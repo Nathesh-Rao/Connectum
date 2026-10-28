@@ -3,6 +3,8 @@
 ## Stack
 - Flutter, Android + iOS. State, DI and routing: GetX. Local DB: sqflite with hand-written SQL (no drift, no ORM). Realtime: WebSocket to the Erlang backend.
 
+- Scope: Set Up (enterprise creation) is not in the mobile app for now.
+
 ## Backend reference
 - The backend contract is in `mobile-handoff/`. Before writing or changing code for the socket, session, messages, forms, deep links or AI, read the matching doc: `websocket-protocol.md`, `messages-and-receipts.md`, `sessions.md`, `forms.md`, `deep-links.md`, `ai-and-misc.md`.
 - Never guess the protocol. If a doc says UNCLEAR, ask the user.

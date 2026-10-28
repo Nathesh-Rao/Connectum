@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 
+import 'models/identity_info.dart';
 import 'models/session_info.dart';
 
 class SessionStore {
@@ -11,14 +12,19 @@ class SessionStore {
   static const _currentKey = 'session.current';
 
   final current = Rxn<SessionInfo>();
+  final identity = Rxn<IdentityInfo>();
   String? _token;
 
   String? get token => _token;
   String? get orgId => current.value?.orgId;
   String? get userId => current.value?.userId;
   bool get hasSession => current.value != null && _token != null;
+  bool get hasEnterpriseSession => hasSession && !current.value!.isExpired;
+  bool get hasIdentity => identity.value != null && !identity.value!.isExpired;
+  bool get isSignedIn => hasEnterpriseSession || hasIdentity;
 
   Future<void> load() async {
+    await _loadIdentity();
     final raw = await _storage.read(key: _currentKey);
     if (raw == null) return;
     final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -54,6 +60,41 @@ class SessionStore {
     _token = null;
     current.value = null;
   }
+
+  Future<void> _loadIdentity() async {
+    final token = await _storage.read(key: 'identity.token');
+    final raw = await _storage.read(key: 'identity.data');
+    if (token == null || raw == null) return;
+    identity.value = IdentityInfo.fromJson(
+      token,
+      jsonDecode(raw) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> saveIdentity(IdentityInfo info) async {
+    await _storage.write(key: 'identity.token', value: info.token);
+    await _storage.write(
+      key: 'identity.data',
+      value: jsonEncode(info.toJson()),
+    );
+    identity.value = info;
+  }
+
+  Future<void> clearIdentity() async {
+    await _storage.delete(key: 'identity.token');
+    await _storage.delete(key: 'identity.data');
+    identity.value = null;
+  }
+
+  // The remember-this-device token is kept per email and survives sign out.
+  Future<String?> trustFor(String email) =>
+      _storage.read(key: 'trust.${email.trim().toLowerCase()}');
+
+  Future<void> saveTrust(String email, String trust) =>
+      _storage.write(key: 'trust.${email.trim().toLowerCase()}', value: trust);
+
+  Future<void> clearTrust(String email) =>
+      _storage.delete(key: 'trust.${email.trim().toLowerCase()}');
 
   Future<String> deviceId() async {
     final existing = await _storage.read(key: 'device_id');

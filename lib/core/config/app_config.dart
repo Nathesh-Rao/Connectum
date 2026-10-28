@@ -6,6 +6,9 @@ class AppConfig {
   static const baseUrl = String.fromEnvironment('BASE_URL');
   static const wsUrl = String.fromEnvironment('WS_URL');
 
+  /// Debug only: START_ROUTE=/gallery or /debug/socket opens that screen first.
+  static const startRoute = String.fromEnvironment('START_ROUTE');
+
   static bool get isConfigured => baseUrl.isNotEmpty && wsUrl.isNotEmpty;
 
   static String get apiBase =>

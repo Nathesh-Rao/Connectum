@@ -24,6 +24,10 @@ class SessionRepository extends GetxService {
   final SocketService _socket;
 
   final loginNotice = RxnString();
+  final _ready = Completer<void>();
+
+  /// Completes once the stored session has been read.
+  Future<void> get ready => _ready.future;
   Timer? _poll;
   bool _isHandling = false;
 
@@ -41,12 +45,12 @@ class SessionRepository extends GetxService {
     });
     await _store.load();
     final info = _store.current.value;
-    if (info == null) return;
-    if (info.isExpired) {
-      await handleAuthFailed();
-      return;
+    if (info != null && info.isExpired) {
+      await _store.clear();
+    } else if (info != null) {
+      _socket.start();
     }
-    _socket.start();
+    _ready.complete();
   }
 
   Future<void> signIn({

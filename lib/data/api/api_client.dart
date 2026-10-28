@@ -9,11 +9,19 @@ import '../../core/config/app_config.dart';
 import '../session_store.dart';
 
 class ApiException implements Exception {
-  const ApiException(this.code, this.message, {this.status});
+  const ApiException(this.code, this.message, {this.status, this.details});
 
   final String code;
   final String message;
   final int? status;
+  final Object? details;
+
+  /// Per-field messages of an `invalid_values` error, if any.
+  Map<String, String> get fieldErrors {
+    final fields = details is Map ? (details as Map)['fields'] : null;
+    if (fields is! Map) return {};
+    return {for (final e in fields.entries) '${e.key}': '${e.value}'};
+  }
 
   bool get isUnauthorized => status == 401 || code == 'unauthenticated';
 
@@ -53,7 +61,8 @@ class ApiClient {
   Future<Map<String, dynamic>> get(
     String path, {
     Map<String, dynamic>? query,
-  }) => _send('GET', path, query: query);
+    String? bearer,
+  }) => _send('GET', path, query: query, bearer: bearer);
 
   Future<Map<String, dynamic>> post(
     String path, {
@@ -89,6 +98,7 @@ class ApiClient {
           '${(data['error'] as Map?)?['code'] ?? 'error'}',
           '${(data['error'] as Map?)?['message'] ?? ''}',
           status: status,
+          details: (data['error'] as Map?)?['details'],
         );
         if (isSessionCall && error.isUnauthorized) _unauthorized.add(null);
         throw error;

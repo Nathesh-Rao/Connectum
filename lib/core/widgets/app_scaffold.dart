@@ -15,6 +15,7 @@ class AppScaffold extends StatelessWidget {
     this.backgroundColor = AppColors.background,
     this.hasDarkBackground = false,
     this.showOfflineBar = false,
+    this.isScrollable = true,
   });
 
   final Widget body;
@@ -24,6 +25,10 @@ class AppScaffold extends StatelessWidget {
   final Color backgroundColor;
   final bool hasDarkBackground;
   final bool showOfflineBar;
+
+  /// False for a body that holds its own scrollable (a page view): it then
+  /// gets the viewport height, because an intrinsic height can't be measured.
+  final bool isScrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -55,24 +60,9 @@ class AppScaffold extends StatelessWidget {
                   children: [
                     if (showOfflineBar) const AppOfflineBar(),
                     Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final vertical = padding
-                              .resolve(Directionality.of(context))
-                              .vertical;
-                          return SingleChildScrollView(
-                            padding: padding,
-                            keyboardDismissBehavior:
-                                ScrollViewKeyboardDismissBehavior.onDrag,
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: constraints.maxHeight - vertical,
-                              ),
-                              child: IntrinsicHeight(child: body),
-                            ),
-                          );
-                        },
-                      ),
+                      child: isScrollable
+                          ? _PackedScroll(padding: padding, body: body)
+                          : Padding(padding: padding, child: body),
                     ),
                   ],
                 ),
@@ -91,6 +81,32 @@ class AppScaffold extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PackedScroll extends StatelessWidget {
+  const _PackedScroll({required this.padding, required this.body});
+
+  final EdgeInsetsGeometry padding;
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final vertical = padding.resolve(Directionality.of(context)).vertical;
+        return SingleChildScrollView(
+          padding: padding,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - vertical,
+            ),
+            child: IntrinsicHeight(child: body),
+          ),
+        );
+      },
     );
   }
 }

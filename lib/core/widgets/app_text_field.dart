@@ -28,6 +28,11 @@ class AppTextField extends StatefulWidget {
     this.enabled = true,
     this.autofocus = false,
     this.autofillHints,
+    this.textAlign = TextAlign.start,
+    this.horizontalPadding = AppSpacing.controlPaddingX,
+    this.readOnly = false,
+    this.onTap,
+    this.suffix,
   });
 
   final TextEditingController? controller;
@@ -47,6 +52,11 @@ class AppTextField extends StatefulWidget {
   final bool enabled;
   final bool autofocus;
   final Iterable<String>? autofillHints;
+  final TextAlign textAlign;
+  final double horizontalPadding;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final Widget? suffix;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -108,6 +118,9 @@ class _AppTextFieldState extends State<AppTextField> {
               minLines: widget.minLines,
               maxLines: widget.maxLines,
               maxLength: widget.maxLength,
+              textAlign: widget.textAlign,
+              readOnly: widget.readOnly,
+              onTap: widget.onTap,
               textAlignVertical: TextAlignVertical.center,
               style: AppText.input,
               strutStyle: const StrutStyle(
@@ -128,8 +141,9 @@ class _AppTextFieldState extends State<AppTextField> {
                 disabledBorder: InputBorder.none,
                 hintText: widget.hint,
                 hintStyle: AppText.input.copyWith(color: AppColors.muted),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.controlPaddingX,
+                suffixIcon: widget.suffix,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: widget.horizontalPadding,
                   vertical: _singleLinePadding,
                 ),
               ),

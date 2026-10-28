@@ -1,3 +1,8 @@
 import 'package:get/get.dart';
 
-class ProfileController extends GetxController {}
+import '../../core/routes/app_routes.dart';
+
+class ProfileController extends GetxController {
+  void replayIntroduction() =>
+      Get.toNamed(AppRoutes.onboarding, arguments: {'replay': true});
+}

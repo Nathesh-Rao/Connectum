@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../data/api/api_client.dart';
 import '../../data/db/app_database.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
 import '../../data/repositories/message_repository.dart';
@@ -20,8 +21,8 @@ class InitialBinding extends Bindings {
 
   @override
   void dependencies() {
-    Get.put(DeepLinkService(AppLinks()), permanent: true);
     final store = Get.put(SessionStore(), permanent: true);
+    Get.put(DeepLinkService(AppLinks(), store), permanent: true);
     final db = Get.put(AppDatabase(), permanent: true);
     final api = Get.put(ApiClient(store), permanent: true);
     Get.put(connectivity, permanent: true);
@@ -40,6 +41,10 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.put(SubmissionRepository(db, store, socket), permanent: true);
-    Get.put(SessionRepository(store, db, api, socket), permanent: true);
+    final session = Get.put(
+      SessionRepository(store, db, api, socket),
+      permanent: true,
+    );
+    Get.put(AuthRepository(api, store, session), permanent: true);
   }
 }

@@ -8,7 +8,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 
-enum _AppButtonKind { primary, secondary, icon }
+enum _AppButtonKind { primary, secondary, text, icon }
 
 class AppButton extends StatefulWidget {
   const AppButton.primary({
@@ -27,6 +27,15 @@ class AppButton extends StatefulWidget {
     this.icon,
     this.isLoading = false,
   }) : _kind = _AppButtonKind.secondary,
+       semanticLabel = null;
+
+  const AppButton.text({
+    super.key,
+    required String this.label,
+    required this.onPressed,
+  }) : _kind = _AppButtonKind.text,
+       icon = null,
+       isLoading = false,
        semanticLabel = null;
 
   const AppButton.icon({
@@ -100,6 +109,7 @@ class _AppButtonState extends State<AppButton>
   Widget build(BuildContext context) {
     final child = switch (widget._kind) {
       _AppButtonKind.icon => _buildIcon(),
+      _AppButtonKind.text => _buildText(),
       _ => _buildLabelled(),
     };
     return Semantics(
@@ -120,6 +130,24 @@ class _AppButtonState extends State<AppButton>
             builder: (_, child) =>
                 Transform.scale(scale: _scale.value, child: child),
             child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildText() {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: AppSpacing.minTapTarget,
+        minWidth: AppSpacing.minTapTarget,
+      ),
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          widget.label!,
+          style: AppText.readableStrong.copyWith(
+            color: _isEnabled ? AppColors.muted : AppColors.taupe,
           ),
         ),
       ),

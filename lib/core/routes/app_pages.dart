@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
+import '../config/app_config.dart';
 import '../../features/ai_agents/ai_agents_binding.dart';
 import '../../features/ai_agents/ai_agents_view.dart';
 import '../../features/authentication/authentication_binding.dart';
@@ -37,8 +38,9 @@ import 'app_transitions.dart';
 class AppPages {
   AppPages._();
 
-  static String get initial =>
-      !kReleaseMode ? AppRoutes.gallery : AppRoutes.splash;
+  static String get initial => !kReleaseMode && AppConfig.startRoute.isNotEmpty
+      ? AppConfig.startRoute
+      : AppRoutes.splash;
 
   static GetPage<dynamic> _page(
     String name,
