@@ -1,0 +1,50 @@
+import 'dart:convert';
+
+import 'ids.dart';
+
+class OutboxEntry {
+  const OutboxEntry({
+    required this.id,
+    required this.convId,
+    required this.kind,
+    required this.payload,
+    required this.refId,
+    required this.status,
+    required this.retryCount,
+    required this.nextAttemptTs,
+    required this.createdTs,
+    this.lastError,
+    this.cursorAtSend,
+    this.attemptTs,
+  });
+
+  final int id;
+  final String convId;
+  final String kind;
+  final Map<String, dynamic> payload;
+  final String refId;
+  final String status;
+  final int retryCount;
+  final int nextAttemptTs;
+  final int createdTs;
+  final String? lastError;
+  final String? cursorAtSend;
+  final int? attemptTs;
+
+  bool get isChat => kind == 'message' || kind == 'reply' || kind == 'edit';
+
+  factory OutboxEntry.fromRow(Map<String, Object?> r) => OutboxEntry(
+    id: intOf(r['id']),
+    convId: idText(r['conv_id']),
+    kind: idText(r['kind']),
+    payload: jsonDecode(idText(r['payload_json'])) as Map<String, dynamic>,
+    refId: idText(r['ref_id']),
+    status: idText(r['status']),
+    retryCount: intOf(r['retry_count']),
+    nextAttemptTs: intOf(r['next_attempt_ts']),
+    createdTs: intOf(r['created_ts']),
+    lastError: r['last_error'] as String?,
+    cursorAtSend: r['cursor_at_send'] as String?,
+    attemptTs: r['attempt_ts'] == null ? null : intOf(r['attempt_ts']),
+  );
+}

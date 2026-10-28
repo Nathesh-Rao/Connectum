@@ -1,0 +1,116 @@
+import '../models/ids.dart';
+import '../session_store.dart';
+import '../socket/socket_service.dart';
+
+enum EncryptionVerdict { encrypted, plain, unknown }
+
+class EncryptionPolicy {
+  EncryptionPolicy(this._socket, this._store);
+
+  static const _peerTtl = Duration(minutes: 5);
+
+  final SocketService _socket;
+  final SessionStore _store;
+
+  String? _mode;
+  bool _isModeFresh = false;
+  final _peers = <String, ({bool hasKeys, DateTime at})>{};
+
+  void onReconnected() => _isModeFresh = false;
+
+  /// The single rule for "may a plain message be sent into this thread".
+  ///
+  /// Only direct messages and groups can be encrypted (global room, hosts,
+  /// forms and AI never are). A thread counts as encrypted when:
+  ///  - a stored message starts with `e2e1:` (hasE2eHistory), or
+  ///  - `e2e.status` reports mode `required`, or
+  ///  - mode is `optional` and a peer (DM) or any other member (group) has
+  ///    published device keys (`e2e.devices` / `e2e.group_devices`).
+  /// It cannot detect: the mode while never connected (unknown, not blocked),
+  /// whether the web client really encrypts when keys exist, revoked or
+  /// stale keys (lookups are cached 5 minutes), or encrypted messages older
+  /// than the 50 that history returns.
+  EncryptionVerdict evaluate(
+    String convId,
+    bool hasE2eHistory,
+    bool? peerKeys,
+  ) {
+    final kind = convId.split(':').first;
+    if (kind != 'dm' && kind != 'group') return EncryptionVerdict.plain;
+    if (hasE2eHistory || _mode == 'required') {
+      return EncryptionVerdict.encrypted;
+    }
+    if (_mode == null) return EncryptionVerdict.unknown;
+    if (_mode == 'off') return EncryptionVerdict.plain;
+    if (peerKeys == null) return EncryptionVerdict.unknown;
+    return peerKeys ? EncryptionVerdict.encrypted : EncryptionVerdict.plain;
+  }
+
+  /// Cached answer for the composer. `unknown` must not block typing.
+  EncryptionVerdict cached(String convId, bool hasE2eHistory) {
+    final peer = _peers[convId];
+    final fresh = peer != null && DateTime.now().difference(peer.at) < _peerTtl;
+    return evaluate(convId, hasE2eHistory, fresh ? peer.hasKeys : null);
+  }
+
+  /// Looks things up when needed, used right before a send.
+  Future<EncryptionVerdict> verdict(String convId, bool hasE2eHistory) async {
+    final kind = convId.split(':').first;
+    if (kind != 'dm' && kind != 'group') return EncryptionVerdict.plain;
+    if (hasE2eHistory) return EncryptionVerdict.encrypted;
+    await _loadMode();
+    var verdict = cached(convId, hasE2eHistory);
+    if (verdict == EncryptionVerdict.unknown && _mode == 'optional') {
+      await _lookupPeer(convId);
+      verdict = cached(convId, hasE2eHistory);
+    }
+    return verdict;
+  }
+
+  Future<void> _loadMode() async {
+    final key = 'e2e.mode.${_store.orgId}';
+    _mode ??= await _store.readValue(key);
+    if (_isModeFresh || !_socket.isOnline) return;
+    try {
+      final data = await _socket.sdCall('e2e.status', {});
+      final mode = idText(data['mode']);
+      if (mode.isNotEmpty) {
+        _mode = mode;
+        _isModeFresh = true;
+        await _store.writeValue(key, mode);
+      }
+    } on SocketCallError catch (_) {}
+  }
+
+  Future<void> _lookupPeer(String convId) async {
+    if (!_socket.isOnline) return;
+    final me = (_store.userId ?? '').toLowerCase();
+    try {
+      bool hasKeys;
+      if (convId.startsWith('dm:')) {
+        final peer = convId.substring(3);
+        final data = await _socket.sdCall('e2e.devices', {
+          'users': [peer],
+        });
+        final devices = (data['devices'] as Map?) ?? {};
+        hasKeys = devices.entries.any(
+          (e) =>
+              e.key.toString().toLowerCase() == peer.toLowerCase() &&
+              e.value is List &&
+              (e.value as List).isNotEmpty,
+        );
+      } else {
+        final data = await _socket.sdCall('e2e.group_devices', {
+          'group': convId.substring(6),
+        });
+        hasKeys = ((data['members'] as List?) ?? []).cast<Map>().any(
+          (m) =>
+              idText(m['user']).toLowerCase() != me &&
+              m['devices'] is List &&
+              (m['devices'] as List).isNotEmpty,
+        );
+      }
+      _peers[convId] = (hasKeys: hasKeys, at: DateTime.now());
+    } on SocketCallError catch (_) {}
+  }
+}

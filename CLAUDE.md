@@ -42,6 +42,16 @@
 - On a `session_replaced` event or a handshake error, clear that organisation's token and local session and send the user to login with a notice.
 - Reconnect delay uses backoff with a cap, not a fixed delay.
 
+## Offline
+- SQLite is the UI's only source. The app opens offline with everything cached. Login, OTP, attachments and the AI tab need a connection and show the offline state instead of queuing.
+- Sending writes the row and an outbox entry at once. States: pending -> sending -> sent -> delivered/read (DMs only). `failed` only for non-retryable server refusals (permission, encrypted chat, validation) or an unconfirmed delivery; a network drop never fails a message.
+- The outbox is persistent and flushes one message at a time, in order, on socket online, network regain, app resume and after login. No client id exists in the protocol: an in-flight message is reconciled against fetched history before any re-send, and if the history does not clearly reach back past the stored cursor it fails with tap-to-retry. Forms use `meta.clientId` the same way.
+- Encrypted DMs and groups (`e2e1:` messages, mode `required`, or peer keys in `optional`) are read-only on mobile in v1.
+- `session_replaced`: wipe that org+user rows and outbox, go to login. Handshake error or expired token: clear the token, keep rows and outbox, go to login, flush after login. Explicit sign out: wipe. Only a real auth error clears the token; "Username taken" retries with backoff.
+
+## Before release
+- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket` and `/gallery` routes.
+
 ## Working rules
 - After a task, run `dart analyze` on changed files and run on the device when relevant. Do NOT run flutter test, integration, viewport or VM tests, or full builds unless asked.
 - Small changes. Before adding a package, tell the user why in one sentence.

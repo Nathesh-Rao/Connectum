@@ -9,6 +9,24 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # State, DI and routing
+  get: ^4.7.3
+  # REST client
+  dio: ^5.11.1
+  # Realtime connection to the backend
+  web_socket_channel: ^3.0.3
+  # Local database, the UI's source of truth
+  sqflite: ^2.4.2+1
+  # Building database file paths
+  path: ^1.9.1
+  # App documents directory for the database
+  path_provider: ^2.1.6
+  # Tokens and session secrets in Keystore/Keychain
+  flutter_secure_storage: ^11.2.0
+  # Online/offline state for AppStateView and reconnects
+  connectivity_plus: ^7.3.2
+  # Incoming App Links / Universal Links
+  app_links: ^7.0.0
 
 dev_dependencies:
   flutter_test:
@@ -17,3 +35,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
