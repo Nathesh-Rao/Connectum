@@ -11,6 +11,7 @@ class SubmissionsView extends GetView<SubmissionsController> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      hasOuterBottomBar: true,
       body: Center(child: Text('Submissions', style: AppText.title)),
     );
   }

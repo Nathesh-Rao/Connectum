@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
@@ -16,6 +15,7 @@ import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/models/identity_info.dart';
 import 'enterprises_controller.dart';
+import 'widgets/enterprise_tile.dart';
 import 'widgets/join_sheet.dart';
 
 class EnterprisesView extends GetView<EnterprisesController> {
@@ -177,60 +177,6 @@ class _IdentityStrip extends StatelessWidget {
   }
 }
 
-const _tileIcons = [
-  Icons.domain,
-  Icons.work_outline,
-  Icons.people_outline,
-  Icons.school_outlined,
-  Icons.local_hospital_outlined,
-];
-
-class _Tile extends StatelessWidget {
-  const _Tile({required this.index, required this.isCurrent});
-
-  final int index;
-  final bool isCurrent;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette =
-        AppColors.tilePalettes[index % AppColors.tilePalettes.length];
-    return Container(
-      width: AppSpacing.tileSize,
-      height: AppSpacing.tileSize,
-      decoration: BoxDecoration(
-        color: isCurrent ? AppColors.accentTint : palette.background,
-        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.tile)),
-        border: Border.all(
-          color: isCurrent ? AppColors.tileCurrentBorder : palette.border,
-        ),
-      ),
-      child: Icon(
-        _tileIcons[index % _tileIcons.length],
-        size: 22,
-        color: isCurrent ? AppColors.accent : palette.foreground,
-      ),
-    );
-  }
-}
-
-class _CurrentCheck extends StatelessWidget {
-  const _CurrentCheck();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 23,
-      height: 23,
-      decoration: const BoxDecoration(
-        color: AppColors.accentTint,
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(Icons.check, size: 13, color: AppColors.accent),
-    );
-  }
-}
-
 class _List extends StatelessWidget {
   const _List({required this.controller});
 
@@ -267,7 +213,7 @@ class _List extends StatelessWidget {
         children: [
           for (var i = 0; i < list.length; i++)
             AppListRow(
-              leading: _Tile(
+              leading: EnterpriseTile(
                 index: i,
                 isCurrent: list[i].enterprise == c.currentOrgId,
               ),
@@ -287,7 +233,7 @@ class _List extends StatelessWidget {
                       ),
                     )
                   : list[i].enterprise == c.currentOrgId
-                  ? const _CurrentCheck()
+                  ? const EnterpriseCurrentCheck()
                   : list[i].isActive
                   ? const _Chevron()
                   : null,

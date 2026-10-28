@@ -16,6 +16,8 @@ class OutboxEntry {
     this.lastError,
     this.cursorAtSend,
     this.attemptTs,
+    this.cid,
+    this.firstAttemptTs,
   });
 
   final int id;
@@ -30,8 +32,15 @@ class OutboxEntry {
   final String? lastError;
   final String? cursorAtSend;
   final int? attemptTs;
+  final String? cid;
+  final int? firstAttemptTs;
 
   bool get isChat => kind == 'message' || kind == 'reply' || kind == 'edit';
+
+  bool get isSend => kind == 'message' || kind == 'reply';
+
+  /// Only sends answered with an ack take a client id; the global room does not.
+  bool get usesCid => isSend && cid != null && convId != 'global';
 
   factory OutboxEntry.fromRow(Map<String, Object?> r) => OutboxEntry(
     id: intOf(r['id']),
@@ -46,5 +55,9 @@ class OutboxEntry {
     lastError: r['last_error'] as String?,
     cursorAtSend: r['cursor_at_send'] as String?,
     attemptTs: r['attempt_ts'] == null ? null : intOf(r['attempt_ts']),
+    cid: r['cid'] as String?,
+    firstAttemptTs: r['first_attempt_ts'] == null
+        ? null
+        : intOf(r['first_attempt_ts']),
   );
 }

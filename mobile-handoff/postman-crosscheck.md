@@ -51,6 +51,10 @@ Base `<BASE_URL>/api/sd`. Answers are `{"ok":true,"data":{...}}` or `{"ok":false
 - WebSocket events the collection never mentions: `session_replaced`, `connection_superseded`, `disconnected`, `error` `code` list beyond four values, `host_message`/`/hostmsg`, `/read` receipts, `/edit`, delta history (`/history ... delta`), `e2e_*` events.
 - Left out by the collection on purpose: admin console, Axpert, consumer program, queue, Shopify.
 
+## 2b. Changes in the new collection
+
+Compared with the previous version (git diff of `postman/api_collection_connectum.json`): the 25 REST requests are unchanged. Three WebSocket cards were added to folder 5: "Send with a client id (no double sends)", "Older messages (scroll back)" and "Is a message encrypted? (e2e flag)". Nothing was removed. The cards agree with the backend source (`chat_web.erl`, `chat_store.erl`, commit 869913fe on `origin/main`) in command syntax, allowed id characters (`a-z A-Z 0-9 - _ . :`, 1 to 64), error codes (`bad_cid`, `cid_unsupported`, `usage`), the duplicate ack (the stored first ack plus `"duplicate":true`), and `before` / `hasMore` / `next`. Differences found in the code and not in the cards: a global-room send, `/reply`, `/edit` and every other command give `cid_unsupported`; `next` is the oldest id found before the page is filtered for what the person may see; a group name with spaces works with `before`; `e2e` is not on live events; the `before` id is 1 to 18 digits.
+
 ## 3. Conflicts (not resolved)
 
 | # | Topic | Handoff docs | Collection |
@@ -70,14 +74,16 @@ The "earlier summary" is taken to be the UNCLEAR markers in the handoff docs. Fe
 | UNCLEAR (doc) | What the collection shows |
 |---|---|
 | Submission `status` / `approval` shape (forms.md) | Partial. For a form that needs no approval, `tstruct.submit` returns `recordStatus: "saved"` and a `submission` with only `{id, tstruct, values, by, ts, branch, host, scope}`; `submissions.list` and `submission.get` items have the same keys and no `status` or `approval`; `submissions.update` adds `editedTs`. Evidence: the `tstruct.submit`, `submissions.list` and `submissions.update` samples. The `pending` / `stages` shape is not shown. |
-| History page size, no older pages (messages-and-receipts.md) | Confirms the cap. The `/history dm` card says "up to the last 50 messages, oldest first" and the sample uses only `scope`, `with`, `now`, `list`. No `before` argument exists for `/history`. Whether the backend will add one is still open. (`feed.list` does take `before`.) |
+| History page size, no older pages (messages-and-receipts.md) | Answered. The new cards "Older messages (scroll back)" and the backend (`chat_web.erl`, commit 869913fe) add `/history <scope> ... before <messageId>`: up to 50 older messages, oldest first, with `before`, `hasMore` and `next`. Plain `/history` is still the last 50. |
+| Client id / duplicate protection (messages-and-receipts.md: "no client id") | Answered. The new card "Send with a client id" and the backend add `/c <clientId> <command>`; the ack echoes `cid`, a repeated id gets the first ack with `duplicate:true`. The old statements (no id, acks matched by position, no dedupe) were removed. |
+| Encrypted flag (the guessed `e2e1:` prefix rule) | Answered. `e2e:true` on messages in `history` and on `/conversations` items; the organisation mode stays `e2e.status`. Live events carry no flag. |
 | Session lifetime 14 vs 15 days (sessions.md) | The collection says about 15 days, matching sessions.md, but it is a conflict (C2), not an UNCLEAR, so it is left for the owner. |
 | 2FA (screens-and-features.md) | Minimal: `totpDue: false` appears in the `enter` and `session` samples. No `2fa/*` endpoint is in the collection. |
 
 ## 5. UNCLEAR items that remain
 
 - **websocket-protocol.md:** what the client should do on a handshake `error`; `conversation_changed` has no web handler; full list of `edit_denied` reasons; whether `/pubkey` and `/getpubkey` are still used.
-- **messages-and-receipts.md:** the `[ATTACHMENT:...]` JSON schema; whether mobile stays limited to 50 messages or gets a `before` parameter.
+- **messages-and-receipts.md:** the `[ATTACHMENT:...]` JSON schema. New: the live events (`private`, `group_message`, `host_message`, `chat`) carry no `e2e` flag, nor do `/groups` items; a send that races a second connection of the same person is not covered by the id memory (it is read, then written after the ack).
 - **forms.md:** how to model a Yes/No field (the collection's only `tstruct.get` example is a `list` field with `options`, nothing yes/no); whether grid-section rows appear on the chat card; the `pending` approval shape.
 - **sessions.md:** exact text and category of the `session_replaced` feed item; whether the Flutter app may hold two organisations at once.
 - **ai-and-misc.md:** whether `#<alias>` calls the relay server-side; local thumbnails; native crypto interop with the web E2E envelope; size limits (`CHAT_PROTOCOL.md` vs `chat_web.erl`, code used); unauthenticated `GET /uploads/<name>`; push notifications (no device-token endpoint exists in either source); who owns the AI tool loop.

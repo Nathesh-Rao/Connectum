@@ -7,7 +7,9 @@ import '../../data/db/app_database.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
+import '../../data/repositories/feed_repository.dart';
 import '../../data/repositories/message_repository.dart';
+import '../../data/repositories/presence_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/session_store.dart';
@@ -43,6 +45,8 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.put(SubmissionRepository(db, store, socket), permanent: true);
+    Get.put(PresenceRepository(socket), permanent: true);
+    Get.put(FeedRepository(socket), permanent: true);
     final session = Get.put(
       SessionRepository(store, db, api, socket),
       permanent: true,

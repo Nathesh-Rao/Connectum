@@ -17,6 +17,9 @@ class AppStateView extends StatelessWidget {
     this.emptyMessage,
     this.errorMessage = 'Something went wrong.',
     this.onRetry,
+    this.loadingChild,
+    this.emptyActionLabel,
+    this.onEmptyAction,
   });
 
   final AppViewState state;
@@ -27,15 +30,23 @@ class AppStateView extends StatelessWidget {
   final String errorMessage;
   final VoidCallback? onRetry;
 
+  /// Shown instead of the placeholder while loading (skeleton rows).
+  final Widget? loadingChild;
+  final String? emptyActionLabel;
+  final VoidCallback? onEmptyAction;
+
   @override
   Widget build(BuildContext context) {
     return switch (state) {
       AppViewState.content => child,
-      AppViewState.loading => const _Message(animation: 'loading'),
+      AppViewState.loading =>
+        loadingChild ?? const _Message(animation: 'loading'),
       AppViewState.empty => _Message(
         animation: emptyAnimation,
         title: emptyTitle,
         message: emptyMessage,
+        actionLabel: emptyActionLabel,
+        onAction: onEmptyAction,
       ),
       AppViewState.error => _Message(
         animation: 'error',
@@ -59,12 +70,16 @@ class _Message extends StatelessWidget {
     this.title,
     this.message,
     this.onRetry,
+    this.actionLabel,
+    this.onAction,
   });
 
   final String animation;
   final String? title;
   final String? message;
   final VoidCallback? onRetry;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +104,17 @@ class _Message extends StatelessWidget {
                 message!,
                 style: AppText.readable,
                 textAlign: TextAlign.center,
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SizedBox(
+                width: 200,
+                child: AppButton.primary(
+                  label: actionLabel!,
+                  isCompact: true,
+                  onPressed: onAction,
+                ),
               ),
             ],
             if (onRetry != null) ...[

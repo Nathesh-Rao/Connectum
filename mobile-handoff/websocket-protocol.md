@@ -70,7 +70,7 @@ Direction: C>S = client sends (text line), S>C = server pushes JSON. "Reply" = e
 | `sd_event` `session_replaced` | S>C | `{"type":"sd_event","event":"session_replaced","reason":"signed_in_elsewhere"}` | the same person entered the same enterprise again elsewhere (old token revoked) | socket closed. Client: forced sign-out (see `sessions.md`) |
 | `sd_event` `session_expired` | S>C | `{"type":"sd_event","event":"session_expired","reason":"two_week_login"}` | session TTL (15 days) passed, noticed on next client line | socket closed. Client: forced sign-out |
 | `sd_event` `disconnected` | S>C | `{"type":"sd_event","event":"disconnected","reason":"account_deactivated"}` | admin deactivated the account, or `reason:"too_slow"` | socket closed. `account_deactivated`: forced sign-out. `too_slow`: web client just reconnects |
-| `error` | S>C | `{"type":"error","text":"Unknown command: /xyz (see docs/CHAT_PROTOCOL.md for the command list)"}` | any refused or malformed command | web client shows a toast. Optional `code`: `not_allowed`, `not_associated`, `unknown_command`, `usage`, `invalid_encoding`, `internal`, E2E codes (`e2e_*`, `bad_envelope`) |
+| `error` | S>C | `{"type":"error","text":"Unknown command: /xyz (see docs/CHAT_PROTOCOL.md for the command list)"}` | any refused or malformed command | web client shows a toast. Optional `code`: `not_allowed`, `not_associated`, `unknown_command`, `usage`, `bad_cid`, `cid_unsupported`, `invalid_encoding`, `internal`, E2E codes (`e2e_*`, `bad_envelope`) |
 | `error` (refused DM) | S>C | `{"type":"error","code":"not_associated","text":"...","to":"bob","conv":"dm:bob","sent":false}` | `/msg` or `/replydm` to someone you are not connected with | client marks that message "Not sent" in the thread |
 
 ### 4.2 Enterprises (organisation context)
@@ -92,9 +92,10 @@ There are **no WebSocket events to list or switch enterprises**. Listing and ent
 | Name | Dir | Payload | When | Reply |
 |---|---|---|---|---|
 | `/conversations` | C>S | `/conversations` | after connect | `conversations` |
-| `conversations` | S>C | `{"type":"conversations","list":[{"with":"bob","id":12,"ts":1790071256909,"from":"bob","text":"hi","archived":false}]}` | reply | `text` is `""` if deleted; deleted-for-me threads omitted |
-| `/history ...` | C>S | `/history global` ; `/history dm bob` ; `/history group design_team` ; `/history host hr` ; optional ` delta <lastId> <now>` | open a conversation, connect | `history` (last 50, oldest first) |
-| `history` | S>C | `{"type":"history","scope":"dm","with":"bob","now":1790071256909,"list":[<message>]}` (`group`/`host` key instead of `with` for those scopes; `delta`,`window` when delta) | reply; also auto after `welcome` for global | see message object in 4.4 |
+| `conversations` | S>C | `{"type":"conversations","list":[{"with":"bob","id":12,"ts":1790071256909,"from":"bob","text":"hi","archived":false}]}` | reply | `text` is `""` if deleted; deleted-for-me threads omitted; an item whose last text is an E2E envelope also has `"e2e":true` |
+| `/history ...` | C>S | `/history global` ; `/history dm bob` ; `/history group design_team` ; `/history host hr` ; optional ` delta <lastId> <now>` or ` before <messageId>` | open a conversation, connect, scroll back | `history` (last 50, oldest first; with `before`, the 50 older than that id) |
+| `history` | S>C | `{"type":"history","scope":"dm","with":"bob","now":1790071256909,"list":[<message>]}` (`group`/`host` key instead of `with` for those scopes; `delta`,`window` when delta; `before`,`hasMore`,`next` when asked with `before`) | reply; also auto after `welcome` for global | see message object in 4.4 and `messages-and-receipts.md` section 4 |
+| `/c <clientId> <command>` | C>S | `/c 7f3a-0001 /msg ravi hello` | send that a retry cannot double | the command's usual ack plus `"cid":"7f3a-0001"`; the same id again: the first ack again plus `"duplicate":true`. Only `/msg`, `/replydm`, `/groupmsg`, `/replygroup`, `/hostmsg`; else `error` code `cid_unsupported`; bad id, code `bad_cid`. See `messages-and-receipts.md` section 2 |
 | `/groups` | C>S | `/groups` | after connect | `groups` |
 | `groups` | S>C | `{"type":"groups","list":[{"name":"design_team","owner":"alice","members":["alice","bob"]}]}` | reply | |
 | `/creategroup <name>` | C>S | `/creategroup design team` | new group (spaces allowed, max 32) | `group_created` or `error` |
@@ -116,7 +117,7 @@ There are **no WebSocket events to list or switch enterprises**. Listing and ent
 
 ### 4.4 Messages (payloads only; semantics are in the message doc)
 
-Message object inside `history.list`: `{id, ts, from, text, kind, private, reactions:[{user,emoji}], deleted, editedTs, replyTo, previewUrl, previewTitle, previewDescription, previewImage}`; `kind:"form"` items also carry `form` (the form document). `text` may be an E2E envelope starting `e2e1:`.
+Message object inside `history.list`: `{id, ts, from, text, kind, private, reactions:[{user,emoji}], deleted, editedTs, replyTo, previewUrl, previewTitle, previewDescription, previewImage}`; `kind:"form"` items also carry `form` (the form document). `text` may be an E2E envelope starting `e2e1:`; then the item also has `"e2e":true` (history and `/conversations` only, not the live `private` / `group_message` / `host_message` / `chat` events).
 
 | Name | Dir | Payload (example) | When | Reply / response |
 |---|---|---|---|---|

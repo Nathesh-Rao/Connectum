@@ -1,6 +1,6 @@
 // Runs inside the page. Returns a spec of the .phone element (coords relative to its top-left).
 // Called twice (sample A/B) so the caller can flag animated elements.
-export function extractSpec() {
+export function extractSpec(opts = {}) {
   const phone = document.querySelector(".phone")
   const P = phone.getBoundingClientRect()
   const r2 = (n) => Math.round(n * 100) / 100
@@ -85,8 +85,13 @@ export function extractSpec() {
     const s = getComputedStyle(el)
     const box = rel(b)
     const key = pathOf(el) + (extra.pseudo ? "::" + extra.pseudo : "") + (extra.suffix || "")
+    let sample
+    if (opts.sample && (kind === "text" || kind === "button" || kind === "input" || kind === "image")) {
+      for (const [sel, why] of opts.sample) { if (el.closest(sel)) { sample = why; break } }
+    }
     out.push({
       key, kind, label: extra.label ?? labelFor(el, kind, extra.text ?? ""), ...box,
+      ...(sample ? { sampleContent: true, sampleKind: sample } : {}),
       zones: zoneOf(box), tag: el.tagName.toLowerCase(), classes: el.classList ? [...el.classList].join(" ") : "",
       ...(extra.text !== undefined ? { text: extra.text, textBox: extra.textBox } : {}),
       style: extra.style ?? styleOf(el, s),
@@ -174,7 +179,8 @@ export function extractSpec() {
     else if (own && visual) { /* text element also carries a box; one record holds both */ }
     for (const c of el.children) walk(c)
   }
-  for (const c of phone.children) walk(c)
+  if (opts.scope) { const root = phone.querySelector(opts.scope); if (root) walk(root) }
+  else for (const c of phone.children) walk(c)
 
   return {
     frame: { width: r2(P.width), height: r2(P.height), borderRadius: getComputedStyle(phone).borderRadius, background: getComputedStyle(phone).backgroundColor, border: sidesBorder(getComputedStyle(phone)), padding: getComputedStyle(phone).padding },

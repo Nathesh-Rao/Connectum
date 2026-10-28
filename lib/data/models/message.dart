@@ -20,6 +20,7 @@ class Message {
     this.formJson,
     this.failReason,
     this.localSeq = 0,
+    this.cid,
   });
 
   final String msgId;
@@ -38,6 +39,7 @@ class Message {
   final String? formJson;
   final String? failReason;
   final int localSeq;
+  final String? cid;
 
   bool get isLocalTemp => msgId.startsWith('temp-');
 
@@ -61,5 +63,6 @@ class Message {
     formJson: r['form_json'] as String?,
     failReason: r['fail_reason'] as String?,
     localSeq: intOf(r['local_seq']),
+    cid: r['cid'] as String?,
   );
 }

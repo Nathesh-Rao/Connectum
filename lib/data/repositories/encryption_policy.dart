@@ -4,6 +4,13 @@ import '../socket/socket_service.dart';
 
 enum EncryptionVerdict { encrypted, plain, unknown }
 
+class ThreadFacts {
+  const ThreadFacts({required this.isE2e, required this.hasHistory});
+
+  final bool isE2e;
+  final bool hasHistory;
+}
+
 class EncryptionPolicy {
   EncryptionPolicy(this._socket, this._store);
 
@@ -22,47 +29,42 @@ class EncryptionPolicy {
   ///
   /// Only direct messages and groups can be encrypted (global room, hosts,
   /// forms and AI never are). A thread counts as encrypted when:
-  ///  - a stored message starts with `e2e1:` (hasE2eHistory), or
-  ///  - `e2e.status` reports mode `required`, or
-  ///  - mode is `optional` and a peer (DM) or any other member (group) has
-  ///    published device keys (`e2e.devices` / `e2e.group_devices`).
+  ///  - the conversation or one of its messages carries the server's `e2e`
+  ///    flag (isE2e), or
+  ///  - `e2e.status` reports mode `required`.
+  /// In mode `optional` a thread that already has history is plain. Only a
+  /// thread with no history asks whether a peer (DM) or any other member
+  /// (group) has published device keys (`e2e.devices` / `e2e.group_devices`).
   /// It cannot detect: the mode while never connected (unknown, not blocked),
-  /// whether the web client really encrypts when keys exist, revoked or
-  /// stale keys (lookups are cached 5 minutes), or encrypted messages older
-  /// than the 50 that history returns.
-  EncryptionVerdict evaluate(
-    String convId,
-    bool hasE2eHistory,
-    bool? peerKeys,
-  ) {
+  /// revoked or stale keys (lookups are cached 5 minutes), or encrypted
+  /// messages older than what has been loaded.
+  EncryptionVerdict evaluate(String convId, ThreadFacts facts, bool? peerKeys) {
     final kind = convId.split(':').first;
     if (kind != 'dm' && kind != 'group') return EncryptionVerdict.plain;
-    if (hasE2eHistory || _mode == 'required') {
-      return EncryptionVerdict.encrypted;
-    }
+    if (facts.isE2e || _mode == 'required') return EncryptionVerdict.encrypted;
     if (_mode == null) return EncryptionVerdict.unknown;
-    if (_mode == 'off') return EncryptionVerdict.plain;
+    if (_mode == 'off' || facts.hasHistory) return EncryptionVerdict.plain;
     if (peerKeys == null) return EncryptionVerdict.unknown;
     return peerKeys ? EncryptionVerdict.encrypted : EncryptionVerdict.plain;
   }
 
   /// Cached answer for the composer. `unknown` must not block typing.
-  EncryptionVerdict cached(String convId, bool hasE2eHistory) {
+  EncryptionVerdict cached(String convId, ThreadFacts facts) {
     final peer = _peers[convId];
     final fresh = peer != null && DateTime.now().difference(peer.at) < _peerTtl;
-    return evaluate(convId, hasE2eHistory, fresh ? peer.hasKeys : null);
+    return evaluate(convId, facts, fresh ? peer.hasKeys : null);
   }
 
   /// Looks things up when needed, used right before a send.
-  Future<EncryptionVerdict> verdict(String convId, bool hasE2eHistory) async {
+  Future<EncryptionVerdict> verdict(String convId, ThreadFacts facts) async {
     final kind = convId.split(':').first;
     if (kind != 'dm' && kind != 'group') return EncryptionVerdict.plain;
-    if (hasE2eHistory) return EncryptionVerdict.encrypted;
+    if (facts.isE2e) return EncryptionVerdict.encrypted;
     await _loadMode();
-    var verdict = cached(convId, hasE2eHistory);
+    var verdict = cached(convId, facts);
     if (verdict == EncryptionVerdict.unknown && _mode == 'optional') {
       await _lookupPeer(convId);
-      verdict = cached(convId, hasE2eHistory);
+      verdict = cached(convId, facts);
     }
     return verdict;
   }

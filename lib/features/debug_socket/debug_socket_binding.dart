@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../data/db/app_database.dart';
+import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
@@ -17,6 +18,7 @@ class DebugSocketBinding extends Bindings {
         connectivity: Get.find<ConnectivityService>(),
         session: Get.find<SessionRepository>(),
         messages: Get.find<MessageRepository>(),
+        conversationRepository: Get.find<ConversationRepository>(),
         submissions: Get.find<SubmissionRepository>(),
         db: Get.find<AppDatabase>(),
       ),

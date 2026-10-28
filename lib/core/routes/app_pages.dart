@@ -2,12 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../config/app_config.dart';
-import '../../features/ai_agents/ai_agents_binding.dart';
-import '../../features/ai_agents/ai_agents_view.dart';
 import '../../features/authentication/authentication_binding.dart';
 import '../../features/authentication/authentication_view.dart';
-import '../../features/chats/chats_binding.dart';
-import '../../features/chats/chats_view.dart';
 import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
@@ -17,6 +13,9 @@ import '../../features/enterprise_created/enterprise_created_view.dart';
 import '../../features/enterprises/enterprises_binding.dart';
 import '../../features/enterprises/enterprises_view.dart';
 import '../../features/gallery/gallery_auth_binding.dart';
+import '../../features/home_shell/home_shell_binding.dart';
+import '../../features/home_shell/home_shell_controller.dart';
+import '../../features/home_shell/home_shell_view.dart';
 import '../../features/gallery/gallery_auth_view.dart';
 import '../../features/gallery/gallery_binding.dart';
 import '../../features/gallery/gallery_view.dart';
@@ -24,14 +23,10 @@ import '../../features/notifications/notifications_binding.dart';
 import '../../features/notifications/notifications_view.dart';
 import '../../features/onboarding/onboarding_binding.dart';
 import '../../features/onboarding/onboarding_view.dart';
-import '../../features/profile/profile_binding.dart';
-import '../../features/profile/profile_view.dart';
 import '../../features/splash/splash_binding.dart';
 import '../../features/splash/splash_view.dart';
 import '../../features/submission_detail/submission_detail_binding.dart';
 import '../../features/submission_detail/submission_detail_view.dart';
-import '../../features/submissions/submissions_binding.dart';
-import '../../features/submissions/submissions_view.dart';
 import '../../features/verification/verification_binding.dart';
 import '../../features/verification/verification_view.dart';
 import 'app_routes.dart';
@@ -97,18 +92,13 @@ class AppPages {
       EnterpriseCreatedBinding(),
       AppTransitionKind.enter,
     ),
-    _page(
-      AppRoutes.chats,
-      () => const ChatsView(),
-      ChatsBinding(),
-      AppTransitionKind.enter,
-    ),
-    _page(
-      AppRoutes.aiAgents,
-      () => const AiAgentsView(),
-      AiAgentsBinding(),
-      AppTransitionKind.tab,
-    ),
+    for (final route in HomeShellController.tabRoutes)
+      _page(
+        route,
+        () => const HomeShellView(),
+        HomeShellBinding(),
+        AppTransitionKind.enter,
+      ),
     _page(
       AppRoutes.conversation,
       () => const ConversationView(),
@@ -116,22 +106,10 @@ class AppPages {
       AppTransitionKind.push,
     ),
     _page(
-      AppRoutes.submissions,
-      () => const SubmissionsView(),
-      SubmissionsBinding(),
-      AppTransitionKind.tab,
-    ),
-    _page(
       AppRoutes.submissionDetail,
       () => const SubmissionDetailView(),
       SubmissionDetailBinding(),
       AppTransitionKind.push,
-    ),
-    _page(
-      AppRoutes.profile,
-      () => const ProfileView(),
-      ProfileBinding(),
-      AppTransitionKind.tab,
     ),
     _page(
       AppRoutes.notifications,

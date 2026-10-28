@@ -6,6 +6,9 @@ import 'package:get/get.dart';
 
 import '../../data/api/api_client.dart';
 import '../../data/db/app_database.dart';
+import '../../data/models/ids.dart';
+import '../../data/redact.dart';
+import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
@@ -18,6 +21,7 @@ class DebugSocketController extends GetxController {
     required this.connectivity,
     required this.session,
     required this.messages,
+    required this.conversationRepository,
     required this.submissions,
     required AppDatabase db,
   }) : _db = db;
@@ -26,6 +30,7 @@ class DebugSocketController extends GetxController {
   final ConnectivityService connectivity;
   final SessionRepository session;
   final MessageRepository messages;
+  final ConversationRepository conversationRepository;
   final SubmissionRepository submissions;
   final AppDatabase _db;
 
@@ -36,17 +41,25 @@ class DebugSocketController extends GetxController {
   final enterpriseId = TextEditingController();
   final convId = TextEditingController(text: 'dm:');
   final messageText = TextEditingController(text: 'test message');
+  final sdAction = TextEditingController(text: 'users.search');
+  final sdArgs = TextEditingController(text: '{"q":""}');
   final formName = TextEditingController();
   final formValues = TextEditingController(text: '{}');
 
   final notes = <String>[].obs;
   final outbox = ''.obs;
+  final lastCid = '-'.obs;
+  final recent = ''.obs;
   Timer? _timer;
+  StreamSubscription<Map<String, dynamic>>? _acks;
+  String? _cidConv;
+  String? _cidText;
 
   @override
   void onInit() {
     super.onInit();
     _refreshOutbox();
+    _acks = socket.events.listen(_noteAck);
     _timer = Timer.periodic(
       const Duration(seconds: 2),
       (_) => _refreshOutbox(),
@@ -103,6 +116,87 @@ class DebugSocketController extends GetxController {
     await _refreshOutbox();
   }
 
+  void _noteAck(Map<String, dynamic> e) {
+    final type = idText(e['type']);
+    if (e['cid'] != null && type.endsWith('ack')) {
+      _note(
+        '$type cid=${e['cid']} id=${e['id']} duplicate=${e['duplicate'] == true}',
+      );
+    } else if (type == 'error' && e['code'] != null) {
+      _note('error code=${e['code']}');
+    }
+  }
+
+  Future<void> sendWithCid() async {
+    _cidConv = convId.text.trim();
+    _cidText = messageText.text;
+    lastCid.value = newCid();
+    await _sendCid();
+  }
+
+  Future<void> sendSameCidAgain() async {
+    if (_cidConv == null) {
+      _note('send with a cid first');
+      return;
+    }
+    await _sendCid();
+  }
+
+  Future<void> _sendCid() async {
+    final command = MessageRepository.cidCommand(
+      _cidConv!,
+      _cidText!,
+      lastCid.value,
+    );
+    if (command == null) {
+      _note('a client id works for dm:, group: and host: only');
+      return;
+    }
+    final sent = await socket.sendCommand(command);
+    _note('sent $_cidConv cid=${lastCid.value}${sent ? '' : ' (offline)'}');
+  }
+
+  Future<void> loadOlder(String conv) async {
+    final page = await messages.loadOlder(conv);
+    if (page == null) {
+      _note('older $conv: no answer (offline or nothing stored)');
+      return;
+    }
+    _note(
+      'older $conv: ${page.count} messages, hasMore=${page.hasMore}, next=${page.next}',
+    );
+  }
+
+  Future<void> showMessages() async {
+    final rows = await _db.query(
+      'SELECT msg_id, cid, status, is_encrypted_unsupported AS e2e, text FROM messages '
+      'WHERE org_id = ? AND user_id = ? AND conv_id = ? ORDER BY ts DESC, local_seq DESC LIMIT 8',
+      [session.store.orgId, session.store.userId, convId.text.trim()],
+    );
+    recent.value = rows.isEmpty
+        ? 'no stored messages'
+        : rows
+              .map(
+                (r) =>
+                    '${r['msg_id']}  ${r['status']}  cid=${r['cid'] ?? '-'}  e2e=${intOf(r['e2e']) == 1}  ${idText(r['text']).length}ch',
+              )
+              .join('\n');
+  }
+
+  /// Runs one `/sd` action and notes the answer as redacted JSON (long text
+  /// is cut). For checking a response shape against the real server.
+  Future<void> runSd() async {
+    try {
+      final args = (jsonDecode(sdArgs.text) as Map).cast<String, dynamic>();
+      final data = await socket.sdCall(sdAction.text.trim(), args);
+      _note('${sdAction.text.trim()}: ${jsonEncode(Redact.value(data))}');
+    } on SocketCallError catch (e) {
+      _note('${sdAction.text.trim()} failed: ${e.code} ${e.message}');
+    } on FormatException catch (_) {
+      _note('args must be a JSON object');
+    }
+  }
+
   Future<void> syncNow() async {
     _note('sync started');
     await messages.syncNow();
@@ -127,6 +221,7 @@ class DebugSocketController extends GetxController {
   @override
   void onClose() {
     _timer?.cancel();
+    _acks?.cancel();
     for (final c in [
       orgId,
       username,
@@ -137,6 +232,8 @@ class DebugSocketController extends GetxController {
       messageText,
       formName,
       formValues,
+      sdAction,
+      sdArgs,
     ]) {
       c.dispose();
     }

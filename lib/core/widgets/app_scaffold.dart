@@ -18,6 +18,7 @@ class AppScaffold extends StatelessWidget {
     this.showOfflineBar = false,
     this.isScrollable = true,
     this.ambient,
+    this.hasOuterBottomBar = false,
   });
 
   final Widget body;
@@ -34,6 +35,10 @@ class AppScaffold extends StatelessWidget {
 
   /// Paints the ambient backdrop behind the content when set.
   final AppAmbientVariant? ambient;
+
+  /// True when a parent (the tab shell) draws the bottom bar and already
+  /// keeps the content clear of the system inset.
+  final bool hasOuterBottomBar;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +69,7 @@ class AppScaffold extends StatelessWidget {
               children: [
                 Expanded(
                   child: SafeArea(
-                    bottom: bottomBar == null,
+                    bottom: bottomBar == null && !hasOuterBottomBar,
                     child: Column(
                       children: [
                         if (showOfflineBar) const AppOfflineBar(),

@@ -15,10 +15,24 @@ import 'encryption_policy.dart';
 enum SendResult { queued, blockedEncrypted, tooLong, invalid, noSession }
 
 class _History {
-  const _History(this.items, this.unknown);
+  const _History(this.items, this.unknown, {this.hasMore = false, this.next});
 
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> unknown;
+  final bool hasMore;
+  final String? next;
+}
+
+class OlderPage {
+  const OlderPage({
+    required this.count,
+    required this.hasMore,
+    required this.next,
+  });
+
+  final int count;
+  final bool hasMore;
+  final String? next;
 }
 
 class MessageRepository extends GetxService {
@@ -33,7 +47,9 @@ class MessageRepository extends GetxService {
   static const _ackTimeout = Duration(seconds: 15);
   static const _maxAttempts = 5;
   static const _historyPage = 50;
-  static const couldNotConfirm = "couldn't confirm delivery";
+  static const _maxGapPages = 10;
+  static const _cidMemory = Duration(hours: 23);
+  static const couldNotConfirm = AppDatabase.couldNotConfirm;
 
   final AppDatabase _db;
   final SessionStore _session;
@@ -43,11 +59,12 @@ class MessageRepository extends GetxService {
 
   final _lists = <String, RxList<Message>>{};
   final _historyWaiters = <String, Completer<_History>>{};
-  Future<void> _queue = Future.value();
-  OutboxEntry? _inFlight;
-  Timer? _ackTimer;
+  final _inFlight = <int, OutboxEntry>{};
+  final _ackTimers = <int, Timer>{};
   Timer? _wakeTimer;
+  Future<void> _queue = Future.value();
   bool _isFlushing = false;
+  bool _wantsFlush = false;
   bool _isSyncing = false;
   int _lastTemp = 0;
   String? _openConversation;
@@ -84,9 +101,6 @@ class MessageRepository extends GetxService {
     if (convId != null) _conversations.markRead(convId);
   }
 
-  bool isEncryptedForSending(String convId, {required bool hasE2eHistory}) =>
-      _policy.cached(convId, hasE2eHistory) == EncryptionVerdict.encrypted;
-
   Future<void> _reload(String convId) async {
     final org = _org;
     final user = _me;
@@ -110,12 +124,18 @@ class MessageRepository extends GetxService {
     return 'temp-$_lastTemp';
   }
 
-  Future<bool> _hasE2eHistory(String convId) async {
+  Future<ThreadFacts> _facts(String convId) async {
     final rows = await _db.query(
-      'SELECT is_encrypted FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      'SELECT is_encrypted, (SELECT COUNT(*) FROM messages m WHERE m.org_id = c.org_id AND m.user_id = c.user_id '
+      "AND m.conv_id = c.conv_id AND m.msg_id NOT LIKE 'temp-%') AS n "
+      'FROM conversations c WHERE c.org_id = ? AND c.user_id = ? AND c.conv_id = ?',
       [_org, _me, convId],
     );
-    return rows.isNotEmpty && intOf(rows.first['is_encrypted']) == 1;
+    if (rows.isEmpty) return const ThreadFacts(isE2e: false, hasHistory: false);
+    return ThreadFacts(
+      isE2e: intOf(rows.first['is_encrypted']) == 1,
+      hasHistory: intOf(rows.first['n']) > 0,
+    );
   }
 
   // ---- composing ----------------------------------------------------------
@@ -135,22 +155,23 @@ class MessageRepository extends GetxService {
     if (replyTo != null && replyTo.startsWith('temp-')) {
       return SendResult.invalid;
     }
-    if (_policy.cached(convId, await _hasE2eHistory(convId)) ==
+    if (_policy.cached(convId, await _facts(convId)) ==
         EncryptionVerdict.encrypted) {
       return SendResult.blockedEncrypted;
     }
     final tempId = _tempId();
+    final cid = newCid();
     final now = DateTime.now().millisecondsSinceEpoch;
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
       await sql.insert(
-        'INSERT INTO messages(org_id, user_id, msg_id, conv_id, sender, is_mine, kind, text, ts, reply_to, status, local_seq) '
-        "VALUES(?,?,?,?,?,1,'chat',?,?,?,'pending',?)",
-        [org, user, tempId, convId, user, body, now, replyTo, now],
+        'INSERT INTO messages(org_id, user_id, msg_id, conv_id, sender, is_mine, kind, text, ts, reply_to, status, local_seq, cid) '
+        "VALUES(?,?,?,?,?,1,'chat',?,?,?,'pending',?,?)",
+        [org, user, tempId, convId, user, body, now, replyTo, now, cid],
       );
       await sql.insert(
-        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts) '
-        "VALUES(?,?,?,?,?,?,'pending',?)",
+        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts, cid) '
+        "VALUES(?,?,?,?,?,?,'pending',?,?)",
         [
           org,
           user,
@@ -159,6 +180,7 @@ class MessageRepository extends GetxService {
           jsonEncode({'text': body, 'replyTo': replyTo}),
           tempId,
           now,
+          cid,
         ],
       );
       await sql.update(
@@ -236,7 +258,7 @@ class MessageRepository extends GetxService {
     if (org == null || user == null) return;
     await _db.transaction((sql) async {
       await sql.update(
-        "UPDATE outbox SET status = 'pending', retry_count = 0, next_attempt_ts = 0, last_error = NULL "
+        "UPDATE outbox SET status = 'pending', retry_count = 0, next_attempt_ts = 0, last_error = NULL, first_attempt_ts = NULL "
         "WHERE org_id = ? AND user_id = ? AND ref_id = ? AND status = 'failed'",
         [org, user, msgId],
       );
@@ -258,42 +280,48 @@ class MessageRepository extends GetxService {
 
   // ---- outbox flusher -----------------------------------------------------
 
-  /// One chat message is in flight at a time, in outbox order, so an ack can
-  /// only belong to that message and order survives retries.
+  /// One chat command is in flight per conversation, in outbox order across
+  /// conversations. An ack names its message by cid, so a resend after a
+  /// drop reuses the cid and the server answers the first ack again.
   Future<void> flush() async {
-    if (_isFlushing) return;
+    if (_isFlushing) {
+      _wantsFlush = true;
+      return;
+    }
     _isFlushing = true;
     try {
-      while (_socket.isOnline && _session.hasSession) {
-        if (await _countSending() > 0) return;
-        final entry = await _nextPending();
-        if (entry == null) {
-          await _scheduleWake();
-          return;
-        }
-        final outcome = await _send(entry);
-        if (outcome == _Outcome.inFlight || outcome == _Outcome.deferred) {
-          return;
-        }
-      }
+      do {
+        _wantsFlush = false;
+        await _flushPass();
+      } while (_wantsFlush);
     } finally {
       _isFlushing = false;
     }
   }
 
-  Future<int> _countSending() async {
-    final rows = await _db.query(
-      "SELECT COUNT(*) AS n FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'sending' AND kind IN ('message','reply','edit')",
-      [_org, _me],
-    );
-    return intOf(rows.first['n']);
+  Future<void> _flushPass() async {
+    while (_socket.isOnline && _session.hasSession) {
+      final entry = await _nextPending();
+      if (entry == null) {
+        await _scheduleWake();
+        return;
+      }
+      if (await _send(entry) == _Outcome.stopped) return;
+    }
   }
 
+  /// The oldest due entry whose conversation has nothing in flight and no
+  /// earlier entry waiting out a delay.
   Future<OutboxEntry?> _nextPending() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     final rows = await _db.query(
-      "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'pending' "
-      "AND kind IN ('message','reply','edit') AND next_attempt_ts <= ? ORDER BY id LIMIT 1",
-      [_org, _me, DateTime.now().millisecondsSinceEpoch],
+      "SELECT o.* FROM outbox o WHERE o.org_id = ? AND o.user_id = ? AND o.status = 'pending' "
+      "AND o.kind IN ('message','reply','edit') AND o.next_attempt_ts <= ? "
+      'AND NOT EXISTS (SELECT 1 FROM outbox p WHERE p.org_id = o.org_id AND p.user_id = o.user_id '
+      "AND p.conv_id = o.conv_id AND p.kind IN ('message','reply','edit') "
+      "AND (p.status = 'sending' OR (p.status = 'pending' AND p.id < o.id AND p.next_attempt_ts > ?))) "
+      'ORDER BY o.id LIMIT 1',
+      [_org, _me, now, now],
     );
     return rows.isEmpty ? null : OutboxEntry.fromRow(rows.first);
   }
@@ -311,14 +339,25 @@ class MessageRepository extends GetxService {
     _wakeTimer = Timer(Duration(milliseconds: wait + 50), flush);
   }
 
+  /// The server remembers a client id for a day. An entry first sent more
+  /// than 23 hours ago may no longer be protected against a double send.
+  bool _isPastCidMemory(OutboxEntry e) =>
+      e.firstAttemptTs != null &&
+      DateTime.now().millisecondsSinceEpoch - e.firstAttemptTs! >
+          _cidMemory.inMilliseconds;
+
   Future<_Outcome> _send(OutboxEntry entry) async {
     if (entry.retryCount >= _maxAttempts) {
       await _fail(entry, 'too many attempts');
       return _Outcome.finished;
     }
+    if (entry.usesCid && _isPastCidMemory(entry)) {
+      await _fail(entry, couldNotConfirm);
+      return _Outcome.finished;
+    }
     final verdict = await _policy.verdict(
       entry.convId,
-      await _hasE2eHistory(entry.convId),
+      await _facts(entry.convId),
     );
     if (verdict == EncryptionVerdict.encrypted) {
       await _fail(entry, 'encrypted chat');
@@ -328,16 +367,18 @@ class MessageRepository extends GetxService {
       await _defer(entry, const Duration(seconds: 15));
       return _Outcome.deferred;
     }
-    final command = _commandFor(entry);
+    final command = wireCommand(entry);
     if (command == null) {
       await _fail(entry, 'unsupported in this conversation');
       return _Outcome.finished;
     }
     final cursor = await _cursor(entry.convId);
+    final now = DateTime.now().millisecondsSinceEpoch;
     await _db.transaction((sql) async {
       await sql.update(
-        "UPDATE outbox SET status = 'sending', attempt_ts = ?, retry_count = retry_count + 1, cursor_at_send = ? WHERE id = ?",
-        [DateTime.now().millisecondsSinceEpoch, cursor, entry.id],
+        "UPDATE outbox SET status = 'sending', attempt_ts = ?, first_attempt_ts = COALESCE(first_attempt_ts, ?), "
+        'retry_count = retry_count + 1, cursor_at_send = ? WHERE id = ?',
+        [now, now, cursor, entry.id],
       );
       if (entry.kind != 'edit') {
         await sql.update(
@@ -346,7 +387,7 @@ class MessageRepository extends GetxService {
         );
       }
     });
-    _inFlight = OutboxEntry(
+    _inFlight[entry.id] = OutboxEntry(
       id: entry.id,
       convId: entry.convId,
       kind: entry.kind,
@@ -357,21 +398,44 @@ class MessageRepository extends GetxService {
       nextAttemptTs: entry.nextAttemptTs,
       createdTs: entry.createdTs,
       cursorAtSend: cursor,
-      attemptTs: DateTime.now().millisecondsSinceEpoch,
+      attemptTs: now,
+      cid: entry.cid,
+      firstAttemptTs: entry.firstAttemptTs ?? now,
     );
     final sent = await _socket.sendCommand(command);
     if (!sent) {
-      await _backToPending(_inFlight!, countAttempt: false);
-      _inFlight = null;
-      return _Outcome.deferred;
+      _inFlight.remove(entry.id);
+      await _backToPending(entry, countAttempt: false);
+      return _Outcome.stopped;
     }
-    _ackTimer?.cancel();
-    _ackTimer = Timer(_ackTimeout, _onAckTimeout);
+    _ackTimers[entry.id]?.cancel();
+    _ackTimers[entry.id] = Timer(_ackTimeout, () => _onAckTimeout(entry.id));
     await _reload(entry.convId);
     return _Outcome.inFlight;
   }
 
-  String? _commandFor(OutboxEntry e) {
+  /// The line put on the socket. A send to a DM, group or host goes inside
+  /// `/c <cid> ...`; the global room cannot take a client id.
+  static String? wireCommand(OutboxEntry e) {
+    final command = _commandFor(e);
+    if (command == null) return null;
+    return e.usesCid ? '/c ${e.cid} $command' : command;
+  }
+
+  /// The same line for a debug send, without an outbox entry.
+  static String? cidCommand(String convId, String text, String cid) {
+    final kind = ConversationRepository.kindOf(convId);
+    if (kind != 'dm' && kind != 'group' && kind != 'host') return null;
+    final target = ConversationRepository.targetOf(convId);
+    final command = switch (kind) {
+      'dm' => '/msg $target $text',
+      'group' => '/groupmsg $target $text',
+      _ => '/hostmsg $target $text',
+    };
+    return '/c $cid $command';
+  }
+
+  static String? _commandFor(OutboxEntry e) {
     final text = '${e.payload['text']}';
     final reply = e.payload['replyTo'] as String?;
     final kind = ConversationRepository.kindOf(e.convId);
@@ -433,11 +497,13 @@ class MessageRepository extends GetxService {
     await _reload(e.convId);
   }
 
+  void _settle(int outboxId) {
+    _inFlight.remove(outboxId);
+    _ackTimers.remove(outboxId)?.cancel();
+  }
+
   Future<void> _fail(OutboxEntry e, String reason) async {
-    if (_inFlight?.id == e.id) {
-      _inFlight = null;
-      _ackTimer?.cancel();
-    }
+    _settle(e.id);
     await _db.transaction((sql) async {
       await sql.update(
         "UPDATE outbox SET status = 'failed', last_error = ? WHERE id = ?",
@@ -460,21 +526,25 @@ class MessageRepository extends GetxService {
   }
 
   void _onDropped() {
-    _ackTimer?.cancel();
-    _inFlight = null;
+    for (final timer in _ackTimers.values) {
+      timer.cancel();
+    }
+    _ackTimers.clear();
+    _inFlight.clear();
     for (final waiter in _historyWaiters.values) {
       if (!waiter.isCompleted) waiter.completeError(StateError('dropped'));
     }
   }
 
-  Future<void> _onAckTimeout() async {
-    final entry = _inFlight;
+  Future<void> _onAckTimeout(int outboxId) async {
+    final entry = _inFlight[outboxId];
     if (entry == null || !_socket.isOnline) return;
-    await _reconcile(entry);
+    _settle(outboxId);
+    await _recover(entry, countAttempt: true);
     unawaited(flush());
   }
 
-  // ---- reconnect and reconcile --------------------------------------------
+  // ---- reconnect and recovery ---------------------------------------------
 
   Future<void> _onOnline() async {
     _policy.onReconnected();
@@ -486,8 +556,9 @@ class MessageRepository extends GetxService {
         [_org, _me],
       );
       for (final row in stale) {
-        await _reconcile(OutboxEntry.fromRow(row));
+        await _recover(OutboxEntry.fromRow(row), countAttempt: false);
       }
+      await flush();
       await _syncAll();
       await flush();
     } finally {
@@ -496,6 +567,23 @@ class MessageRepository extends GetxService {
   }
 
   Future<void> syncNow() => _onOnline();
+
+  /// An entry that was sent and never acked. A send with a client id is simply
+  /// sent again under the same id (the server answers the first ack again),
+  /// unless the server's one-day memory of the id may have expired. A global
+  /// message cannot carry an id and is checked against history first.
+  Future<void> _recover(OutboxEntry entry, {required bool countAttempt}) async {
+    _settle(entry.id);
+    if (entry.kind == 'edit') {
+      await _backToPending(entry, countAttempt: countAttempt);
+    } else if (!entry.usesCid) {
+      await _reconcileByText(entry);
+    } else if (_isPastCidMemory(entry)) {
+      await _fail(entry, couldNotConfirm);
+    } else {
+      await _backToPending(entry, countAttempt: countAttempt);
+    }
+  }
 
   Future<void> _syncAll() async {
     final org = _org;
@@ -511,13 +599,42 @@ class MessageRepository extends GetxService {
     );
     for (final row in rows) {
       if (!_socket.isOnline) return;
-      await _fetchHistory(idText(row['conv_id']));
+      await _syncConversation(idText(row['conv_id']));
     }
     await _conversations.reload();
   }
 
-  Future<_History?> _fetchHistory(String convId) async {
-    final existing = _historyWaiters[convId];
+  /// Fetches the latest page. When my last known server id is not in it,
+  /// pages backwards with `before` until it is, the history ends, or the cap
+  /// of pages is reached (then the conversation is flagged as having a gap).
+  /// The id is looked for in the page; ids are never compared as numbers.
+  Future<void> _syncConversation(String convId) async {
+    final lastKnown = await _cursor(convId);
+    final latest = await _fetchHistory(convId);
+    if (latest == null || lastKnown == null || latest.items.isEmpty) return;
+    if (_holds(latest, lastKnown)) return;
+    var before = idText(latest.items.first['id']);
+    for (var page = 0; page < _maxGapPages; page++) {
+      if (!_socket.isOnline) break;
+      final older = await _fetchHistory(convId, before: before);
+      if (older == null) break;
+      if (_holds(older, lastKnown) || !older.hasMore || older.next == null) {
+        return;
+      }
+      before = older.next!;
+    }
+    await _db.update(
+      'UPDATE sync_cursor SET gap_to = COALESCE(gap_to, ?) WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [lastKnown, _org, _me, convId],
+    );
+  }
+
+  bool _holds(_History page, String id) =>
+      page.items.any((i) => idText(i['id']) == id);
+
+  Future<_History?> _fetchHistory(String convId, {String? before}) async {
+    final key = before == null ? convId : 'older:$convId';
+    final existing = _historyWaiters[key];
     if (existing != null) {
       return existing.future
           .then<_History?>((h) => h)
@@ -526,23 +643,81 @@ class MessageRepository extends GetxService {
     final kind = ConversationRepository.kindOf(convId);
     final target = ConversationRepository.targetOf(convId);
     final waiter = Completer<_History>();
-    _historyWaiters[convId] = waiter;
+    _historyWaiters[key] = waiter;
     try {
+      final scope = kind == 'global' ? 'global' : '$kind $target';
       final sent = await _socket.sendCommand(
-        kind == 'global' ? '/history global' : '/history $kind $target',
+        before == null ? '/history $scope' : '/history $scope before $before',
       );
       if (!sent) return null;
       return await waiter.future.timeout(const Duration(seconds: 10));
     } catch (_) {
       return null;
     } finally {
-      _historyWaiters.remove(convId);
+      _historyWaiters.remove(key);
     }
   }
 
-  /// Duplicate protection for the single in-flight message. The protocol has
-  /// no client id, so after a drop or an ack timeout the history is fetched
-  /// and searched before anything is re-sent.
+  /// Loads the page of messages older than the oldest one held (or than the
+  /// `next` the server gave last time, which also moves past a page that
+  /// showed nothing). Null when offline, nothing is stored yet, or no answer.
+  Future<OlderPage?> loadOlder(String convId) async {
+    if (_org == null || _me == null || !_socket.isOnline) return null;
+    final before = await _olderBoundary(convId);
+    if (before == null) return null;
+    final page = await _fetchHistory(convId, before: before);
+    if (page == null) return null;
+    final gap = await _db.query(
+      'SELECT gap_to FROM sync_cursor WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    final gapTo = gap.isEmpty ? null : gap.first['gap_to'] as String?;
+    if (gapTo != null && (_holds(page, gapTo) || !page.hasMore)) {
+      await _db.update(
+        'UPDATE sync_cursor SET gap_to = NULL WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+        [_org, _me, convId],
+      );
+    }
+    return OlderPage(
+      count: page.items.length,
+      hasMore: page.hasMore,
+      next: page.next,
+    );
+  }
+
+  Future<String?> _olderBoundary(String convId) async {
+    final saved = await _db.query(
+      'SELECT next_id FROM sync_cursor WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    final next = saved.isEmpty ? null : saved.first['next_id'] as String?;
+    if (next != null && next.isNotEmpty) return next;
+    final oldest = await _db.query(
+      'SELECT msg_id FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? '
+      "AND msg_id NOT LIKE 'temp-%' ORDER BY ts, LENGTH(msg_id), msg_id LIMIT 1",
+      [_org, _me, convId],
+    );
+    return oldest.isEmpty ? null : idText(oldest.first['msg_id']);
+  }
+
+  /// Whether older messages are known to exist (`hasMore`), and whether a gap
+  /// after a reconnect is still open.
+  Future<({bool? hasMore, bool hasGap})> olderState(String convId) async {
+    final rows = await _db.query(
+      'SELECT has_more, gap_to FROM sync_cursor WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    if (rows.isEmpty) return (hasMore: null, hasGap: false);
+    final more = rows.first['has_more'];
+    return (
+      hasMore: more == null ? null : intOf(more) == 1,
+      hasGap: rows.first['gap_to'] != null,
+    );
+  }
+
+  /// Duplicate protection for a global-room message, which cannot carry a
+  /// client id: after a drop or an ack timeout the history is fetched and
+  /// searched before anything is re-sent.
   ///
   /// Match: a message in the fetched history that is from me, kind `chat`,
   /// has exactly the same text (and replyTo), has a server id above
@@ -551,15 +726,8 @@ class MessageRepository extends GetxService {
   /// history clearly reaches back past the cursor (fewer than 50 items, so it
   /// is the whole thread, or it holds an id <= the cursor). Otherwise, or if
   /// the history cannot be fetched while online, the message is failed with
-  /// "couldn't confirm delivery" and never auto-resent. Edits are idempotent
-  /// and are simply re-queued.
-  Future<void> _reconcile(OutboxEntry entry) async {
-    _ackTimer?.cancel();
-    if (entry.kind == 'edit') {
-      _inFlight = null;
-      await _backToPending(entry, countAttempt: true);
-      return;
-    }
+  /// "couldn't confirm delivery" and never auto-resent.
+  Future<void> _reconcileByText(OutboxEntry entry) async {
     final history = await _fetchHistory(entry.convId);
     if (history == null) {
       if (!_socket.isOnline) return;
@@ -594,7 +762,6 @@ class MessageRepository extends GetxService {
               (history.items.length < _historyPage ||
                   ids.any((id) => id <= cursor));
     if (reachesBack) {
-      _inFlight = null;
       await _backToPending(entry);
     } else {
       await _fail(entry, couldNotConfirm);
@@ -655,15 +822,42 @@ class MessageRepository extends GetxService {
     }
   }
 
+  /// An ack with a `cid` is matched to its outbox row by that id, whether the
+  /// ack is the first or a repeated one (`duplicate: true`): both swap the
+  /// temp id for the server id and neither creates a second row. An ack
+  /// without a cid can only be the global room's.
   Future<void> _ack(
     String convId,
     Map<String, dynamic> e, {
     bool delivered = false,
   }) async {
-    final entry = _inFlight;
-    if (entry == null || entry.kind == 'edit') return;
-    if (entry.convId.toLowerCase() != convId.toLowerCase()) return;
-    await _adopt(entry, idText(e['id']), intOf(e['ts']), delivered: delivered);
+    final cid = e['cid'];
+    OutboxEntry? entry;
+    if (cid is String && cid.isNotEmpty) {
+      final rows = await _db.query(
+        'SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND cid = ? '
+        "AND kind IN ('message','reply') AND status IN ('sending','pending') ORDER BY id LIMIT 1",
+        [_org, _me, cid],
+      );
+      if (rows.isNotEmpty) entry = OutboxEntry.fromRow(rows.first);
+    } else {
+      for (final inFlight in _inFlight.values) {
+        if (inFlight.isSend &&
+            !inFlight.usesCid &&
+            inFlight.convId.toLowerCase() == convId.toLowerCase()) {
+          entry = inFlight;
+          break;
+        }
+      }
+    }
+    if (entry == null) return;
+    await _adopt(
+      entry,
+      idText(e['id']),
+      intOf(e['ts']),
+      delivered: delivered,
+      moveCursor: e['duplicate'] != true,
+    );
     unawaited(flush());
   }
 
@@ -672,9 +866,9 @@ class MessageRepository extends GetxService {
     String serverId,
     int ts, {
     bool delivered = false,
+    bool moveCursor = true,
   }) async {
-    _ackTimer?.cancel();
-    if (_inFlight?.id == entry.id) _inFlight = null;
+    _settle(entry.id);
     final status = delivered && entry.convId.startsWith('dm:')
         ? MessageStatus.delivered.name
         : MessageStatus.sent.name;
@@ -689,8 +883,8 @@ class MessageRepository extends GetxService {
           [_org, _me, entry.refId],
         );
         await sql.update(
-          "UPDATE messages SET is_mine = 1, status = CASE WHEN status IN ('delivered','read') THEN status ELSE ? END WHERE org_id = ? AND user_id = ? AND msg_id = ?",
-          [status, _org, _me, serverId],
+          "UPDATE messages SET is_mine = 1, cid = COALESCE(cid, ?), status = CASE WHEN status IN ('delivered','read') THEN status ELSE ? END WHERE org_id = ? AND user_id = ? AND msg_id = ?",
+          [entry.cid, status, _org, _me, serverId],
         );
       } else {
         await sql.update(
@@ -700,49 +894,58 @@ class MessageRepository extends GetxService {
         );
       }
       await sql.update('DELETE FROM outbox WHERE id = ?', [entry.id]);
-      await _bumpCursor(sql, entry.convId, serverId);
+      if (moveCursor) await _setCursor(sql, entry.convId, serverId);
     });
     await _reload(entry.convId);
     await _conversations.reload();
   }
 
-  Future<void> _bumpCursor(
+  /// The newest server id seen for the conversation, taken in arrival order
+  /// (never by comparing ids), plus the server time of the last history.
+  Future<void> _setCursor(
     Sql sql,
     String convId,
-    String serverId, {
+    String? serverId, {
     int? now,
   }) async {
-    final next = idNumber(serverId);
+    final id = serverId == null || serverId.isEmpty ? null : serverId;
+    final stamp = DateTime.now().millisecondsSinceEpoch;
     final rows = await sql.query(
-      'SELECT last_server_id FROM sync_cursor WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      'SELECT 1 FROM sync_cursor WHERE org_id = ? AND user_id = ? AND conv_id = ?',
       [_org, _me, convId],
     );
-    final current = rows.isEmpty
-        ? null
-        : idNumber(rows.first['last_server_id']);
-    final keep = next == null || (current != null && current >= next)
-        ? current?.toString()
-        : serverId;
     if (rows.isEmpty) {
       await sql.insert(
         'INSERT INTO sync_cursor(org_id, user_id, conv_id, last_server_id, last_history_now, synced_ts) VALUES(?,?,?,?,?,?)',
-        [_org, _me, convId, keep, now, DateTime.now().millisecondsSinceEpoch],
+        [_org, _me, convId, id, now, stamp],
       );
     } else {
       await sql.update(
-        'UPDATE sync_cursor SET last_server_id = ?, last_history_now = COALESCE(?, last_history_now), synced_ts = ? '
+        'UPDATE sync_cursor SET last_server_id = COALESCE(?, last_server_id), last_history_now = COALESCE(?, last_history_now), synced_ts = ? '
         'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-        [keep, now, DateTime.now().millisecondsSinceEpoch, _org, _me, convId],
+        [id, now, stamp, _org, _me, convId],
       );
     }
   }
 
   Future<void> _onError(Map<String, dynamic> e) async {
-    final entry = _inFlight;
+    final code = idText(e['code']);
+    if (code == 'bad_cid' || code == 'cid_unsupported') {
+      final sends = _inFlight.values.where((i) => i.usesCid).toList();
+      if (sends.length == 1) {
+        await _fail(sends.first, 'client id refused: $code');
+      }
+      return;
+    }
     final conv = e['conv'];
-    if (entry == null || !entry.isChat || conv == null) return;
-    if (idText(conv).toLowerCase() != entry.convId.toLowerCase()) return;
-    await _fail(entry, idText(e['code'] ?? e['text']));
+    if (conv == null) return;
+    for (final entry in _inFlight.values.toList()) {
+      if (entry.isChat &&
+          entry.convId.toLowerCase() == idText(conv).toLowerCase()) {
+        await _fail(entry, idText(e['code'] ?? e['text']));
+        return;
+      }
+    }
   }
 
   Future<void> _onRead(String peer) async {
@@ -760,21 +963,23 @@ class MessageRepository extends GetxService {
       'UPDATE messages SET text = ?, edited_ts = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?',
       [idText(e['text']), intOf(e['editedTs']), _org, _me, id],
     );
-    final entry = _inFlight;
-    if (entry != null && entry.kind == 'edit' && entry.refId == id) {
-      _ackTimer?.cancel();
-      _inFlight = null;
-      await _db.update('DELETE FROM outbox WHERE id = ?', [entry.id]);
-      unawaited(flush());
+    for (final entry in _inFlight.values.toList()) {
+      if (entry.kind == 'edit' && entry.refId == id) {
+        _settle(entry.id);
+        await _db.update('DELETE FROM outbox WHERE id = ?', [entry.id]);
+        unawaited(flush());
+      }
     }
     await _reloadAll();
   }
 
   Future<void> _onEditDenied(Map<String, dynamic> e) async {
-    final entry = _inFlight;
-    if (entry == null || entry.kind != 'edit') return;
-    if (entry.refId != idText(e['messageId'])) return;
-    await _fail(entry, 'edit denied: ${idText(e['reason'])}');
+    for (final entry in _inFlight.values.toList()) {
+      if (entry.kind == 'edit' && entry.refId == idText(e['messageId'])) {
+        await _fail(entry, 'edit denied: ${idText(e['reason'])}');
+        return;
+      }
+    }
   }
 
   Future<void> _setDeleted(String id) async {
@@ -802,14 +1007,15 @@ class MessageRepository extends GetxService {
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
       final isNew = await _upsert(sql, convId, e);
-      final isMine = idText(e['from']).toLowerCase() == user.toLowerCase();
-      if (isNew && !isMine && _openConversation != convId) {
-        await sql.update(
-          'UPDATE conversations SET unread = unread + 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-          [org, user, convId],
-        );
-      }
-      await _bumpCursor(sql, convId, id);
+      await _noteIncoming(
+        sql,
+        convId,
+        id: id,
+        ts: intOf(e['ts']),
+        isNew: isNew,
+        isMine: idText(e['from']).toLowerCase() == user.toLowerCase(),
+      );
+      await _setCursor(sql, convId, id);
     });
     if (_openConversation == convId && convId.startsWith('dm:')) {
       unawaited(_socket.sendCommand('/read dm ${convId.substring(3)}'));
@@ -825,8 +1031,16 @@ class MessageRepository extends GetxService {
     if (org == null || user == null || convId.isEmpty) return;
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
-      await _upsert(sql, convId, data, kind: 'form');
-      await _bumpCursor(sql, convId, idText(data['id']));
+      final isNew = await _upsert(sql, convId, data, kind: 'form');
+      await _noteIncoming(
+        sql,
+        convId,
+        id: idText(data['id']),
+        ts: intOf(data['ts']),
+        isNew: isNew,
+        isMine: idText(data['from']).toLowerCase() == user.toLowerCase(),
+      );
+      await _setCursor(sql, convId, idText(data['id']));
     });
     await _reload(convId);
     await _conversations.reload();
@@ -845,53 +1059,167 @@ class MessageRepository extends GetxService {
       _ => '',
     };
     if (convId.isEmpty) return;
+    final isOlder = e['before'] != null;
+    final hasMore = e['hasMore'] == true;
+    final next = e['next'] == null ? null : idText(e['next']);
     final items = ((e['list'] as List?) ?? [])
         .cast<Map>()
         .map((m) => m.cast<String, dynamic>())
         .toList();
     final unknown = <Map<String, dynamic>>[];
+    final fresh = <int>[];
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
-      for (final item in items) {
+      for (var i = 0; i < items.length; i++) {
+        final item = items[i];
         final isNew = await _upsert(
           sql,
           convId,
           item,
           kind: idText(item['kind']).isEmpty ? 'chat' : idText(item['kind']),
+          isFromHistory: true,
         );
         if (isNew) unknown.add(item);
+        if (isNew && idText(item['from']).toLowerCase() != user.toLowerCase()) {
+          fresh.add(i);
+        }
       }
-      final ids = items.map((i) => idNumber(i['id'])).whereType<int>();
-      final newest = ids.isEmpty ? null : ids.reduce((a, b) => a > b ? a : b);
-      await _bumpCursor(
-        sql,
-        convId,
-        newest?.toString() ?? '',
-        now: intOf(e['now']),
-      );
+      if (isOlder) {
+        await _setCursor(sql, convId, null);
+        await sql.update(
+          'UPDATE sync_cursor SET has_more = ?, next_id = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+          [hasMore ? 1 : 0, next, org, user, convId],
+        );
+      } else {
+        await _countHistory(sql, convId, items, fresh);
+        await _setCursor(
+          sql,
+          convId,
+          items.isEmpty ? null : idText(items.last['id']),
+          now: intOf(e['now']),
+        );
+        await sql.update(
+          'UPDATE sync_cursor SET has_more = ?, next_id = ? '
+          'WHERE org_id = ? AND user_id = ? AND conv_id = ? AND has_more IS NULL',
+          [
+            items.length >= _historyPage ? 1 : 0,
+            items.isEmpty ? null : idText(items.first['id']),
+            org,
+            user,
+            convId,
+          ],
+        );
+      }
     });
     await _reload(convId);
     await _conversations.reload();
-    final waiter = _historyWaiters[convId];
+    final waiter = _historyWaiters[isOlder ? 'older:$convId' : convId];
     if (waiter != null && !waiter.isCompleted) {
-      waiter.complete(_History(items, unknown));
+      waiter.complete(_History(items, unknown, hasMore: hasMore, next: next));
     }
   }
 
+  // ---- unread ---------------------------------------------------------------
+  // Local only, not shared across devices. Unread = messages from others newer
+  // than this thread's "last opened" marker, judged by the server ts and the
+  // position in the thread, never by the phone's clock or by comparing ids.
+
+  Future<void> _setMarker(
+    Sql sql,
+    String convId,
+    int ts,
+    String id,
+  ) => sql.update(
+    'UPDATE conversations SET read_ts = ?, read_id = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+    [ts, id, _org, _me, convId],
+  );
+
+  /// A live message. While its thread is open it moves the marker; otherwise
+  /// it counts. A thread with no marker yet gets one just before this message.
+  Future<void> _noteIncoming(
+    Sql sql,
+    String convId, {
+    required String id,
+    required int ts,
+    required bool isNew,
+    required bool isMine,
+  }) async {
+    if (!isNew || isMine) return;
+    if (_openConversation == convId) {
+      await _setMarker(sql, convId, ts, id);
+      return;
+    }
+    final rows = await sql.query(
+      'SELECT read_ts FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    if (rows.isEmpty || rows.first['read_ts'] == null) {
+      await _setMarker(sql, convId, ts - 1, '');
+    }
+    await sql.update(
+      'UPDATE conversations SET unread = unread + 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+  }
+
+  /// The latest history page (oldest first). A thread's first sync counts 0
+  /// and sets the marker to its newest message. Later pages count the new
+  /// messages from others that come after the marker.
+  Future<void> _countHistory(
+    Sql sql,
+    String convId,
+    List<Map<String, dynamic>> items,
+    List<int> fresh,
+  ) async {
+    if (items.isEmpty) return;
+    final rows = await sql.query(
+      'SELECT read_ts, read_id FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    final readTs = rows.isEmpty || rows.first['read_ts'] == null
+        ? null
+        : intOf(rows.first['read_ts']);
+    final newest = items.last;
+    if (readTs == null) {
+      await _setMarker(sql, convId, intOf(newest['ts']), idText(newest['id']));
+      return;
+    }
+    final readId = idText(rows.first['read_id']);
+    final at = readId.isEmpty
+        ? -1
+        : items.indexWhere((i) => idText(i['id']) == readId);
+    final count = fresh
+        .where((i) => at >= 0 ? i > at : intOf(items[i]['ts']) > readTs)
+        .length;
+    if (count == 0) return;
+    if (_openConversation == convId) {
+      await _setMarker(sql, convId, intOf(newest['ts']), idText(newest['id']));
+      return;
+    }
+    await sql.update(
+      'UPDATE conversations SET unread = unread + ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [count, _org, _me, convId],
+    );
+  }
+
   /// Inserts or updates one server message. Returns true when the row is new.
-  /// Local status (delivered/read) of an existing row is kept.
+  /// Local status (delivered/read) of an existing row is kept. History and the
+  /// conversation list carry the server's `e2e` flag; live events do not, so
+  /// for those the server's own rule (an `e2e1:` envelope) is applied.
   Future<bool> _upsert(
     Sql sql,
     String convId,
     Map<String, dynamic> m, {
     String kind = 'chat',
+    bool isFromHistory = false,
   }) async {
     final org = _org!;
     final user = _me!;
     final id = idText(m['id']);
     final sender = idText(m['from']);
     final text = idText(m['text']);
-    final isEncrypted = text.startsWith('e2e1:');
+    final isEncrypted =
+        m['e2e'] == true || (!isFromHistory && text.startsWith('e2e1:'));
     final isMine = sender.toLowerCase() == user.toLowerCase();
     final form = m['form'];
     final exists = await sql.query(
@@ -951,4 +1279,4 @@ class MessageRepository extends GetxService {
   }
 }
 
-enum _Outcome { inFlight, finished, deferred }
+enum _Outcome { inFlight, finished, deferred, stopped }

@@ -21,6 +21,7 @@ class AppColors {
   static const surface = Color(0xFFFFFCFA);
   static const sage = Color(0xFFF1EFEC);
   static const bubbleIn = Color(0xFFF5F3F1);
+  static const searchFill = Color(0xFFF7F6F5);
   static const avatarBg = Color(0xFFF1EEEB);
   static const avatarText = Color(0xFF675E56);
 

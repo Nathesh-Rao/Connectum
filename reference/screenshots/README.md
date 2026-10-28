@@ -36,3 +36,13 @@ Sample text is placeholder data only (email alex@example.com, code 482916).
 - `30-submission-detail.png` - Submission detail. Source: src/screens/SubmissionDetail.tsx, src/components/SubmissionsLayout.tsx
 - `31-profile.png` - Profile tab. Source: src/screens/Profile.tsx
 - `32-sign-out-sheet.png` - Sign-out confirmation sheet. Source: src/components/Sheet.tsx ('Sign out')
+- `33-chats-filter-direct-teams.png` - Chats home with the 'Direct & Teams' filter selected. Source: src/screens/Chats.tsx, src/components/FilterChips.tsx
+- `34-chats-search-typed.png` - Chats: search focused with 'pri' typed, list filtered to matches. Source: src/screens/Chats.tsx
+- `35-chats-search-no-results.png` - Chats: search with no match ('No conversations found.') - the only empty state Chats has. Source: src/screens/Chats.tsx
+- `36-conversation-sent-form-card-expanded.png` - Conversation: the sent card expanded with 'Show less' (extra fields revealed). Source: src/components/FormCard.tsx
+- `37-summarise-full-answer.png` - Summarise panel at full height with a finished answer (Copy / Pin to chat actions). Source: src/components/conversation/SummaryPanel.tsx
+- `38-summarise-60-answer.png` - Summarise panel back at 60% with the answer. Source: src/components/conversation/SummaryPanel.tsx
+- `39-conversation-pinned-summary.png` - Conversation with a pinned summary card under the header (expanded). Source: src/components/conversation/PinnedSummary.tsx
+- `40-conversation-pinned-summary-collapsed.png` - Pinned summary folded to its title row. Source: src/components/conversation/PinnedSummary.tsx
+- `41-ai-model-sheet.png` - AI model picker sheet (Auto / Fast / Thinking). Source: src/components/sheets/AiSheets.tsx (AiModel)
+- `42-ai-history-sheet.png` - AI history sheet (search past chats, list). Source: src/components/sheets/AiSheets.tsx (AiHistory)

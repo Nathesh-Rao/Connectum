@@ -293,6 +293,11 @@ class AuthRepository extends GetxService {
       );
       _checkBlockers(data);
       final user = ((data['user'] as Map?) ?? {}).cast<String, dynamic>();
+      final current = _store.orgId;
+      if (current != null) {
+        // The server already ended the old token when it is the same enterprise.
+        await _session.leaveCurrent(endOnServer: current != enterprise);
+      }
       await _session.signIn(
         orgId: idText(data['enterprise'] ?? enterprise),
         userId: idText(user['username']),

@@ -295,7 +295,8 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (!wait.isNegative) await Future<void>.delayed(wait);
     final channel = _channel;
     if (!isOnline || channel == null) return false;
-    _log('-> ${line.split(' ').first}');
+    final words = line.split(' ');
+    _log('-> ${words.take(line.startsWith('/c ') ? 3 : 1).join(' ')}');
     channel.sink.add(line);
     return true;
   }

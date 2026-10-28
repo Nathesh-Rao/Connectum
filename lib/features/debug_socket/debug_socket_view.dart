@@ -101,6 +101,58 @@ class DebugSocketView extends GetView<DebugSocketController> {
           AppTextField(controller: c.messageText, label: 'Text'),
           const SizedBox(height: AppSpacing.xs),
           AppButton.secondary(label: 'Send', onPressed: c.sendTest),
+          _section('Send with a client id (dm:, group:, host:)'),
+          Obx(() => Text('cid: ${c.lastCid.value}', style: AppText.readable)),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Send with cid',
+                  onPressed: c.sendWithCid,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Same cid again',
+                  onPressed: c.sendSameCidAgain,
+                ),
+              ),
+            ],
+          ),
+          _section('Stored messages of the conversation above'),
+          AppButton.secondary(label: 'Show last 8', onPressed: c.showMessages),
+          const SizedBox(height: AppSpacing.xs),
+          Obx(() => Text(c.recent.value, style: AppText.caption)),
+          _section('Conversations (e2e flag, load older)'),
+          Obx(
+            () => Column(
+              children: [
+                for (final conv in c.conversationRepository.conversations)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${conv.convId}${conv.isEncrypted ? '  e2e' : ''}',
+                          style: AppText.readable,
+                        ),
+                      ),
+                      AppButton.text(
+                        label: 'Load older',
+                        onPressed: () => c.loadOlder(conv.convId),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          _section('Run an /sd action (read-only ones only)'),
+          AppTextField(controller: c.sdAction, label: 'Action'),
+          const SizedBox(height: AppSpacing.xs),
+          AppTextField(controller: c.sdArgs, label: 'Args (JSON)'),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(label: 'Run', onPressed: c.runSd),
           _section('Form meta test (creates a real submission)'),
           AppTextField(controller: c.formName, label: 'Form name'),
           const SizedBox(height: AppSpacing.xs),

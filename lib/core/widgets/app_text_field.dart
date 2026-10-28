@@ -39,6 +39,7 @@ class AppTextField extends StatefulWidget {
     this.borderColor = AppColors.inputBorder,
     this.borderRadius = AppRadius.controlAll,
     this.helperText,
+    this.fillColor = AppColors.background,
   });
 
   final TextEditingController? controller;
@@ -69,6 +70,7 @@ class AppTextField extends StatefulWidget {
   final Color borderColor;
   final BorderRadius borderRadius;
   final String? helperText;
+  final Color fillColor;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -108,7 +110,7 @@ class _AppTextFieldState extends State<AppTextField> {
             curve: AppCurves.out,
             constraints: BoxConstraints(minHeight: widget.minHeight),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: widget.fillColor,
               borderRadius: widget.borderRadius,
               border: Border.all(color: borderColor),
               boxShadow: _isFocused && !_hasError ? AppShadows.focusRing : null,

@@ -19,6 +19,8 @@ class AppRoutes {
   static const galleryAuth = '/gallery/auth';
   static const debugSocket = '/debug/socket';
 
-  static String conversationOf(String id) => '/conversation/$id';
+  /// A conversation id holds `:` and a group name may hold spaces or `/`.
+  static String conversationOf(String id) =>
+      '/conversation/${Uri.encodeComponent(id)}';
   static String submissionDetailOf(String id) => '/submissions/$id';
 }

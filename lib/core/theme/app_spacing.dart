@@ -45,4 +45,17 @@ class AppSpacing {
   static const double verifyLogoWidth = 54;
   static const double splashLogoWidth = 106;
   static const double headerLogoWidth = 26;
+  static const double headerHeight = 72;
+  static const double searchHeight = 44;
+  static const double filterTabHeight = 45;
+  static const double chatRowHeight = 86;
+  static const double presenceDot = 9;
+  static const double unreadBadge = 19;
+  static const double navItemHeight = 52;
+  static const double navPaddingTop = 10;
+  static const double navPaddingBottom = 5;
+  static const double navIcon = 22;
+  static const double navIndicatorWidth = 18;
+  static const double navIndicatorHeight = 3;
+  static const double navDot = 5;
 }

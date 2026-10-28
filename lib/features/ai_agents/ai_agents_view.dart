@@ -11,6 +11,7 @@ class AiAgentsView extends GetView<AiAgentsController> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      hasOuterBottomBar: true,
       body: Center(child: Text('Ai Agents', style: AppText.title)),
     );
   }

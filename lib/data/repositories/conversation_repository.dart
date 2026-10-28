@@ -17,6 +17,8 @@ class ConversationRepository extends GetxService {
   final SocketService _socket;
 
   final conversations = <Conversation>[].obs;
+  final isLoaded = false.obs;
+  final loadError = RxnString();
   Completer<void>? _listsReady;
 
   @override
@@ -27,18 +29,34 @@ class ConversationRepository extends GetxService {
     reload();
   }
 
+  /// Reads the list from SQLite. Each row carries the newest message of its
+  /// thread (joined on the newest rowid by ts), so the list can show a
+  /// preview of the right kind without a query per row.
   Future<void> reload() async {
     final org = _session.orgId;
     final user = _session.userId;
     if (org == null || user == null) {
       conversations.clear();
+      isLoaded.value = true;
       return;
     }
-    final rows = await _db.query(
-      'SELECT * FROM conversations WHERE org_id = ? AND user_id = ? ORDER BY last_ts DESC',
-      [org, user],
-    );
-    conversations.assignAll(rows.map(Conversation.fromRow));
+    try {
+      final rows = await _db.query(
+        'SELECT c.*, m.text AS lm_text, m.kind AS lm_kind, m.is_mine AS lm_mine, m.status AS lm_status, '
+        'm.is_encrypted_unsupported AS lm_e2e, m.is_deleted AS lm_deleted, m.form_json AS lm_form '
+        'FROM conversations c LEFT JOIN messages m ON m.rowid = ('
+        'SELECT x.rowid FROM messages x WHERE x.org_id = c.org_id AND x.user_id = c.user_id AND x.conv_id = c.conv_id '
+        'ORDER BY x.ts DESC, x.local_seq DESC LIMIT 1) '
+        'WHERE c.org_id = ? AND c.user_id = ? ORDER BY c.last_ts DESC',
+        [org, user],
+      );
+      conversations.assignAll(rows.map(Conversation.fromRow));
+      loadError.value = null;
+    } catch (e) {
+      loadError.value = 'Could not read your chats.';
+    } finally {
+      isLoaded.value = true;
+    }
   }
 
   /// Asks the server for DM threads, groups and hosts and waits until the
@@ -54,13 +72,22 @@ class ConversationRepository extends GetxService {
     );
   }
 
+  /// Opening a thread clears its unread count and moves the local "last
+  /// opened" marker to its newest server message (by server ts and position,
+  /// never by the phone's clock or by comparing ids). Local only: not shared
+  /// across devices.
   Future<void> markRead(String convId) async {
     final org = _session.orgId;
     final user = _session.userId;
     if (org == null || user == null) return;
     await _db.update(
-      'UPDATE conversations SET unread = 0 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-      [org, user, convId],
+      'UPDATE conversations SET unread = 0, '
+      'read_ts = COALESCE((SELECT ts FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? '
+      "AND msg_id NOT LIKE 'temp-%' ORDER BY ts DESC, rowid DESC LIMIT 1), read_ts), "
+      'read_id = COALESCE((SELECT msg_id FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? '
+      "AND msg_id NOT LIKE 'temp-%' ORDER BY ts DESC, rowid DESC LIMIT 1), read_id) "
+      'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [org, user, convId, org, user, convId, org, user, convId],
     );
     await reload();
   }
@@ -104,11 +131,19 @@ class ConversationRepository extends GetxService {
               'UPDATE conversations SET is_archived = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
               [item['archived'] == true ? 1 : 0, org, user, conv],
             );
+            if (item['e2e'] == true) {
+              await sql.update(
+                'UPDATE conversations SET is_encrypted = 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+                [org, user, conv],
+              );
+            }
             await sql.update(
               'UPDATE conversations SET last_text = ?, last_ts = ?, last_from = ? '
               'WHERE org_id = ? AND user_id = ? AND conv_id = ? AND last_ts <= ?',
               [
-                idText(item['text']),
+                item['e2e'] == true
+                    ? '[encrypted message]'
+                    : idText(item['text']),
                 intOf(item['ts']),
                 idText(item['from']),
                 org,

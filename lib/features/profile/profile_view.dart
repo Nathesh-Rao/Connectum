@@ -13,6 +13,7 @@ class ProfileView extends GetView<ProfileController> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      hasOuterBottomBar: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

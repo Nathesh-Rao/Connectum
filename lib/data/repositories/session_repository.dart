@@ -92,6 +92,23 @@ class SessionRepository extends GetxService {
     return Redact.shape(Redact.value(data));
   }
 
+  /// Leaves the current enterprise on a switch: closes its socket, asks the
+  /// server to end its session (best effort, never awaited) and drops that
+  /// organisation's token. Its cached rows and outbox stay (they are scoped by
+  /// organisation and user) and go out when the person enters it again.
+  Future<void> leaveCurrent({required bool endOnServer}) async {
+    final token = _store.token;
+    if (_store.current.value == null) return;
+    _isHandling = true;
+    await _socket.stop();
+    if (endOnServer && token != null) {
+      unawaited(
+        _api.post('/logout', bearer: token).then((_) {}, onError: (_) {}),
+      );
+    }
+    await _store.clear();
+  }
+
   /// session_replaced: this account signed in elsewhere. Cached rows and the
   /// outbox for this organisation and user are wiped.
   Future<void> handleSessionReplaced() async {

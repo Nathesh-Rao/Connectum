@@ -6,7 +6,9 @@ class ConversationBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(
-      () => ConversationController(conversationId: Get.parameters['id'] ?? ''),
+      () => ConversationController(
+        conversationId: Uri.decodeComponent(Get.parameters['id'] ?? ''),
+      ),
     );
   }
 }
