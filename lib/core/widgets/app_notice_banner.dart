@@ -6,6 +6,8 @@ import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import 'app_button.dart';
 
+/// A dark banner for persistent notices that stay until dismissed (the
+/// session notice, an error to read). Never for temporary feedback.
 class AppNoticeBanner extends StatelessWidget {
   const AppNoticeBanner({
     super.key,

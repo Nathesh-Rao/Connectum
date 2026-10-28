@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_ambient_backdrop.dart';
 import 'app_offline_bar.dart';
 
 class AppScaffold extends StatelessWidget {
@@ -16,6 +17,7 @@ class AppScaffold extends StatelessWidget {
     this.hasDarkBackground = false,
     this.showOfflineBar = false,
     this.isScrollable = true,
+    this.ambient,
   });
 
   final Widget body;
@@ -29,6 +31,9 @@ class AppScaffold extends StatelessWidget {
   /// False for a body that holds its own scrollable (a page view): it then
   /// gets the viewport height, because an intrinsic height can't be measured.
   final bool isScrollable;
+
+  /// Paints the ambient backdrop behind the content when set.
+  final AppAmbientVariant? ambient;
 
   @override
   Widget build(BuildContext context) {
@@ -51,33 +56,39 @@ class AppScaffold extends StatelessWidget {
       child: Scaffold(
         backgroundColor: backgroundColor,
         resizeToAvoidBottomInset: true,
-        body: Column(
+        body: Stack(
           children: [
-            Expanded(
-              child: SafeArea(
-                bottom: bottomBar == null,
-                child: Column(
-                  children: [
-                    if (showOfflineBar) const AppOfflineBar(),
-                    Expanded(
-                      child: isScrollable
-                          ? _PackedScroll(padding: padding, body: body)
-                          : Padding(padding: padding, child: body),
+            if (ambient != null)
+              Positioned.fill(child: AppAmbientBackdrop(variant: ambient!)),
+            Column(
+              children: [
+                Expanded(
+                  child: SafeArea(
+                    bottom: bottomBar == null,
+                    child: Column(
+                      children: [
+                        if (showOfflineBar) const AppOfflineBar(),
+                        Expanded(
+                          child: isScrollable
+                              ? _PackedScroll(padding: padding, body: body)
+                              : Padding(padding: padding, child: body),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            if (bottomBar != null)
-              ColoredBox(
-                color: bottomBarColor,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.paddingOf(context).bottom,
                   ),
-                  child: bottomBar,
                 ),
-              ),
+                if (bottomBar != null)
+                  ColoredBox(
+                    color: bottomBarColor,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.paddingOf(context).bottom,
+                      ),
+                      child: bottomBar,
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

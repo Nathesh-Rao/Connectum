@@ -6,14 +6,15 @@ import 'package:get/get.dart';
 import '../../core/routes/app_routes.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
+import '../../data/models/auth_flow.dart';
 import '../../data/repositories/auth_repository.dart';
 
 class VerificationController extends GetxController {
   VerificationController({
     required this.auth,
     required this.email,
-    required this.isRegister,
-    required this.registerBody,
+    required this.flow,
+    required this.startBody,
     required int retryAfter,
   }) : _initialResend = retryAfter;
 
@@ -26,8 +27,8 @@ class VerificationController extends GetxController {
 
   final AuthRepository auth;
   final String email;
-  final bool isRegister;
-  final Map<String, dynamic>? registerBody;
+  final AuthFlow flow;
+  final Map<String, dynamic>? startBody;
   final int _initialResend;
 
   final cells = List.generate(
@@ -138,12 +139,20 @@ class VerificationController extends GetxController {
     if (isBusy.value || isLocked || code.length != length) return;
     isBusy.value = true;
     try {
-      if (isRegister) {
-        await auth.verifyRegister(email, code);
-      } else {
-        await auth.verifyLogin(email, code);
+      switch (flow) {
+        case AuthFlow.login:
+          await auth.verifyLogin(email, code);
+          Get.offAllNamed(AppRoutes.enterprises);
+        case AuthFlow.register:
+          await auth.verifyRegister(email, code);
+          Get.offAllNamed(AppRoutes.enterprises);
+        case AuthFlow.setup:
+          final created = await auth.verifySetup(email, code);
+          Get.offAllNamed(
+            AppRoutes.enterpriseCreated,
+            arguments: {'name': created.name, 'id': created.enterpriseId},
+          );
       }
-      Get.offAllNamed(AppRoutes.enterprises);
     } on UnsupportedStep catch (e) {
       blockedReasons.assignAll(e.reasons);
     } on ApiException catch (e) {
@@ -174,20 +183,28 @@ class VerificationController extends GetxController {
     if (resendIn.value > 0 || isBusy.value) return;
     isBusy.value = true;
     try {
-      if (isRegister) {
-        await auth.startRegister(registerBody!);
-        _startResendTimer(resendSeconds);
-      } else {
-        final result = await auth.startLogin(email);
-        if (result.kind == LoginStartKind.trusted) {
-          Get.offAllNamed(AppRoutes.enterprises);
-          return;
-        }
-        _startResendTimer(
-          result.kind == LoginStartKind.throttled
-              ? result.retryAfter
-              : resendSeconds,
-        );
+      switch (flow) {
+        case AuthFlow.register:
+          await auth.startRegister(startBody!);
+          _startResendTimer(resendSeconds);
+        case AuthFlow.setup:
+          final result = await auth.startSetup(startBody!);
+          _startResendTimer(
+            result.kind == LoginStartKind.throttled
+                ? result.retryAfter
+                : resendSeconds,
+          );
+        case AuthFlow.login:
+          final result = await auth.startLogin(email);
+          if (result.kind == LoginStartKind.trusted) {
+            Get.offAllNamed(AppRoutes.enterprises);
+            return;
+          }
+          _startResendTimer(
+            result.kind == LoginStartKind.throttled
+                ? result.retryAfter
+                : resendSeconds,
+          );
       }
       triesLeft.value = maxTries;
       message.value = 'A new code is on its way.';

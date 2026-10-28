@@ -23,16 +23,16 @@ class AppText {
   static const display = TextStyle(
     fontFamily: fontFamily,
     fontSize: sizeDisplay,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: heightHeading,
-    letterSpacing: -1,
+    letterSpacing: -1.2,
     color: AppColors.ink,
   );
 
   static const heading = TextStyle(
     fontFamily: fontFamily,
     fontSize: sizeHeading,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: heightHeading,
     letterSpacing: -1,
     color: AppColors.ink,
@@ -42,8 +42,8 @@ class AppText {
     fontFamily: fontFamily,
     fontSize: sizeTitle,
     fontWeight: FontWeight.w700,
-    height: heightHeading,
-    letterSpacing: -0.5,
+    height: 1.3,
+    letterSpacing: -1,
     color: AppColors.ink,
   );
 
@@ -126,5 +126,182 @@ class AppText {
     fontWeight: FontWeight.w400,
     height: heightBody,
     color: AppColors.error,
+  );
+
+  static const hero = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 29,
+    fontWeight: FontWeight.w600,
+    height: heightHeading,
+    letterSpacing: -1,
+    color: AppColors.ink,
+  );
+
+  static const heroSlide = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 29,
+    fontWeight: FontWeight.w600,
+    height: 1.25,
+    letterSpacing: -1.1,
+    color: AppColors.ink,
+  );
+
+  static const wordmark = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    letterSpacing: -0.6,
+    color: AppColors.ink,
+  );
+
+  static const wordmarkLarge = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    letterSpacing: -0.6,
+    color: AppColors.ink,
+  );
+
+  static const fieldLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w600,
+    height: heightHeading + 0.3,
+    color: AppColors.ink,
+  );
+
+  static const buttonSmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w600,
+    height: heightControl,
+    color: AppColors.background,
+  );
+
+  static const kicker = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    letterSpacing: 1.5,
+    color: AppColors.muted,
+  );
+
+  static const eyebrow = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    letterSpacing: 1.1,
+    color: AppColors.muted,
+  );
+
+  static const digit = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 23,
+    fontWeight: FontWeight.w500,
+    height: heightBody - 0.1,
+    color: AppColors.ink,
+  );
+
+  static const rowTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    letterSpacing: -0.3,
+    color: AppColors.ink,
+  );
+
+  static const rowCaption = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    letterSpacing: 0.1,
+    color: AppColors.muted,
+  );
+
+  static const idValue = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+    letterSpacing: 0.5,
+    color: AppColors.ink,
+  );
+
+  static const rowLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    color: AppColors.ink,
+  );
+
+  static const segment = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    color: AppColors.muted,
+  );
+
+  static const heroCopy = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w400,
+    height: 1.8,
+    color: AppColors.muted,
+  );
+
+  static const heroCopyStrong = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w600,
+    height: 1.8,
+    color: AppColors.ink,
+  );
+
+  static const slideCopy = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeBody,
+    fontWeight: FontWeight.w400,
+    height: 1.8,
+    color: AppColors.muted,
+  );
+
+  static const leadingGlyph = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeSubtitle,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    color: AppColors.muted,
+  );
+
+  static const segmentSelected = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w700,
+    height: 1.5,
+    color: AppColors.accent,
+  );
+
+  static const action = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w500,
+    height: 1.5,
+    color: AppColors.accentInk,
+  );
+
+  static const copiedLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w600,
+    height: 1.5,
+    color: AppColors.yesDot,
   );
 }

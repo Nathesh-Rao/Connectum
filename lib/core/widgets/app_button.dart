@@ -10,14 +10,20 @@ import '../theme/app_text.dart';
 
 enum _AppButtonKind { primary, secondary, text, icon }
 
+enum AppTextButtonTone { muted, accent, ink }
+
 class AppButton extends StatefulWidget {
   const AppButton.primary({
     super.key,
     required String this.label,
     required this.onPressed,
     this.icon,
+    this.leadingIcon,
     this.isLoading = false,
+    this.isCentered = false,
+    this.isCompact = false,
   }) : _kind = _AppButtonKind.primary,
+       tone = AppTextButtonTone.muted,
        semanticLabel = null;
 
   const AppButton.secondary({
@@ -27,15 +33,23 @@ class AppButton extends StatefulWidget {
     this.icon,
     this.isLoading = false,
   }) : _kind = _AppButtonKind.secondary,
+       tone = AppTextButtonTone.muted,
+       leadingIcon = null,
+       isCentered = true,
+       isCompact = false,
        semanticLabel = null;
 
   const AppButton.text({
     super.key,
     required String this.label,
     required this.onPressed,
+    this.tone = AppTextButtonTone.muted,
+    this.leadingIcon,
+    this.isLoading = false,
   }) : _kind = _AppButtonKind.text,
        icon = null,
-       isLoading = false,
+       isCentered = true,
+       isCompact = false,
        semanticLabel = null;
 
   const AppButton.icon({
@@ -44,13 +58,24 @@ class AppButton extends StatefulWidget {
     required this.onPressed,
     required String this.semanticLabel,
   }) : _kind = _AppButtonKind.icon,
+       tone = AppTextButtonTone.muted,
        label = null,
+       leadingIcon = null,
+       isCentered = true,
+       isCompact = false,
        isLoading = false;
 
   final _AppButtonKind _kind;
   final String? label;
   final String? semanticLabel;
   final IconData? icon;
+  final IconData? leadingIcon;
+  final AppTextButtonTone tone;
+
+  /// Primary buttons put the label on the left and the icon on the right
+  /// (the prototype); sheets centre them.
+  final bool isCentered;
+  final bool isCompact;
   final VoidCallback? onPressed;
   final bool isLoading;
 
@@ -58,11 +83,15 @@ class AppButton extends StatefulWidget {
   State<AppButton> createState() => _AppButtonState();
 }
 
-class _AppButtonState extends State<AppButton>
-    with SingleTickerProviderStateMixin {
+class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
   late final AnimationController _scale = AnimationController.unbounded(
     vsync: this,
     value: 1,
+  );
+
+  late final AnimationController _spin = AnimationController(
+    vsync: this,
+    duration: AppDurations.spin,
   );
 
   Offset? _pressOrigin;
@@ -100,7 +129,26 @@ class _AppButtonState extends State<AppButton>
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.isLoading && widget._kind == _AppButtonKind.text) _spin.repeat();
+  }
+
+  @override
+  void didUpdateWidget(AppButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget._kind != _AppButtonKind.text) return;
+    if (widget.isLoading && !_spin.isAnimating) {
+      _spin.repeat();
+    } else if (!widget.isLoading && _spin.isAnimating) {
+      _spin.stop();
+      _spin.value = 0;
+    }
+  }
+
+  @override
   void dispose() {
+    _spin.dispose();
     _scale.dispose();
     super.dispose();
   }
@@ -137,6 +185,17 @@ class _AppButtonState extends State<AppButton>
   }
 
   Widget _buildText() {
+    final color = switch (widget.tone) {
+      AppTextButtonTone.accent => AppColors.accentInk,
+      AppTextButtonTone.ink => AppColors.ink,
+      AppTextButtonTone.muted => AppColors.muted,
+    };
+    final isDimmed = !_isEnabled && !widget.isLoading;
+    final tint = isDimmed ? AppColors.taupe : color;
+    final label = Text(
+      widget.label!,
+      style: AppText.action.copyWith(color: tint),
+    );
     return ConstrainedBox(
       constraints: const BoxConstraints(
         minHeight: AppSpacing.minTapTarget,
@@ -144,12 +203,22 @@ class _AppButtonState extends State<AppButton>
       ),
       child: Center(
         widthFactor: 1,
-        child: Text(
-          widget.label!,
-          style: AppText.readableStrong.copyWith(
-            color: _isEnabled ? AppColors.muted : AppColors.taupe,
-          ),
-        ),
+        child: widget.leadingIcon == null
+            ? label
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RotationTransition(
+                      turns: _spin,
+                      child: Icon(widget.leadingIcon, size: 18, color: tint),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    label,
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -174,8 +243,22 @@ class _AppButtonState extends State<AppButton>
               ? AppColors.accent
               : AppColors.accentDisabled)
         : AppColors.background;
+    final hasIcons = widget.icon != null || widget.leadingIcon != null;
+    final isSpaced = !widget.isCentered && hasIcons;
+    final label = Text(
+      widget.label!,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: (widget.isCompact ? AppText.buttonSmall : AppText.button).copyWith(
+        color: foreground,
+      ),
+    );
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: AppSpacing.controlHeight),
+      constraints: BoxConstraints(
+        minHeight: widget.isCompact
+            ? AppSpacing.compactButtonHeight
+            : AppSpacing.controlHeight,
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: background,
@@ -183,7 +266,11 @@ class _AppButtonState extends State<AppButton>
           border: isPrimary ? null : Border.all(color: AppColors.inputBorder),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.isCompact
+                ? AppSpacing.compactButtonPaddingX
+                : AppSpacing.buttonPaddingX,
+          ),
           child: Center(
             child: widget.isLoading
                 ? SizedBox(
@@ -195,18 +282,19 @@ class _AppButtonState extends State<AppButton>
                     ),
                   )
                 : Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisSize: isSpaced
+                        ? MainAxisSize.max
+                        : MainAxisSize.min,
                     children: [
-                      Flexible(
-                        child: Text(
-                          widget.label!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.button.copyWith(color: foreground),
-                        ),
-                      ),
-                      if (widget.icon != null) ...[
+                      if (widget.leadingIcon != null) ...[
+                        Icon(widget.leadingIcon, size: 18, color: foreground),
                         const SizedBox(width: AppSpacing.sm),
+                      ],
+                      isSpaced
+                          ? Expanded(child: label)
+                          : Flexible(child: label),
+                      if (widget.icon != null) ...[
+                        if (!isSpaced) const SizedBox(width: AppSpacing.sm),
                         Icon(widget.icon, size: 18, color: foreground),
                       ],
                     ],

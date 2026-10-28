@@ -11,6 +11,9 @@ class AppRadius {
   static const double lg = 16;
   static const double sheet = 20;
   static const double pill = 999;
+  static const double tile = 11;
+  static const double cell = 8;
+  static const double segment = 7;
 
   static const controlAll = BorderRadius.all(Radius.circular(control));
   static const mdAll = BorderRadius.all(Radius.circular(md));

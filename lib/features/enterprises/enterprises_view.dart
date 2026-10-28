@@ -5,10 +5,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_flex_gap.dart';
+import '../../core/widgets/app_id_copy_strip.dart';
 import '../../core/widgets/app_list_row.dart';
+import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_view.dart';
@@ -33,62 +35,84 @@ class EnterprisesView extends GetView<EnterprisesController> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Image.asset('assets/images/connectum_logo.png', width: 26),
-                const SizedBox(width: AppSpacing.xs),
-                const Text('Connectum', style: AppText.subtitle),
-                const Spacer(),
-                AppButton.icon(
-                  icon: Icons.more_horiz,
-                  semanticLabel: 'Account options',
-                  onPressed: () => AppBottomSheet.show<void>(
-                    context,
-                    title: 'Account options',
-                    child: AppButton.secondary(
-                      label: 'Sign out',
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        c.signOut();
-                      },
-                    ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      const AppLogo(width: AppSpacing.headerLogoWidth + 3),
+                      const SizedBox(width: AppSpacing.xs),
+                      const Text('Connectum', style: AppText.wordmarkLarge),
+                      const Spacer(),
+                      Transform.translate(
+                        offset: const Offset(AppSpacing.sm, 0),
+                        child: AppButton.icon(
+                          icon: Icons.more_horiz,
+                          semanticLabel: 'Account options',
+                          onPressed: () => AppBottomSheet.show<void>(
+                            context,
+                            title: 'Account options',
+                            child: AppListRow(
+                              title: 'Sign out',
+                              titleStyle: AppText.rowLabel,
+                              minHeight: AppSpacing.settingRowHeight,
+                              trailing: const _Chevron(),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                c.signOut();
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const AppFlexGap(flex: 28, min: 8, max: 40),
+                  const Text('YOUR CONNECTED WORLD', style: AppText.kicker),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text('Choose an\nenterprise.', style: AppText.display),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    "Pick where you'd like to work today.",
+                    style: AppText.readable,
+                  ),
+                  const AppFlexGap(flex: 23, min: 8, max: 32),
+                  _Message(controller: c),
+                  _IdentityStrip(controller: c),
+                  const SizedBox(height: AppSpacing.sm),
+                  _List(controller: c),
+                  const AppFlexGap(flex: 17, min: 8, max: 28),
+                  AppButton.primary(
+                    label: 'Join another enterprise',
+                    leadingIcon: Icons.add,
+                    icon: Icons.chevron_right,
+                    isCompact: true,
+                    onPressed: () {
+                      c.resetJoin();
+                      AppBottomSheet.show<void>(
+                        context,
+                        title: 'Join another enterprise',
+                        child: JoinSheet(controller: c),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text('YOUR CONNECTED WORLD', style: AppText.label),
-            const SizedBox(height: AppSpacing.xs),
-            const Text('Choose an\nenterprise.', style: AppText.display),
-            const SizedBox(height: AppSpacing.xs),
-            const Text(
-              "Pick where you'd like to work today.",
-              style: AppText.readable,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            _Message(controller: c),
-            _IdentityStrip(controller: c),
-            _List(controller: c),
-            const SizedBox(height: AppSpacing.md),
-            AppButton.primary(
-              label: 'Join another enterprise',
-              icon: Icons.arrow_forward,
-              onPressed: () {
-                c.resetJoin();
-                AppBottomSheet.show<void>(
-                  context,
-                  title: 'Join an enterprise',
-                  child: JoinSheet(controller: c),
-                );
-              },
-            ),
-            const Spacer(),
             Row(
               children: [
-                Obx(
-                  () => AppButton.text(
-                    label: c.isRefreshing.value ? 'Refreshing…' : 'Refresh',
-                    onPressed: c.refresh,
+                Transform.translate(
+                  offset: const Offset(-AppSpacing.sm, 0),
+                  child: Obx(
+                    () => AppButton.text(
+                      label: 'Refresh',
+                      leadingIcon: Icons.refresh,
+                      tone: AppTextButtonTone.accent,
+                      isLoading: c.isRefreshing.value,
+                      onPressed: c.refresh,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -103,6 +127,14 @@ class EnterprisesView extends GetView<EnterprisesController> {
       }),
     );
   }
+}
+
+class _Chevron extends StatelessWidget {
+  const _Chevron();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Icon(Icons.chevron_right, size: 20, color: AppColors.rowChevron);
 }
 
 class _Message extends StatelessWidget {
@@ -136,35 +168,66 @@ class _IdentityStrip extends StatelessWidget {
     return Obx(() {
       final id = controller.store.identity.value?.connectumId ?? '';
       if (id.isEmpty) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: controller.copyConnectumId,
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.controlAll,
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(
-              children: [
-                const Text('Connectum ID', style: AppText.label),
-                const SizedBox(width: AppSpacing.sm),
-                Text(id, style: AppText.bodyStrong),
-                const Spacer(),
-                const Icon(
-                  Icons.copy_rounded,
-                  size: 16,
-                  color: AppColors.muted,
-                ),
-              ],
-            ),
-          ),
-        ),
+      return AppIdCopyStrip(
+        id: id,
+        isCopied: controller.isCopied.value,
+        onTap: controller.copyConnectumId,
       );
     });
+  }
+}
+
+const _tileIcons = [
+  Icons.domain,
+  Icons.work_outline,
+  Icons.people_outline,
+  Icons.school_outlined,
+  Icons.local_hospital_outlined,
+];
+
+class _Tile extends StatelessWidget {
+  const _Tile({required this.index, required this.isCurrent});
+
+  final int index;
+  final bool isCurrent;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette =
+        AppColors.tilePalettes[index % AppColors.tilePalettes.length];
+    return Container(
+      width: AppSpacing.tileSize,
+      height: AppSpacing.tileSize,
+      decoration: BoxDecoration(
+        color: isCurrent ? AppColors.accentTint : palette.background,
+        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.tile)),
+        border: Border.all(
+          color: isCurrent ? AppColors.tileCurrentBorder : palette.border,
+        ),
+      ),
+      child: Icon(
+        _tileIcons[index % _tileIcons.length],
+        size: 22,
+        color: isCurrent ? AppColors.accent : palette.foreground,
+      ),
+    );
+  }
+}
+
+class _CurrentCheck extends StatelessWidget {
+  const _CurrentCheck();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 23,
+      height: 23,
+      decoration: const BoxDecoration(
+        color: AppColors.accentTint,
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.check, size: 13, color: AppColors.accent),
+    );
   }
 }
 
@@ -202,31 +265,33 @@ class _List extends StatelessWidget {
       }
       return Column(
         children: [
-          for (final m in list)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: AppListRow(
-                leading: AppAvatar(name: m.name),
-                title: m.name,
-                subtitle: m.isActive
-                    ? 'Member · ${m.enterprise}'
-                    : m.status == 'pending'
-                    ? 'Waiting for approval · ${m.enterprise}'
-                    : 'Not approved · ${m.enterprise}',
-                trailing: c.enteringId.value == m.enterprise
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.accent,
-                        ),
-                      )
-                    : m.isActive
-                    ? const Icon(Icons.arrow_forward, size: 18)
-                    : null,
-                onTap: () => c.enter(m),
+          for (var i = 0; i < list.length; i++)
+            AppListRow(
+              leading: _Tile(
+                index: i,
+                isCurrent: list[i].enterprise == c.currentOrgId,
               ),
+              title: list[i].name,
+              subtitle: list[i].isActive
+                  ? 'Member · ${list[i].enterprise}'
+                  : list[i].status == 'pending'
+                  ? 'Waiting for approval · ${list[i].enterprise}'
+                  : 'Not approved · ${list[i].enterprise}',
+              trailing: c.enteringId.value == list[i].enterprise
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.accent,
+                      ),
+                    )
+                  : list[i].enterprise == c.currentOrgId
+                  ? const _CurrentCheck()
+                  : list[i].isActive
+                  ? const _Chevron()
+                  : null,
+              onTap: () => c.enter(list[i]),
             ),
         ],
       );

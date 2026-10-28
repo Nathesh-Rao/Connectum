@@ -2,6 +2,7 @@ import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 
 import '../../data/api/api_client.dart';
+import '../debug/seed_ui.dart';
 import '../../data/db/app_database.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
@@ -22,6 +23,7 @@ class InitialBinding extends Bindings {
   @override
   void dependencies() {
     final store = Get.put(SessionStore(), permanent: true);
+    store.identity.value = SeedUi.identity();
     Get.put(DeepLinkService(AppLinks(), store), permanent: true);
     final db = Get.put(AppDatabase(), permanent: true);
     final api = Get.put(ApiClient(store), permanent: true);

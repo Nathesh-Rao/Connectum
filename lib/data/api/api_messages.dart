@@ -19,6 +19,8 @@ class ApiMessages {
       'invalid' =>
         error.message.isNotEmpty ? error.message : 'Check what you entered.',
       'exists' => 'An account with that email already exists. Sign in instead.',
+      'invalid_mobile' => 'Enter a valid mobile number.',
+      'no_pending_setup' => 'That setup has expired. Start again.',
       'no_pending' => 'That sign-up has expired. Start again.',
       'unauthenticated' => 'Your session has ended. Please sign in again.',
       'pending_approval' =>

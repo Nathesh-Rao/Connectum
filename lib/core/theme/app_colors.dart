@@ -42,7 +42,31 @@ class AppColors {
   static const noDot = Color(0xFF9A9A98);
   static const noText = Color(0xFF4A4A48);
 
+  static const sphereHighlight = Color(0xFFFFDBB9);
+  static const sphereMid = Color(0xFFFFA363);
+  static const ambientDiscCenter = Color(0x1CF66510);
+  static const ambientDiscEdge = Color(0x05F66510);
+  static const ambientOrbitOuter = Color(0x17F66510);
+  static const ambientOrbitInner = Color(0x0CF66510);
+  static const rowChevron = Color(0xFFA1998D);
+  static const tileCurrentBorder = Color(0xFFF8C8AA);
+
+  static const tilePalettes = [
+    AppTilePalette(Color(0xFFF5F1ED), Color(0xFFE9E2DA), Color(0xFF8A7260)),
+    AppTilePalette(Color(0xFFF8F1ED), Color(0xFFEDE2DC), Color(0xFF99745F)),
+    AppTilePalette(Color(0xFFF3F2EF), Color(0xFFE7E5DE), Color(0xFF80775F)),
+    AppTilePalette(Color(0xFFF7F2ED), Color(0xFFEAE1D8), Color(0xFF967552)),
+  ];
+
   static const scrim = Color(0xFF28211D);
   static const sheetBackdrop = Color(0x6628211D);
   static const sheetHandle = Color(0xFFD8D0C5);
+}
+
+class AppTilePalette {
+  const AppTilePalette(this.background, this.border, this.foreground);
+
+  final Color background;
+  final Color border;
+  final Color foreground;
 }

@@ -3,8 +3,6 @@
 ## Stack
 - Flutter, Android + iOS. State, DI and routing: GetX. Local DB: sqflite with hand-written SQL (no drift, no ORM). Realtime: WebSocket to the Erlang backend.
 
-- Scope: Set Up (enterprise creation) is not in the mobile app for now.
-
 ## Backend reference
 - The backend contract is in `mobile-handoff/`. Before writing or changing code for the socket, session, messages, forms, deep links or AI, read the matching doc: `websocket-protocol.md`, `messages-and-receipts.md`, `sessions.md`, `forms.md`, `deep-links.md`, `ai-and-misc.md`.
 - Never guess the protocol. If a doc says UNCLEAR, ask the user.
@@ -52,7 +50,7 @@
 - `session_replaced`: wipe that org+user rows and outbox, go to login. Handshake error or expired token: clear the token, keep rows and outbox, go to login, flush after login. Explicit sign out: wipe. Only a real auth error clears the token; "Username taken" retries with backoff.
 
 ## Before release
-- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket` and `/gallery` routes.
+- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket` and `/gallery` routes and `lib/core/debug/seed_ui.dart` (`SEED_UI=1` fixture: debug-only, in-memory sample enterprises; turn it on with `--dart-define=SEED_UI=1`, best without `BASE_URL`).
 
 ## Working rules
 - After a task, run `dart analyze` on changed files and run on the device when relevant. Do NOT run flutter test, integration, viewport or VM tests, or full builds unless asked.

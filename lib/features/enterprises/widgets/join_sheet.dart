@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
@@ -57,6 +58,8 @@ class _Search extends StatelessWidget {
         AppTextField(
           controller: c.joinQuery,
           hint: 'Enterprise name or ID',
+          minHeight: AppSpacing.sheetFieldHeight,
+          borderColor: AppColors.line,
           onChanged: c.onJoinQueryChanged,
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -73,11 +76,14 @@ class _Search extends StatelessWidget {
             children: [
               if (error != null) Text(error, style: AppText.readable),
               for (final r in c.results) ...[
-                const SizedBox(height: AppSpacing.xs),
                 AppListRow(
                   title: r.name,
                   subtitle: r.city.isEmpty ? r.id : '${r.city} · ${r.id}',
-                  trailing: const Icon(Icons.arrow_forward, size: 18),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppColors.rowChevron,
+                  ),
                   onTap: () => c.selectEnterprise(r),
                 ),
               ],
@@ -110,10 +116,13 @@ class _Categories extends StatelessWidget {
             title: category,
             trailing: c.isJoinBusy.value
                 ? null
-                : const Icon(Icons.arrow_forward, size: 18),
+                : const Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppColors.rowChevron,
+                  ),
             onTap: () => c.join(category),
           ),
-          const SizedBox(height: AppSpacing.xs),
         ],
         Obx(() {
           final error = c.joinMessage.value;

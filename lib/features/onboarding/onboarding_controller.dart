@@ -39,22 +39,34 @@ class OnboardingController extends GetxController {
   final bool isReplay;
 
   final pageController = PageController();
+  final copyController = PageController();
   final page = 0.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // The copy follows the illustration, so both slide together.
+    pageController.addListener(() {
+      if (pageController.hasClients && copyController.hasClients) {
+        copyController.position.jumpTo(pageController.position.pixels);
+      }
+    });
+  }
 
   bool get isLast => page.value == slides.length - 1;
 
   void onPageChanged(int index) => page.value = index;
 
-  void _goTo(int index) => pageController.animateToPage(
+  void goTo(int index) => pageController.animateToPage(
     index,
     duration: AppDurations.page,
     curve: AppCurves.out,
   );
 
-  void next() => isLast ? finish() : _goTo(page.value + 1);
+  void next() => isLast ? finish() : goTo(page.value + 1);
 
   void back() {
-    if (page.value > 0) _goTo(page.value - 1);
+    if (page.value > 0) goTo(page.value - 1);
   }
 
   Future<void> finish() async {
@@ -69,6 +81,7 @@ class OnboardingController extends GetxController {
   @override
   void onClose() {
     pageController.dispose();
+    copyController.dispose();
     super.onClose();
   }
 }

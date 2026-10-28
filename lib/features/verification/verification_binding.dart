@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../data/models/auth_flow.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'verification_controller.dart';
 
@@ -11,8 +12,11 @@ class VerificationBinding extends Bindings {
       () => VerificationController(
         auth: Get.find<AuthRepository>(),
         email: '${args['email'] ?? ''}',
-        isRegister: args['isRegister'] == true,
-        registerBody: (args['registerBody'] as Map?)?.cast<String, dynamic>(),
+        flow: AuthFlow.values.firstWhere(
+          (f) => f.name == args['flow'],
+          orElse: () => AuthFlow.login,
+        ),
+        startBody: (args['body'] as Map?)?.cast<String, dynamic>(),
         retryAfter: (args['retryAfter'] as int?) ?? 30,
       ),
     );

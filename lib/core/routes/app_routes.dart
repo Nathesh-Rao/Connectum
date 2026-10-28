@@ -6,6 +6,7 @@ class AppRoutes {
   static const authentication = '/authentication';
   static const verification = '/verification';
   static const enterprises = '/enterprises';
+  static const enterpriseCreated = '/enterprise-created';
   static const chats = '/chats';
   static const aiAgents = '/ai-agents';
   static const conversation = '/conversation/:id';

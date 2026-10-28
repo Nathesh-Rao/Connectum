@@ -11,6 +11,8 @@ class AppDurations {
   static const reduced = Duration(milliseconds: 150);
   static const stagger = Duration(milliseconds: 55);
   static const splashHold = Duration(milliseconds: 1800);
+  static const copiedHold = Duration(milliseconds: 1500);
+  static const spin = Duration(milliseconds: 900);
 }
 
 class AppCurves {
@@ -38,6 +40,7 @@ class AppDistances {
 
   static const double rise = 12;
   static const double tab = 8;
+  static const double modeShift = 24;
   static const double enter = 16;
   static const double parallax = 0.25;
   static const double pressScale = 0.97;

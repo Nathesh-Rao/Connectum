@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "ef5b6243-d4f7-4df5-8f6b-075196a40e97",
+    "_postman_id": "27343cb8-55e9-4ee7-acce-8d5313decc4a",
     "name": "Connectum: platform API reference",
     "description": "# Connectum: platform API reference (for the mobile team)\n\nEverything a mobile app needs to talk to the Connectum backend: how to reach it, how to sign in, the HTTP endpoints, the chat WebSocket and the `/sd` actions the web app uses. Sample responses were captured from a real running server.\n\n## 1. Reaching the server (read this first)\n\nThe Connectum server runs on a **private IP address** (`10.0.2.146`). It is **not on the internet**. You can reach it in only two ways:\n\n1. **From inside the office network**, or\n2. **Through the WireGuard VPN** from anywhere else (home, mobile data, travel).\n\nHow to connect with WireGuard:\n1. Install the **WireGuard** app (iOS, Android, macOS, Windows, Linux).\n2. Ask the person who manages the VPN (IT / the backend owner) for your **WireGuard configuration** (a `.conf` file or QR code). It is personal: never share it or put it in a repository.\n3. Import it into WireGuard and switch the tunnel **on**.\n4. With the tunnel on, run **0. Check you can reach the server** in this collection. A JSON answer means you are connected. A timeout means the tunnel is off, or the profile is wrong.\n\nThings to know:\n- An app build that talks to this server also needs the tunnel on the phone, or the phone on the office Wi-Fi. A phone on ordinary mobile data without the VPN cannot reach it.\n- The address works over plain `http` and `ws` today. A production address with `https` / `wss` will replace it; only the two variables below change.\n- Sign-in codes are **emailed**; they do not appear in the API answer.\n\n## 2. Quick start (5 minutes)\n\n1. Be on the office network or switch the WireGuard tunnel on.\n2. Open the collection **Variables** tab. Set `email` to **your own email address** (the one the backend owner invited, see section 5). Leave the others as they are: `baseUrl` = `http://10.0.2.146`, `wsUrl` = `ws://10.0.2.146/ws`.\n3. Folder **1** > request **0** > Send. You should see `\"platform\": true`.\n4. Folder **2** > **1. Ask for a sign-in code** > Send. A 6-digit code arrives in your email.\n5. Type the code into the `otp` variable, then Send **2. Verify the code**. This saves your tokens and organisation for you.\n6. Send **4. Enter an organisation**, then **5. Session**. You are in. Everything else in the collection now works.\n\n## 3. How sign-in works\n\n```\nemail --login/start--> code by email --login/verify--> identity token + organisations + remember-device token\nidentity token --enter (pick an organisation)--> session token\nsession token --> HTTP calls (Bearer) and the WebSocket handshake\n```\n\n- A person has **one account** (their email) and can belong to **many organisations**. The **identity token** is only for choosing, joining and entering organisations. The **session token** is what every other call uses and it belongs to one organisation.\n- **Remember this device:** `login/verify` also returns `trust`. Keep it in the phone's secure storage and send it with the next `login/start`. If it is valid, the server skips the email code (about 15 days from the code that issued it). It is kept when the person signs out. A wrong or expired token simply gets a normal code.\n- **Sessions last about 15 days and are not extended by use.** After that the WebSocket sends `session_expired` and closes; sign in again.\n- A person waiting for approval (`status: pending`) cannot enter yet.\n\n## 4. Answers and errors\n\nEvery HTTP answer is JSON. Success: `{\"ok\": true, \"data\": {...}}`. Failure: `{\"ok\": false, \"error\": {\"code\": \"...\", \"message\": \"...\", \"details\": {...}}}`. Show `message` to the person; branch on `code`. Common codes: `invalid` (HTTP 400), `invalid_values` (a form field is wrong, `details.fields` says which), `unauthenticated` (401, no or bad token), `otp_invalid` (401, wrong or expired code), `forbidden` / `not_allowed` (403), `not_found` (404), `no_account` (404), `rate_limited` (429; wait and retry), `pending_approval`, `admin_locked`. Times are **epoch milliseconds** unless a field is a date string.\n\n## 5. Getting an account to test with\n\nSigning in needs a person who already exists in an organisation, and a real email address that can receive the code. Ask the backend owner to **invite your email address** into the test organisation (Admin console > Invite user). After you sign in once, that organisation appears in the answer of **2. Verify the code**. A person with no account can also create one (folder 3), but an administrator may still have to approve them before they can enter.\n\n## 6. Notes for the mobile app (http, certificate, storage)\n\n- **Use `http` and `ws` for now.** The server also answers on `https`, but its certificate is **self-signed**, so Postman (turn off *SSL certificate verification* in Settings) and a phone will refuse it. A proper `https` / `wss` address will come with production.\n- **Plain http on a phone needs a setting.** iOS blocks it by default: add an App Transport Security exception for `10.0.2.146`. Android blocks cleartext by default: allow cleartext for that host in the network security config. Remove both when the production `https` address exists.\n- **Store tokens in the secure storage** (iOS Keychain, Android Keystore): the session token and the remember-this-device token (`trust`). Never log them.\n- **Keep the WebSocket alive:** reconnect with the same session token if it drops, and sign in again on `session_expired`. Expect a few seconds of delay on a slow VPN link: use a timeout of about 30 seconds for HTTP calls.\n- **Sign-in codes are emailed** and last 5 minutes. There is no code in the API answer.\n\n## 7. What is in this collection\n\n| Folder | What |\n|---|---|\n| 1. Reach the server | One request to prove your connection works. |\n| 2. Sign in | Code, verify, organisations, enter, session, sign out. |\n| 3. New account and joining | Register, find an organisation, join. |\n| 4. Feed and files (HTTP) | The workspace feed; uploading and downloading files. |\n| 5. WebSocket: connect and chat | The handshake and every chat command and event (reference cards: see the note inside). |\n| 6. WebSocket: actions (/sd) | The 127 actions the app uses, by area: a card with a real sample for the common ones and a table for all of them. |\n\n**Left out on purpose:** the administrator console, the Axpert ARM calls, the consumer program, the message queue and the Shopify calls. Those are for administrators and the server team, not the mobile app.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -2133,6 +2133,215 @@
               ],
               "cookie": [],
               "body": "{\n \"type\": \"history\",\n \"scope\": \"dm\",\n \"with\": \"ravi\",\n \"now\": 1793166707302,\n \"list\": [\n  {\n   \"id\": 1,\n   \"ts\": 1793166707278,\n   \"from\": \"asha\",\n   \"text\": \"Hello Ravi, are you on rounds today?\",\n   \"kind\": \"chat\",\n   \"private\": true,\n   \"reactions\": [],\n   \"deleted\": false,\n   \"editedTs\": null,\n   \"replyTo\": null,\n   \"previewUrl\": \"\",\n   \"previewTitle\": \"\",\n   \"previewDescription\": \"\",\n   \"previewImage\": \"\"\n  }\n ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "WS · Send with a client id (no double sends)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sd/session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sd",
+                "session"
+              ]
+            },
+            "description": "`/c <clientId> <command>` runs the command as usual and echoes your id in the ack as `cid`. If the connection drops and you send the **same id again**, nothing is sent twice: you get the first ack back with `duplicate: true`. The id is remembered for one day, per person. Works for `/msg`, `/replydm`, `/groupmsg`, `/replygroup`, `/hostmsg`. It does not work for plain messages to the global room (`cid_unsupported`). The id is 1 to 64 characters: letters, digits and `- _ . :` (else `bad_cid`). A refused send is not remembered, so you can retry with the same id.\n\n**You send:** `/c 7f3a-0001 /msg ravi Hello Ravi`"
+          },
+          "response": [
+            {
+              "name": "First send",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sd/session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sd",
+                    "session"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n \"type\": \"dm_ack\",\n \"with\": \"ravi\",\n \"status\": \"delivered\",\n \"id\": 1790071256909,\n \"ts\": 1790071256909,\n \"cid\": \"7f3a-0001\"\n}"
+            },
+            {
+              "name": "Same id sent again",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sd/session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sd",
+                    "session"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n \"type\": \"dm_ack\",\n \"with\": \"ravi\",\n \"status\": \"delivered\",\n \"id\": 1790071256909,\n \"ts\": 1790071256909,\n \"cid\": \"7f3a-0001\",\n \"duplicate\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "WS · Older messages (scroll back)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sd/session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sd",
+                "session"
+              ]
+            },
+            "description": "`/history dm <username> before <messageId>` gives up to 50 messages older than that id, oldest first. Ask with the oldest id you hold. `hasMore` says whether still older ones exist; `next` is the id to ask with next (`null` when the page is empty). Also works for `group <name>` and `host <hostKey>`. A conversation the person cleared stays cleared. A `before` without a number gives an `error` with code `usage`.\n\n**You send:** `/history dm ravi before 1790071256909`"
+          },
+          "response": [
+            {
+              "name": "What you receive",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sd/session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sd",
+                    "session"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n \"type\": \"history\",\n \"scope\": \"dm\",\n \"with\": \"ravi\",\n \"now\": 1790071300000,\n \"before\": 1790071256909,\n \"hasMore\": true,\n \"next\": 1790070000000,\n \"list\": [\n  \"... up to 50 messages, each shaped like in 'Direct message history' ...\"\n ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "WS · Is a message encrypted? (e2e flag)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sd/session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sd",
+                "session"
+              ]
+            },
+            "description": "A message whose text is an end-to-end encrypted envelope (`e2e1:...`) carries `e2e: true` in `history` and in the `/conversations` list. Plain messages have no `e2e` field. The organisation-wide mode (off, optional, required) is `e2e.status` in folder 6."
+          },
+          "response": [
+            {
+              "name": "A history item",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sd/session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sd",
+                    "session"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n \"id\": 1790071256909,\n \"ts\": 1790071256909,\n \"from\": \"asha\",\n \"text\": \"e2e1:{...}\",\n \"e2e\": true\n}"
             }
           ]
         },

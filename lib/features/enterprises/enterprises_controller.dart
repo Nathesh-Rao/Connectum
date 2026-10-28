@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/theme/app_motion.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
 import '../../data/models/identity_info.dart';
@@ -33,6 +35,8 @@ class EnterprisesController extends GetxController {
   final loadError = RxnString();
   final message = RxnString();
   final enteringId = RxnString();
+  final isCopied = false.obs;
+  Timer? _copiedTimer;
   final blockedReasons = <String>[].obs;
 
   // join
@@ -47,6 +51,8 @@ class EnterprisesController extends GetxController {
   Timer? _debounce;
 
   IdentityInfo? get identity => store.identity.value;
+  String? get currentOrgId =>
+      store.orgId ?? (SeedUi.isActive ? SeedUi.currentOrgId : null);
   bool get isOffline => connectivity.state.value == AppConnectivity.offline;
 
   @override
@@ -83,7 +89,9 @@ class EnterprisesController extends GetxController {
     final id = identity?.connectumId ?? '';
     if (id.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: id));
-    message.value = 'Connectum ID copied.';
+    isCopied.value = true;
+    _copiedTimer?.cancel();
+    _copiedTimer = Timer(AppDurations.copiedHold, () => isCopied.value = false);
   }
 
   Future<void> enter(EnterpriseMembership m) async {
@@ -243,6 +251,7 @@ class EnterprisesController extends GetxController {
 
   @override
   void onClose() {
+    _copiedTimer?.cancel();
     _debounce?.cancel();
     joinQuery.dispose();
     super.onClose();

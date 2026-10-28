@@ -33,6 +33,12 @@ class AppTextField extends StatefulWidget {
     this.readOnly = false,
     this.onTap,
     this.suffix,
+    this.leading,
+    this.textStyle = AppText.input,
+    this.minHeight = AppSpacing.controlHeight,
+    this.borderColor = AppColors.inputBorder,
+    this.borderRadius = AppRadius.controlAll,
+    this.helperText,
   });
 
   final TextEditingController? controller;
@@ -57,15 +63,21 @@ class AppTextField extends StatefulWidget {
   final bool readOnly;
   final VoidCallback? onTap;
   final Widget? suffix;
+  final Widget? leading;
+  final TextStyle textStyle;
+  final double minHeight;
+  final Color borderColor;
+  final BorderRadius borderRadius;
+  final String? helperText;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
 }
 
 class _AppTextFieldState extends State<AppTextField> {
-  static const _lineHeight = AppText.sizeBody * AppText.heightControl;
-  static const _singleLinePadding =
-      (AppSpacing.controlHeight - 2 - _lineHeight) / 2;
+  double get _lineHeight =>
+      widget.textStyle.fontSize! * widget.textStyle.height!;
+  double get _singleLinePadding => (widget.minHeight - 2 - _lineHeight) / 2;
 
   bool _isFocused = false;
 
@@ -78,13 +90,13 @@ class _AppTextFieldState extends State<AppTextField> {
         ? AppColors.error
         : _isFocused
         ? AppColors.accent
-        : AppColors.inputBorder;
+        : widget.borderColor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.label != null) ...[
-          Text(widget.label!, style: AppText.label),
+          Text(widget.label!, style: AppText.fieldLabel),
           const SizedBox(height: AppSpacing.xs),
         ],
         Focus(
@@ -94,12 +106,10 @@ class _AppTextFieldState extends State<AppTextField> {
           child: AnimatedContainer(
             duration: AppDurations.fast,
             curve: AppCurves.out,
-            constraints: const BoxConstraints(
-              minHeight: AppSpacing.controlHeight,
-            ),
+            constraints: BoxConstraints(minHeight: widget.minHeight),
             decoration: BoxDecoration(
               color: AppColors.background,
-              borderRadius: AppRadius.controlAll,
+              borderRadius: widget.borderRadius,
               border: Border.all(color: borderColor),
               boxShadow: _isFocused && !_hasError ? AppShadows.focusRing : null,
             ),
@@ -122,11 +132,11 @@ class _AppTextFieldState extends State<AppTextField> {
               readOnly: widget.readOnly,
               onTap: widget.onTap,
               textAlignVertical: TextAlignVertical.center,
-              style: AppText.input,
-              strutStyle: const StrutStyle(
+              style: widget.textStyle,
+              strutStyle: StrutStyle(
                 fontFamily: AppText.fontFamily,
-                fontSize: AppText.sizeBody,
-                height: AppText.heightControl,
+                fontSize: widget.textStyle.fontSize,
+                height: widget.textStyle.height,
                 forceStrutHeight: true,
               ),
               cursorColor: AppColors.accent,
@@ -140,10 +150,22 @@ class _AppTextFieldState extends State<AppTextField> {
                 errorBorder: InputBorder.none,
                 disabledBorder: InputBorder.none,
                 hintText: widget.hint,
-                hintStyle: AppText.input.copyWith(color: AppColors.muted),
+                hintStyle: widget.textStyle.copyWith(color: AppColors.muted),
                 suffixIcon: widget.suffix,
+                prefixIcon: widget.leading == null
+                    ? null
+                    : Padding(
+                        padding: EdgeInsets.only(
+                          left: widget.horizontalPadding,
+                          right: AppSpacing.sm,
+                        ),
+                        child: widget.leading,
+                      ),
+                prefixIconConstraints: const BoxConstraints(),
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: widget.horizontalPadding,
+                  horizontal: widget.leading == null
+                      ? widget.horizontalPadding
+                      : 0,
                   vertical: _singleLinePadding,
                 ),
               ),
@@ -159,7 +181,12 @@ class _AppTextFieldState extends State<AppTextField> {
                   padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: Text(widget.errorText!, style: AppText.error),
                 )
-              : const SizedBox(width: double.infinity),
+              : (widget.helperText == null
+                    ? const SizedBox(width: double.infinity)
+                    : Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
+                        child: Text(widget.helperText!, style: AppText.caption),
+                      )),
         ),
       ],
     );

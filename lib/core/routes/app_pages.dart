@@ -12,6 +12,8 @@ import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
 import '../../features/debug_socket/debug_socket_view.dart';
+import '../../features/enterprise_created/enterprise_created_binding.dart';
+import '../../features/enterprise_created/enterprise_created_view.dart';
 import '../../features/enterprises/enterprises_binding.dart';
 import '../../features/enterprises/enterprises_view.dart';
 import '../../features/gallery/gallery_auth_binding.dart';
@@ -88,6 +90,12 @@ class AppPages {
       () => const EnterprisesView(),
       EnterprisesBinding(),
       AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.enterpriseCreated,
+      () => const EnterpriseCreatedView(),
+      EnterpriseCreatedBinding(),
+      AppTransitionKind.enter,
     ),
     _page(
       AppRoutes.chats,

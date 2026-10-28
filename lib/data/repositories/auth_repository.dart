@@ -24,6 +24,13 @@ class UnsupportedStep implements Exception {
   final List<String> reasons;
 }
 
+class SetupResult {
+  const SetupResult(this.enterpriseId, this.name);
+
+  final String enterpriseId;
+  final String name;
+}
+
 class EnterpriseHit {
   const EnterpriseHit(this.id, this.name, this.city);
 
@@ -99,6 +106,59 @@ class AuthRepository extends GetxService {
       await _store.saveTrust(email, trust);
     }
     return _acceptIdentity(data, email);
+  }
+
+  // ---- set up an enterprise -----------------------------------------------------
+
+  Future<LoginStart> startSetup(Map<String, dynamic> body) async {
+    final data = await _api.post('/setup/start', body: body);
+    if (data['sent'] == false) {
+      return LoginStart(
+        LoginStartKind.throttled,
+        retryAfter: intOf(data['retryAfter']),
+      );
+    }
+    return LoginStart(
+      LoginStartKind.codeSent,
+      expiresInSec: data['expiresInSec'] == null
+          ? 300
+          : intOf(data['expiresInSec']),
+    );
+  }
+
+  /// Creates the enterprise. The answer holds the account (identity) session
+  /// and a session inside the new enterprise: both are stored like the sign-in
+  /// and enter flows do, and the socket starts.
+  Future<SetupResult> verifySetup(String email, String otp) async {
+    final data = await _api.post(
+      '/setup/verify',
+      body: {'email': email, 'otp': otp, 'deviceId': await _store.deviceId()},
+    );
+    final session = ((data['session'] as Map?) ?? {}).cast<String, dynamic>();
+    _checkBlockers(data);
+    _checkBlockers(session);
+    await _store.saveIdentity(
+      IdentityInfo.fromResponse(
+        idText(data['token']),
+        data,
+        fallbackEmail: email,
+      ),
+    );
+    final user = ((session['user'] as Map?) ?? {}).cast<String, dynamic>();
+    final enterpriseId = idText(session['enterprise'] ?? data['enterprise']);
+    await _session.signIn(
+      orgId: enterpriseId,
+      userId: idText(user['username']),
+      token: idText(session['token']),
+      expiresTs: session['expiresTs'] == null
+          ? null
+          : intOf(session['expiresTs']),
+      orgName: idText(data['name']),
+    );
+    return SetupResult(
+      idText(data['enterprise'] ?? enterpriseId),
+      idText(data['name']),
+    );
   }
 
   // ---- create account -----------------------------------------------------------
