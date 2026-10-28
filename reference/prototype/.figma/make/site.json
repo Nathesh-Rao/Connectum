@@ -1,0 +1,10 @@
+{
+  "description": "Connectum helps enterprise teams manage chats, AI agents, workflows, and submissions across multiple enterprises from one account.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
