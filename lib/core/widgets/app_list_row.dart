@@ -33,12 +33,17 @@ class AppListRow extends StatefulWidget {
 class _AppListRowState extends State<AppListRow> {
   bool _isPressed = false;
 
+  void _set(bool value) {
+    if (!mounted || _isPressed == value) return;
+    setState(() => _isPressed = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: (_) => setState(() => _isPressed = true),
-      onPointerUp: (_) => setState(() => _isPressed = false),
-      onPointerCancel: (_) => setState(() => _isPressed = false),
+      onPointerDown: (_) => _set(true),
+      onPointerUp: (_) => _set(false),
+      onPointerCancel: (_) => _set(false),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,

@@ -722,6 +722,11 @@ class SubmissionRepository extends GetxService {
         [_org, _me, serverId],
       );
       if (exists.isNotEmpty) {
+        // The echo arrived first: it takes over the cid so the card keeps its key.
+        await sql.update(
+          'UPDATE messages SET cid = COALESCE(cid, ?) WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [entry.cid, _org, _me, serverId],
+        );
         await sql.update(
           'DELETE FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
           [_org, _me, entry.refId],

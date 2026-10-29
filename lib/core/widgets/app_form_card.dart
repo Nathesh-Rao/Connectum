@@ -88,7 +88,8 @@ class _AppFormCardState extends State<AppFormCard> {
   }
 
   void _setPressed(bool value) {
-    if (_isPressed != value) setState(() => _isPressed = value);
+    if (!mounted || _isPressed == value) return;
+    setState(() => _isPressed = value);
   }
 
   @override
@@ -166,7 +167,9 @@ class _AppFormCardState extends State<AppFormCard> {
                             _MoreRow(
                               isOpen: _isOpen,
                               count: extra.length,
-                              onTap: () => setState(() => _isOpen = !_isOpen),
+                              onTap: () {
+                                if (mounted) setState(() => _isOpen = !_isOpen);
+                              },
                             ),
                           ],
                         ],

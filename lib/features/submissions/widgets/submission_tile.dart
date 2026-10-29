@@ -25,7 +25,8 @@ class _SubmissionTileState extends State<SubmissionTile> {
   bool _isPressed = false;
 
   void _setPressed(bool value) {
-    if (_isPressed != value) setState(() => _isPressed = value);
+    if (!mounted || _isPressed == value) return;
+    setState(() => _isPressed = value);
   }
 
   @override

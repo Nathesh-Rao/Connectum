@@ -182,7 +182,9 @@ class ConversationController extends GetxController
   /// A key that is unique across open conversations: message ids repeat
   /// between conversations, and two can be mounted at once.
   GlobalKey keyFor(ChatItem item) =>
-      GlobalObjectKey('$conversationId|${item.key}');
+      _itemKeys.putIfAbsent(item.key, () => GlobalKey());
+
+  final _itemKeys = <String, GlobalKey>{};
 
   final _cards = <String, FormCardData?>{};
 

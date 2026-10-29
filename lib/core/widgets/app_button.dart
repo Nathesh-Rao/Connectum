@@ -118,6 +118,7 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
   }
 
   void _springTo(double target) {
+    if (!mounted) return;
     _scale.animateWith(
       SpringSimulation(
         AppCurves.pressSpring,

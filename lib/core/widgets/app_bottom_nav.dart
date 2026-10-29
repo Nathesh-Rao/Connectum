@@ -108,6 +108,11 @@ class _NavButton extends StatefulWidget {
 class _NavButtonState extends State<_NavButton> {
   bool _isPressed = false;
 
+  void _set(bool value) {
+    if (!mounted || _isPressed == value) return;
+    setState(() => _isPressed = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = widget.isActive ? AppColors.accent : AppColors.muted;
@@ -117,9 +122,9 @@ class _NavButtonState extends State<_NavButton> {
       label: widget.item.label,
       excludeSemantics: true,
       child: Listener(
-        onPointerDown: (_) => setState(() => _isPressed = true),
-        onPointerUp: (_) => setState(() => _isPressed = false),
-        onPointerCancel: (_) => setState(() => _isPressed = false),
+        onPointerDown: (_) => _set(true),
+        onPointerUp: (_) => _set(false),
+        onPointerCancel: (_) => _set(false),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,

@@ -157,7 +157,18 @@ class FormEntry {
     };
   }
 
+  /// A typed "lat, lng": two decimal numbers with a fraction.
+  static final _pair = RegExp(r'^(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$');
+
   static ({String address, String? coordinates})? _place(Object? v) {
+    if (v is String) {
+      final m = _pair.firstMatch(v.trim());
+      if (m == null) return null;
+      final lat = double.parse(m[1]!);
+      final lng = double.parse(m[2]!);
+      if (lat.abs() > 90 || lng.abs() > 180) return null;
+      return (address: '', coordinates: '${_trim(lat)}, ${_trim(lng)}');
+    }
     if (v is! Map) return null;
     final lat = _coordinate(v['lat']);
     final lng = _coordinate(v['lng'] ?? v['lon'] ?? v['long']);
