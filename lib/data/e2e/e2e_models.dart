@@ -16,11 +16,36 @@ class E2eDevicePublic {
     required this.id,
     required this.ecdh,
     required this.sign,
+    this.label = '',
+    this.ts = 0,
   });
 
   final String id;
   final String ecdh;
   final String sign;
+  final String label;
+  final int ts;
+}
+
+enum E2eReadState { ok, cantDecrypt, pending }
+
+/// The outcome of opening one envelope. [code] is the failure code from the
+/// handoff doc, for the log only.
+class E2eReading {
+  const E2eReading.ok(String this.text) : state = E2eReadState.ok, code = null;
+
+  const E2eReading.cannot(String this.code)
+    : state = E2eReadState.cantDecrypt,
+      text = null;
+
+  const E2eReading.pending()
+    : state = E2eReadState.pending,
+      text = null,
+      code = null;
+
+  final E2eReadState state;
+  final String? text;
+  final String? code;
 }
 
 /// This device's two key pairs. The public halves are base64url of the raw

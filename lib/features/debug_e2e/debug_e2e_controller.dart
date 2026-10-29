@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
@@ -7,6 +9,7 @@ import '../../data/e2e/e2e_crypto.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_random.dart';
+import '../../data/repositories/e2e_repository.dart';
 
 class E2eCheck {
   const E2eCheck(this.name, this.isPassed, [this.detail = '']);
@@ -17,12 +20,23 @@ class E2eCheck {
 }
 
 class DebugE2eController extends GetxController {
-  DebugE2eController({required E2eKeyStore keyStore}) : _keyStore = keyStore;
+  DebugE2eController({required E2eKeyStore keyStore, required this.e2e})
+    : _keyStore = keyStore;
 
   static const _vectorsAsset = 'mobile-handoff/e2e-vectors.json';
 
   final E2eKeyStore _keyStore;
+  final E2eRepository e2e;
   final _crypto = E2eCrypto();
+
+  final label = TextEditingController(
+    text: 'Connectum mobile (${Platform.operatingSystem})',
+  );
+  final message = ''.obs;
+  final isBusy = false.obs;
+
+  /// The destructive buttons need a second tap on the same button.
+  final armed = ''.obs;
 
   final results = <E2eCheck>[].obs;
   final isRunning = false.obs;
@@ -35,6 +49,68 @@ class DebugE2eController extends GetxController {
   void onReady() {
     super.onReady();
     run();
+    e2e.refreshStatus();
+  }
+
+  @override
+  void onClose() {
+    label.dispose();
+    super.onClose();
+  }
+
+  Future<void> refreshDevices() async {
+    isBusy.value = true;
+    final isOk = await e2e.refreshStatus();
+    message.value = isOk ? 'Status refreshed.' : 'Could not read the status.';
+    isBusy.value = false;
+  }
+
+  /// Registers this phone. Generates keys only when none exist, and asks for
+  /// a second tap when keys exist that the server does not know.
+  Future<void> register() async {
+    if (isBusy.value) return;
+    final hasUnregistered = e2e.hasKeys.value && !e2e.isRegistered;
+    if (hasUnregistered && armed.value != 'register') {
+      armed.value = 'register';
+      message.value =
+          'Keys exist on this phone but the server does not list this device. '
+          'Tap Register again to register those keys.';
+      return;
+    }
+    armed.value = '';
+    isBusy.value = true;
+    final result = await e2e.register(label.text, isConfirmed: hasUnregistered);
+    message.value = switch (result) {
+      E2eRegisterResult.registered => 'Registered this phone.',
+      E2eRegisterResult.alreadyRegistered =>
+        'Already registered. Nothing done.',
+      E2eRegisterResult.modeOff =>
+        'Encryption is off for this organisation. Nothing done.',
+      E2eRegisterResult.limitReached =>
+        'Device limit reached (${e2e.myDevices.length} of ${e2e.maxDevices.value}). Nothing done.',
+      E2eRegisterResult.needsConfirmation => 'Tap Register again to confirm.',
+      E2eRegisterResult.needsConnection => 'Needs a connection.',
+      E2eRegisterResult.refused => 'Refused: ${e2e.lastError.value}',
+    };
+    isBusy.value = false;
+  }
+
+  Future<void> removeThisDevice() async {
+    if (isBusy.value) return;
+    if (armed.value != 'remove') {
+      armed.value = 'remove';
+      message.value =
+          'This deletes the keys on this phone and removes only this device '
+          'from the server. Old messages stay unreadable. Tap again to confirm.';
+      return;
+    }
+    armed.value = '';
+    isBusy.value = true;
+    final isOk = await e2e.removeThisDevice();
+    message.value = isOk
+        ? 'This device was removed and its keys deleted.'
+        : 'Not removed: ${e2e.lastError.value}';
+    isBusy.value = false;
   }
 
   Future<void> run() async {
@@ -53,6 +129,7 @@ class DebugE2eController extends GetxController {
       await _safety(vectors, devices);
       _encodings(vectors);
       await _roundTrip();
+      await _repositoryOpen();
       await _keyStoreRoundTrip();
     } catch (e) {
       _add('self-test aborted', false, e.runtimeType.toString());
@@ -453,6 +530,49 @@ class DebugE2eController extends GetxController {
       } on E2eException catch (e) {
         return e.code == 'not_for_this_device' ? null : 'got ${e.code}';
       }
+    });
+  }
+
+  /// The same path the message list uses: [E2eRepository.open] with a
+  /// throwaway sender and reader, no server and no stored keys.
+  Future<void> _repositoryOpen() async {
+    await _check('repository opens an envelope (throwaway keys)', () async {
+      final sender = await _crypto.generateDeviceKeys();
+      final reader = await _crypto.generateDeviceKeys();
+      final stranger = await _crypto.generateDeviceKeys();
+      const text = 'Self-test ✓ héllo';
+      final conv = E2eCrypto.dmLabel('selftest-a', 'selftest-b');
+      final env = await _crypto.buildEnvelope(
+        user: 'selftest-a',
+        keys: sender,
+        conv: conv,
+        recipients: [sender.asPublic, reader.asPublic],
+        text: text,
+      );
+      Future<String?> signKey(String user, String dev) async =>
+          user == 'selftest-a' && dev == sender.id ? sender.signPub : null;
+      Future<E2eReading> open(E2eDeviceKeys keys, {String? other}) => e2e.open(
+        text: env,
+        convId: 'dm:selftest-b',
+        expectConv: other ?? conv,
+        keys: keys,
+        signKeyFor: signKey,
+      );
+      final ok = await open(reader);
+      if (ok.state != E2eReadState.ok || ok.text != text) return 'not opened';
+      final none = await open(stranger);
+      if (none.code != 'not_for_this_device') return 'no wrap not refused';
+      final wrong = await open(reader, other: 'dm:selftest-a|selftest-c');
+      if (wrong.code != 'wrong_conversation') return 'wrong thread not refused';
+      final unknown = await e2e.open(
+        text: env,
+        convId: 'dm:selftest-b',
+        expectConv: conv,
+        keys: reader,
+        signKeyFor: (_, _) async => null,
+      );
+      if (unknown.code != 'unknown_sender_device') return 'unknown not refused';
+      return null;
     });
   }
 
