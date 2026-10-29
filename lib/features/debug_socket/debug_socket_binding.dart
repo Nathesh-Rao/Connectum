@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../data/db/app_database.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/message_repository.dart';
+import '../../data/repositories/presence_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/socket/connectivity_service.dart';
@@ -20,6 +21,7 @@ class DebugSocketBinding extends Bindings {
         messages: Get.find<MessageRepository>(),
         conversationRepository: Get.find<ConversationRepository>(),
         submissions: Get.find<SubmissionRepository>(),
+        presence: Get.find<PresenceRepository>(),
         db: Get.find<AppDatabase>(),
       ),
     );

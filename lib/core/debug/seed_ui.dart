@@ -1,9 +1,14 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../data/models/conversation.dart';
 import '../../data/models/identity_info.dart';
 import '../../data/models/message.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text.dart';
 
 /// Debug-only fixture for UI checks: run with --dart-define=SEED_UI=1 and the
 /// enterprises screen shows five sample enterprises. Ignored in release. The
@@ -16,6 +21,42 @@ class SeedUi {
 
   /// Debug and profile builds only (profile is needed for the scrolling check).
   static bool get isActive => !kReleaseMode && _requested;
+
+  /// A corner ribbon on every screen while sample data is on.
+  static Widget withRibbon(Widget child) => Directionality(
+    textDirection: TextDirection.ltr,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        Builder(
+          builder: (context) => Positioned(
+            right: -50,
+            top: MediaQuery.paddingOf(context).top + 6,
+            child: IgnorePointer(
+              child: Transform.rotate(
+                angle: math.pi / 4,
+                child: Container(
+                  width: 170,
+                  height: 22,
+                  alignment: Alignment.center,
+                  color: AppColors.error,
+                  child: Text(
+                    'SAMPLE DATA',
+                    style: AppText.label.copyWith(
+                      color: AppColors.background,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   static const currentOrgId = 'CMYD-Z063';
   static const sampleEnterpriseName = 'Agile Labs';
@@ -60,6 +101,17 @@ class SeedUi {
 
   static List<Conversation>? _conversations;
 
+  /// Pin or mute in the sample list, so the long-press menu works in this mode.
+  static void setFlags(String convId, {bool? isPinned, bool? isMuted}) {
+    _conversations = [
+      for (final c in conversations())
+        c.convId == convId
+            ? c.withFlags(isPinned: isPinned, isMuted: isMuted)
+            : c,
+    ];
+    chatsState.refresh();
+  }
+
   static List<Conversation> conversations() {
     if (!isActive) return const [];
     return _conversations ??= _buildConversations();
@@ -86,6 +138,8 @@ class SeedUi {
         lastTs: ago(const Duration(minutes: 12)),
         lastFrom: 'alex',
         unread: 3,
+        memberCount: 5,
+        isMuted: true,
         lastIsMine: true,
         lastStatus: MessageStatus.sent,
       ),
@@ -96,6 +150,7 @@ class SeedUi {
         lastText: 'Can you take a look at the proposal?',
         lastTs: ago(const Duration(minutes: 28)),
         lastFrom: 'arjun',
+        isPinned: true,
       ),
       Conversation(
         convId: 'group:Product & Engineering',
@@ -104,6 +159,7 @@ class SeedUi {
         lastText: 'Friday release is looking good',
         lastTs: ago(const Duration(hours: 1)),
         lastFrom: 'Nina',
+        memberCount: 8,
       ),
       Conversation(
         convId: 'dm:meera',

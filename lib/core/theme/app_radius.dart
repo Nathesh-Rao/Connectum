@@ -15,6 +15,7 @@ class AppRadius {
   static const double cell = 8;
   static const double segment = 7;
   static const double badge = 4;
+  static const double bubbleTail = 4;
 
   static const controlAll = BorderRadius.all(Radius.circular(control));
   static const mdAll = BorderRadius.all(Radius.circular(md));

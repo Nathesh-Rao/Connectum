@@ -62,4 +62,13 @@ class AppSpacing {
   static const double navIndicatorWidth = 18;
   static const double navIndicatorHeight = 3;
   static const double navDot = 5;
+  static const double conversationHeaderHeight = 65;
+  static const double bubblePadX = 14;
+  static const double bubblePadY = 12;
+  static const double bubbleGap = 8;
+  static const double bubbleRunGap = 2;
+  static const double statusIcon = 14;
+  static const double scrollButton = 40;
+  static const double composerPad = 3;
+  static const double composerButton = 44;
 }

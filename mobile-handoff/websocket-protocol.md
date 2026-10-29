@@ -20,11 +20,10 @@ Derived from the web client (`src/services/connectumSocket.js`) and the Erlang b
 {"username": "alice", "token": "<TOKEN>", "armSessionId": "sess-1790071256909"}
 ```
 - `token` = the **enterprise session token** returned by `POST /api/sd/enter` (see `sessions.md`). `armSessionId` is optional (server defaults to `"app"` and ignores it); the web client still sends `"arm-<ms>"` or `"sess-<ms>"`.
-- `username` is the person's username inside the chosen enterprise. Web client sends it trimmed, lower-cased, spaces replaced by `_`, cut to 24 chars. Server rule: max 24 chars, no whitespace or control chars. The server compares it with the username stored on the session; a mismatch is rejected.
+- `username` is the person's username inside the chosen enterprise. **Send it in lower case**: in a Connectum organisation (strict mode) the server stores usernames in lower case and refuses another case (`That session belongs to a different username`); in the open plain-chat mode names are case-sensitive. Keep the original spelling only for display. Max 24 chars, no whitespace or control chars (the web client also trims and turns spaces into `_`).
 - **The organisation is not a field in the handshake.** It is implied by the token: an enterprise session belongs to exactly one enterprise, and resolving the token puts the connection into that enterprise (`sd_auth:session_record/1`). To use another organisation, call `POST /api/sd/enter` for it and open a new socket with the new token.
 - Success: `{"type":"welcome","name":"alice"}`, then immediately a `history` event (`scope:"global"`, with `now`), then one `profile` event per known person (self, online users, DM partners, connections, max 300) that has an avatar or status.
-- Failure: `{"type":"error","text":"..."}` and the socket **stays open** for a corrected retry. Texts seen in code: `Username cannot be empty`, `Username too long (max 24 chars)`, `Username cannot contain spaces or control characters`, `Expected {"username":..,"token":..} (armSessionId is optional)`, `That session belongs to a different username.`, `Sign in to Connectum first (POST /api/sd/login) and pass the returned token.`, `Username taken`.
-- The web client does not retry on a handshake error: it waits for `welcome`. UNCLEAR: what the mobile client should do on a handshake `error` (the web client relies on its 60 s `GET /api/sd/session` poll to notice a dead token and sign out).
+- Failure: `{"type":"error","text":"..."}` and the socket **stays open** for a corrected retry. Texts seen in code: `Username cannot be empty`, `Username too long (max 24 chars)`, `Username cannot contain spaces or control characters`, `Expected {"username":..,"token":..} (armSessionId is optional)`, `That session belongs to a different username.`, `Sign in to Connectum first (POST /api/sd/login) and pass the returned token.`, `Username taken`. **`Username taken` now only means the connection carried no Connectum session** (open plain-chat mode); a connection with a valid session never gets it (see Reconnecting below). Mobile treats every handshake `error` as an auth failure: clear the token, keep cached rows and the outbox, go to login with a notice.
 
 **After `welcome` the web client sends, in order:** `/hosts`, `/list`, `/groups`, `/conversations`, `/history global` (delta form once it holds a cache), `/cmds`. Then `/sd me`-style calls as screens need them.
 
@@ -32,14 +31,14 @@ Derived from the web client (`src/services/connectumSocket.js`) and the Erlang b
 
 - **No application heartbeat** in either direction (no ping command, no server `ping` event). The server answers a WebSocket protocol Ping (opcode 9) with Pong (opcode 10) and honours Close (8). It never sends Pings itself. The web client sends none (browsers cannot). A mobile client may send protocol Pings to detect dead links; this is not required by the server.
 - Server drops a connection whose socket write cannot finish in 15 s (`send_timeout`), or whose backlog exceeds 5000 pushes (it first sends `sd_event` `disconnected` with `reason:"too_slow"`).
-- **Reconnect (web client):** on `onclose` without a manual disconnect: set status `offline_fallback`, fail pending `/sd` requests with code `disconnected`, wait a fixed **2500 ms**, run the full connect + handshake again with the stored token. No backoff, no retry cap. `onerror` only sets status `offline_fallback` (the close that follows triggers the reconnect).
-- **No reconnect** after: manual `disconnect()` (sign-out, switching enterprise), `connection_superseded`, and the three forced sign-out events (`session_replaced`, `session_expired`, `disconnected`/`account_deactivated`).
+- **Reconnect (web client):** on `onclose` without a manual disconnect: set status `offline_fallback`, fail pending `/sd` requests with code `disconnected`, wait a fixed **2500 ms**, run the full connect + handshake again with the stored token. No backoff, no retry cap. Mobile uses a capped exponential backoff with jitter instead. **A reconnect with a valid session takes the old socket over at once** (no waiting, no `Username taken`): the old socket receives `sd_event connection_superseded` (`reason:"opened_elsewhere"`) and is closed, and no `presence` event is sent for the takeover. A new sign-in on another device sends the old socket `session_replaced` instead.
+- **No reconnect** after: manual `disconnect()` (sign-out, switching enterprise), `connection_superseded`, and the forced sign-out events (`session_replaced`, `session_expired`, `disconnected`/`account_deactivated`). Mobile shows a short notice on the login screen for each.
 - Status values: `connecting`, `connected` (set on `welcome`), `disconnected`, `offline_fallback`.
 - **Nothing is replayed on reconnect.** Pushes sent while offline are lost; the client re-fetches (`/conversations`, `/history`, `/sd req.list`, `cards.list`, `feed.list`). The web client emits an internal `resync` after each reconnect for this.
 - `/sd` requests that hit a connection gap (`not_connected` / `disconnected`) are retried once after the next `welcome`, waiting up to 12 s. `timeout` and server errors are not retried. Default `/sd` timeout 10 s (some calls 15 to 60 s).
 - **Rate limit:** 30 commands per 10 s window per connection (env `CHAT_RATE_LIMIT_MAX`); `/cmds` and `/cmdcomplete` have a separate 120 per window. Over the limit: `{"type":"error","text":"Too many commands -- slow down"}`; for `/sd` the reply is an `sd` envelope with `error.code:"rate_limited"`. Also `error.code:"busy"` ("Too many requests at once") from the per-connection `/sd` lane.
 - Max chat text 2000 chars (E2E envelope has a larger cap). Max group name 32. Max status 140.
-- The session check (`session_expired`) runs only when the server **receives a line** from the client, at most every 30 s. An idle socket is not closed on expiry until it sends something. The web client also polls `GET /api/sd/session` every 60 s.
+- A session lasts **15 days, a hard limit** (not extended by use). Use `expiresTs` from the sign-in answer, never a fixed number. The server notices expiry when it receives a client line (at most every 30 s) and sends `sd_event session_expired` (`reason:"two_week_login"`) before closing. Mobile also checks `expiresTs` at start and on resume. HTTPS/WSS has no date yet.
 - **History delta (optional optimisation):** `/history <scope> [target] delta <lastId> <now>` where `now` is the `now` field of the last `history` answer. The answer then carries `delta:true`, `window:[ids]` and only changed items; a client that holds no cache sends the plain form.
 
 ## 3. Reply envelope for `/sd` calls
@@ -66,7 +65,7 @@ Direction: C>S = client sends (text line), S>C = server pushes JSON. "Reply" = e
 | (handshake) | C>S | `{"username":"alice","token":"<TOKEN>"}` | first frame | `welcome` or `error` |
 | `welcome` | S>C | `{"type":"welcome","name":"alice"}` | handshake accepted | client starts bootstrap sends, sets E2E up |
 | `/quit` | C>S | `/quit` | clean disconnect (web sends it on sign-out) | server unregisters the user and closes |
-| `sd_event` `connection_superseded` | S>C | `{"type":"sd_event","event":"connection_superseded","reason":"opened_elsewhere"}` | the **same token** opened a second socket; the newer wins | socket closed. Client: no reconnect, no sign-out, toast "reload to use it here" |
+| `sd_event` `connection_superseded` | S>C | `{"type":"sd_event","event":"connection_superseded","reason":"opened_elsewhere"}` | a connection with a valid session opened while this socket was registered; the newer one takes over immediately | socket closed. Client: no auto-reconnect; mobile signs out of this device with a notice |
 | `sd_event` `session_replaced` | S>C | `{"type":"sd_event","event":"session_replaced","reason":"signed_in_elsewhere"}` | the same person entered the same enterprise again elsewhere (old token revoked) | socket closed. Client: forced sign-out (see `sessions.md`) |
 | `sd_event` `session_expired` | S>C | `{"type":"sd_event","event":"session_expired","reason":"two_week_login"}` | session TTL (15 days) passed, noticed on next client line | socket closed. Client: forced sign-out |
 | `sd_event` `disconnected` | S>C | `{"type":"sd_event","event":"disconnected","reason":"account_deactivated"}` | admin deactivated the account, or `reason:"too_slow"` | socket closed. `account_deactivated`: forced sign-out. `too_slow`: web client just reconnects |
@@ -108,12 +107,12 @@ There are **no WebSocket events to list or switch enterprises**. Listing and ent
 | `group_system` | S>C | `{"type":"group_system","group":"g","text":"alice added bob to the group"}` | group notices | web client parses "X added Y to the group" to update members |
 | `/hosts` | C>S | `/hosts` | after connect | `hosts` |
 | `hosts` | S>C | `{"type":"hosts","list":[{"key":"claude","name":"Claude","kind":"llm"}]}` | reply | `kind`: `llm`, `workspace`, `department` |
-| `/list` | C>S | `/list` | online users; web re-sends on `system` join/leave | `users` |
+| `/list` | C>S | `/list` | online users: call it once at start, on resume and after every reconnect; follow `presence` events from then on | `users` |
 | `users` | S>C | `{"type":"users","list":["alice","bob"]}` | reply (filtered by visibility rules) | |
 | `/getprofile <user>`, `/setavatar <url>`, `/removeavatar`, `/setstatus <text>` | C>S | `/setstatus In a meeting` | avatar url must be `/uploads/..` or `https://..` (max 300); bare `/setstatus` clears | `profile` (broadcast) |
 | `profile` | S>C | `{"type":"profile","user":"alice","avatar":"/uploads/x.png","status":null}` | change, `/getprofile` reply, and after `welcome` | `null` = none |
-| `sd_event` `conversation_changed` | S>C | `{"data":{"id":"dm:bob","change":"archived\|unarchived\|deleted","conversation":{...}}}` | archive/delete state changed (also other devices) | UNCLEAR: web client has no handler for it and never calls `conv.*` (backend and `CONNECTUM_API.md` define them) |
-| `/sd conv.list / conv.archive / conv.unarchive / conv.delete` | C>S | `{"id":"dm:bob"}` (id = `global`, `dm:<user>`, `group:<name>`) | server-side archive/delete | `data:{conversation:state}`; see `CONNECTUM_API.md` "Conversations: archive and delete" |
+| `sd_event` `conversation_changed` | S>C | `{"data":{"id":"dm:bob","change":"archived\|unarchived\|deleted","conversation":{...}}}` | archive/delete state changed (also other devices) | the web client has no handler; mobile reads `archived` from `conv.list` |
+| `/sd conv.list`, `conv.pin`, `conv.unpin`, `conv.mute`, `conv.unmute`, `conv.read`, `conv.delivered`, `conv.readers`, `conv.archive`, `conv.unarchive`, `conv.delete` | C>S | `{"id":"dm:bob"}` (id = `global`, `dm:<user>`, `group:<name>`) | inbox state kept on the server | `data:{conversation:state}`; `conv.list {"full":true}` returns every conversation. See `messages-and-receipts.md` §6 and §7 |
 
 ### 4.4 Messages (payloads only; semantics are in the message doc)
 
@@ -132,7 +131,7 @@ Message object inside `history.list`: `{id, ts, from, text, kind, private, react
 | `private` | S>C | same fields as `chat`, `type:"private"` | DM received | |
 | `group_message` | S>C | `{"type":"group_message","group":"g","id":5,"ts":..,"from":"bob","text":"..","replyTo":null}` | | |
 | `host_message` | S>C | `{"type":"host_message","host":"hr","id":3,"ts":..,"from":"x","text":"..","replyTo":null}` | | |
-| `system` | S>C | `{"type":"system","text":"bob has joined"}` | global notices: `has joined`, `has left`, `has disconnected` (also the only presence signal) | web client re-sends `/list` |
+| `system` | S>C | `{"type":"system","text":"bob has joined"}` | global notices (`has joined`, `has left`, `has disconnected`); no longer the presence signal, use `presence` | |
 | `own_message_id` | S>C | `{"type":"own_message_id","id":7,"ts":..}` | echo of your global broadcast | |
 | `dm_ack` | S>C | `{"type":"dm_ack","with":"bob","status":"delivered\|queued","id":9,"ts":..}` | `/msg` accepted | `queued` = recipient offline |
 | `group_msg_ack` | S>C | `{"type":"group_msg_ack","group":"g","id":6,"ts":..}` | | |
@@ -232,7 +231,7 @@ AI chat is **not** a WebSocket event stream. It is request/reply over `/sd`; no 
 | `typing` | S>C | `{"type":"typing","text":"bob"}` | someone typing in global (`text` = username) | |
 | `typing_dm` | S>C | `{"type":"typing_dm","from":"bob"}` | | |
 | `group_typing` | S>C | `{"type":"group_typing","group":"g","from":"bob"}` | | |
-| presence | n/a | `users` list + `system` join/leave text | no dedicated presence event | |
+| `presence` | S>C | `{"type":"presence","user":"ravi","online":false,"ts":1793202927615}` | someone who knows that person (connected to them, or who could message them) is told when they go online or offline; a takeover sends none | update the dot; `/list` gives the starting set |
 
 ### 4.10 `#commands` (prompt-bar menu)
 
@@ -252,3 +251,28 @@ AI chat is **not** a WebSocket event stream. It is request/reply over `/sd`; no 
 
 ## 5. Source files used
 `src/services/connectumSocket.js`, `src/services/connectumApi.js`, `src/features/connectumChat/ConnectumChatScreen.jsx` (event handlers around lines 940 to 2200, `forceSignOut` 3713), `src/features/connectumChat/utils/useLiveChanges.js`, `src/features/connectumChat/services/workspaceAgent.js`, `aiHistory.js`, `src/features/connectumChat/e2e/*`, `tests/frontend/socket.test.mjs`, `axi-chat-backend/src/chat_web.erl`, `chat_room.erl`, `chat.hrl`, `chat_cmds.erl`, `sd_cmds.erl`, `sd_notify.erl`, `sd_policy.erl`, `sd_auth.erl`, `sd_cards.erl`, `sd_feed.erl`, `sd_formmsg.erl`, `sd_reqs.erl`, `sd_subflow.erl`, `sd_tasks.erl`, `sd_conv.erl`, `docs/CHAT_PROTOCOL.md`, `docs/CONNECTUM_API.md`, `docs/MULTI_ENTERPRISE.md`.
+
+## Update 2 (backend answers, collection with real samples)
+
+Answered by the backend developer and checked against the collection and the source (`origin/main`): reconnect takeover and `connection_superseded`; lower-case handshake username (strict mode); 15-day session and `expiresTs`; `presence`; `receipt`; `conv.list {full:true}` and the `conv.*` actions; `cid` on form saves; `users.search` `canMessage`/`connected`/`avatar`. See `postman-crosscheck.md` for the list of disagreements.
+
+| Name | Dir | Payload | Notes |
+|---|---|---|---|
+| `sd_event` `receipt` | S>C | `{"type":"sd_event","event":"receipt","data":{"by":"ravi","conversation":"dm:ravi","kind":"read","ts":1793202927506,"upTo":7}}` | the other person of a direct conversation called `conv.delivered` or `conv.read` (or `/read dm`); a message is read when its id is at or below `upTo` |
+| `/sd conv.list {"full":true}` | C>S | | every conversation: direct, groups I am in, the general room, plus any with a stored state. Rows: `id, kind (dm\|group\|global), with\|group, lastId, readId, unread (max 99), unreadMore, pinned, pinnedTs, muted, mutedTs, archived, archivedTs, clearedId, clearedTs, deliveredId`; a direct row adds `peerReadId, peerDeliveredId, avatar`. **No host conversations, no last-message text, titles or members** |
+| `/sd conv.read {id, upTo?}` | C>S | | forward only, clamped to the newest; default is everything; the other person gets a `receipt`; returns `data.conversation` |
+| `/sd conv.delivered {id, upTo?}` | C>S | | my device has received up to that id; reading implies it |
+| `/sd conv.pin`, `conv.unpin`, `conv.mute`, `conv.unmute` | C>S | `{id}` | idempotent, kept on the server; `muted` is a flag, the app decides what quiet means |
+| `/sd conv.readers {id:"group:<name>", messageId}` | C>S | | who of the group read my message; **groups only and only the author** (a direct conversation answers `invalid`: read `peerReadId`) |
+| `/sd users.search {q}` | C>S | | rows add `canMessage` (a direct message would be accepted now), `connected`, `avatar`; strict mode: exact username, email or mobile only |
+| `/sd connect.scan {code}` | C>S | | a personal code connects at once (and tells its owner); your own code is an error; an enterprise code returns `{type:"enterprise", enterprise, alreadyMember:true}` |
+| `/sd assoc.invite {to}` | C>S | | `to` may be a username, email or mobile; returns `data.request` |
+
+### Answered UNCLEAR items
+- What mobile does on a handshake `error`: treat it as an auth failure (this file, section 1).
+- `conversation_changed` / `conv.*` are now used by mobile (`conv.list` is the inbox source).
+- Presence: a dedicated `presence` event exists.
+
+### Still open
+- Whether `conv.list` should carry host conversations, last-message text, titles and members (today `/groups`, `/hosts`, `/conversations` and history still supply them).
+- The `assoc.list` sample in the collection shows no `avatar` although the source adds one (`with_avatar`); not verifiable on an account with no connections.

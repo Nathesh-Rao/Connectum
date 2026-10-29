@@ -104,6 +104,14 @@ class AppText {
     color: AppColors.ink,
   );
 
+  static const message = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeReadable,
+    fontWeight: FontWeight.w400,
+    height: 1.6,
+    color: AppColors.ink,
+  );
+
   static const label = TextStyle(
     fontFamily: fontFamily,
     fontSize: sizeCaption,

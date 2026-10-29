@@ -30,58 +30,64 @@ class HomeShellView extends GetView<HomeShellController> {
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
-      body: Column(
-        children: [
-          Expanded(
-            // The bar stays put under the keyboard, so a tab only gives up the
-            // part of the keyboard that rises above the bar.
-            child: MediaQuery(
-              data: media.copyWith(
-                viewInsets: media.viewInsets.copyWith(
-                  bottom: math.max(0, media.viewInsets.bottom - navHeight),
+      body: Obx(() {
+        if (c.isRetired.value) return const SizedBox.shrink();
+        return Column(
+          children: [
+            Expanded(
+              // The bar stays put under the keyboard, so a tab only gives up the
+              // part of the keyboard that rises above the bar.
+              child: MediaQuery(
+                data: media.copyWith(
+                  viewInsets: media.viewInsets.copyWith(
+                    bottom: math.max(0, media.viewInsets.bottom - navHeight),
+                  ),
                 ),
+                child: Obx(() {
+                  final active = c.index.value;
+                  return Stack(
+                    children: [
+                      for (var i = 0; i < _screens.length; i++)
+                        if (c.isBuilt[i])
+                          _TabLayer(
+                            animation: c.crossfade,
+                            isActive: i == active,
+                            isLeaving: i == c.previous,
+                            child: _screens[i],
+                          ),
+                    ],
+                  );
+                }),
               ),
-              child: Obx(() {
-                final active = c.index.value;
-                return Stack(
-                  children: [
-                    for (var i = 0; i < _screens.length; i++)
-                      if (c.isBuilt[i])
-                        _TabLayer(
-                          animation: c.crossfade,
-                          isActive: i == active,
-                          isLeaving: i == c.previous,
-                          child: _screens[i],
-                        ),
-                  ],
-                );
-              }),
             ),
-          ),
-          Obx(
-            () => AppBottomNav(
-              index: c.index.value,
-              onSelected: c.select,
-              items: [
-                AppNavItem(
-                  label: 'Chats',
-                  icon: Icons.chat_bubble_outline,
-                  showDot: c.hasUnread.value,
-                ),
-                const AppNavItem(
-                  label: 'AI Agents',
-                  icon: Icons.auto_awesome_outlined,
-                ),
-                const AppNavItem(
-                  label: 'Submissions',
-                  icon: Icons.description_outlined,
-                ),
-                const AppNavItem(label: 'Profile', icon: Icons.person_outline),
-              ],
+            Obx(
+              () => AppBottomNav(
+                index: c.index.value,
+                onSelected: c.select,
+                items: [
+                  AppNavItem(
+                    label: 'Chats',
+                    icon: Icons.chat_bubble_outline,
+                    showDot: c.hasUnread.value,
+                  ),
+                  const AppNavItem(
+                    label: 'AI Agents',
+                    icon: Icons.auto_awesome_outlined,
+                  ),
+                  const AppNavItem(
+                    label: 'Submissions',
+                    icon: Icons.description_outlined,
+                  ),
+                  const AppNavItem(
+                    label: 'Profile',
+                    icon: Icons.person_outline,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }

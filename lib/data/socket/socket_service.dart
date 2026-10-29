@@ -20,6 +20,7 @@ enum SocketState {
   offline,
   sessionReplaced,
   authFailed,
+  expired,
   superseded,
 }
 
@@ -98,6 +99,11 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed &&
+        (_session.current.value?.isExpired ?? false)) {
+      _drop(SocketState.expired);
+      return;
+    }
+    if (state == AppLifecycleState.resumed &&
         _wantConnected &&
         !isOnline &&
         connection.value != SocketState.connecting) {
@@ -122,6 +128,10 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (resetBackoff) _attempt = 0;
     final state = connection.value;
     if (state == SocketState.connecting || state == SocketState.online) return;
+    if (_session.current.value?.isExpired ?? false) {
+      _drop(SocketState.expired);
+      return;
+    }
     if (!AppConfig.isConfigured ||
         !_session.hasSession ||
         _connectivity.simulateOffline.value ||
@@ -151,8 +161,13 @@ class SocketService extends GetxService with WidgetsBindingObserver {
         onDone: () => _onClosed(channel),
         onError: (_) => _onClosed(channel),
       );
+      // The server stores usernames in lower case and wants exactly that; the
+      // stored user id keeps the original for display.
       channel.sink.add(
-        jsonEncode({'username': _session.userId, 'token': _session.token}),
+        jsonEncode({
+          'username': _session.userId?.toLowerCase(),
+          'token': _session.token,
+        }),
       );
       _handshakeTimer = Timer(_handshakeTimeout, () {
         if (!_hasWelcome) _drop(SocketState.offline, retry: true);
@@ -214,7 +229,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
         case 'session_replaced':
           _drop(SocketState.sessionReplaced);
         case 'session_expired':
-          _drop(SocketState.authFailed);
+          _drop(SocketState.expired);
         case 'connection_superseded':
           _drop(SocketState.superseded);
         case 'disconnected':
@@ -229,12 +244,11 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   }
 
   // The docs give no error codes for handshake failures, only texts.
+  // "Username taken" only appears when the connection carries no Connectum
+  // session, so it is an auth failure, never a retry.
   Future<void> _onHandshakeError(String text) async {
-    if (text.contains('Username taken')) {
-      _drop(SocketState.offline, retry: true);
-      return;
-    }
-    if (text.contains('Sign in to Connectum first') ||
+    if (text.contains('Username taken') ||
+        text.contains('Sign in to Connectum first') ||
         text.contains('different username')) {
       _drop(SocketState.authFailed);
       return;
@@ -257,6 +271,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     final keep =
         state == SocketState.sessionReplaced ||
         state == SocketState.authFailed ||
+        state == SocketState.expired ||
         state == SocketState.superseded;
     _drop(keep ? state : SocketState.offline, retry: !keep);
   }

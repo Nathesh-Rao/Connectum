@@ -17,6 +17,7 @@ import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'chats_controller.dart';
+import 'widgets/conversation_actions_sheet.dart';
 import 'widgets/conversation_tile.dart';
 import 'widgets/enterprise_switcher_sheet.dart';
 import 'widgets/new_chat_sheet.dart';
@@ -368,6 +369,8 @@ class _List extends StatelessWidget {
                 conversation: row.value,
                 controller: c,
                 onTap: () => c.open(id),
+                onLongPress: () =>
+                    ConversationActionsSheet.show(context, c, row.value),
               ),
             );
           },

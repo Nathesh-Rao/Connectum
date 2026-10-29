@@ -17,6 +17,9 @@ class SessionRepository extends GetxService {
   static const replacedNotice =
       'You were signed out because this account signed in on another tab or device.';
   static const endedNotice = 'Your session has ended. Please sign in again.';
+  static const expiredNotice = 'Your session expired. Please sign in again.';
+  static const supersededNotice =
+      'This account was opened on another device, so this one was signed out. Sign in again to use it here.';
 
   final SessionStore _store;
   final AppDatabase _db;
@@ -28,7 +31,6 @@ class SessionRepository extends GetxService {
 
   /// Completes once the stored session has been read.
   Future<void> get ready => _ready.future;
-  Timer? _poll;
   bool _isHandling = false;
 
   SessionStore get store => _store;
@@ -40,8 +42,8 @@ class SessionRepository extends GetxService {
     ever(_socket.connection, (state) {
       if (state == SocketState.sessionReplaced) handleSessionReplaced();
       if (state == SocketState.authFailed) handleAuthFailed();
-      if (state == SocketState.online) _startPolling();
-      if (state != SocketState.online) _poll?.cancel();
+      if (state == SocketState.expired) handleAuthFailed(expiredNotice);
+      if (state == SocketState.superseded) handleAuthFailed(supersededNotice);
     });
     await _store.load();
     final info = _store.current.value;
@@ -147,35 +149,5 @@ class SessionRepository extends GetxService {
   void _goToLogin(String? notice) {
     loginNotice.value = notice;
     Get.offAllNamed(AppRoutes.authentication);
-  }
-
-  // The web client polls every 60 s; expiry is otherwise noticed only when
-  // the socket receives a line.
-  void _startPolling() {
-    _poll?.cancel();
-    _poll = Timer.periodic(const Duration(seconds: 60), (_) async {
-      try {
-        final data = await _api.session();
-        final expires = data['sessionExpiresTs'];
-        final info = _store.current.value;
-        final token = _store.token;
-        if (expires != null && info != null && token != null) {
-          await _store.save(
-            SessionInfo(
-              orgId: info.orgId,
-              userId: info.userId,
-              expiresTs: intOf(expires),
-            ),
-            token,
-          );
-        }
-      } on ApiException catch (_) {}
-    });
-  }
-
-  @override
-  void onClose() {
-    _poll?.cancel();
-    super.onClose();
   }
 }

@@ -8,6 +8,7 @@ import '../../../core/utils/relative_time.dart';
 import '../../../core/widgets/app_state_view.dart';
 import '../chats_controller.dart';
 import '../models/message_hit.dart';
+import 'conversation_actions_sheet.dart';
 import 'conversation_tile.dart';
 
 class SearchResults extends StatelessWidget {
@@ -44,6 +45,8 @@ class SearchResults extends StatelessWidget {
                 conversation: conv,
                 controller: c,
                 onTap: () => c.open(conv.convId),
+                onLongPress: () =>
+                    ConversationActionsSheet.show(context, c, conv),
               ),
           ],
           if (messages.isNotEmpty) ...[

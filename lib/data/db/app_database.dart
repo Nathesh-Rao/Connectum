@@ -21,7 +21,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 3;
+  static const _version = 4;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -77,6 +77,22 @@ class AppDatabase {
     3: [
       'ALTER TABLE conversations ADD COLUMN read_ts INTEGER',
       'ALTER TABLE conversations ADD COLUMN read_id TEXT',
+    ],
+    4: [
+      'ALTER TABLE conversations ADD COLUMN last_id TEXT',
+      'ALTER TABLE conversations ADD COLUMN unread_more INTEGER DEFAULT 0',
+      'ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0',
+      'ALTER TABLE conversations ADD COLUMN pinned_ts INTEGER',
+      'ALTER TABLE conversations ADD COLUMN is_muted INTEGER DEFAULT 0',
+      'ALTER TABLE conversations ADD COLUMN delivered_id TEXT',
+      'ALTER TABLE conversations ADD COLUMN peer_read_id TEXT',
+      'ALTER TABLE conversations ADD COLUMN peer_delivered_id TEXT',
+      'ALTER TABLE conversations ADD COLUMN avatar TEXT',
+      'ALTER TABLE conversations ADD COLUMN pending_read_id TEXT',
+      'ALTER TABLE conversations ADD COLUMN pending_delivered_id TEXT',
+      // The version 3 columns held a local "last opened" marker; the server's
+      // read position replaces it, so the old values must not be read as one.
+      'UPDATE conversations SET read_id = NULL, read_ts = NULL',
     ],
   };
 

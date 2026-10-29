@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../core/routes/app_routes.dart';
+import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
 
 class EnterpriseCreatedController extends GetxController {
@@ -22,7 +22,7 @@ class EnterpriseCreatedController extends GetxController {
     _timer = Timer(AppDurations.copiedHold, () => isCopied.value = false);
   }
 
-  void continueToChats() => Get.offAllNamed(AppRoutes.chats);
+  Future<void> continueToChats() => HomeReload.run();
 
   @override
   void onClose() {

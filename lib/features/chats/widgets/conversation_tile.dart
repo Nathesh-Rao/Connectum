@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/relative_time.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_row_highlight.dart';
 import '../../../core/widgets/app_unread_badge.dart';
 import '../../../data/models/conversation.dart';
 import '../../../data/models/message.dart';
@@ -14,17 +14,19 @@ import '../chats_controller.dart';
 
 /// One conversation row. Only the parts that change on their own sit in their
 /// own Obx: the presence dot and the time label.
-class ConversationTile extends StatefulWidget {
+class ConversationTile extends StatelessWidget {
   const ConversationTile({
     super.key,
     required this.conversation,
     required this.controller,
     required this.onTap,
+    this.onLongPress,
   });
 
   final Conversation conversation;
   final ChatsController controller;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   static String typeLabel(String kind) => switch (kind) {
     'dm' => 'Direct message',
@@ -34,97 +36,102 @@ class ConversationTile extends StatefulWidget {
   };
 
   @override
-  State<ConversationTile> createState() => _ConversationTileState();
-}
-
-class _ConversationTileState extends State<ConversationTile> {
-  bool _isPressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final c = widget.conversation;
+    final c = conversation;
     final hasUnread = c.unread > 0;
     return Semantics(
       button: true,
       label:
-          '${c.title}, ${ConversationTile.typeLabel(c.kind)}${hasUnread ? ', ${c.unread} unread' : ''}',
+          '${c.title}, ${ConversationTile.typeLabel(c.kind)}${c.isPinned ? ', pinned' : ''}${c.isMuted ? ', muted' : ''}${hasUnread ? ', ${c.unreadLabel} unread' : ''}',
       excludeSemantics: true,
-      child: Listener(
-        onPointerDown: (_) => setState(() => _isPressed = true),
-        onPointerUp: (_) => setState(() => _isPressed = false),
-        onPointerCancel: (_) => setState(() => _isPressed = false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: AppDurations.fast,
-            curve: AppCurves.out,
-            constraints: const BoxConstraints(
-              minHeight: AppSpacing.chatRowHeight,
-            ),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            decoration: BoxDecoration(
-              color: _isPressed ? AppColors.accentTint : Colors.transparent,
-              border: const Border(bottom: BorderSide(color: AppColors.line)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _Avatar(conversation: c, controller: widget.controller),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              c.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppText.rowTitle.copyWith(
-                                fontWeight: hasUnread
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                              ),
+      child: AppRowHighlight(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        resetKey: Object.hash(c.isPinned, c.isMuted, c.lastTs),
+        child: Container(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.chatRowHeight,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _Avatar(conversation: c, controller: controller),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            c.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.rowTitle.copyWith(
+                              fontWeight: hasUnread
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
                             ),
                           ),
+                        ),
+                        if (c.isPinned) ...[
+                          const SizedBox(width: AppSpacing.xxs),
+                          const Icon(
+                            Icons.push_pin,
+                            size: 13,
+                            color: AppColors.muted,
+                          ),
+                        ],
+                        if (c.isMuted) ...[
+                          const SizedBox(width: AppSpacing.xxs),
+                          const Icon(
+                            Icons.volume_off,
+                            size: 13,
+                            color: AppColors.muted,
+                          ),
+                        ],
+                        const SizedBox(width: AppSpacing.xs),
+                        Obx(
+                          () => Text(
+                            RelativeTime.label(
+                              c.lastTs,
+                              controller.minute.value,
+                            ),
+                            style: AppText.caption.copyWith(
+                              color: hasUnread && !c.isMuted
+                                  ? AppColors.accentInk
+                                  : AppColors.muted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Expanded(child: _Preview(conversation: c)),
+                        if (hasUnread) ...[
                           const SizedBox(width: AppSpacing.xs),
-                          Obx(
-                            () => Text(
-                              RelativeTime.label(
-                                c.lastTs,
-                                widget.controller.minute.value,
-                              ),
-                              style: AppText.caption.copyWith(
-                                color: hasUnread
-                                    ? AppColors.accentInk
-                                    : AppColors.muted,
-                              ),
-                            ),
+                          AppUnreadBadge(
+                            label: c.unreadLabel,
+                            isMuted: c.isMuted,
                           ),
                         ],
-                      ),
-                      Row(
-                        children: [
-                          Expanded(child: _Preview(conversation: c)),
-                          if (hasUnread) ...[
-                            const SizedBox(width: AppSpacing.xs),
-                            AppUnreadBadge(count: c.unread),
-                          ],
-                        ],
-                      ),
-                      Text(
-                        ConversationTile.typeLabel(c.kind),
-                        style: AppText.caption,
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                    Text(
+                      ConversationTile.typeLabel(c.kind),
+                      style: AppText.caption,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

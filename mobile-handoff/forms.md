@@ -106,7 +106,7 @@ All over the WebSocket `/sd` envelope (see messages-and-receipts.md section 7).
 |---|---|
 | List what the user can fill | `options.list` (options have `type:"data_input"`, `target` = form name, `targetScope`), `options.categories` |
 | Get definition | `tstruct.get {"name":"expense_claim"}` (admin forms) or `tstruct.user.get` (forms made by people) -> `data.tstruct` |
-| Submit | `tstruct.submit {"name":"expense_claim","values":{...},"chat":"dm:bob"}` or `tstruct.user.submit` for person-made forms. `chat` is optional: `dm:<user>` or `group:<name>` (never the global room); when present the server also posts the form into that conversation. Optional: `ref` (text <=200), `meta` (JSON object). |
+| Submit | `tstruct.submit {"name":"expense_claim","values":{...},"chat":"dm:bob"}` or `tstruct.user.submit` for person-made forms. `chat` is optional: `dm:<user>` or `group:<name>` (never the global room); when present the server also posts the form into that conversation. Optional: `ref` (text <=200), `meta` (JSON object, returned unchanged and **not** a duplicate guard), `cid` (see below). |
 | Reply | `{"ok":true,"data":{"submission":{...},"recordStatus":"saved"\|"pending","message":{"id":901,"ts":...,"conversation":"dm:bob"}}}` ; `message` is `null` if posting failed; `pending` = needs approval, and the chat message is posted only after approval. |
 | Edit | `submissions.update {"id":42,"values":{...}}` (full values object, the same validation, read-only fields keep the saved value). Only author (or user with edit access). Locked while `status` is `pending` or `approved` (`submission_locked`). Refreshes every chat card of that submission. |
 | Fix after rejection | `submission.resubmit {"id":42,"values":{...}}` (only if approver allowed) |
@@ -180,3 +180,12 @@ UNCLEAR: submission `status`/`approval` shape beyond `pending|approved|rejected`
 - src/features/connectumChat/utils/formEngine.js, formMessages.js, conditions.js, submissionState.js
 - src/features/connectumChat/components/modals/SmartStructureModal.jsx (submit/edit), src/features/connectumChat/ConnectumChatScreen.jsx (form_message handlers, openSubmissionEdit), components/MessageList.jsx
 - web/src/core/defaults.js, fieldTypes.js, validation.js (studio side), docs/FIELD_DEFAULTS.md, FIELD_RULES.md, GRID_SECTIONS.md, FETCH_RULES.md
+
+## Client id (`cid`) on form saves (backend update 2)
+
+Add `cid` (1 to 64 characters: letters, digits and `- _ . :`) to `tstruct.submit`, `tstruct.user.submit`, `submissions.update` and `submission.resubmit`.
+- A retry with the same `cid` returns the **first answer** with `duplicate:true` and saves nothing. The id is remembered for one day per person. Mobile treats `duplicate:true` as a normal success.
+- A save that was **refused** is not remembered, so the same `cid` can be retried.
+- Two calls with the same `cid` at the same instant: one saves, the other gets error `in_progress` (retry after a short delay with the same `cid`).
+- `meta` comes back unchanged but does **not** prevent duplicates. Mobile no longer sends `meta.clientId`.
+- Mobile keeps one `cid` per outbox item and reuses it on every retry; an entry first sent more than 23 hours ago fails with "couldn't confirm delivery" and tap-to-retry (the server remembers the id for one day). An entry sent before client ids existed that was never confirmed goes to tap-to-retry too.

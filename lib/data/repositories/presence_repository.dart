@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../models/ids.dart';
@@ -7,40 +6,37 @@ import '../socket/socket_service.dart';
 
 enum PresenceDot { none, online, offline }
 
-/// Who is online, from `/list`. The protocol has no presence event, only that
-/// list plus "has joined / has left" notices, so the list is asked again on
-/// those and every minute. Kept in memory: it is never written to SQLite.
-/// A dot is shown only while the data is under two minutes old and the socket
-/// is online, so a green dot never comes from stale data.
-class PresenceRepository extends GetxService {
+/// Who is online. `/list` answers once at start, on resume and after every
+/// reconnect; the live `presence` event keeps it current from then on. A
+/// reconnect that takes over a live connection sends no event, so everything
+/// is cleared when the socket goes down and nothing shows until `/list`
+/// answers. Kept in memory: never written to SQLite.
+class PresenceRepository extends GetxService with WidgetsBindingObserver {
   PresenceRepository(this._socket);
-
-  static const _freshFor = Duration(minutes: 2);
-  static const _every = Duration(minutes: 1);
 
   final SocketService _socket;
 
   final online = <String>{}.obs;
-  final isFresh = false.obs;
-  Timer? _staleTimer;
-  Timer? _repeat;
-  Timer? _debounce;
+
+  /// True once `/list` has answered on this connection.
+  final isKnown = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _socket.events.listen(_onEvent);
-    _socket.onOnline.listen((_) {
-      refresh();
-      _repeat?.cancel();
-      _repeat = Timer.periodic(_every, (_) => refresh());
-    });
+    _socket.onOnline.listen((_) => refresh());
     ever(_socket.connection, (state) {
       if (state == SocketState.online) return;
-      _repeat?.cancel();
-      _staleTimer?.cancel();
-      isFresh.value = false;
+      online.clear();
+      isKnown.value = false;
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) refresh();
   }
 
   Future<void> refresh() async {
@@ -50,7 +46,7 @@ class PresenceRepository extends GetxService {
   /// Reads the Rx values it depends on, so call it inside an Obx.
   PresenceDot dotFor(String username) {
     final connection = _socket.connection.value;
-    if (!isFresh.value || connection != SocketState.online) {
+    if (!isKnown.value || connection != SocketState.online) {
       return PresenceDot.none;
     }
     return online.contains(username.toLowerCase())
@@ -64,25 +60,21 @@ class PresenceRepository extends GetxService {
         online.assignAll(
           ((e['list'] as List?) ?? []).map((u) => idText(u).toLowerCase()),
         );
-        isFresh.value = true;
-        _staleTimer?.cancel();
-        _staleTimer = Timer(_freshFor, () => isFresh.value = false);
-      case 'system':
-        final text = idText(e['text']);
-        if (text.contains(' has joined') ||
-            text.contains(' has left') ||
-            text.contains(' has disconnected')) {
-          _debounce?.cancel();
-          _debounce = Timer(const Duration(seconds: 1), refresh);
+        isKnown.value = true;
+      case 'presence':
+        final user = idText(e['user']).toLowerCase();
+        if (user.isEmpty) return;
+        if (e['online'] == true) {
+          online.add(user);
+        } else {
+          online.remove(user);
         }
     }
   }
 
   @override
   void onClose() {
-    _staleTimer?.cancel();
-    _repeat?.cancel();
-    _debounce?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.onClose();
   }
 }

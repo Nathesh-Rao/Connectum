@@ -40,6 +40,7 @@ class AppTextField extends StatefulWidget {
     this.borderRadius = AppRadius.controlAll,
     this.helperText,
     this.fillColor = AppColors.background,
+    this.hasFocusRing = true,
   });
 
   final TextEditingController? controller;
@@ -72,6 +73,9 @@ class AppTextField extends StatefulWidget {
   final String? helperText;
   final Color fillColor;
 
+  /// False when the field sits inside a container that shows the focus.
+  final bool hasFocusRing;
+
   @override
   State<AppTextField> createState() => _AppTextFieldState();
 }
@@ -90,7 +94,7 @@ class _AppTextFieldState extends State<AppTextField> {
   Widget build(BuildContext context) {
     final borderColor = _hasError
         ? AppColors.error
-        : _isFocused
+        : _isFocused && widget.hasFocusRing
         ? AppColors.accent
         : widget.borderColor;
     return Column(
@@ -113,7 +117,9 @@ class _AppTextFieldState extends State<AppTextField> {
               color: widget.fillColor,
               borderRadius: widget.borderRadius,
               border: Border.all(color: borderColor),
-              boxShadow: _isFocused && !_hasError ? AppShadows.focusRing : null,
+              boxShadow: _isFocused && widget.hasFocusRing && !_hasError
+                  ? AppShadows.focusRing
+                  : null,
             ),
             child: TextField(
               controller: widget.controller,
@@ -154,6 +160,10 @@ class _AppTextFieldState extends State<AppTextField> {
                 hintText: widget.hint,
                 hintStyle: widget.textStyle.copyWith(color: AppColors.muted),
                 suffixIcon: widget.suffix,
+                // A suffix must not push the field past its own height.
+                suffixIconConstraints: BoxConstraints(
+                  maxHeight: widget.minHeight - 2,
+                ),
                 prefixIcon: widget.leading == null
                     ? null
                     : Padding(

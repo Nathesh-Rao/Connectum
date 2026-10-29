@@ -103,7 +103,9 @@ class AppPages {
       ),
     _page(
       AppRoutes.conversation,
-      () => const ConversationView(),
+      () => ConversationView(
+        conversationId: Uri.decodeComponent(Get.parameters['id'] ?? ''),
+      ),
       ConversationBinding(),
       AppTransitionKind.push,
     ),

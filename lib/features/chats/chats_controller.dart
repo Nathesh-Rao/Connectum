@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/conversation_route.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/db/app_database.dart';
@@ -15,6 +16,7 @@ import '../../data/repositories/feed_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
 import '../../data/session_store.dart';
+import '../../data/socket/socket_service.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
 import 'enterprise_switcher_controller.dart';
@@ -103,11 +105,16 @@ class ChatsController extends GetxController
 
   void _apply() {
     final source = _source.where(_isShown).toList()
-      ..sort((a, b) => b.lastTs.compareTo(a.lastTs));
+      ..sort((a, b) {
+        if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+        return b.lastTs.compareTo(a.lastTs);
+      });
     _all
       ..clear()
       ..addEntries(source.map((c) => MapEntry(c.convId, c)));
-    unreadChats.value = source.where((c) => c.unread > 0).length;
+    // A muted conversation keeps its own count but is left out of the tab
+    // dot and the All badge.
+    unreadChats.value = source.where((c) => c.unread > 0 && !c.isMuted).length;
     final onlyDirect = filterTabs.index == 1;
     final shown = onlyDirect
         ? source.where((c) => c.kind != 'global').toList()
@@ -177,14 +184,47 @@ class ChatsController extends GetxController
 
   void openProfile() => shell.select(3);
 
+  static const needsConnection =
+      'This needs a connection. Try again when you are online.';
+
+  /// Pin, unpin, mute or unmute. Returns a plain-words problem, or null when
+  /// it worked. These are kept on the server, so they need a connection.
+  Future<String?> togglePin(Conversation c) => _change(
+    () => conversations.setPinned(c.convId, isPinned: !c.isPinned),
+    () => SeedUi.setFlags(c.convId, isPinned: !c.isPinned),
+  );
+
+  Future<String?> toggleMute(Conversation c) => _change(
+    () => conversations.setMuted(c.convId, isMuted: !c.isMuted),
+    () => SeedUi.setFlags(c.convId, isMuted: !c.isMuted),
+  );
+
+  Future<String?> _change(
+    Future<void> Function() action,
+    VoidCallback seed,
+  ) async {
+    if (SeedUi.isActive) {
+      seed();
+      return null;
+    }
+    if (isOffline) return needsConnection;
+    try {
+      await action();
+      return null;
+    } on SocketCallError catch (e) {
+      if (e.isConnectionGap) return needsConnection;
+      return e.message.isEmpty ? 'That did not work. Try again.' : e.message;
+    }
+  }
+
   void open(String convId) {
-    Get.toNamed(AppRoutes.conversationOf(convId));
+    ConversationRoute.open(convId);
   }
 
   AppPresenceDot presenceFor(Conversation c) {
     final peer = c.peer;
     if (peer == null) return AppPresenceDot.none;
-    final isFresh = presence.isFresh.value;
+    final isKnown = presence.isKnown.value;
     if (SeedUi.isActive) {
       return SeedUi.online.contains(peer)
           ? AppPresenceDot.online
@@ -192,7 +232,7 @@ class ChatsController extends GetxController
           ? AppPresenceDot.offline
           : AppPresenceDot.none;
     }
-    if (!isFresh) return AppPresenceDot.none;
+    if (!isKnown) return AppPresenceDot.none;
     return switch (presence.dotFor(peer)) {
       PresenceDot.online => AppPresenceDot.online,
       PresenceDot.offline => AppPresenceDot.offline,

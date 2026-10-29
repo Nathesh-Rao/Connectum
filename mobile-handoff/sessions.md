@@ -12,7 +12,7 @@ Based on code; `docs/MULTI_ENTERPRISE.md` describes the same flow. Where docs di
 | Lifetime | 15 days, hard limit (not extended by use) | 15 days, hard limit |
 | Sent as | `Authorization: Bearer <ACCT_TOKEN>` | `Authorization: Bearer <ENT_TOKEN>` and the WS handshake `token` |
 
-Lifetime: code default is 15 days (`SESSION_TTL_DEFAULT = 15 * 24 * 3600`, env `CONNECTUM_SESSION_TTL_SEC`). `docs/CHAT_PROTOCOL.md` and `docs/CONNECTUM_API.md` say 14 days; code wins. Each sign-in answer carries `expiresTs` (epoch ms).
+Lifetime: **15 days, a hard limit** (confirmed by the backend developer; the older docs that say 14 are wrong). Each sign-in answer carries `expiresTs` (epoch ms): use it, never a fixed number. `enter` is the right call for the WebSocket token. HTTPS/WSS has no date yet.
 
 ## 2. Login with email code (OTP)
 
@@ -82,7 +82,7 @@ Server rule (`sd_auth:revoke_previous_session`): **one active enterprise session
 
 UI on the old device (`ConnectumChatScreen.jsx`, `forceSignOut`): disconnect socket (no reconnect), clear message cache, remove `connectum_session_user` if it still holds the ended token (another tab may already have stored a new one), reset all per-user state, set the sign-in notice **"You were signed out because this account signed in on another tab or device."**, render the auth screen. Because `connectum_identity` is still valid, the auth screen shows the enterprise list with that notice as the error line.
 
-Related but different: the **same token** opening a second socket (reload, second window) does not sign anyone out. The newest socket wins; the older gets `sd_event connection_superseded` (`reason:"opened_elsewhere"`) and is closed; the web client shows a toast ("...opened in another window. Reload this page to use it here.") and does not reconnect.
+Related but different: a connection with a **valid session** (reload, second window, the same app reconnecting) takes the old socket over at once: the older gets `sd_event connection_superseded` (`reason:"opened_elsewhere"`) and is closed. A new **sign-in** on another device sends the old socket `session_replaced` instead. `Username taken` only appears when there is no Connectum session. Mobile: `connection_superseded` and `session_expired` sign this device out (token cleared, cached rows and outbox kept) with a notice; `session_replaced` wipes this organisation's rows and outbox; any handshake error is an auth failure (token cleared, rows kept).
 
 ### Different organisation
 Sessions, usernames, sockets and chat rooms are per enterprise (Redis keys prefixed `e:<id>:`, `chat_room@<id>`). `POST enter` for enterprise B creates a new, independent enterprise session. Enterprise A's session and socket are untouched: no `session_replaced` is sent, and the account session is unchanged. The web client can hold only one enterprise at a time per browser profile: it must first "switch" (section 5), which calls `logout` for A. If another tab/device enters B while tab 1 stays in A, tab 1 keeps working with its A token (UNCLEAR: whether the Flutter app should allow two enterprises at once; the backend allows it). In the browser, `connectum_session_user` is a single slot, so tab 2 overwrites it, and a reload of tab 1 would resume B.

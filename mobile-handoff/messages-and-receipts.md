@@ -4,7 +4,7 @@ Based on code (backend `chat_web.erl` is the source of truth, per docs/CHAT_PROT
 
 ## 1. Connect
 
-First frame (JSON): `{"username":"alice","token":"<session token from POST /api/sd/login>"}` ; reply `{"type":"welcome","name":"alice"}` then a `history` for the global room. `username` is case-sensitive, max 24 chars, no spaces. Rate limit: 30 commands / 10 s per connection (`chat.hrl`); over the limit an `/sd` call gets `{"ok":false,"error":{"code":"rate_limited"}}`. Max message text 2000 chars (longer gets an `error` event). Session lasts 14 days, then `{"type":"sd_event","event":"session_expired"}` and close.
+First frame (JSON): `{"username":"alice","token":"<session token from POST /api/sd/login>"}` ; reply `{"type":"welcome","name":"alice"}` then a `history` for the global room. `username` max 24 chars, no spaces; in a Connectum organisation send it in lower case. Rate limit: 30 commands / 10 s per connection (`chat.hrl`); over the limit an `/sd` call gets `{"ok":false,"error":{"code":"rate_limited"}}`. Max message text 2000 chars (longer gets an `error` event). Session lasts 15 days (hard limit; use `expiresTs`), then `{"type":"sd_event","event":"session_expired"}` and close.
 
 ## 2. Sending a message
 
@@ -84,25 +84,26 @@ Live events carry a subset (no `e2e` flag): `chat`/`private` = `{type,id,ts,from
 
 Conversation lists: DM key is the other username lowercased; web ids are `user-<name>`, `room-<group>`, `host-<key>`.
 
-## 6. Sent / delivered / read states
+## 6. Sent / delivered / read states and unread counts
 
-**Receipts partly exist, for direct messages only. They are not persisted.**
+**Receipts are kept on the server (backend update 2).** For a direct conversation the other person's positions are stored, so a sender who was offline still learns them.
 
-| State (web `status`/`ticks`) | Source | Notes |
+| State | Source | Notes |
 |---|---|---|
-| `sending` | local, before the socket write is confirmed | Web sets it, then flips to `sent` immediately after `ws.send` succeeds (before the ack). |
-| `failed` | local: socket closed on send; E2E encrypt failure; `error` with `not_associated`/`not_allowed` | Not retried. |
-| `sent` | local after write, and again on ack (`dm_ack`, `group_msg_ack`, `own_message_id`, `host_ack`) | Ack gives the real `id` and `ts`. |
-| `delivered` | **`dm_ack.status`** is `"delivered"` (recipient online and pushed live) or `"queued"` (recipient offline, stored). | The web app saves it as `serverStatus` but **shows only the "sent" tick**; the "delivered" double tick icon exists in `TicksIcon` but nothing sets `ticks:"delivered"`. There is no later "delivered" event when a queued message is eventually received. |
-| `read` | Recipient's client sends `/read dm <user>`; server pushes `{"type":"dm_read","from":"bob"}` to the other party **only if they are online** (`chat_room` mark_read: silently dropped otherwise). | The web client then marks **all** its outgoing messages in that DM `read` (no per-message id in the event). |
+| `pending`, `sending` | local, before the server ack | the client shows its temp id until the ack |
+| `failed` | local, for a non-retryable refusal (`not_associated`, `not_allowed`, validation) or an unconfirmed delivery | see `CLAUDE.md` Offline |
+| `sent` | the ack (`dm_ack`, `group_msg_ack`, `own_message_id`, `host_ack`) | gives the real `id` and `ts` |
+| `delivered` | a message of mine with id at or below `peerDeliveredId` | `conv.list {full:true}` gives it; the live `sd_event receipt` (`kind:"delivered"`, `upTo`) moves it. `dm_ack.status "delivered"/"queued"` is only a first hint |
+| `read` | a message of mine with id at or below `peerReadId` | same sources (`kind:"read"`); read implies delivered. The old `dm_read` push (no id) is still sent and means "up to now" |
 
-Facts a mobile developer must know:
-- `dm_read` has no message id or timestamp: it means "bob has read the thread up to now".
-- Read state is **not stored**: history items carry no read/delivered flag. The web client marks every message loaded from history (even its own) as `read`. After reconnect the read state of your own messages is unknown; show them as sent/read by convention, as the web does.
-- `/read dm <user>` is sent when the DM is opened, and when a `private` message arrives while it is open. It also clears the sender's personal notifications server-side (`notifications_changed`).
-- **Groups, global room, hosts: no delivery or read receipts** (`/read` accepts only `dm`).
+- **Ids are compared as numbers only here**, and in the unread rule below. They are stored as text; parse only all-digit ids and ignore anything else.
+- **Receipts are for direct conversations.** For a group the author asks `conv.readers {id:"group:<name>", messageId}` (`readers[{user, readTs}]`, `readCount`, `total`); only the author may ask and a direct conversation answers `invalid`. The global room and hosts have no receipts.
+- **Sending a read position:** `conv.read {id, upTo}` when messages are actually on screen (forward only; the server clamps to the newest). `conv.delivered {id, upTo}` when messages from others arrive or sync in. Do not send a read just because a row was tapped.
+- **Unread counts come from the server.** `conv.list {full:true}` gives `unread` (at most 99) and `unreadMore` per conversation (messages from others above the read position and above what was cleared) plus `lastId` and `readId`. Between syncs a live message from someone else counts once when its id is newer than the known `lastId`; the next sync replaces the number. Host conversations are not in `conv.list`, so their count stays local.
+- **Pin and mute** are kept on the server (`conv.pin/unpin/mute/unmute`, flags `pinned`/`pinnedTs`, `muted`/`mutedTs` in `conv.list`).
 - Typing: `/typing dm|group <name>|global` ; received as `typing_dm {from}`, `group_typing {group,from}`, `typing {text: username}`.
-- Unread counts are client state (incremented per `private`/`group_message` when the chat is not on screen); badge/feed counts for notifications come from `/sd` actions (`feed.summary` etc., see docs/CONNECTUM_API.md).
+- Notification counts come from `/sd feed.summary` etc. (docs/CONNECTUM_API.md).
+- `/conversations` items now also carry `avatar` (the other person's picture address or null). `conv.list` carries `avatar` only on direct rows; `assoc.list` and `users.search` rows carry it per person.
 
 ## 7. Related `/sd` envelope (used by forms and everything else)
 

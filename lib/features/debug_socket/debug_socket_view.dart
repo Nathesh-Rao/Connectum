@@ -68,6 +68,21 @@ class DebugSocketView extends GetView<DebugSocketController> {
           ),
           const SizedBox(height: AppSpacing.xs),
           AppButton.secondary(label: 'Sync now', onPressed: c.syncNow),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Simulate switch reload (Chats, 8 s)',
+            onPressed: c.simulateSwitchReload,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Open Priya, then Arjun over it',
+            onPressed: c.openStacked,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Reload with a conversation open (6 s)',
+            onPressed: c.reloadWithConversation,
+          ),
           _section('Outbox'),
           Obx(() => Text(c.outbox.value, style: AppText.readable)),
           _section('Test login (token stays in secure storage)'),
@@ -153,7 +168,118 @@ class DebugSocketView extends GetView<DebugSocketController> {
           AppTextField(controller: c.sdArgs, label: 'Args (JSON)'),
           const SizedBox(height: AppSpacing.xs),
           AppButton.secondary(label: 'Run', onPressed: c.runSd),
-          _section('Form meta test (creates a real submission)'),
+          _section('Inbox state (uses the conversation id and up-to id above)'),
+          AppTextField(controller: c.upTo, label: 'Up to message id'),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'conv.list full',
+                  onPressed: c.convListFull,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Stored state',
+                  onPressed: c.showInboxState,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Mark read',
+                  onPressed: c.markReadDebug,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Delivered',
+                  onPressed: c.deliveredDebug,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Pin / unpin',
+                  onPressed: c.togglePin,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Mute / unmute',
+                  onPressed: c.toggleMute,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'conv.readers',
+                  onPressed: c.readersDebug,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Presence list',
+                  onPressed: c.presenceList,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Fake delivered receipt',
+                  onPressed: () => c.fakeReceipt('delivered'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Fake read receipt',
+                  onPressed: () => c.fakeReceipt('read'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Fake incoming',
+                  onPressed: c.fakeIncoming,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Seed rows',
+                  onPressed: c.seedMigrationRows,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _section('Form cid test (creates one real submission)'),
           AppTextField(controller: c.formName, label: 'Form name'),
           const SizedBox(height: AppSpacing.xs),
           AppTextField(
@@ -164,9 +290,46 @@ class DebugSocketView extends GetView<DebugSocketController> {
           ),
           const SizedBox(height: AppSpacing.xs),
           AppButton.secondary(
-            label: 'Submit and read back',
-            onPressed: c.metaTest,
+            label: 'Submit, repeat, show duplicate',
+            onPressed: c.cidTest,
           ),
+          _section('Migration check (own account, debug only)'),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Seed rows',
+                  onPressed: c.seedMigrationRows,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Count rows',
+                  onPressed: c.countRows,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Show outbox rows',
+                  onPressed: c.showOutboxRows,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Remove test rows',
+                  onPressed: c.removeTestRows,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
           _section('Results'),
           Obx(() => Text(c.notes.join('\n\n'), style: AppText.readable)),
           _section('Last 20 events (redacted)'),

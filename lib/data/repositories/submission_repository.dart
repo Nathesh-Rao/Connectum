@@ -14,8 +14,11 @@ import '../socket/socket_service.dart';
 class SubmissionRepository extends GetxService {
   SubmissionRepository(this._db, this._session, this._socket);
 
-  static const _metaKey = 'meta.preserved';
   static const couldNotConfirm = "couldn't confirm delivery";
+
+  /// The server remembers a client id for one day; an entry first sent longer
+  /// ago than this can no longer be sent safely again.
+  static const _cidMemory = Duration(hours: 23);
   static const _kinds = "('form_submit','form_edit')";
 
   final AppDatabase _db;
@@ -67,20 +70,16 @@ class SubmissionRepository extends GetxService {
         [org, user, tempId, name, user, now, jsonEncode(values)],
       );
       await sql.insert(
-        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts) '
-        "VALUES(?,?,?,'form_submit',?,?,'pending',?)",
+        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts, cid) '
+        "VALUES(?,?,?,'form_submit',?,?,'pending',?,?)",
         [
           org,
           user,
           chat ?? '',
-          jsonEncode({
-            'name': name,
-            'values': values,
-            'chat': chat,
-            'clientId': _nonce(),
-          }),
+          jsonEncode({'name': name, 'values': values, 'chat': chat}),
           tempId,
           now,
+          newCid(),
         ],
       );
     });
@@ -105,14 +104,15 @@ class SubmissionRepository extends GetxService {
       ]);
     } else {
       await _db.insert(
-        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts) '
-        "VALUES(?,?,'','form_edit',?,?,'pending',?)",
+        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts, cid) '
+        "VALUES(?,?,'','form_edit',?,?,'pending',?,?)",
         [
           org,
           user,
           jsonEncode({'id': id, 'values': values}),
           id,
           DateTime.now().millisecondsSinceEpoch,
+          newCid(),
         ],
       );
     }
@@ -132,14 +132,6 @@ class SubmissionRepository extends GetxService {
       [_org, _me, refId],
     );
     unawaited(flush());
-  }
-
-  String _nonce() {
-    final random = Random.secure();
-    return List.generate(
-      12,
-      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
-    ).join();
   }
 
   // ---- flusher ----------------------------------------------------------------
@@ -168,32 +160,37 @@ class SubmissionRepository extends GetxService {
   }
 
   Future<void> _send(OutboxEntry entry) async {
+    if (_isPastCidMemory(entry)) {
+      await _fail(entry, couldNotConfirm);
+      return;
+    }
+    final cid = entry.cid ?? newCid();
+    final now = DateTime.now().millisecondsSinceEpoch;
     await _db.update(
-      "UPDATE outbox SET status = 'sending', attempt_ts = ?, retry_count = retry_count + 1 WHERE id = ?",
-      [DateTime.now().millisecondsSinceEpoch, entry.id],
+      "UPDATE outbox SET status = 'sending', attempt_ts = ?, retry_count = retry_count + 1, "
+      'first_attempt_ts = COALESCE(first_attempt_ts, ?), cid = ? WHERE id = ?',
+      [now, now, cid, entry.id],
     );
     try {
+      // A repeat of the same cid returns the first answer with
+      // `duplicate: true` and saves nothing; that is an ordinary success.
       if (entry.kind == 'form_submit') {
-        final nonce = '${entry.payload['clientId']}';
         final data = await _socket.sdCall('tstruct.submit', {
           'name': entry.payload['name'],
           'values': entry.payload['values'],
           if (entry.payload['chat'] != null) 'chat': entry.payload['chat'],
-          'meta': {'clientId': nonce},
+          'cid': cid,
         });
         await _adopt(
           entry,
           (data['submission'] as Map).cast<String, dynamic>(),
           data['recordStatus'],
         );
-        final meta = (data['submission'] as Map)['meta'];
-        if (meta is Map && meta['clientId'] == nonce) {
-          await _session.writeValue(_metaKey, 'true');
-        }
       } else {
         final data = await _socket.sdCall('submissions.update', {
           'id': entry.payload['id'],
           'values': entry.payload['values'],
+          'cid': cid,
         });
         await _adopt(
           entry,
@@ -206,16 +203,21 @@ class SubmissionRepository extends GetxService {
     }
   }
 
+  bool _isPastCidMemory(OutboxEntry e) =>
+      e.firstAttemptTs != null &&
+      DateTime.now().millisecondsSinceEpoch - e.firstAttemptTs! >
+          _cidMemory.inMilliseconds;
+
   Future<void> _onSendError(OutboxEntry entry, SocketCallError e) async {
+    // No answer: the save may or may not have happened, and sending the same
+    // cid again is safe either way, so it goes back to pending.
     if (e.isConnectionGap) {
-      if (entry.kind == 'form_edit') {
-        await _setStatus(entry, 'pending');
-      } else if (e.code == 'timeout' && _socket.isOnline) {
-        await _reconcile(entry);
-      }
+      await _setStatus(entry, 'pending');
       return;
     }
-    if (e.code == 'rate_limited' || e.code == 'busy') {
+    if (e.code == 'in_progress' ||
+        e.code == 'rate_limited' ||
+        e.code == 'busy') {
       await _db.update(
         "UPDATE outbox SET status = 'pending', next_attempt_ts = ? WHERE id = ?",
         [
@@ -259,52 +261,6 @@ class SubmissionRepository extends GetxService {
       await sql.update('DELETE FROM outbox WHERE id = ?', [entry.id]);
     });
     await reload();
-  }
-
-  /// Duplicate protection for a form submission that may or may not have
-  /// reached the server. It relies on the server returning `meta.clientId`,
-  /// which only counts as proven after one real round trip (the debug action
-  /// or a successful submit). The submission is found by its nonce. It is
-  /// re-sent only if the list is complete, or reaches back before the
-  /// submission was created, and the nonce is absent. Anything uncertain
-  /// (meta not proven, list failed, list too short) fails with tap-to-retry.
-  Future<void> _reconcile(OutboxEntry entry) async {
-    if (await _session.readValue(_metaKey) != 'true') {
-      await _fail(entry, couldNotConfirm);
-      return;
-    }
-    final Map<String, dynamic> data;
-    try {
-      data = await _socket.sdCall('submissions.list', {
-        'tstruct': entry.payload['name'],
-      });
-    } on SocketCallError catch (_) {
-      if (_socket.isOnline) {
-        await _fail(entry, couldNotConfirm);
-      } else {
-        await _setStatus(entry, 'sending');
-      }
-      return;
-    }
-    final list = ((data['submissions'] as List?) ?? []).cast<Map>();
-    final nonce = '${entry.payload['clientId']}';
-    for (final s in list) {
-      final meta = s['meta'];
-      if (meta is Map && meta['clientId'] == nonce) {
-        await _adopt(entry, s.cast<String, dynamic>(), null);
-        return;
-      }
-    }
-    final oldest = list.isEmpty
-        ? null
-        : list.map((s) => intOf(s['ts'])).reduce(min);
-    final reachesBack =
-        data['hasMore'] != true || (oldest != null && oldest < entry.createdTs);
-    if (reachesBack) {
-      await _setStatus(entry, 'pending');
-    } else {
-      await _fail(entry, couldNotConfirm);
-    }
   }
 
   Future<void> _upsertServer(
@@ -353,11 +309,11 @@ class SubmissionRepository extends GetxService {
     );
     for (final row in stale) {
       final entry = OutboxEntry.fromRow(row);
-      if (entry.kind == 'form_edit') {
-        await _setStatus(entry, 'pending');
-      } else {
-        await _reconcile(entry);
-      }
+      // A send with no client id (made before ids existed) may already be on
+      // the server; it goes to tap-to-retry instead of being sent again.
+      await (entry.cid == null || _isPastCidMemory(entry)
+          ? _fail(entry, couldNotConfirm)
+          : _setStatus(entry, 'pending'));
     }
     await syncFromServer();
     await flush();
@@ -416,26 +372,22 @@ class SubmissionRepository extends GetxService {
         .cast<String, dynamic>();
   }
 
-  /// Debug: submits a real test form with a nonce in `meta.clientId`, reads it
-  /// back and records whether the server kept `meta`.
-  Future<String> debugMetaRoundTrip(
-    String name,
-    Map<String, dynamic> values,
-  ) async {
-    final nonce = _nonce();
-    final created = await _socket.sdCall('tstruct.submit', {
+  /// Debug: submits a real test form with a client id, then the same id again
+  /// and reports whether the repeat came back as `duplicate: true` with the
+  /// same submission and nothing new saved.
+  Future<String> debugCidTest(String name, Map<String, dynamic> values) async {
+    final cid = newCid();
+    Future<Map<String, dynamic>> submit() => _socket.sdCall('tstruct.submit', {
       'name': name,
       'values': values,
-      'meta': {'clientId': nonce},
+      'cid': cid,
     });
-    final submission = (created['submission'] as Map).cast<String, dynamic>();
-    final id = submission['id'];
-    final read = await _socket.sdCall('submission.get', {'id': id});
-    final meta = (read['submission'] as Map)['meta'];
-    final inReply = (submission['meta'] as Map?)?['clientId'] == nonce;
-    final inRead = meta is Map && meta['clientId'] == nonce;
-    if (inRead) await _session.writeValue(_metaKey, 'true');
-    return 'submission ${idText(id)}: meta in submit reply=$inReply, in submission.get=$inRead'
-        '${inRead ? ' (meta preserved)' : ' (meta NOT preserved: retried forms will fail with tap-to-retry)'}';
+    final first = await submit();
+    final again = await submit();
+    String id(Map<String, dynamic> d) => idText((d['submission'] as Map)['id']);
+    return 'cid $cid: first submission ${id(first)} '
+        'duplicate=${first['duplicate'] == true}; repeat submission ${id(again)} '
+        'duplicate=${again['duplicate'] == true}, '
+        '${id(first) == id(again) && again['duplicate'] == true ? 'nothing saved twice' : 'NOT a clean duplicate'}';
   }
 }

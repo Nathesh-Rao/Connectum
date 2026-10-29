@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
@@ -110,7 +111,7 @@ class EnterprisesController extends GetxController {
     enteringId.value = m.enterprise;
     try {
       await auth.enter(m.enterprise);
-      Get.offAllNamed(AppRoutes.chats);
+      await HomeReload.run();
     } on UnsupportedStep catch (e) {
       blockedReasons.assignAll(e.reasons);
     } on ApiException catch (e) {

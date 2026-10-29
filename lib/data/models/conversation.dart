@@ -20,6 +20,16 @@ class Conversation {
     this.lastStatus,
     this.lastIsEncrypted = false,
     this.lastIsDeleted = false,
+    this.lastId = '',
+    this.readId = '',
+    this.unreadMore = false,
+    this.isPinned = false,
+    this.isMuted = false,
+    this.deliveredId = '',
+    this.peerReadId = '',
+    this.peerDeliveredId = '',
+    this.avatar,
+    this.memberCount = 0,
   });
 
   final String convId;
@@ -37,8 +47,53 @@ class Conversation {
   final MessageStatus? lastStatus;
   final bool lastIsEncrypted;
   final bool lastIsDeleted;
+  final String lastId;
+  final String readId;
+
+  /// The server counts at most 99 and says when there were more.
+  final bool unreadMore;
+  final bool isPinned;
+  final bool isMuted;
+  final String deliveredId;
+  final String peerReadId;
+  final String peerDeliveredId;
+  final String? avatar;
+
+  /// Members of a group, from the stored list (0 when not known).
+  final int memberCount;
+
+  /// "99+" past the cap, a plain number below it, nothing at 0.
+  String get unreadLabel => unreadMore || unread > 99 ? '99+' : '$unread';
 
   bool get isEncryptedUnsupported => isEncrypted;
+
+  Conversation withFlags({bool? isPinned, bool? isMuted}) => Conversation(
+    convId: convId,
+    kind: kind,
+    title: title,
+    lastText: lastText,
+    lastTs: lastTs,
+    lastFrom: lastFrom,
+    unread: unread,
+    isArchived: isArchived,
+    isEncrypted: isEncrypted,
+    lastKind: lastKind,
+    lastFormName: lastFormName,
+    lastIsMine: lastIsMine,
+    lastStatus: lastStatus,
+    lastIsEncrypted: lastIsEncrypted,
+    lastIsDeleted: lastIsDeleted,
+    lastId: lastId,
+    readId: readId,
+    unreadMore: unreadMore,
+    isPinned: isPinned ?? this.isPinned,
+    isMuted: isMuted ?? this.isMuted,
+    deliveredId: deliveredId,
+    peerReadId: peerReadId,
+    peerDeliveredId: peerDeliveredId,
+    avatar: avatar,
+    memberCount: memberCount,
+  );
 
   /// The other person's username for a direct message.
   String? get peer => kind == 'dm' ? convId.substring(3) : null;
@@ -70,7 +125,27 @@ class Conversation {
           intOf(r['lm_e2e']) == 1 ||
           (r['lm_kind'] == null && intOf(r['is_encrypted']) == 1),
       lastIsDeleted: intOf(r['lm_deleted']) == 1,
+      lastId: idText(r['last_id']),
+      readId: idText(r['read_id']),
+      unreadMore: intOf(r['unread_more']) == 1,
+      isPinned: intOf(r['is_pinned']) == 1,
+      isMuted: intOf(r['is_muted']) == 1,
+      deliveredId: idText(r['delivered_id']),
+      peerReadId: idText(r['peer_read_id']),
+      peerDeliveredId: idText(r['peer_delivered_id']),
+      avatar: r['avatar'] == null ? null : idText(r['avatar']),
+      memberCount: _count(r['members_json'] as String?),
     );
+  }
+
+  static int _count(String? json) {
+    if (json == null) return 0;
+    try {
+      final members = jsonDecode(json);
+      return members is List ? members.length : 0;
+    } on FormatException {
+      return 0;
+    }
   }
 
   /// A form card is named by its caption, then its structure, then "Form".
@@ -105,7 +180,15 @@ class Conversation {
       other.lastIsMine == lastIsMine &&
       other.lastStatus == lastStatus &&
       other.lastIsEncrypted == lastIsEncrypted &&
-      other.lastIsDeleted == lastIsDeleted;
+      other.lastIsDeleted == lastIsDeleted &&
+      other.lastId == lastId &&
+      other.unreadMore == unreadMore &&
+      other.isPinned == isPinned &&
+      other.isMuted == isMuted &&
+      other.peerReadId == peerReadId &&
+      other.peerDeliveredId == peerDeliveredId &&
+      other.avatar == avatar &&
+      other.memberCount == memberCount;
 
   @override
   int get hashCode => Object.hash(
@@ -124,5 +207,15 @@ class Conversation {
     lastStatus,
     lastIsEncrypted,
     lastIsDeleted,
+    Object.hash(
+      lastId,
+      unreadMore,
+      isPinned,
+      isMuted,
+      peerReadId,
+      peerDeliveredId,
+      avatar,
+      memberCount,
+    ),
   );
 }

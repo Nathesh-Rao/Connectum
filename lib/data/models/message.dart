@@ -43,6 +43,31 @@ class Message {
 
   bool get isLocalTemp => msgId.startsWith('temp-');
 
+  Message copyWith({
+    String? msgId,
+    MessageStatus? status,
+    bool? isDeleted,
+    String? failReason,
+  }) => Message(
+    msgId: msgId ?? this.msgId,
+    convId: convId,
+    sender: sender,
+    isMine: isMine,
+    text: text,
+    ts: ts,
+    status: status ?? this.status,
+    kind: kind,
+    replyTo: replyTo,
+    isEncryptedUnsupported: isEncryptedUnsupported,
+    editedTs: editedTs,
+    isDeleted: isDeleted ?? this.isDeleted,
+    reactionsJson: reactionsJson,
+    formJson: formJson,
+    failReason: failReason ?? this.failReason,
+    localSeq: localSeq,
+    cid: cid,
+  );
+
   factory Message.fromRow(Map<String, Object?> r) => Message(
     msgId: idText(r['msg_id']),
     convId: idText(r['conv_id']),

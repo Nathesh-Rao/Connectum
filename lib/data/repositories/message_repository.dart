@@ -14,6 +14,8 @@ import 'encryption_policy.dart';
 
 enum SendResult { queued, blockedEncrypted, tooLong, invalid, noSession }
 
+enum DeleteResult { deleted, denied, needsConnection, notSupported, failed }
+
 class _History {
   const _History(this.items, this.unknown, {this.hasMore = false, this.next});
 
@@ -59,6 +61,7 @@ class MessageRepository extends GetxService {
 
   final _lists = <String, RxList<Message>>{};
   final _historyWaiters = <String, Completer<_History>>{};
+  final _deleteWaiters = <String, Completer<DeleteResult>>{};
   final _inFlight = <int, OutboxEntry>{};
   final _ackTimers = <int, Timer>{};
   Timer? _wakeTimer;
@@ -79,6 +82,7 @@ class MessageRepository extends GetxService {
       _queue = _queue.then((_) => _handle(e)).catchError((Object _) {});
     });
     _socket.onOnline.listen((_) => _onOnline());
+    _conversations.receiptsChanged.listen(applyReceipts);
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _onDropped();
     });
@@ -96,9 +100,79 @@ class MessageRepository extends GetxService {
     return list;
   }
 
+  /// The thread on screen. Messages that arrive in it do not count as unread
+  /// (the screen reports what it showed through `markRead`).
+  /// The thread's cached messages, ready to show: the list is filled from
+  /// SQLite before this returns.
+  Future<RxList<Message>> open(String convId) async {
+    final list = messages(convId);
+    await _reload(convId);
+    return list;
+  }
+
+  /// Latest page of one conversation (and the gap check), when online.
+  Future<void> syncConversation(String convId) async {
+    if (!_socket.isOnline) return;
+    await _syncConversation(convId);
+  }
+
+  /// True when the thread is known to be end-to-end encrypted: plain sends are
+  /// blocked. An unknown verdict is not blocked (a send defers instead).
+  Future<bool> isEncrypted(String convId, {bool isLookup = false}) async {
+    final facts = await _facts(convId);
+    final verdict = isLookup && _socket.isOnline
+        ? await _policy.verdict(convId, facts)
+        : _policy.cached(convId, facts);
+    return verdict == EncryptionVerdict.encrypted;
+  }
+
+  /// Deletes one of my messages. A message that never reached the server (still
+  /// waiting or failed) is removed here, offline too; a sent one needs the
+  /// connection and the server's answer (`/delete` exists for direct messages,
+  /// groups and the global room, not for teams).
+  Future<DeleteResult> deleteMessage(Message m) async {
+    if (m.isLocalTemp || m.status == MessageStatus.failed) {
+      await _db.transaction((sql) async {
+        await sql.update(
+          'DELETE FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ?',
+          [_org, _me, m.msgId],
+        );
+        await sql.update(
+          'DELETE FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [_org, _me, m.msgId],
+        );
+      });
+      await _reload(m.convId);
+      await _conversations.reload();
+      return DeleteResult.deleted;
+    }
+    final kind = ConversationRepository.kindOf(m.convId);
+    final target = ConversationRepository.targetOf(m.convId);
+    final command = switch (kind) {
+      'dm' => '/delete dm $target ${m.msgId}',
+      'group' => '/delete group $target ${m.msgId}',
+      'global' => '/delete global ${m.msgId}',
+      _ => null,
+    };
+    if (command == null) return DeleteResult.notSupported;
+    if (!_socket.isOnline) return DeleteResult.needsConnection;
+    final waiter = Completer<DeleteResult>();
+    _deleteWaiters[m.msgId] = waiter;
+    try {
+      if (!await _socket.sendCommand(command)) {
+        return DeleteResult.needsConnection;
+      }
+      return await waiter.future.timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => DeleteResult.failed,
+      );
+    } finally {
+      _deleteWaiters.remove(m.msgId);
+    }
+  }
+
   void setOpenConversation(String? convId) {
     _openConversation = convId;
-    if (convId != null) _conversations.markRead(convId);
   }
 
   Future<void> _reload(String convId) async {
@@ -802,6 +876,11 @@ class MessageRepository extends GetxService {
       case 'dm_edited':
       case 'group_edited':
         await _onEdited(e);
+      case 'delete_denied':
+        final waiter = _deleteWaiters[idText(e['messageId'])];
+        if (waiter != null && !waiter.isCompleted) {
+          waiter.complete(DeleteResult.denied);
+        }
       case 'edit_denied':
         await _onEditDenied(e);
       case 'deleted':
@@ -814,6 +893,9 @@ class MessageRepository extends GetxService {
         await _onReaction(e);
       case 'sd_event':
         final event = e['event'];
+        if (event == 'receipt') {
+          await _onReceipt((e['data'] as Map?)?.cast<String, dynamic>() ?? {});
+        }
         if (event == 'form_message' || event == 'form_message_updated') {
           await _onFormMessage(
             (e['data'] as Map?)?.cast<String, dynamic>() ?? {},
@@ -948,6 +1030,108 @@ class MessageRepository extends GetxService {
     }
   }
 
+  /// The other person of a direct conversation received or read up to an id
+  /// (a live `receipt`). The positions only move forward.
+  Future<void> _onReceipt(Map<String, dynamic> data) async {
+    final convId = idText(data['conversation']).toLowerCase();
+    final upTo = idText(data['upTo']);
+    if (!convId.startsWith('dm:') || numericId(upTo) == null) return;
+    final isRead = data['kind'] == 'read';
+    final rows = await _db.query(
+      'SELECT peer_read_id, peer_delivered_id FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    if (rows.isEmpty) return;
+    String next(Object? old) =>
+        old != null && !isNewerId(upTo, idText(old)) && numericId(old) != null
+        ? idText(old)
+        : upTo;
+    await _db.update(
+      'UPDATE conversations SET peer_read_id = ?, peer_delivered_id = ? '
+      'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [
+        isRead ? next(rows.first['peer_read_id']) : rows.first['peer_read_id'],
+        next(rows.first['peer_delivered_id']),
+        _org,
+        _me,
+        convId,
+      ],
+    );
+    await _applyReceipts(convId);
+    await _conversations.reload();
+  }
+
+  /// Debug: feeds a receipt as if the server had pushed it, then lists the
+  /// status of my numbered messages in that conversation.
+  Future<String> debugReceipt(String convId, String kind, String upTo) async {
+    await _onReceipt({'conversation': convId, 'kind': kind, 'upTo': upTo});
+    final rows = await _db.query(
+      "SELECT msg_id, status FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? AND is_mine = 1 ORDER BY ts, local_seq",
+      [_org, _me, convId],
+    );
+    return rows.map((r) => '${r['msg_id']}:${r['status']}').join('  ');
+  }
+
+  /// Debug: feeds live messages from another person (a repeat of one id, an
+  /// older id and newer ones) and reports the unread count before and after.
+  Future<String> debugIncoming(String convId, List<String> ids) async {
+    Future<int> unread() async {
+      final rows = await _db.query(
+        'SELECT unread FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+        [_org, _me, convId],
+      );
+      return rows.isEmpty ? -1 : intOf(rows.first['unread']);
+    }
+
+    final before = await unread();
+    final peer = convId.startsWith('dm:') ? convId.substring(3) : 'someone';
+    for (final id in ids) {
+      await _incoming(convId, {
+        'id': id,
+        'from': peer,
+        'text': 'debug $id',
+        'ts': DateTime.now().millisecondsSinceEpoch,
+      });
+    }
+    return 'unread $before -> ${await unread()} after ids ${ids.join(', ')}';
+  }
+
+  Future<void> applyReceipts(String convId) async {
+    await _applyReceipts(convId);
+    await _conversations.reload();
+  }
+
+  /// A message of mine in a direct conversation is read when its id is at or
+  /// below the other person's read position, delivered when at or below the
+  /// delivered one. Ids are stored as text; only an all-digit id takes part,
+  /// and a tick only ever moves forward.
+  Future<void> _applyReceipts(String convId) async {
+    if (!convId.startsWith('dm:') || _org == null || _me == null) return;
+    final rows = await _db.query(
+      'SELECT peer_read_id, peer_delivered_id FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [_org, _me, convId],
+    );
+    if (rows.isEmpty) return;
+    final read = numericId(rows.first['peer_read_id']);
+    final delivered = numericId(rows.first['peer_delivered_id']);
+    const digits = "msg_id != '' AND msg_id NOT GLOB '*[^0-9]*'";
+    if (delivered != null) {
+      await _db.update(
+        "UPDATE messages SET status = 'delivered' WHERE org_id = ? AND user_id = ? AND conv_id = ? "
+        "AND is_mine = 1 AND status = 'sent' AND $digits AND CAST(msg_id AS INTEGER) <= ?",
+        [_org, _me, convId, delivered],
+      );
+    }
+    if (read != null) {
+      await _db.update(
+        "UPDATE messages SET status = 'read' WHERE org_id = ? AND user_id = ? AND conv_id = ? "
+        "AND is_mine = 1 AND status IN ('sent','delivered') AND $digits AND CAST(msg_id AS INTEGER) <= ?",
+        [_org, _me, convId, read],
+      );
+    }
+    await _reload(convId);
+  }
+
   Future<void> _onRead(String peer) async {
     await _db.update(
       'UPDATE messages SET status = ? WHERE org_id = ? AND user_id = ? AND conv_id = ? '
@@ -983,6 +1167,10 @@ class MessageRepository extends GetxService {
   }
 
   Future<void> _setDeleted(String id) async {
+    final waiter = _deleteWaiters[id];
+    if (waiter != null && !waiter.isCompleted) {
+      waiter.complete(DeleteResult.deleted);
+    }
     await _db.update(
       'UPDATE messages SET is_deleted = 1 WHERE org_id = ? AND user_id = ? AND msg_id = ?',
       [_org, _me, id],
@@ -1011,14 +1199,13 @@ class MessageRepository extends GetxService {
         sql,
         convId,
         id: id,
-        ts: intOf(e['ts']),
         isNew: isNew,
         isMine: idText(e['from']).toLowerCase() == user.toLowerCase(),
       );
       await _setCursor(sql, convId, id);
     });
-    if (_openConversation == convId && convId.startsWith('dm:')) {
-      unawaited(_socket.sendCommand('/read dm ${convId.substring(3)}'));
+    if (idText(e['from']).toLowerCase() != user.toLowerCase()) {
+      unawaited(_conversations.noteDelivered(convId, id));
     }
     await _reload(convId);
     await _conversations.reload();
@@ -1036,7 +1223,6 @@ class MessageRepository extends GetxService {
         sql,
         convId,
         id: idText(data['id']),
-        ts: intOf(data['ts']),
         isNew: isNew,
         isMine: idText(data['from']).toLowerCase() == user.toLowerCase(),
       );
@@ -1111,6 +1297,17 @@ class MessageRepository extends GetxService {
         );
       }
     });
+    if (!isOlder) {
+      final fromOthers = [
+        for (final i in items)
+          if (idText(i['from']).toLowerCase() != user.toLowerCase())
+            idText(i['id']),
+      ];
+      if (fromOthers.isNotEmpty) {
+        unawaited(_conversations.noteDelivered(convId, fromOthers.last));
+      }
+    }
+    await _applyReceipts(convId);
     await _reload(convId);
     await _conversations.reload();
     final waiter = _historyWaiters[isOlder ? 'older:$convId' : convId];
@@ -1120,86 +1317,66 @@ class MessageRepository extends GetxService {
   }
 
   // ---- unread ---------------------------------------------------------------
-  // Local only, not shared across devices. Unread = messages from others newer
-  // than this thread's "last opened" marker, judged by the server ts and the
-  // position in the thread, never by the phone's clock or by comparing ids.
+  // The server's number is the source after each sync (`conv.list`). Between
+  // syncs a message from someone else counts once when its id is newer than
+  // the newest id known for the thread; that id then moves up, so the same
+  // message is not counted again when it comes back through history or a
+  // sync. A thread with no known newest id yet is not counted from history
+  // (it would count everything), only from a live message.
 
-  Future<void> _setMarker(
-    Sql sql,
-    String convId,
-    int ts,
-    String id,
-  ) => sql.update(
-    'UPDATE conversations SET read_ts = ?, read_id = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-    [ts, id, _org, _me, convId],
-  );
-
-  /// A live message. While its thread is open it moves the marker; otherwise
-  /// it counts. A thread with no marker yet gets one just before this message.
   Future<void> _noteIncoming(
     Sql sql,
     String convId, {
     required String id,
-    required int ts,
     required bool isNew,
     required bool isMine,
   }) async {
-    if (!isNew || isMine) return;
-    if (_openConversation == convId) {
-      await _setMarker(sql, convId, ts, id);
-      return;
-    }
+    if (!isNew || isMine || _openConversation == convId) return;
+    await _countOther(sql, convId, [id], isLive: true);
+  }
+
+  Future<void> _countOther(
+    Sql sql,
+    String convId,
+    List<String> ids, {
+    required bool isLive,
+  }) async {
     final rows = await sql.query(
-      'SELECT read_ts FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      'SELECT last_id FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
       [_org, _me, convId],
     );
-    if (rows.isEmpty || rows.first['read_ts'] == null) {
-      await _setMarker(sql, convId, ts - 1, '');
+    if (rows.isEmpty) return;
+    var last = rows.first['last_id'] == null
+        ? null
+        : idText(rows.first['last_id']);
+    var count = 0;
+    for (final id in ids) {
+      if (last == null) {
+        last = id;
+        if (isLive) count++;
+      } else if (isNewerId(id, last)) {
+        last = id;
+        count++;
+      } else if (numericId(id) == null || numericId(last) == null) {
+        if (isLive) count++;
+      }
     }
     await sql.update(
-      'UPDATE conversations SET unread = unread + 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-      [_org, _me, convId],
+      'UPDATE conversations SET unread = unread + ?, last_id = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [count, last, _org, _me, convId],
     );
   }
 
-  /// The latest history page (oldest first). A thread's first sync counts 0
-  /// and sets the marker to its newest message. Later pages count the new
-  /// messages from others that come after the marker.
+  /// The latest history page (oldest first): the new messages from others.
   Future<void> _countHistory(
     Sql sql,
     String convId,
     List<Map<String, dynamic>> items,
     List<int> fresh,
   ) async {
-    if (items.isEmpty) return;
-    final rows = await sql.query(
-      'SELECT read_ts, read_id FROM conversations WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-      [_org, _me, convId],
-    );
-    final readTs = rows.isEmpty || rows.first['read_ts'] == null
-        ? null
-        : intOf(rows.first['read_ts']);
-    final newest = items.last;
-    if (readTs == null) {
-      await _setMarker(sql, convId, intOf(newest['ts']), idText(newest['id']));
-      return;
-    }
-    final readId = idText(rows.first['read_id']);
-    final at = readId.isEmpty
-        ? -1
-        : items.indexWhere((i) => idText(i['id']) == readId);
-    final count = fresh
-        .where((i) => at >= 0 ? i > at : intOf(items[i]['ts']) > readTs)
-        .length;
-    if (count == 0) return;
-    if (_openConversation == convId) {
-      await _setMarker(sql, convId, intOf(newest['ts']), idText(newest['id']));
-      return;
-    }
-    await sql.update(
-      'UPDATE conversations SET unread = unread + ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-      [count, _org, _me, convId],
-    );
+    final ids = [for (final i in fresh) idText(items[i]['id'])];
+    if (ids.isEmpty || _openConversation == convId) return;
+    await _countOther(sql, convId, ids, isLive: false);
   }
 
   /// Inserts or updates one server message. Returns true when the row is new.

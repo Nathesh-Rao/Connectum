@@ -24,7 +24,7 @@ Base `<BASE_URL>/api/sd`. Answers are `{"ok":true,"data":{...}}` or `{"ok":false
 | 12 | POST `/join/check` | Bearer identity | `{enterprise, isEmployee, category}` | `data{ok, fields{}}` | screens-and-features.md (name only) |
 | 13 | POST `/join` | Bearer identity | same as 12 | no example; text says `{joined, status, username, nextStep}` | screens-and-features.md (name only) |
 | 14 | GET `/geo/countries` | none | | `data{countries[]}` | screens-and-features.md (name only) |
-| 15 | GET `/geo/cities?country=` | none | | no example | screens-and-features.md (name only) |
+| 15 | GET `/geo/cities?country=` | none | | `data{country, cities:[...]}` (confirmed by the backend developer and `sd_http.erl`; the collection still has no example) | screens-and-features.md (name only) |
 | 16 | GET `/feed/summary` | Bearer session | | `data{unread, total, resolved, high, medium, low}` | ai-and-misc.md §4 |
 | 17 | GET `/feed?priority=&unreadOnly=&limit=` | Bearer session | | `data{counts, hasMore, notifications[{id (string), category, icon, title, message, priority, severity, read, resolved, resolvedTs, ref{cardId}, count, ts}]}` | ai-and-misc.md §4 |
 | 18 | POST `/feed/read` | Bearer session | `{all:true}` (or `{ids}`) | `data{counts, updated}` | ai-and-misc.md §4 |
@@ -55,12 +55,30 @@ Base `<BASE_URL>/api/sd`. Answers are `{"ok":true,"data":{...}}` or `{"ok":false
 
 Compared with the previous version (git diff of `postman/api_collection_connectum.json`): the 25 REST requests are unchanged. Three WebSocket cards were added to folder 5: "Send with a client id (no double sends)", "Older messages (scroll back)" and "Is a message encrypted? (e2e flag)". Nothing was removed. The cards agree with the backend source (`chat_web.erl`, `chat_store.erl`, commit 869913fe on `origin/main`) in command syntax, allowed id characters (`a-z A-Z 0-9 - _ . :`, 1 to 64), error codes (`bad_cid`, `cid_unsupported`, `usage`), the duplicate ack (the stored first ack plus `"duplicate":true`), and `before` / `hasMore` / `next`. Differences found in the code and not in the cards: a global-room send, `/reply`, `/edit` and every other command give `cid_unsupported`; `next` is the oldest id found before the page is filtered for what the person may see; a group name with spaces works with `before`; `e2e` is not on live events; the `before` id is 1 to 18 digits.
 
+## 2c. Update 2: the collection after the backend answers
+
+Compared with the previous commit of `postman/api_collection_connectum.json` (75 requests before, 87 now; the 25 REST requests are unchanged).
+
+**Added (WebSocket reference cards with real samples):** `WS · Presence (someone went online or offline)`, `WS · Receipt (the other person received or read your messages)`, `WS · Read a group` (`/read group <name>`), `/sd conv.list`, `/sd conv.pin`, `/sd conv.mute`, `/sd conv.read`, `/sd conv.delivered`, `/sd conv.readers`, `/sd users.search: a person who is not connected`, `/sd conv.list after the other person read`, `/sd tstruct.submit with a client id (a retry never saves twice)`.
+
+**Changed:** `WS · My conversations (inbox)`: items now carry `avatar`. `assoc.list`, `users.search` and `req.list` moved into a renamed folder ("People, hosts and connections (17)", before 11); `users.search` rows now carry `canMessage`, `connected` and `avatar`.
+
+**Disagreements between what the developer said, the collection and the source (`origin/main`)**
+1. Lower-case username: the source requires it only in a Connectum (strict) organisation; in the open plain-chat mode names are case-sensitive. Mobile always sends lower case.
+2. `avatar` in `assoc.list`: the source adds it to every person row (`with_avatar`), the collection sample has none (stale sample or no avatar key because the account had none). Not verified live (own account has no connections).
+3. `avatar` in conversations: `conv.list {full:true}` adds it **only to direct rows** (`conv_avatar`); group and global rows have none. `/conversations` items carry it.
+4. Not in the developer's message: `session_expired` (`reason:"two_week_login"`) is sent to an open socket after 15 days; `connect.scan` on a personal code also notifies the owner; scanning your own code is an error (`That's your own code.`).
+5. `conv.list {full:true}` has **no host conversations**, no last-message text, titles or members; `/groups`, `/hosts`, `/conversations` and history remain needed.
+6. `conv.readers` only works for a group and only for the message's author; a direct conversation returns `invalid` (confirmed live).
+
+**Resolved by this update:** C2 (session lifetime is 15 days, use `expiresTs`); the client-id UNCLEAR for forms; presence event; receipts persistence; handshake-error handling; `Username taken` meaning.
+
 ## 3. Conflicts (not resolved)
 
 | # | Topic | Handoff docs | Collection |
 |---|---|---|---|
 | C1 | Where the WebSocket token comes from | websocket-protocol.md §1: the token from `POST /api/sd/enter`. messages-and-receipts.md §1: "session token from `POST /api/sd/login`". The handshake error text also names `/api/sd/login`. | Session token from `enter` (folder 2 step 4, WS card "How to connect"). |
-| C2 | Session lifetime | sessions.md: 15 days (code); says `CHAT_PROTOCOL.md` and `CONNECTUM_API.md` say 14. messages-and-receipts.md §1: "14 days". | "about 15 days", not extended by activity. |
+| C2 (resolved: 15 days, `expiresTs`) | Session lifetime | sessions.md: 15 days (code); says `CHAT_PROTOCOL.md` and `CONNECTUM_API.md` say 14. messages-and-receipts.md §1: "14 days". | "about 15 days", not extended by activity. |
 | C3 | Server address and scheme | websocket-protocol.md and sessions.md: `https://<HOST>/api/sd`, `wss://<HOST>/ws`. deep-links.md: `APP_URL` default `https://<private-IP>`, production `https://connectum.app`. | `http://<private-IP>` and `ws://<private-IP>/ws`; server is not on the internet; https is self-signed; a production address comes later. |
 | C4 | `enter` response | sessions.md: `{token, expiresTs, user, enterprise, landing?}` | Adds `mustChangePassword` and `totpDue`; example has no `landing`. |
 | C5 | `identity` object | sessions.md `login/verify` example: `{connectumId, email, username}` | Also `name, mobile, city, state, country, hasPassword`. |
@@ -82,7 +100,7 @@ The "earlier summary" is taken to be the UNCLEAR markers in the handoff docs. Fe
 
 ## 5. UNCLEAR items that remain
 
-- **websocket-protocol.md:** what the client should do on a handshake `error`; `conversation_changed` has no web handler; full list of `edit_denied` reasons; whether `/pubkey` and `/getpubkey` are still used.
+- **websocket-protocol.md:** (answered in update 2: handshake errors are auth failures; `conv.*` is used) `conversation_changed` has no web handler; full list of `edit_denied` reasons; whether `/pubkey` and `/getpubkey` are still used.
 - **messages-and-receipts.md:** the `[ATTACHMENT:...]` JSON schema. New: the live events (`private`, `group_message`, `host_message`, `chat`) carry no `e2e` flag, nor do `/groups` items; a send that races a second connection of the same person is not covered by the id memory (it is read, then written after the ack).
 - **forms.md:** how to model a Yes/No field (the collection's only `tstruct.get` example is a `list` field with `options`, nothing yes/no); whether grid-section rows appear on the chat card; the `pending` approval shape.
 - **sessions.md:** exact text and category of the `session_replaced` feed item; whether the Flutter app may hold two organisations at once.

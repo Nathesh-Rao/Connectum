@@ -4,6 +4,26 @@ String idText(Object? value) => value == null ? '' : value.toString();
 
 int? idNumber(Object? value) => int.tryParse(idText(value));
 
+/// A server message id as a number, only when it is plain digits. Ids are
+/// stored as text; this is the one place they are ever compared as numbers
+/// (receipts, read positions and the unread rule), and anything else is null.
+int? numericId(Object? value) {
+  final text = idText(value);
+  if (text.isEmpty || text.length > 15) return null;
+  for (var i = 0; i < text.length; i++) {
+    final c = text.codeUnitAt(i);
+    if (c < 48 || c > 57) return null;
+  }
+  return int.parse(text);
+}
+
+/// True when [a] is strictly newer than [b]; false when either is not numeric.
+bool isNewerId(String? a, String? b) {
+  final x = numericId(a);
+  final y = numericId(b);
+  return x != null && y != null && x > y;
+}
+
 int intOf(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();

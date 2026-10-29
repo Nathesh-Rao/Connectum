@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/home_reload.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
 import '../../data/db/app_database.dart';
@@ -84,9 +85,14 @@ class EnterpriseSwitcherController extends GetxController {
     }
     enteringId.value = m.enterprise;
     try {
-      await auth.enter(m.enterprise);
-      Get.back<void>();
-      Get.offAllNamed(AppRoutes.chats);
+      // Sample data has no server: a pause stands in for `enter` so the
+      // switch navigation can be exercised without a real session.
+      if (SeedUi.isActive) {
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+      } else {
+        await auth.enter(m.enterprise);
+      }
+      await HomeReload.run();
     } on UnsupportedStep catch (e) {
       message.value =
           "This enterprise needs a step the app doesn't support yet: ${e.reasons.join(', ')}.";
@@ -101,6 +107,7 @@ class EnterpriseSwitcherController extends GetxController {
 
   void joinAnother() {
     Get.back<void>();
+    HomeReload.homeBelow = Get.rawRoute;
     Get.toNamed(AppRoutes.enterprises);
   }
 }
