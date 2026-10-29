@@ -21,6 +21,7 @@ class AppRoutes {
   static const galleryAuth = '/gallery/auth';
   static const debugSocket = '/debug/socket';
   static const debugAssets = '/debug/assets';
+  static const debugE2e = '/debug/e2e';
 
   /// A conversation id holds `:` and a group name may hold spaces or `/`.
   static String conversationOf(String id) =>
@@ -28,11 +29,14 @@ class AppRoutes {
 
   /// A submission's detail. [convId] and [msgId] name the form message it was
   /// opened from, which is where a submission that is not mine is read from.
-  static String submissionDetailOf(String id, {String? convId, String? msgId}) =>
-      Uri(
-        path: '/submissions/${Uri.encodeComponent(id)}',
-        queryParameters: {
-          if (convId != null && msgId != null) ...{'conv': convId, 'msg': msgId},
-        },
-      ).toString();
+  static String submissionDetailOf(
+    String id, {
+    String? convId,
+    String? msgId,
+  }) => Uri(
+    path: '/submissions/${Uri.encodeComponent(id)}',
+    queryParameters: {
+      if (convId != null && msgId != null) ...{'conv': convId, 'msg': msgId},
+    },
+  ).toString();
 }

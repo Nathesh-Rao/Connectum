@@ -28,6 +28,7 @@ dependencies:
   # Incoming App Links / Universal Links
   app_links: ^7.0.0
   lottie: ^3.3.3
+  webcrypto: ^0.6.1
 
 dev_dependencies:
   flutter_test:
@@ -40,6 +41,7 @@ flutter:
     - assets/images/connectum_logo.png
     - assets/images/states/
     - assets/lottie/
+    - mobile-handoff/e2e-vectors.json
   fonts:
     - family: PlusJakartaSans
       fonts:

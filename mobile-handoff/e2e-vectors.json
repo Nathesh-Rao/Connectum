@@ -1,0 +1,392 @@
+{
+  "_about": "Test vectors produced by running the web e2eCrypto.js (origin/main, copied unchanged to a scratch dir) in Node 22 with injected randomness; every envelope was also decrypted by an independent node:crypto implementation. Private keys are FIXED TEST KEYS: never use them anywhere real. Signatures (ECDSA) use a random nonce and cannot be reproduced; verify them instead.",
+  "generated": "2026-10-29",
+  "encodings": {
+    "publicKey": "base64url (no padding) of 65-byte uncompressed P-256 point 04||X||Y",
+    "signature": "base64url of 64 bytes r||s (IEEE P1363, NOT DER)",
+    "privateScalarHex": "raw 32-byte big-endian scalar, for test import only"
+  },
+  "devices": [
+    {
+      "user": "alice",
+      "id": "cf95cba664c322f0848990455fcdf792",
+      "ecdhPrivateScalarHex": "518a9110489b73e8631a65395b978e0a1357dfaab30428d8101e9bb89903c2a7",
+      "signPrivateScalarHex": "0b2ba76cf61b06e6a529cece6e9931666f0311866ff1829a2820b91517402e23",
+      "ecdhPublic": "BGjF0s_RIsnesyOfSy3XA3WiPM5UhVPIDvVhx2duLDPF1Uz-yS3aj6zn7a4CBSVlYY1aIMOt4fu8Bwd18mc1ekU",
+      "signPublic": "BC79MhnFMaJWZGpJYtPugueS77JCnCIzRdo6PhdXKlEL7bg9CVcoNWTZgChrM-4KuB6Eor8ONen7pCmPsRF7LFU"
+    },
+    {
+      "user": "alice",
+      "id": "27e054270a58bbf62a6a99637700005d",
+      "ecdhPrivateScalarHex": "216e86524575d1710f92d3077830498d3f2c1711b85a08a51963bed60d724df0",
+      "signPrivateScalarHex": "bf72b055a667c177e806e92a5b00e49f3d7a3796adf8e15b5999f31e36d9cea6",
+      "ecdhPublic": "BMKOIQm5y--9yv4XmdbwuiO8rolRQXkCAQMUPlUwsRRnjsotwMy-J3YjYjRHqhMbY-9W7NHfBe3ZD608rjsU7qY",
+      "signPublic": "BDxYcnpB1ocUpCA5wRCZ7rQmwXiS51cvkzTHp1KGpKpE_Krr752rRYANYJgMXKv4wRJZaUb1KqGZ_pAWPpg0G14"
+    },
+    {
+      "user": "bob",
+      "id": "1ebaec6c80ba2e43e67786baef32df26",
+      "ecdhPrivateScalarHex": "784a31fdd5d0ceecc2248e62a0654b3ee5d5cd45f4cf00545dd31bbef087522c",
+      "signPrivateScalarHex": "64d1a0c8a59038ee3f69b32062c09073a97ca18b6a64cb9809be054a9e595df2",
+      "ecdhPublic": "BL8n0YhvLLwD3cvBV1u164bI0wDHB6MMCFKhKBp77cZwqgjEk0jRKMk2IUV0U6r2f3lcyaVaDuKUV31-S9bRgFs",
+      "signPublic": "BPDxfO0RUH8QuMxxiwMh9xHBUIXzK6Z-z9KLFlFmscI5UpWHdM5VFUyOYZMLwJpYprtmwdNontI4qsQns_5wntY"
+    },
+    {
+      "user": "carol",
+      "id": "74cfc99deb6dac386757195bccc1eb34",
+      "ecdhPrivateScalarHex": "d4ea8f273b93db0ab1a62063c0d18e92892eeeb73f61ac50f43216fdee08aa6f",
+      "signPrivateScalarHex": "f12338eabe5612108d936c5f9d2115c21616cf951c48343ea7e3e6a4d0c56447",
+      "ecdhPublic": "BEnwCwwhOdf3m5HLY60zgrJGmj3M2g3m1YY1DD4SXgr0GlGUX8emLP_jHH5UJJ_ZBNPLSgz2qcoegqphkFib1_A",
+      "signPublic": "BDeM4DOEnOELmzZkszC57BIFZ1rowZTVj2gIIIy6zoiYEUUHPo72az8Pio_3cI01MfJqqG1E8Rrw_8R8h0S3cgs"
+    },
+    {
+      "user": "carol",
+      "id": "35d40061444ceac4e9da75a5b1b7cdf6",
+      "ecdhPrivateScalarHex": "9660796181aaecc27a6d48dfc689aed5362bbe31d22cc62d7598c4dc4a4c85f3",
+      "signPrivateScalarHex": "ee0efe7a4d22a9487324ddf13a4f9ed4aa66134e9e9fc1c9d060c7d0cf4f39c7",
+      "ecdhPublic": "BNkwkNmI_TUqB4yKYyME4S2Kpu1kUq-ns0hKwoF_vwB8Jg6hNu5NJKez2vpPaIQ3280QcqGJcFdCxg-cztWo6r4",
+      "signPublic": "BDF6XaXgSbo8DE-VMLtKxu7wqTm8kaIfDcKaxyNjujLDOfN-cVZzf2IW_Ohlpd2UUj8TyOEC1xfPbFPfNRu8_hQ"
+    }
+  ],
+  "registration": {
+    "message": "connectum-e2e-register|alice|cf95cba664c322f0848990455fcdf792|BGjF0s_RIsnesyOfSy3XA3WiPM5UhVPIDvVhx2duLDPF1Uz-yS3aj6zn7a4CBSVlYY1aIMOt4fu8Bwd18mc1ekU|BC79MhnFMaJWZGpJYtPugueS77JCnCIzRdo6PhdXKlEL7bg9CVcoNWTZgChrM-4KuB6Eor8ONen7pCmPsRF7LFU",
+    "proofB64u": "dU9d6dDZrhX2SvQid0pm8vPREeDV38FvMUbGaAWdaUG9ShLrAKLwdje5XaWtffpCWznld-mWWLLKCiql_udcJQ",
+    "proofVerifiesAgainst": "BC79MhnFMaJWZGpJYtPugueS77JCnCIzRdo6PhdXKlEL7bg9CVcoNWTZgChrM-4KuB6Eor8ONen7pCmPsRF7LFU",
+    "note": "proof is ECDSA-SHA256 over the UTF-8 message, r||s, base64url; random nonce, so verify do not compare",
+    "rpcExample": {
+      "action": "e2e.register",
+      "args": {
+        "id": "cf95cba664c322f0848990455fcdf792",
+        "ecdh": "BGjF0s_RIsnesyOfSy3XA3WiPM5UhVPIDvVhx2duLDPF1Uz-yS3aj6zn7a4CBSVlYY1aIMOt4fu8Bwd18mc1ekU",
+        "sign": "BC79MhnFMaJWZGpJYtPugueS77JCnCIzRdo6PhdXKlEL7bg9CVcoNWTZgChrM-4KuB6Eor8ONen7pCmPsRF7LFU",
+        "label": "Test phone",
+        "proof": "dU9d6dDZrhX2SvQid0pm8vPREeDV38FvMUbGaAWdaUG9ShLrAKLwdje5XaWtffpCWznld-mWWLLKCiql_udcJQ"
+      }
+    }
+  },
+  "envelopes": [
+    {
+      "name": "dm alice -> bob (alice has 2 devices; wrapped for alice1, alice2, bob1)",
+      "sender": "cf95cba664c322f0848990455fcdf792",
+      "conv": "dm:alice|bob",
+      "ts": 1793300000000,
+      "plaintextText": "hello bob",
+      "payloadJson": "{\"v\":1,\"t\":\"hello bob\"}",
+      "random": {
+        "midBytesHex": "b3fb42d0279169bf3d44bad7088d339a",
+        "messageKeyHex": "a7ff3cad0ccc21244aa4a747e61e70539e86238c494b022f5dfaa9106b3b7efa",
+        "ivHex": "648f11250a5490423148920c",
+        "ephemeralPrivateScalarHex": "5d1a17f2e9d9f1507dd46b8b503e28fda6cce5cf4cadd2cd4c7628fedc344556",
+        "wrapIvsHex": {
+          "cf95cba664c322f0848990455fcdf792": "064f9dbf04c4f7c1ba93ef23",
+          "27e054270a58bbf62a6a99637700005d": "908b9dbb3fb97485c04008cd",
+          "1ebaec6c80ba2e43e67786baef32df26": "960a325f8b2a5570559b3a73"
+        }
+      },
+      "aad": {
+        "message": "e2e1-msg|s_tC0CeRab89RLrXCI0zmg|dm:alice|bob|alice|cf95cba664c322f0848990455fcdf792",
+        "wrapPerRecipient": {
+          "cf95cba664c322f0848990455fcdf792": "e2e1-wrap|s_tC0CeRab89RLrXCI0zmg|cf95cba664c322f0848990455fcdf792",
+          "27e054270a58bbf62a6a99637700005d": "e2e1-wrap|s_tC0CeRab89RLrXCI0zmg|27e054270a58bbf62a6a99637700005d",
+          "1ebaec6c80ba2e43e67786baef32df26": "e2e1-wrap|s_tC0CeRab89RLrXCI0zmg|1ebaec6c80ba2e43e67786baef32df26"
+        }
+      },
+      "hkdfInfoPerRecipient": {
+        "cf95cba664c322f0848990455fcdf792": "connectum-e2e-wrap|cf95cba664c322f0848990455fcdf792|cf95cba664c322f0848990455fcdf792",
+        "27e054270a58bbf62a6a99637700005d": "connectum-e2e-wrap|27e054270a58bbf62a6a99637700005d|cf95cba664c322f0848990455fcdf792",
+        "1ebaec6c80ba2e43e67786baef32df26": "connectum-e2e-wrap|1ebaec6c80ba2e43e67786baef32df26|cf95cba664c322f0848990455fcdf792"
+      },
+      "signatureInputString": "e2e1|s_tC0CeRab89RLrXCI0zmg|alice|cf95cba664c322f0848990455fcdf792|dm:alice|bob|1793300000000|BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI|ZI8RJQpUkEIxSJIM|g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"s_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "note": "sig is ECDSA with a random nonce: it is NOT reproducible. A Dart implementation must verify this sig, and its own sigs must verify in the web code.",
+      "decryptsTo": {
+        "cf95cba664c322f0848990455fcdf792": {
+          "plaintext": "hello bob",
+          "referenceIntermediates": {
+            "sharedSecretHex": "00a2cb1f8a58f3786101863c20fc26afafcd7c9a475af150d146475ff88ea5f7",
+            "wrapKeyHex": "696b238c20e5b9a07c4acf5afdfaf5006c2e0be613ea682ea6053bab955e4356",
+            "messageKeyHex": "a7ff3cad0ccc21244aa4a747e61e70539e86238c494b022f5dfaa9106b3b7efa",
+            "paddedPlaintextHex": "000000177b2276223a312c2274223a2268656c6c6f20626f62227d00000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "27e054270a58bbf62a6a99637700005d": {
+          "plaintext": "hello bob",
+          "referenceIntermediates": {
+            "sharedSecretHex": "d0c59bf58aa1307df7e17489d02f2c34dd3ef2beab48971f4cefe3a8e7c37e5c",
+            "wrapKeyHex": "06d77c147a98070b2383bc225464b211e26902a87b17dfade54414e25c1dd897",
+            "messageKeyHex": "a7ff3cad0ccc21244aa4a747e61e70539e86238c494b022f5dfaa9106b3b7efa",
+            "paddedPlaintextHex": "000000177b2276223a312c2274223a2268656c6c6f20626f62227d00000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "1ebaec6c80ba2e43e67786baef32df26": {
+          "plaintext": "hello bob",
+          "referenceIntermediates": {
+            "sharedSecretHex": "06a9d3c117ba3c529e684c0c700ac12eb92c80cec8abd2fa334620bb37894fa9",
+            "wrapKeyHex": "b513ab7435659df6abb1580a27d7c2fb65012c6f175444c91fe0025d9e69c45c",
+            "messageKeyHex": "a7ff3cad0ccc21244aa4a747e61e70539e86238c494b022f5dfaa9106b3b7efa",
+            "paddedPlaintextHex": "000000177b2276223a312c2274223a2268656c6c6f20626f62227d00000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      }
+    },
+    {
+      "name": "dm with unicode and exactly-64-boundary padding",
+      "sender": "1ebaec6c80ba2e43e67786baef32df26",
+      "conv": "dm:alice|bob",
+      "ts": 1793300001000,
+      "plaintextText": "héllo wörld ✓ 你好 😀 𝄞",
+      "payloadJson": "{\"v\":1,\"t\":\"héllo wörld ✓ 你好 😀 𝄞\"}",
+      "random": {
+        "midBytesHex": "d62a75b5b3e4607253ea747858fa4e53",
+        "messageKeyHex": "7eb3b4d77c72ea6d1c4f4c6a2d81d7463d5f3d2ea0660ad03fe777d8fc0e78c4",
+        "ivHex": "6f0a0839d2d71ffac8c083e2",
+        "ephemeralPrivateScalarHex": "5295444407ce6d4a36f2f00a8b3b42c6f41e9b73073c7c74454f8beb5e55ed48",
+        "wrapIvsHex": {
+          "1ebaec6c80ba2e43e67786baef32df26": "a5d5a1736ca46eae12b82bcf",
+          "cf95cba664c322f0848990455fcdf792": "9bf71c67d65c49478b7bbda1",
+          "27e054270a58bbf62a6a99637700005d": "e83f1d83d595e4c89062efc8"
+        }
+      },
+      "aad": {
+        "message": "e2e1-msg|1ip1tbPkYHJT6nR4WPpOUw|dm:alice|bob|bob|1ebaec6c80ba2e43e67786baef32df26",
+        "wrapPerRecipient": {
+          "1ebaec6c80ba2e43e67786baef32df26": "e2e1-wrap|1ip1tbPkYHJT6nR4WPpOUw|1ebaec6c80ba2e43e67786baef32df26",
+          "cf95cba664c322f0848990455fcdf792": "e2e1-wrap|1ip1tbPkYHJT6nR4WPpOUw|cf95cba664c322f0848990455fcdf792",
+          "27e054270a58bbf62a6a99637700005d": "e2e1-wrap|1ip1tbPkYHJT6nR4WPpOUw|27e054270a58bbf62a6a99637700005d"
+        }
+      },
+      "hkdfInfoPerRecipient": {
+        "1ebaec6c80ba2e43e67786baef32df26": "connectum-e2e-wrap|1ebaec6c80ba2e43e67786baef32df26|1ebaec6c80ba2e43e67786baef32df26",
+        "cf95cba664c322f0848990455fcdf792": "connectum-e2e-wrap|cf95cba664c322f0848990455fcdf792|1ebaec6c80ba2e43e67786baef32df26",
+        "27e054270a58bbf62a6a99637700005d": "connectum-e2e-wrap|27e054270a58bbf62a6a99637700005d|1ebaec6c80ba2e43e67786baef32df26"
+      },
+      "signatureInputString": "e2e1|1ip1tbPkYHJT6nR4WPpOUw|bob|1ebaec6c80ba2e43e67786baef32df26|dm:alice|bob|1793300001000|BKC_OcXcI0-PYhrCAox-_URuEpO3ei8Ip8c1dly_VZ7gL10O9LZabDuA-7SXY5UIFSIiIeL_hGswk25Y28uyjLw|bwoIOdLXH_rIwIPi|7Y72qL8s9CUZLjhJnbnERvb6rVcVCltgDT3aYOYMFLB_y-5rxtJl_4A1hsFooQaU0PYsFccHB4h3pxtXqE_hM8Nq0Yw3hhjCGQR3R_inqkY",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"1ip1tbPkYHJT6nR4WPpOUw\",\"from\":\"bob\",\"dev\":\"1ebaec6c80ba2e43e67786baef32df26\",\"conv\":\"dm:alice|bob\",\"ts\":1793300001000,\"ek\":\"BKC_OcXcI0-PYhrCAox-_URuEpO3ei8Ip8c1dly_VZ7gL10O9LZabDuA-7SXY5UIFSIiIeL_hGswk25Y28uyjLw\",\"iv\":\"bwoIOdLXH_rIwIPi\",\"ct\":\"7Y72qL8s9CUZLjhJnbnERvb6rVcVCltgDT3aYOYMFLB_y-5rxtJl_4A1hsFooQaU0PYsFccHB4h3pxtXqE_hM8Nq0Yw3hhjCGQR3R_inqkY\",\"sig\":\"2Z4f--_BcauoNiq1LEyQOSaADa9qwYaFIlw7zScP92kWXILkFQN4nuquyxkvP-lLHhS5BsQ2430UNuda5E1_bA\",\"keys\":{\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"pdWhc2ykbq4SuCvP\",\"w\":\"1nd888yOUKB3vW8CmXAuHqhnVpRfGp-ErDHfzPvD0QsgPy9dx8gYQMOU72_sjNhj\"},\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"m_ccZ9ZcSUeLe72h\",\"w\":\"9OLC3VML9AAgjAO6-wykDVXcKgI5czC3ACvLyqREaU_91dqmYS6KOTxUH4ioM8PO\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"6D8dg9WV5MiQYu_I\",\"w\":\"WmtuZYIVL1YFuQN3U9sTB3oWcFIjmxMGMdoK_ZpqkN3-KYAbMbPekK6MYrhSLrOG\"}}}",
+      "note": "sig is ECDSA with a random nonce: it is NOT reproducible. A Dart implementation must verify this sig, and its own sigs must verify in the web code.",
+      "decryptsTo": {
+        "1ebaec6c80ba2e43e67786baef32df26": {
+          "plaintext": "héllo wörld ✓ 你好 😀 𝄞",
+          "referenceIntermediates": {
+            "sharedSecretHex": "5643127c0fe0062cdb441398eb29978d3ed0db07f1f88099f914a0d3ebb069ff",
+            "wrapKeyHex": "1bdf38cea18fee6504428dcad54200909ace1893cf9127fea96a6b74187d5991",
+            "messageKeyHex": "7eb3b4d77c72ea6d1c4f4c6a2d81d7463d5f3d2ea0660ad03fe777d8fc0e78c4",
+            "paddedPlaintextHex": "000000307b2276223a312c2274223a2268c3a96c6c6f2077c3b6726c6420e29c9320e4bda0e5a5bd20f09f988020f09d849e227d000000000000000000000000"
+          }
+        },
+        "cf95cba664c322f0848990455fcdf792": {
+          "plaintext": "héllo wörld ✓ 你好 😀 𝄞",
+          "referenceIntermediates": {
+            "sharedSecretHex": "98547c8501d09f42d09f6e65ce932d63f86518011ef4bbf88a50894bbf63b119",
+            "wrapKeyHex": "f4a6e1b84dc9806e564241f97875ec3866acb0e013ed2197a5c3b1a555a4971d",
+            "messageKeyHex": "7eb3b4d77c72ea6d1c4f4c6a2d81d7463d5f3d2ea0660ad03fe777d8fc0e78c4",
+            "paddedPlaintextHex": "000000307b2276223a312c2274223a2268c3a96c6c6f2077c3b6726c6420e29c9320e4bda0e5a5bd20f09f988020f09d849e227d000000000000000000000000"
+          }
+        },
+        "27e054270a58bbf62a6a99637700005d": {
+          "plaintext": "héllo wörld ✓ 你好 😀 𝄞",
+          "referenceIntermediates": {
+            "sharedSecretHex": "964ac6641eae1e31f1dd5a02418fc391490d9043cde2537c86d6a1f1a2b0f90a",
+            "wrapKeyHex": "7250a7b54838d200a27f34bcb108cf850ecd6576cce428412df48410d58e4b3d",
+            "messageKeyHex": "7eb3b4d77c72ea6d1c4f4c6a2d81d7463d5f3d2ea0660ad03fe777d8fc0e78c4",
+            "paddedPlaintextHex": "000000307b2276223a312c2274223a2268c3a96c6c6f2077c3b6726c6420e29c9320e4bda0e5a5bd20f09f988020f09d849e227d000000000000000000000000"
+          }
+        }
+      }
+    },
+    {
+      "name": "dm, plaintext of 60 chars (4+len+JSON = padding edge)",
+      "sender": "cf95cba664c322f0848990455fcdf792",
+      "conv": "dm:alice|bob",
+      "ts": 1793300002000,
+      "plaintextText": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "payloadJson": "{\"v\":1,\"t\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+      "random": {
+        "midBytesHex": "48fbb333743689db2d347fcc04a64cdc",
+        "messageKeyHex": "b2794d16888750ff0f0ffb158c42cbaaa63c23695f09305acd46cae7f7a928e3",
+        "ivHex": "7bbd49fe3a99b10ecd44b278",
+        "ephemeralPrivateScalarHex": "7cf5f2f334098c81dc2bddb1b40ec9babc99df3863dcc02ccd829ec6f8286b9d",
+        "wrapIvsHex": {
+          "cf95cba664c322f0848990455fcdf792": "664537fe7fed98a812a8b88c",
+          "1ebaec6c80ba2e43e67786baef32df26": "caf00429401f42e47495142f"
+        }
+      },
+      "aad": {
+        "message": "e2e1-msg|SPuzM3Q2idstNH_MBKZM3A|dm:alice|bob|alice|cf95cba664c322f0848990455fcdf792",
+        "wrapPerRecipient": {
+          "cf95cba664c322f0848990455fcdf792": "e2e1-wrap|SPuzM3Q2idstNH_MBKZM3A|cf95cba664c322f0848990455fcdf792",
+          "1ebaec6c80ba2e43e67786baef32df26": "e2e1-wrap|SPuzM3Q2idstNH_MBKZM3A|1ebaec6c80ba2e43e67786baef32df26"
+        }
+      },
+      "hkdfInfoPerRecipient": {
+        "cf95cba664c322f0848990455fcdf792": "connectum-e2e-wrap|cf95cba664c322f0848990455fcdf792|cf95cba664c322f0848990455fcdf792",
+        "1ebaec6c80ba2e43e67786baef32df26": "connectum-e2e-wrap|1ebaec6c80ba2e43e67786baef32df26|cf95cba664c322f0848990455fcdf792"
+      },
+      "signatureInputString": "e2e1|SPuzM3Q2idstNH_MBKZM3A|alice|cf95cba664c322f0848990455fcdf792|dm:alice|bob|1793300002000|BFJ9REb3M0C6DDfsWCTGmpGUvH-gaoA0iqR8Qp6FMlv5ekgGVPnHbZm2HVF_EGiYUNskNQy7yURzIq5a9KDQuic|e71J_jqZsQ7NRLJ4|acD33jgtwwDbXu9SXHWaOLi0a474ryQJc-7ESCtWr3q8ozM3EIWZN3Y1difECmqifnc2xaQxoPp8EhzbKJSoaRrcetLBzpQYjdfe6ocr0lg",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"SPuzM3Q2idstNH_MBKZM3A\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300002000,\"ek\":\"BFJ9REb3M0C6DDfsWCTGmpGUvH-gaoA0iqR8Qp6FMlv5ekgGVPnHbZm2HVF_EGiYUNskNQy7yURzIq5a9KDQuic\",\"iv\":\"e71J_jqZsQ7NRLJ4\",\"ct\":\"acD33jgtwwDbXu9SXHWaOLi0a474ryQJc-7ESCtWr3q8ozM3EIWZN3Y1difECmqifnc2xaQxoPp8EhzbKJSoaRrcetLBzpQYjdfe6ocr0lg\",\"sig\":\"-1AeZwbt4EoIBB2oF02Mvt-m4JfJWcpSj9hAlVBCczNu15mtnKuVWG4wsXgq_7EbXoNC3Q4okNz0nA4yJN8xgQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"ZkU3_n_tmKgSqLiM\",\"w\":\"IHei6KHow2d_8PrBDhtfWF1genq46Zzet41kNBTzglBFdfMaETv8iCvCVkTYc8M-\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"yvAEKUAfQuR0lRQv\",\"w\":\"9EaiNYVN_JVdkYBpiuP_I1jQ-9K6fwa-DFyrruJbi4IUTTPfyNvJPYViDwj5OQb7\"}}}",
+      "note": "sig is ECDSA with a random nonce: it is NOT reproducible. A Dart implementation must verify this sig, and its own sigs must verify in the web code.",
+      "decryptsTo": {
+        "cf95cba664c322f0848990455fcdf792": {
+          "plaintext": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "referenceIntermediates": {
+            "sharedSecretHex": "ca475dfe9310c2ffad9f74ddc2f4a5069d1acd18d81bbfca786b4fe18af7bba5",
+            "wrapKeyHex": "03bdef5f10b41ab047f85615e75345c3dc14ed9fab1e56f72225aeb219ac5afe",
+            "messageKeyHex": "b2794d16888750ff0f0ffb158c42cbaaa63c23695f09305acd46cae7f7a928e3",
+            "paddedPlaintextHex": "000000377b2276223a312c2274223a227878787878787878787878787878787878787878787878787878787878787878787878787878787878227d0000000000"
+          }
+        },
+        "1ebaec6c80ba2e43e67786baef32df26": {
+          "plaintext": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "referenceIntermediates": {
+            "sharedSecretHex": "fa30e06ad9e18c0f109f60f3a395551009d4f4fc5e17f62b6c6fc9c574687bc6",
+            "wrapKeyHex": "687255ea1f255a7206479f5e1b19d484af31120693923dd598b0773bda199b35",
+            "messageKeyHex": "b2794d16888750ff0f0ffb158c42cbaaa63c23695f09305acd46cae7f7a928e3",
+            "paddedPlaintextHex": "000000377b2276223a312c2274223a227878787878787878787878787878787878787878787878787878787878787878787878787878787878227d0000000000"
+          }
+        }
+      }
+    },
+    {
+      "name": "group \"design\" alice -> alice, bob, carol (carol has 2 devices)",
+      "sender": "cf95cba664c322f0848990455fcdf792",
+      "conv": "group:design",
+      "ts": 1793300003000,
+      "plaintextText": "hello team",
+      "payloadJson": "{\"v\":1,\"t\":\"hello team\"}",
+      "random": {
+        "midBytesHex": "b8bd9e3888cede2e92d0311ef6189718",
+        "messageKeyHex": "d64a4831a4ec6be4b3ae55c62bb37be56fad4a3eff669902951c85d4735ef3c0",
+        "ivHex": "367d44d21b3b0a09aa2b299b",
+        "ephemeralPrivateScalarHex": "967738461516b2a9eae8f5373e6ed78c05c3b31700f6676c91012f6b04201b74",
+        "wrapIvsHex": {
+          "cf95cba664c322f0848990455fcdf792": "a96614f678fde53af6d45e8e",
+          "1ebaec6c80ba2e43e67786baef32df26": "61b4b7ea337dce69e64f036d",
+          "74cfc99deb6dac386757195bccc1eb34": "0b999ce9f666ec2046b30b9f",
+          "35d40061444ceac4e9da75a5b1b7cdf6": "23bf2c6c96a8fd1d1203e899"
+        }
+      },
+      "aad": {
+        "message": "e2e1-msg|uL2eOIjO3i6S0DEe9hiXGA|group:design|alice|cf95cba664c322f0848990455fcdf792",
+        "wrapPerRecipient": {
+          "cf95cba664c322f0848990455fcdf792": "e2e1-wrap|uL2eOIjO3i6S0DEe9hiXGA|cf95cba664c322f0848990455fcdf792",
+          "1ebaec6c80ba2e43e67786baef32df26": "e2e1-wrap|uL2eOIjO3i6S0DEe9hiXGA|1ebaec6c80ba2e43e67786baef32df26",
+          "74cfc99deb6dac386757195bccc1eb34": "e2e1-wrap|uL2eOIjO3i6S0DEe9hiXGA|74cfc99deb6dac386757195bccc1eb34",
+          "35d40061444ceac4e9da75a5b1b7cdf6": "e2e1-wrap|uL2eOIjO3i6S0DEe9hiXGA|35d40061444ceac4e9da75a5b1b7cdf6"
+        }
+      },
+      "hkdfInfoPerRecipient": {
+        "cf95cba664c322f0848990455fcdf792": "connectum-e2e-wrap|cf95cba664c322f0848990455fcdf792|cf95cba664c322f0848990455fcdf792",
+        "1ebaec6c80ba2e43e67786baef32df26": "connectum-e2e-wrap|1ebaec6c80ba2e43e67786baef32df26|cf95cba664c322f0848990455fcdf792",
+        "74cfc99deb6dac386757195bccc1eb34": "connectum-e2e-wrap|74cfc99deb6dac386757195bccc1eb34|cf95cba664c322f0848990455fcdf792",
+        "35d40061444ceac4e9da75a5b1b7cdf6": "connectum-e2e-wrap|35d40061444ceac4e9da75a5b1b7cdf6|cf95cba664c322f0848990455fcdf792"
+      },
+      "signatureInputString": "e2e1|uL2eOIjO3i6S0DEe9hiXGA|alice|cf95cba664c322f0848990455fcdf792|group:design|1793300003000|BFKw1IEqzmKRsTZGwCx2H4qkvrd_aa3_V8fbfxBkQiwVnhmAxsL2gpaaifaJCuQ-HmAHesEE6aJ3rq1BPNISbcs|Nn1E0hs7CgmqKymb|012N6mOupZ7wUj-d6EvvkraBa12xPTRskI-Or0bZekdoG257Q45CuwNyd8-SuDqsbQubIVqf60WH5Fcyau1ZK4Sk6TT0OANCBqoB-6ye3cs",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"uL2eOIjO3i6S0DEe9hiXGA\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"group:design\",\"ts\":1793300003000,\"ek\":\"BFKw1IEqzmKRsTZGwCx2H4qkvrd_aa3_V8fbfxBkQiwVnhmAxsL2gpaaifaJCuQ-HmAHesEE6aJ3rq1BPNISbcs\",\"iv\":\"Nn1E0hs7CgmqKymb\",\"ct\":\"012N6mOupZ7wUj-d6EvvkraBa12xPTRskI-Or0bZekdoG257Q45CuwNyd8-SuDqsbQubIVqf60WH5Fcyau1ZK4Sk6TT0OANCBqoB-6ye3cs\",\"sig\":\"p1zKiRiH-87An8qknHdbft-XPLAzEbZVc4f2e_Gj0roYxpwN_dXC3YV6KFdzECJ-9EzrIIvsWPYBjpDgVnQEsA\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"qWYU9nj95Tr21F6O\",\"w\":\"UyGn1ez2yTBrZ7Bo4w_xJum3YbhqvbBGnr6Zir1gtn4SQ4E_FR1JqEmIAY1fpYsw\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"YbS36jN9zmnmTwNt\",\"w\":\"lbxkwQhZS7sZOrS30pqD6O5SmemMBu65XvSbES3a6JO5wWwunc7ahTJj-pTdvkxR\"},\"74cfc99deb6dac386757195bccc1eb34\":{\"iv\":\"C5mc6fZm7CBGswuf\",\"w\":\"rJLNsr1F8Uhie9FzcCjV_UfJZsMHPWS3a40eA6Vh5gfTDDBZG3rLVN08aXr8FoKs\"},\"35d40061444ceac4e9da75a5b1b7cdf6\":{\"iv\":\"I78sbJao_R0SA-iZ\",\"w\":\"fNUreTRUL-DbocWMSeL6zSpDcMLpRKBs8pHOyfCCIM4xYvLT7h0QZd2tjqDIT5vE\"}}}",
+      "note": "sig is ECDSA with a random nonce: it is NOT reproducible. A Dart implementation must verify this sig, and its own sigs must verify in the web code.",
+      "decryptsTo": {
+        "cf95cba664c322f0848990455fcdf792": {
+          "plaintext": "hello team",
+          "referenceIntermediates": {
+            "sharedSecretHex": "72a55620e212d33f66f313ceddb92327ad84a810d3afdd9b2ac66090ebf67aaa",
+            "wrapKeyHex": "3c580bf057c7ab03b57b0ff6b4a8e06353f4375fa1c704ab154cd2779092ac1f",
+            "messageKeyHex": "d64a4831a4ec6be4b3ae55c62bb37be56fad4a3eff669902951c85d4735ef3c0",
+            "paddedPlaintextHex": "000000187b2276223a312c2274223a2268656c6c6f207465616d227d000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "1ebaec6c80ba2e43e67786baef32df26": {
+          "plaintext": "hello team",
+          "referenceIntermediates": {
+            "sharedSecretHex": "068a154d20b0ce7c32a57feb976c0c963c0f906af3e821cf3bfdc0c98b64192c",
+            "wrapKeyHex": "85c7728f11a0e84c8550304b5f70c4894ac66fa9f69a52ffe063611112e6eaaf",
+            "messageKeyHex": "d64a4831a4ec6be4b3ae55c62bb37be56fad4a3eff669902951c85d4735ef3c0",
+            "paddedPlaintextHex": "000000187b2276223a312c2274223a2268656c6c6f207465616d227d000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "74cfc99deb6dac386757195bccc1eb34": {
+          "plaintext": "hello team",
+          "referenceIntermediates": {
+            "sharedSecretHex": "cc0d17939d1cfdfc6e47ccb6eee0bf6e6cd6e718e51130a8d056fe3969a7e3ed",
+            "wrapKeyHex": "a738d1b4e2f814176dd0055a7d14ccf626a04114f8ba404019b3c0f18c7f7281",
+            "messageKeyHex": "d64a4831a4ec6be4b3ae55c62bb37be56fad4a3eff669902951c85d4735ef3c0",
+            "paddedPlaintextHex": "000000187b2276223a312c2274223a2268656c6c6f207465616d227d000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "35d40061444ceac4e9da75a5b1b7cdf6": {
+          "plaintext": "hello team",
+          "referenceIntermediates": {
+            "sharedSecretHex": "da8bade0de831a8ee509d74eab2d92442c6060918c5856db920fb08308a6deba",
+            "wrapKeyHex": "05cea8542ebf2cb5814254e4a00af5959ec6a7d3af7fc2bb80bc48dcfea8aa27",
+            "messageKeyHex": "d64a4831a4ec6be4b3ae55c62bb37be56fad4a3eff669902951c85d4735ef3c0",
+            "paddedPlaintextHex": "000000187b2276223a312c2274223a2268656c6c6f207465616d227d000000000000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      }
+    }
+  ],
+  "negative": [
+    {
+      "case": "ct modified",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"s_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"A2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "openAs": "1ebaec6c80ba2e43e67786baef32df26",
+      "expectError": "bad_signature"
+    },
+    {
+      "case": "conv modified (replay into another chat)",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"s_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|carol\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "openAs": "1ebaec6c80ba2e43e67786baef32df26",
+      "expectError": "bad_signature"
+    },
+    {
+      "case": "opened by a device with no wrap",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"s_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "openAs": "74cfc99deb6dac386757195bccc1eb34",
+      "expectError": "not_for_this_device"
+    },
+    {
+      "case": "expectConv mismatch (arrived in another conversation)",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"s_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "openAs": "1ebaec6c80ba2e43e67786baef32df26",
+      "expectConvArg": "dm:bob|carol",
+      "expectError": "wrong_conversation"
+    },
+    {
+      "case": "wrong signing key for sender",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"s_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "openAs": "1ebaec6c80ba2e43e67786baef32df26",
+      "expectError": "bad_signature"
+    },
+    {
+      "case": "mid modified",
+      "envelope": "e2e1:{\"v\":1,\"mid\":\"A_tC0CeRab89RLrXCI0zmg\",\"from\":\"alice\",\"dev\":\"cf95cba664c322f0848990455fcdf792\",\"conv\":\"dm:alice|bob\",\"ts\":1793300000000,\"ek\":\"BIuOuNYHRGsY-yi2_dBXX5voy2aj6t24TqxyqZVxnVemaPhwNp9azG8m0CT4vSr_QspCedT4XFJkSyv_u8Y6dJI\",\"iv\":\"ZI8RJQpUkEIxSJIM\",\"ct\":\"g2-pJN0AcgE2cRsAhQqr1H4Ar6ncf66jkGz8n_ixx6mKj4zAZ62MLyPr8omi6bPL71VwDQa9mPMopn5f0cNVZ5X2XTehdrtd27Ue0abfxr8\",\"sig\":\"AKlV2w-v3vrb_7CbL35FDP_FQHfw5zxniCMlECTAmeTOI1zinSDfmd1aAYgPGIsWJXSJ9v87-lgIkhdzSCCEtQ\",\"keys\":{\"cf95cba664c322f0848990455fcdf792\":{\"iv\":\"Bk-dvwTE98G6k-8j\",\"w\":\"QmCEs64agoDbLaEDTlTugYq7Mp8SqSm0IsC6C4u84-STG-ffK5ByaKZXm9fetpXM\"},\"27e054270a58bbf62a6a99637700005d\":{\"iv\":\"kIuduz-5dIXAQAjN\",\"w\":\"BIpWHD9ev0URuMWzPY-uQsznYu7CHzYvAH87ev2up_8XNW4efZP14oxrjxoNzk6Z\"},\"1ebaec6c80ba2e43e67786baef32df26\":{\"iv\":\"lgoyX4sqVXBVmzpz\",\"w\":\"Sxk8syFUlHLfMfpba9RugzipYOiyDyhXMFbP_wsfWh1bGFVcUXMVMsLx3PCl1ikH\"}}}",
+      "openAs": "1ebaec6c80ba2e43e67786baef32df26",
+      "expectError": "bad_signature"
+    }
+  ],
+  "file": {
+    "plaintextUtf8": "connectum attachment bytes éè",
+    "plaintextHex": "636f6e6e656374756d206174746163686d656e7420627974657320c3a9c3a8",
+    "keyB64u": "jrKjNwB-yTiWSuwmuwlxuXVXkFXG3GC-biK9R854aL0",
+    "ivB64u": "rsgRijnlJNrI1YfH",
+    "aad": "e2e1-file",
+    "ciphertextWithTagHex": "623bc7cb650cf9791ae3c8fe910097bfafb40f5910ee44a10964b147b0c759522a9163771fa6d1ca08a05fb8d3f55d",
+    "ciphertextLengthEqualsPlaintextPlus16": true
+  },
+  "safetyNumber": {
+    "devicesA": "alice1+alice2",
+    "devicesB": "bob1",
+    "value": "52484 28505 09386 18585 02172 21838 27981 31536 43346 05737 29782 43938"
+  },
+  "deviceFingerprint": {
+    "device": "alice1",
+    "value": "OAV3j8N0xKjJjFtPEFmnCA"
+  },
+  "base64url": {
+    "enc_empty": "",
+    "enc_ff": "-_8",
+    "enc_1byte": "AQ",
+    "decodeRejectsPadding": "bad_encoding"
+  },
+  "paddingNote": {
+    "x*41 payload JSON bytes + 4": 59,
+    "rule": "padded length = ceil((4 + len(payloadJsonUtf8)) / 64) * 64; first 4 bytes big-endian length; remainder zeros"
+  }
+}

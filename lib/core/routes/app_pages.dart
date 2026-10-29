@@ -8,6 +8,8 @@ import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_assets/debug_assets_binding.dart';
 import '../../features/debug_assets/debug_assets_view.dart';
+import '../../features/debug_e2e/debug_e2e_binding.dart';
+import '../../features/debug_e2e/debug_e2e_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
 import '../../features/debug_socket/debug_socket_view.dart';
 import '../../features/enterprise_created/enterprise_created_binding.dart';
@@ -167,5 +169,12 @@ class AppPages {
         AppTransitionKind.push,
       ),
     ],
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugE2e,
+        () => const DebugE2eView(),
+        DebugE2eBinding(),
+        AppTransitionKind.push,
+      ),
   ];
 }
