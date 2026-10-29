@@ -21,7 +21,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 4;
+  static const _version = 5;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -94,6 +94,17 @@ class AppDatabase {
       // read position replaces it, so the old values must not be read as one.
       'UPDATE conversations SET read_id = NULL, read_ts = NULL',
     ],
+    5: [
+      '''CREATE TABLE form_options(
+        org_id TEXT NOT NULL, user_id TEXT NOT NULL, options_json TEXT,
+        categories_json TEXT, fetched_ts INTEGER,
+        PRIMARY KEY(org_id, user_id))''',
+      '''CREATE TABLE form_recents(
+        org_id TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL,
+        scope TEXT, caption TEXT, used_ts INTEGER,
+        PRIMARY KEY(org_id, user_id, name))''',
+      'ALTER TABLE form_submissions ADD COLUMN rejection_json TEXT',
+    ],
   };
 
   static const _scopedTables = [
@@ -102,6 +113,8 @@ class AppDatabase {
     'messages',
     'form_submissions',
     'form_definitions',
+    'form_options',
+    'form_recents',
     'outbox',
     'sync_cursor',
   ];

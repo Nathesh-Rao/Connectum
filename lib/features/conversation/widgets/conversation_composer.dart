@@ -9,11 +9,13 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../data/models/message.dart';
+import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
 
 /// The composer: a field that grows to five lines, a send button that wakes
-/// as text appears, and attach and forms buttons that are placeholders for
-/// now. In an encrypted thread it is replaced by a blocked state.
+/// as text appears, an attach button that is a placeholder for now and the
+/// forms button. In an encrypted thread the field is replaced by a blocked
+/// note, and the forms button stays.
 class ConversationComposer extends StatelessWidget {
   const ConversationComposer({super.key, required this.controller});
 
@@ -23,7 +25,7 @@ class ConversationComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     return Obx(() {
-      if (c.isBlocked.value) return const _Blocked();
+      if (c.isBlocked.value) return _Blocked(controller: c);
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,10 +90,8 @@ class ConversationComposer extends StatelessWidget {
                     label: 'Attach',
                     onTap: c.tapPlaceholder,
                   ),
-                  _Placeholder(
-                    icon: Icons.grid_view,
-                    label: 'Forms',
-                    onTap: c.tapPlaceholder,
+                  FormsButton(
+                    onTap: () => FormsPickerSheet.show(context, c.picker),
                   ),
                   Expanded(
                     child: AppTextField(
@@ -274,8 +274,34 @@ class _ReplyBar extends StatelessWidget {
   }
 }
 
+/// The forms button of every composer: it opens the forms sheet, in an
+/// encrypted conversation too (forms are not end-to-end encrypted).
+class FormsButton extends StatelessWidget {
+  const FormsButton({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Forms',
+    excludeSemantics: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: const SizedBox(
+        width: AppSpacing.composerButton,
+        height: AppSpacing.composerButton,
+        child: Icon(Icons.grid_view, size: 22, color: AppColors.ink),
+      ),
+    ),
+  );
+}
+
 class _Blocked extends StatelessWidget {
-  const _Blocked();
+  const _Blocked({required this.controller});
+
+  final ConversationController controller;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -299,6 +325,9 @@ class _Blocked extends StatelessWidget {
             "Can't send in encrypted chats from mobile yet",
             style: AppText.readable,
           ),
+        ),
+        FormsButton(
+          onTap: () => FormsPickerSheet.show(context, controller.picker),
         ),
       ],
     ),

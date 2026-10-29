@@ -8,6 +8,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
 import '../../data/repositories/feed_repository.dart';
+import '../../data/repositories/form_options_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
 import '../../data/repositories/typing_repository.dart';
@@ -41,11 +42,15 @@ class InitialBinding extends Bindings {
       ConversationRepository(db, store, socket),
       permanent: true,
     );
-    Get.put(
+    final messages = Get.put(
       MessageRepository(db, store, socket, conversations, policy),
       permanent: true,
     );
-    Get.put(SubmissionRepository(db, store, socket), permanent: true);
+    Get.put(
+      SubmissionRepository(db, store, socket, messages),
+      permanent: true,
+    );
+    Get.put(FormOptionsRepository(db, store, socket), permanent: true);
     Get.put(PresenceRepository(socket), permanent: true);
     Get.put(TypingRepository(socket), permanent: true);
     Get.put(FeedRepository(socket), permanent: true);

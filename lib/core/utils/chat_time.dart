@@ -35,6 +35,11 @@ class ChatTime {
     return '$hour:$minute ${t.hour < 12 ? 'AM' : 'PM'}';
   }
 
+  static String date(int ts) {
+    final t = DateTime.fromMillisecondsSinceEpoch(ts);
+    return '${t.day} ${_months[t.month - 1]} ${t.year}';
+  }
+
   static bool isSameDay(int a, int b) {
     final x = DateTime.fromMillisecondsSinceEpoch(a);
     final y = DateTime.fromMillisecondsSinceEpoch(b);

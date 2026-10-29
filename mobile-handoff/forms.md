@@ -54,7 +54,7 @@ Definition-level keys also present (not needed to render): `saveToDb`, `axpert`,
 | `list` (dropdown) | `options`: [string] **or** `source`: one of `branches, departments, designations, users, people, categories, affiliates, roles` or `isource:<name>`; `multi`, `allowAll` (multi+source), `where`, `dependsOn {field,prop}`, `prefill` (person detail), `subject`, `involve` | single: string that matches an option (case-insensitive for sourced lists); `multi`: array of strings; `"All"` if `allowAll` |
 | `selection` | `api` (URL), `source` {type: `datasource`\|`api`\|`query`, name, params {p:{field}\|{value}}}, `allowTyping` | string (<=500). The server also stores a display label in `labels[name]` |
 | `fill` (Auto Fill) | `fillFrom` (field name), `sourceProp` | string, read-only, copied from the chosen selection |
-| `location` | `defaultNow` | `{"lat":12.97,"lng":77.59}` (web may add `address`; server keeps only lat/lng). Also accepts string `"lat,lng"` |
+| `location` | `defaultNow` | `{"lat":12.97,"lng":77.59}` (newer backend also keeps `address`; the test server 2026-10-29 keeps only lat/lng; in a *form message* this server sends the value as a JSON **string**, newer ones as the address text). Also accepts string `"lat,lng"` |
 | `file` | `multi` | array of file ids (max 1, or 10 if `multi`); upload first via the files API (`src/services/connectumFiles.js`, `sd_files`) |
 | `payment` | `amount` (usual fee), `currency` (label), `methods` (default `["Cash","Card","UPI"]`) | `{"amount":500,"method":"UPI","status":"paid"\|"pending"}`; amount >= 0; method must be on the list and is required when `paid` |
 | `slot` (booking time) | `of` (name of the field holding the person booked) | string `"YYYY-MM-DD HH:MM"`, chosen from `avail.slots {user, days}` |

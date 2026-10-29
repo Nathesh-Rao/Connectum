@@ -123,7 +123,8 @@ class Conversation {
             ),
       lastIsEncrypted:
           intOf(r['lm_e2e']) == 1 ||
-          (r['lm_kind'] == null && intOf(r['is_encrypted']) == 1),
+          (r['lm_kind'] == null &&
+              idText(r['last_text']) == '[encrypted message]'),
       lastIsDeleted: intOf(r['lm_deleted']) == 1,
       lastId: idText(r['last_id']),
       readId: idText(r['read_id']),

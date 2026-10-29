@@ -31,6 +31,7 @@ class EnterprisesView extends GetView<EnterprisesController> {
       AppStateImageKind.offline,
     ]);
     return AppScaffold(
+      showOfflineBar: true,
       body: Obx(() {
         if (c.blockedReasons.isNotEmpty) {
           return _Blocked(

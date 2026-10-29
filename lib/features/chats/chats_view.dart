@@ -12,9 +12,11 @@ import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_filter_tabs.dart';
 import '../../core/widgets/app_offline_bar.dart';
+import '../../core/widgets/app_row_highlight.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'chats_controller.dart';
 import 'widgets/conversation_actions_sheet.dart';
@@ -33,7 +35,6 @@ class ChatsView extends GetView<ChatsController> {
     AppStateImage.precache(context, const [
       AppStateImageKind.emptyChats,
       AppStateImageKind.error,
-      AppStateImageKind.offline,
       AppStateImageKind.noResults,
     ]);
     return AppScaffold(
@@ -285,32 +286,84 @@ class _Body extends StatelessWidget {
       final state = c.viewState.value;
       final Widget child = isSearching
           ? SearchResults(key: const ValueKey('search'), controller: c)
-          : AppStateView(
-              key: ValueKey(state),
-              state: state,
-              emptyImage: AppStateImageKind.emptyChats,
-              emptyTitle: 'No conversations yet',
-              emptyMessage: 'Start a chat to see it here.',
-              emptyActionLabel: 'Start a chat',
-              onEmptyAction: () {
-                c.newChat.prepare();
-                AppBottomSheet.show<void>(
-                  context,
-                  title: 'New Group / Chat',
-                  child: NewChatSheet(controller: c.newChat),
-                );
-              },
-              errorMessage: 'We could not read your chats.',
-              onRetry: c.retry,
-              loadingChild: const SkeletonRows(),
-              child: _List(controller: c),
+          : _Refreshable(
+              isEnabled: state == AppViewState.empty,
+              onRefresh: () => _refresh(context, c),
+              child: AppStateView(
+                key: ValueKey(state),
+                state: state,
+                emptyImage: AppStateImageKind.emptyChats,
+                emptyTitle: 'No conversations yet',
+                emptyMessage: 'Start a chat to see it here.',
+                emptyActionLabel: 'Start a chat',
+                onEmptyAction: () {
+                  c.newChat.prepare();
+                  AppBottomSheet.show<void>(
+                    context,
+                    title: 'New Group / Chat',
+                    child: NewChatSheet(controller: c.newChat),
+                  );
+                },
+                errorMessage: 'We could not read your chats.',
+                onRetry: c.retry,
+                loadingChild: const SkeletonRows(),
+                child: _List(controller: c),
+              ),
             );
-      return AnimatedSwitcher(
-        duration: AppDurations.fast,
-        switchInCurve: AppCurves.out,
-        child: child,
+      return Column(
+        children: [
+          if (!isSearching)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+              child: _WorkspaceRow(onTap: c.openWorkspace),
+            ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: AppDurations.fast,
+              switchInCurve: AppCurves.out,
+              child: child,
+            ),
+          ),
+        ],
       );
     });
+  }
+}
+
+Future<void> _refresh(BuildContext context, ChatsController c) async {
+  if (c.isOffline) AppToast.show(context, "You're offline");
+  await c.refreshList();
+}
+
+/// Lets the empty state be pulled to refresh, like the list.
+class _Refreshable extends StatelessWidget {
+  const _Refreshable({
+    required this.isEnabled,
+    required this.onRefresh,
+    required this.child,
+  });
+
+  final bool isEnabled;
+  final Future<void> Function() onRefresh;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isEnabled) return child;
+    return RefreshIndicator(
+      color: AppColors.accent,
+      backgroundColor: AppColors.background,
+      onRefresh: onRefresh,
+      child: LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: box.maxHeight),
+            child: child,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -325,34 +378,16 @@ class _List extends StatelessWidget {
     return RefreshIndicator(
       color: AppColors.accent,
       backgroundColor: AppColors.background,
-      onRefresh: c.refreshList,
+      onRefresh: () => _refresh(context, c),
       child: Obx(() {
         final ids = c.visibleIds.toList();
         return ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-          itemCount: ids.length + 2,
+          itemCount: ids.length + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
-              return Obx(
-                () => AnimatedSize(
-                  duration: AppDurations.fast,
-                  curve: AppCurves.out,
-                  alignment: Alignment.topLeft,
-                  child: c.isOfflineNote.value
-                      ? const Padding(
-                          padding: EdgeInsets.only(top: AppSpacing.sm),
-                          child: Text(
-                            "You're offline",
-                            style: AppText.readableStrong,
-                          ),
-                        )
-                      : const SizedBox(width: double.infinity),
-                ),
-              );
-            }
-            if (index == 1) {
               return const Padding(
                 padding: EdgeInsets.only(
                   top: AppSpacing.lg,
@@ -361,7 +396,7 @@ class _List extends StatelessWidget {
                 child: Text('Direct & Teams', style: AppText.eyebrow),
               );
             }
-            final id = ids[index - 2];
+            final id = ids[index - 1];
             final row = c.rowOf(id);
             return Obx(
               () => ConversationTile(
@@ -376,6 +411,97 @@ class _List extends StatelessWidget {
           },
         );
       }),
+    );
+  }
+}
+
+/// The pinned My Work Space row above the conversations. It is not a
+/// conversation, so it is never archived and always comes first.
+class _WorkspaceRow extends StatelessWidget {
+  const _WorkspaceRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  static const preview = "Type '#' for commands, automated tasks & alerts";
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'My Work Space, pinned',
+      excludeSemantics: true,
+      child: AppRowHighlight(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.chatRowHeight,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: AppSpacing.avatar,
+                height: AppSpacing.avatar,
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(AppRadius.tile),
+                  ),
+                  border: Border.all(color: AppColors.peach),
+                ),
+                child: const Icon(
+                  Icons.dashboard_outlined,
+                  size: 22,
+                  color: AppColors.accent,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('My Work Space', style: AppText.rowTitle),
+                        const SizedBox(width: AppSpacing.xs),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xxs,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.line),
+                          ),
+                          child: Text(
+                            'PINNED',
+                            style: AppText.eyebrow.copyWith(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.7,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Text(
+                      preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.rowCaption,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.rowChevron,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

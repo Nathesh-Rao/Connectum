@@ -63,14 +63,12 @@ class ChatsController extends GetxController
   final searchMessages = <MessageHit>[].obs;
   final hasSearched = false.obs;
   final minute = DateTime.now().obs;
-  final isOfflineNote = false.obs;
   final isRefreshing = false.obs;
 
   final _rows = <String, Rx<Conversation>>{};
   final _all = <String, Conversation>{};
   Timer? _minuteTimer;
   Timer? _searchTimer;
-  Timer? _noteTimer;
   int _searchSeq = 0;
 
   bool get isOffline => connectivity.state.value == AppConnectivity.offline;
@@ -152,14 +150,12 @@ class ChatsController extends GetxController
           return AppViewState.empty;
         case 'error':
           return AppViewState.error;
-        case 'offline':
-          return AppViewState.offline;
       }
       return AppViewState.content;
     }
     if (conversations.loadError.value != null) return AppViewState.error;
     if (!conversations.isLoaded.value) return AppViewState.loading;
-    if (isEmpty) return isOffline ? AppViewState.offline : AppViewState.empty;
+    if (isEmpty) return AppViewState.empty;
     return AppViewState.content;
   }
 
@@ -183,6 +179,8 @@ class ChatsController extends GetxController
   void openNotifications() => Get.toNamed(AppRoutes.notifications);
 
   void openProfile() => shell.select(3);
+
+  void openWorkspace() => Get.toNamed(AppRoutes.workspace);
 
   static const needsConnection =
       'This needs a connection. Try again when you are online.';
@@ -243,15 +241,7 @@ class ChatsController extends GetxController
   // ---- refresh -----------------------------------------------------------------
 
   Future<void> refreshList() async {
-    if (isOffline) {
-      isOfflineNote.value = true;
-      _noteTimer?.cancel();
-      _noteTimer = Timer(
-        const Duration(seconds: 3),
-        () => isOfflineNote.value = false,
-      );
-      return;
-    }
+    if (isOffline) return;
     isRefreshing.value = true;
     try {
       await Future.wait([
@@ -358,7 +348,6 @@ class ChatsController extends GetxController
   void onClose() {
     _minuteTimer?.cancel();
     _searchTimer?.cancel();
-    _noteTimer?.cancel();
     searchField.dispose();
     searchFocus.dispose();
     filterTabs.dispose();

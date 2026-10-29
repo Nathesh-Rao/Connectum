@@ -9,12 +9,24 @@ import '../../core/debug/seed_messages.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
+import '../../core/theme/app_motion.dart';
 import '../../core/utils/chat_time.dart';
 import '../../data/models/conversation.dart';
+import '../../data/models/form_card.dart';
+import '../../core/widgets/app_form_card.dart';
+import '../forms/forms_picker_controller.dart';
+import '../forms/models/form_launch.dart';
+import '../home_shell/home_shell_controller.dart';
+import '../../data/models/form_submission.dart';
+import '../../data/repositories/form_options_repository.dart';
+import '../../data/socket/connectivity_service.dart';
+
 import '../../data/models/message.dart';
+import '../../data/models/reaction.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
+import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/typing_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
@@ -33,6 +45,10 @@ class ConversationController extends GetxController
     required this.conversations,
     required this.presence,
     required this.typing,
+    required this.submissions,
+    required this.formOptions,
+    required this.connectivity,
+    required this.shell,
     required this.socket,
     required this.store,
   });
@@ -48,8 +64,26 @@ class ConversationController extends GetxController
   final ConversationRepository conversations;
   final PresenceRepository presence;
   final TypingRepository typing;
+  final SubmissionRepository submissions;
+  final FormOptionsRepository formOptions;
+  final ConnectivityService connectivity;
+  final HomeShellController? shell;
   final SocketService socket;
   final SessionStore store;
+
+  /// The forms button's sheet. A form is posted into this conversation only
+  /// where the server takes one (a direct message or a group).
+  late final picker = FormsPickerController(
+    options: formOptions,
+    connectivity: connectivity,
+    shell: shell,
+    convId: kind == 'dm' || kind == 'group' ? conversationId : null,
+    isEncrypted: () => isBlocked.value,
+  );
+
+  final highlighted = <String>{}.obs;
+  final _formJson = <String, String>{};
+  Worker? _noticeWorker;
 
   final text = TextEditingController();
   final focus = FocusNode();
@@ -150,6 +184,129 @@ class ConversationController extends GetxController
   GlobalKey keyFor(ChatItem item) =>
       GlobalObjectKey('$conversationId|${item.key}');
 
+  final _cards = <String, FormCardData?>{};
+
+  /// The card for a form message, or null when it is not one that can be
+  /// shown as a card (then it stays an ordinary bubble). A message that
+  /// carries no fields falls back to the stored submission and captions.
+  FormCardData? formCardOf(Message m) {
+    if (m.kind != 'form' || m.isDeleted || m.formJson == null) return null;
+    final first = FormCardData.fromMessage(m);
+    if (first == null) return null;
+    // Reads the stored submission, so a card follows its status (waiting for
+    // approval, declined) without a new message.
+    final sub = submissions.submissionById(first.id);
+    return _cards.putIfAbsent(
+      '${m.msgId}|${m.formJson.hashCode}|${sub?.status}|${sub?.canResubmit}',
+      () => FormCardData.fromMessage(
+        m,
+        submission: first.entries.isEmpty ? sub : null,
+        definition: submissions.definitions[first.structure],
+        status: (sub?.status ?? '').isEmpty ? null : sub!.status,
+        canResubmit: sub?.canResubmit ?? false,
+      ),
+    );
+  }
+
+  AppFormCardState formStateOf(Message m) => switch (m.status) {
+    MessageStatus.failed => AppFormCardState.failed,
+    MessageStatus.pending || MessageStatus.sending => AppFormCardState.waiting,
+    _ => AppFormCardState.sent,
+  };
+
+  /// What a failed card says under its fields.
+  String formProblemOf(Message m) => isInvalidFailure(m)
+      ? 'Not sent. Some answers need fixing. Tap to edit and resend'
+      : 'Not sent. ${m.failReason == SubmissionRepository.couldNotConfirm ? "Couldn't confirm delivery. " : ""}Tap to retry';
+
+  bool isInvalidFailure(Message m) =>
+      m.failReason == SubmissionRepository.invalidReason;
+
+  bool isSentForm(FormCardData d) => d.by.toLowerCase() == me;
+
+  bool canEditForm(Message m, FormCardData d) =>
+      m.status != MessageStatus.failed &&
+      m.status != MessageStatus.pending &&
+      m.status != MessageStatus.sending &&
+      (d.canEdit(me) || d.canFix(me));
+
+  /// Tapping a card opens it; a failed one is fixed or sent again instead.
+  void tapForm(Message m, FormCardData d) {
+    if (m.status != MessageStatus.failed) return openForm(m, d);
+    if (isInvalidFailure(m)) {
+      unawaited(editAndResend(m));
+    } else {
+      unawaited(retryForm(m));
+    }
+  }
+
+  Future<void> retryForm(Message m) async {
+    if (SeedUi.isActive) {
+      SeedMessages.retry(conversationId, m.msgId);
+    } else {
+      await submissions.retry(m.msgId);
+    }
+  }
+
+  /// A submission the server refused, opened with what was typed and the
+  /// server's complaint on the fields.
+  Future<void> editAndResend(Message m) async {
+    final pending = await submissions.pendingFor(m.msgId);
+    if (pending == null) {
+      _say("That form can't be opened. Delete it and fill it in again.");
+      return;
+    }
+    await Get.toNamed(
+      AppRoutes.form,
+      arguments: FormLaunch(
+        name: pending.name,
+        scope: pending.scope,
+        caption: pending.caption,
+        mode: FormMode.resend,
+        convId: conversationId,
+        submissionId: m.msgId,
+        savedValues: pending.values,
+        errorDetails: pending.errors,
+        isEncryptedChat: isBlocked.value,
+      ),
+    );
+  }
+
+  /// The pencil on my own card: the form again, filled in with what was
+  /// saved. A declined card allowed to be fixed is resubmitted instead.
+  Future<void> editForm(Message m, FormCardData d) async {
+    FormSubmission? saved = submissions.submissionById(d.id);
+    if (saved == null && socket.isOnline) {
+      await submissions.syncFromServer();
+      saved = submissions.submissionById(d.id);
+    }
+    if (saved == null) {
+      _say("That submission can't be opened right now. Try again online.");
+      return;
+    }
+    await Get.toNamed(
+      AppRoutes.form,
+      arguments: FormLaunch.forSubmission(
+        d,
+        saved,
+        me: me,
+        scope: submissions.definitions[d.structure]?.scope ?? '',
+        convId: conversationId,
+        isEncryptedChat: isBlocked.value,
+      ),
+    );
+  }
+
+  void openForm(Message m, FormCardData d) {
+    Get.toNamed(
+      AppRoutes.submissionDetailOf(
+        d.id,
+        convId: conversationId,
+        msgId: m.msgId,
+      ),
+    );
+  }
+
   Message? originalOf(Message m) => m.replyTo == null ? null : _byId[m.replyTo];
 
   /// "Priya is typing", "Priya and Ravi are typing", or null.
@@ -172,6 +329,11 @@ class ConversationController extends GetxController
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     scroll.addListener(_onScroll);
+    _noticeWorker = ever(submissions.notice, (message) {
+      if (message == null) return;
+      _say(message);
+      submissions.notice.value = null;
+    });
     _onlineWorker = ever(socket.connection, (state) {
       if (state == SocketState.online && !SeedUi.isActive) _sync();
     });
@@ -280,6 +442,13 @@ class ConversationController extends GetxController
         }
       }
     }
+    for (final m in asc) {
+      final json = m.formJson;
+      if (m.kind != 'form' || json == null) continue;
+      final before = _formJson[m.msgId];
+      _formJson[m.msgId] = json;
+      if (before != null && before != json && !isFirst) _highlight(m.msgId);
+    }
     final out = <ChatItem>[];
     Message? prev;
     for (var i = 0; i < asc.length; i++) {
@@ -317,6 +486,12 @@ class ConversationController extends GetxController
     }
     items.assignAll(reversed);
     _scheduleRead();
+  }
+
+  /// A card that an edit just rewrote flashes once.
+  void _highlight(String msgId) {
+    highlighted.add(msgId);
+    Timer(AppDurations.slow * 3, () => highlighted.remove(msgId));
   }
 
   bool _breaks(Message a, Message b) =>
@@ -504,6 +679,43 @@ class ConversationController extends GetxController
     }
   }
 
+  // ---- reactions -----------------------------------------------------------
+
+  /// Teams have no reaction command; a message that is not on the server yet,
+  /// failed or deleted cannot take one. Encrypted messages can: a reaction is
+  /// not part of the encrypted text.
+  bool canReact(Message m) =>
+      kind != 'host' &&
+      !m.isLocalTemp &&
+      m.status != MessageStatus.failed &&
+      !m.isDeleted;
+
+  List<Reaction> reactionsOf(Message m) =>
+      m.isDeleted ? const [] : Reaction.parse(m.reactionsJson, me);
+
+  /// Toggles my [emoji] on [m]. Returns a plain-words problem, or null; the
+  /// chips change when the server's reaction event arrives.
+  Future<String?> react(Message m, String emoji) async {
+    if (!canReact(m)) return "That message can't take a reaction yet.";
+    if (SeedUi.isActive) {
+      SeedMessages.react(conversationId, m.msgId, emoji);
+      return null;
+    }
+    if (!socket.isOnline) return 'Needs a connection';
+    final result = await messages.react(m, emoji);
+    return switch (result) {
+      ReactResult.sent => null,
+      ReactResult.needsConnection => 'Needs a connection',
+      ReactResult.notSupported => "Reactions aren't available here.",
+    };
+  }
+
+  /// A tap on a chip: the same toggle, with a problem shown as a notice.
+  Future<void> toggleReaction(Message m, String emoji) async {
+    final problem = await react(m, emoji);
+    if (problem != null) _say(problem);
+  }
+
   Future<void> copy(Message m) =>
       Clipboard.setData(ClipboardData(text: m.text));
 
@@ -511,6 +723,11 @@ class ConversationController extends GetxController
   Future<String?> delete(Message m) async {
     if (SeedUi.isActive) {
       SeedMessages.delete(conversationId, m.msgId);
+      return null;
+    }
+    if (m.kind == 'form' &&
+        (m.isLocalTemp || m.status == MessageStatus.failed)) {
+      await submissions.discardPending(m.msgId);
       return null;
     }
     final result = await messages.deleteMessage(m);
@@ -533,6 +750,8 @@ class ConversationController extends GetxController
     _seedTimer?.cancel();
     _listWorker?.dispose();
     _onlineWorker?.dispose();
+    _noticeWorker?.dispose();
+    picker.onClose();
     scroll.removeListener(_onScroll);
     scroll.dispose();
     text.dispose();

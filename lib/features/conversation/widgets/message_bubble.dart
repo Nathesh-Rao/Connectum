@@ -7,7 +7,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/chat_time.dart';
 import '../../../data/models/message.dart';
+import '../../../data/models/reaction.dart';
 import '../models/chat_item.dart';
+import 'reaction_chips.dart';
 import 'message_status_mark.dart';
 
 /// One message: sent on the right, received on the left. The time and, on
@@ -22,6 +24,8 @@ class MessageBubble extends StatelessWidget {
     required this.original,
     required this.onLongPress,
     required this.onRetry,
+    required this.reactions,
+    required this.onReact,
   });
 
   static const _maxWidthFraction = 0.88;
@@ -33,6 +37,8 @@ class MessageBubble extends StatelessWidget {
   final Message? original;
   final VoidCallback onLongPress;
   final VoidCallback onRetry;
+  final List<Reaction> reactions;
+  final void Function(String emoji) onReact;
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +115,16 @@ class MessageBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: box.maxWidth * _maxWidthFraction,
             ),
-            child: bubble,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: isMine
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                bubble,
+                ReactionChips(reactions: reactions, onToggle: onReact),
+              ],
+            ),
           ),
         ),
       ),

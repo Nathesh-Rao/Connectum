@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:get/get.dart';
 
+import '../../data/models/form_entry.dart';
 import '../../data/models/ids.dart';
 import '../../data/models/message.dart';
 
@@ -16,8 +18,55 @@ class SeedMessages {
   static final _lists = <String, RxList<Message>>{};
   static int _next = 5000;
 
-  static RxList<Message> of(String convId) =>
-      _lists.putIfAbsent(convId, () => _build(convId).obs);
+  static RxList<Message> of(String convId) => _lists.putIfAbsent(
+    convId,
+    () => [for (final m in _build(convId)) _withReactions(m)].obs,
+  );
+
+  /// Sample reactions by message id: (user, emoji), several per message.
+  static const _reactions = <String, List<(String, String)>>{
+    '1001': [(me, '👍'), ('priya', '👍'), ('priya', '❤️')],
+    '1002': [('priya', '😂')],
+    '1004': [('priya', '🔥'), (me, '🔥')],
+    '1009': [(me, '🙏')],
+    '3001': [(me, '👍'), ('ravi', '👍'), ('nina', '👍'), ('nina', '❤️')],
+    '3004': [('meera', '🎉'), ('ravi', '🎉')],
+    '3006': [(me, '😂'), ('meera', '😂'), ('nina', '😮')],
+    '20001': [('forms', '👍')],
+    '20002': [(me, '❤️'), ('forms', '❤️'), ('forms', '🙏')],
+    '20003': [('forms', '👏'), (me, '🚀')],
+    '20004': [(me, '🙏'), ('forms', '🙏')],
+  };
+
+  static Message _withReactions(Message m) {
+    final list = _reactions[m.msgId];
+    if (list == null) return m;
+    return m.copyWith(
+      reactionsJson: jsonEncode([
+        for (final (user, emoji) in list) {'user': user, 'emoji': emoji},
+      ]),
+    );
+  }
+
+  /// Toggles my reaction as the server would: add the pair, or remove it.
+  static void react(String convId, String id, String emoji) {
+    _set(convId, id, (m) {
+      final list = <Map<String, dynamic>>[];
+      final stored = m.reactionsJson;
+      if (stored != null) {
+        for (final r in jsonDecode(stored) as List) {
+          list.add((r as Map).cast<String, dynamic>());
+        }
+      }
+      final at = list.indexWhere((r) => r['user'] == me && r['emoji'] == emoji);
+      if (at >= 0) {
+        list.removeAt(at);
+      } else {
+        list.insert(0, {'user': me, 'emoji': emoji});
+      }
+      return m.copyWith(reactionsJson: jsonEncode(list));
+    });
+  }
 
   static int _minutes(int n) =>
       DateTime.now().millisecondsSinceEpoch - n * 60 * 1000;
@@ -220,6 +269,8 @@ class SeedMessages {
           _m(c, 8002, 'meera', 'Good morning everyone.', 90),
           _m(c, 8003, me, 'Good morning.', 85, status: MessageStatus.sent),
         ];
+      case 'dm:forms':
+        return _formCards(c);
       default:
         return [
           _m(
@@ -231,6 +282,126 @@ class SeedMessages {
           ),
         ];
     }
+  }
+
+  static Message _form(
+    String convId,
+    int id,
+    String by,
+    String caption,
+    int minutesAgo,
+    List<(String, Object?)> fields,
+  ) {
+    final form = {
+      'structure': caption.toLowerCase().replaceAll(' ', '_'),
+      'scope': 'user',
+      'caption': caption,
+      'submissionId': id,
+      'by': by,
+      'fields': [
+        for (final (name, value) in fields)
+          {'name': name, 'caption': FormEntry.humanize(name), 'value': value},
+      ],
+    };
+    return Message(
+      msgId: '$id',
+      convId: convId,
+      sender: by,
+      isMine: by == me,
+      kind: 'form',
+      text: '$caption: sample',
+      ts: _minutes(minutesAgo),
+      status: by == me ? MessageStatus.read : MessageStatus.sent,
+      formJson: jsonEncode(form),
+      localSeq: id,
+    );
+  }
+
+  /// A thread of form cards: three fields and nine, yes/no, long values, the
+  /// three location shapes, then generated ones (about 100 in all) for the
+  /// scrolling check.
+  static List<Message> _formCards(String c) {
+    const long =
+        'Patient reports intermittent pain in the left knee after long walks. Advised rest, ice, compression and a follow-up visit in two weeks if it does not settle on its own.';
+    final out = <Message>[
+      _form(c, 20001, me, 'Leave request', 4000, [
+        ('kind', 'Casual leave'),
+        ('from', '2026-11-03'),
+        ('days', 2),
+      ]),
+      _form(c, 20002, 'forms', 'Clinical examination - Ortho', 3990, [
+        ('patient', 'Sabarish'),
+        ('diet', 'test'),
+        ('physio', 'Yes'),
+        ('surgery', 'No'),
+        ('ip', true),
+        ('notes', long),
+        ('seenOn', '2026-10-28'),
+        ('fee', 1250.5),
+        ('tags', ['knee', 'follow-up']),
+      ]),
+      _form(c, 20003, me, 'Test Mobile', 3980, [
+        ('description', 'This is a test'),
+        ('locationField', '{"lat":12.918562,"lng":77.57447}'),
+      ]),
+      _form(c, 20004, 'forms', 'Test Mobile', 3970, [
+        ('description', 'Hi bro'),
+        ('locationField', {'lat': 12.918566617853976, 'lng': 77.574456833656}),
+      ]),
+      _form(c, 20005, me, 'Site visit', 3960, [
+        ('where', '12 Church Street, Bengaluru'),
+        ('answer', 'Yes'),
+        ('empty', ''),
+        ('missing', null),
+      ]),
+      _form(c, 20006, 'forms', 'Site visit', 3950, [
+        (
+          'where',
+          {'lat': 12.9716, 'lng': 77.5946, 'address': 'MG Road, Bengaluru'},
+        ),
+        (
+          'weird',
+          {
+            'a': 1,
+            'b': ['x', 'y'],
+          },
+        ),
+      ]),
+    ];
+    for (var i = 0; i < 100; i++) {
+      final isMine = i % 3 != 1;
+      final n = 3 + (i * 5) % 8;
+      out.add(
+        _form(
+          c,
+          21000 + i,
+          isMine ? me : 'forms',
+          i.isEven ? 'Expense claim' : 'Clinical examination - Ortho',
+          3900 - i * 30,
+          [
+            for (var f = 0; f < n; f++)
+              switch (f % 4) {
+                0 => ('field$f', 'Value ${i + f}'),
+                1 => ('flag$f', (i + f).isEven ? 'Yes' : 'No'),
+                2 => ('amount$f', 1000 * (i + f + 1)),
+                _ => ('note$f', f % 8 == 3 ? long : 'Short note'),
+              },
+          ],
+        ),
+      );
+      if (i % 10 == 9) {
+        out.add(
+          _m(
+            c,
+            22000 + i,
+            isMine ? 'forms' : me,
+            'Thanks, got it.',
+            3900 - i * 30 - 1,
+          ),
+        );
+      }
+    }
+    return out;
   }
 
   /// Adds a message of mine and walks it through the send states.
@@ -253,6 +424,110 @@ class SeedMessages {
       ),
     );
     _walk(convId, id, isDm);
+  }
+
+  /// A form of mine: a pending card that turns into a sent one (or a failed
+  /// one) on a timer.
+  static void sendForm(
+    String convId,
+    String tempId,
+    String finalId,
+    String pendingJson,
+    String sentJson,
+    String caption, {
+    required bool fails,
+  }) {
+    final list = of(convId);
+    list.add(
+      Message(
+        msgId: tempId,
+        convId: convId,
+        sender: me,
+        isMine: true,
+        kind: 'form',
+        text: '$caption submitted',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        status: MessageStatus.pending,
+        formJson: pendingJson,
+        localSeq: _next,
+        cid: newCid(),
+      ),
+    );
+    Timer(const Duration(milliseconds: 700), () {
+      _set(convId, tempId, (m) => m.copyWith(status: MessageStatus.sending));
+    });
+    Timer(const Duration(milliseconds: 1500), () {
+      if (fails) {
+        _set(
+          convId,
+          tempId,
+          (m) => m.copyWith(
+            status: MessageStatus.failed,
+            failReason: 'Some answers need fixing.',
+          ),
+        );
+        return;
+      }
+      final i = list.indexWhere((m) => m.msgId == tempId);
+      if (i < 0) return;
+      final m = list[i];
+      final serverId = '${_next++}';
+      list[i] = Message(
+        msgId: serverId,
+        convId: convId,
+        sender: me,
+        isMine: true,
+        kind: 'form',
+        text: m.text,
+        ts: m.ts,
+        status: MessageStatus.sent,
+        formJson: sentJson,
+        localSeq: 0,
+      );
+      if (!convId.startsWith('dm:')) return;
+      Timer(const Duration(milliseconds: 1500), () {
+        _set(
+          convId,
+          serverId,
+          (x) => x.copyWith(status: MessageStatus.delivered),
+        );
+      });
+      Timer(const Duration(milliseconds: 3500), () {
+        _set(convId, serverId, (x) => x.copyWith(status: MessageStatus.read));
+      });
+    });
+  }
+
+  /// A form message rewritten after an edit (`form_message_updated`).
+  static void updateForm(String submissionId, String formJson) {
+    for (final list in _lists.values) {
+      for (var i = 0; i < list.length; i++) {
+        final m = list[i];
+        if (m.kind != 'form' ||
+            !(m.formJson ?? '').contains('"submissionId":"$submissionId"') &&
+                !(m.formJson ?? '').contains('"submissionId":$submissionId')) {
+          continue;
+        }
+        Timer(const Duration(milliseconds: 900), () {
+          final at = list.indexWhere((x) => x.msgId == m.msgId);
+          if (at < 0) return;
+          final old = list[at];
+          list[at] = Message(
+            msgId: old.msgId,
+            convId: old.convId,
+            sender: old.sender,
+            isMine: old.isMine,
+            kind: 'form',
+            text: old.text,
+            ts: old.ts,
+            status: old.status,
+            formJson: formJson,
+            editedTs: DateTime.now().millisecondsSinceEpoch,
+            localSeq: old.localSeq,
+          );
+        });
+      }
+    }
   }
 
   static void retry(String convId, String id) {

@@ -312,6 +312,12 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (!isOnline || channel == null) return false;
     final words = line.split(' ');
     _log('-> ${words.take(line.startsWith('/c ') ? 3 : 1).join(' ')}');
+    if (kDebugMode && line.startsWith('/react ')) {
+      final emoji = line.split(' ').last;
+      debugPrint(
+        'REACT frame: $line  codepoints=${emoji.runes.map((r) => 'U+${r.toRadixString(16).toUpperCase()}').join(' ')}',
+      );
+    }
     channel.sink.add(line);
     return true;
   }

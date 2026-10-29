@@ -48,6 +48,7 @@ class AppDistances {
   static const double parallax = 0.25;
   static const double pressScale = 0.97;
   static const double introScale = 1.02;
+  static const double chipPopScale = 0.7;
   static const double scrimOpacity = 0.12;
 }
 

@@ -161,8 +161,8 @@ class _Avatar extends StatelessWidget {
 }
 
 /// The one-line preview. Mine starts with "You: ", a group message with the
-/// sender. A form shows its name, an encrypted message a lock (mobile cannot
-/// read those in v1), a pending message a clock and a failed one an error mark.
+/// sender. A form shows its name, even in an encrypted thread (forms are
+/// never encrypted), an encrypted message a lock (mobile cannot read those in v1), a pending message a clock and a failed one an error mark.
 class _Preview extends StatelessWidget {
   const _Preview({required this.conversation});
 
@@ -176,10 +176,10 @@ class _Preview extends StatelessWidget {
         ? const _Glyph(Icons.error_outline, AppColors.error)
         : status == MessageStatus.pending || status == MessageStatus.sending
         ? const _Glyph(Icons.schedule, AppColors.muted)
-        : c.lastIsEncrypted
-        ? const _Glyph(Icons.lock_outline, AppColors.muted)
         : c.lastKind == 'form'
         ? const _Glyph(Icons.description_outlined, AppColors.muted)
+        : c.lastIsEncrypted
+        ? const _Glyph(Icons.lock_outline, AppColors.muted)
         : null;
     return Row(
       children: [
@@ -198,8 +198,8 @@ class _Preview extends StatelessWidget {
 
   static String _text(Conversation c) {
     if (c.lastIsDeleted) return 'Message deleted';
-    if (c.lastIsEncrypted) return 'Encrypted message';
     if (c.lastKind == 'form') return '${c.lastFormName ?? 'Form'} submitted';
+    if (c.lastIsEncrypted) return 'Encrypted message';
     final prefix = c.lastIsMine
         ? 'You: '
         : c.kind == 'group' && c.lastFrom.isNotEmpty

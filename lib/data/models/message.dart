@@ -48,6 +48,7 @@ class Message {
     MessageStatus? status,
     bool? isDeleted,
     String? failReason,
+    String? reactionsJson,
   }) => Message(
     msgId: msgId ?? this.msgId,
     convId: convId,
@@ -61,7 +62,7 @@ class Message {
     isEncryptedUnsupported: isEncryptedUnsupported,
     editedTs: editedTs,
     isDeleted: isDeleted ?? this.isDeleted,
-    reactionsJson: reactionsJson,
+    reactionsJson: reactionsJson ?? this.reactionsJson,
     formJson: formJson,
     failReason: failReason ?? this.failReason,
     localSeq: localSeq,

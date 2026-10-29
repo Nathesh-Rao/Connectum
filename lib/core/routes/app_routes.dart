@@ -12,6 +12,8 @@ class AppRoutes {
   static const conversation = '/conversation/:id';
   static const submissions = '/submissions';
   static const submissionDetail = '/submissions/:id';
+  static const workspace = '/workspace';
+  static const form = '/form';
   static const profile = '/profile';
   static const notifications = '/notifications';
 
@@ -23,5 +25,14 @@ class AppRoutes {
   /// A conversation id holds `:` and a group name may hold spaces or `/`.
   static String conversationOf(String id) =>
       '/conversation/${Uri.encodeComponent(id)}';
-  static String submissionDetailOf(String id) => '/submissions/$id';
+
+  /// A submission's detail. [convId] and [msgId] name the form message it was
+  /// opened from, which is where a submission that is not mine is read from.
+  static String submissionDetailOf(String id, {String? convId, String? msgId}) =>
+      Uri(
+        path: '/submissions/${Uri.encodeComponent(id)}',
+        queryParameters: {
+          if (convId != null && msgId != null) ...{'conv': convId, 'msg': msgId},
+        },
+      ).toString();
 }

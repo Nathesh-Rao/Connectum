@@ -14,6 +14,9 @@ import '../../features/enterprise_created/enterprise_created_binding.dart';
 import '../../features/enterprise_created/enterprise_created_view.dart';
 import '../../features/enterprises/enterprises_binding.dart';
 import '../../features/enterprises/enterprises_view.dart';
+import '../../features/forms/form_binding.dart';
+import '../../features/forms/form_view.dart';
+import '../../features/forms/models/form_launch.dart';
 import '../../features/gallery/gallery_auth_binding.dart';
 import '../../features/home_shell/home_shell_binding.dart';
 import '../../features/home_shell/home_shell_controller.dart';
@@ -30,6 +33,8 @@ import '../../features/splash/splash_view.dart';
 import '../../features/submission_detail/submission_detail_binding.dart';
 import '../../features/submission_detail/submission_detail_view.dart';
 import '../../features/verification/verification_binding.dart';
+import '../../features/workspace/workspace_binding.dart';
+import '../../features/workspace/workspace_view.dart';
 import '../../features/verification/verification_view.dart';
 import 'app_routes.dart';
 import 'app_transitions.dart';
@@ -54,6 +59,7 @@ class AppPages {
       binding: binding,
       customTransition: transition,
       transitionDuration: transition.duration,
+      opaque: kind != AppTransitionKind.slideUp,
     );
   }
 
@@ -111,8 +117,22 @@ class AppPages {
     ),
     _page(
       AppRoutes.submissionDetail,
-      () => const SubmissionDetailView(),
+      () => SubmissionDetailView(
+        submissionId: Uri.decodeComponent(Get.parameters['id'] ?? ''),
+      ),
       SubmissionDetailBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.form,
+      () => FormView(launch: Get.arguments as FormLaunch),
+      FormBinding(),
+      AppTransitionKind.slideUp,
+    ),
+    _page(
+      AppRoutes.workspace,
+      () => const WorkspaceView(),
+      WorkspaceBinding(),
       AppTransitionKind.push,
     ),
     _page(

@@ -168,6 +168,29 @@ class DebugSocketView extends GetView<DebugSocketController> {
           AppTextField(controller: c.sdArgs, label: 'Args (JSON)'),
           const SizedBox(height: AppSpacing.xs),
           AppButton.secondary(label: 'Run', onPressed: c.runSd),
+          _section('Read-only investigation (answers go to the log)'),
+          AppButton.secondary(
+            label: 'Enterprises + search "Test organisation"',
+            onPressed: () =>
+                c.checkEnterprise('Test organisation', 'Y2NH-GHP6'),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppTextField(controller: c.readCommand, label: 'Read-only command'),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Send read-only command',
+            onPressed: c.sendReadCommand,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Run /sd action above (full log)',
+            onPressed: c.readSd,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Run read batch (reads.txt)',
+            onPressed: c.runReadBatch,
+          ),
           _section('Inbox state (uses the conversation id and up-to id above)'),
           AppTextField(controller: c.upTo, label: 'Up to message id'),
           const SizedBox(height: AppSpacing.xs),

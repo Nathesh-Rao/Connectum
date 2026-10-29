@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../db/app_database.dart';
@@ -15,6 +16,8 @@ import 'encryption_policy.dart';
 enum SendResult { queued, blockedEncrypted, tooLong, invalid, noSession }
 
 enum DeleteResult { deleted, denied, needsConnection, notSupported, failed }
+
+enum ReactResult { sent, needsConnection, notSupported }
 
 class _History {
   const _History(this.items, this.unknown, {this.hasMore = false, this.next});
@@ -169,6 +172,24 @@ class MessageRepository extends GetxService {
     } finally {
       _deleteWaiters.remove(m.msgId);
     }
+  }
+
+  /// Toggles my reaction on a message. Online only and never queued: the
+  /// server toggles, so a repeat would undo it. The answer is the pushed
+  /// reaction set (stored by [_onReaction]); nothing is predicted here.
+  Future<ReactResult> react(Message m, String emoji) async {
+    final target = ConversationRepository.targetOf(m.convId);
+    final command = switch (ConversationRepository.kindOf(m.convId)) {
+      'dm' => '/react dm $target ${m.msgId} $emoji',
+      'group' => '/react group $target ${m.msgId} $emoji',
+      'global' => '/react global ${m.msgId} $emoji',
+      _ => null,
+    };
+    if (command == null || numericId(m.msgId) == null) {
+      return ReactResult.notSupported;
+    }
+    if (!await _socket.sendCommand(command)) return ReactResult.needsConnection;
+    return ReactResult.sent;
   }
 
   void setOpenConversation(String? convId) {
@@ -344,6 +365,13 @@ class MessageRepository extends GetxService {
     });
     await _reloadAll();
     unawaited(flush());
+  }
+
+  /// Another repository changed message rows (a pending form card): the open
+  /// lists and the chat list read them again.
+  Future<void> reloadAfterLocalChange() async {
+    await _reloadAll();
+    await _conversations.reload();
   }
 
   Future<void> _reloadAll() async {
@@ -1179,6 +1207,7 @@ class MessageRepository extends GetxService {
   }
 
   Future<void> _onReaction(Map<String, dynamic> e) async {
+    if (kDebugMode) debugPrint('REACT event: ${jsonEncode(e)}');
     await _db.update(
       'UPDATE messages SET reactions_json = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?',
       [jsonEncode(e['reactions'] ?? []), _org, _me, idText(e['messageId'])],
@@ -1219,6 +1248,7 @@ class MessageRepository extends GetxService {
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
       final isNew = await _upsert(sql, convId, data, kind: 'form');
+      await _dropWaitingCard(sql, convId, data);
       await _noteIncoming(
         sql,
         convId,
@@ -1228,8 +1258,40 @@ class MessageRepository extends GetxService {
       );
       await _setCursor(sql, convId, idText(data['id']));
     });
+    await _applyReceipts(convId);
     await _reload(convId);
     await _conversations.reload();
+  }
+
+  /// A submission that waited for approval kept a local card; the real form
+  /// message has now been posted, so the local one goes.
+  Future<void> _dropWaitingCard(
+    Sql sql,
+    String convId,
+    Map<String, dynamic> data,
+  ) async {
+    final form = data['form'];
+    if (form is! Map) return;
+    final id = idText(form['submissionId']);
+    if (id.isEmpty) return;
+    final waiting = await sql.query(
+      "SELECT msg_id, form_json FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? AND kind = 'form' "
+      "AND msg_id LIKE 'temp-%' AND status = 'sent'",
+      [_org, _me, convId],
+    );
+    for (final w in waiting) {
+      try {
+        final f = jsonDecode(idText(w['form_json']));
+        if (f is Map && idText(f['submissionId']) == id) {
+          await sql.update(
+            'DELETE FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+            [_org, _me, w['msg_id']],
+          );
+        }
+      } on FormatException {
+        continue;
+      }
+    }
   }
 
   Future<void> _onHistory(Map<String, dynamic> e) async {

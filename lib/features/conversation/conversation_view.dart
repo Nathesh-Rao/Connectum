@@ -5,6 +5,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
+import '../../core/widgets/app_form_card.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_skeleton.dart';
@@ -16,6 +17,8 @@ import 'widgets/conversation_composer.dart';
 import 'widgets/conversation_header.dart';
 import 'widgets/message_actions_sheet.dart';
 import 'widgets/message_bubble.dart';
+import 'widgets/message_status_mark.dart';
+import 'widgets/reaction_chips.dart';
 import 'widgets/scroll_to_latest_button.dart';
 import 'widgets/typing_dots.dart';
 
@@ -132,13 +135,7 @@ class _MessageArea extends StatelessWidget {
 
   Widget _row(BuildContext context, ConversationController c, ChatItem item) {
     final child = switch (item.kind) {
-      ChatItemKind.message => MessageBubble(
-        item: item,
-        isDirect: c.isDirect,
-        original: c.originalOf(item.message!),
-        onLongPress: () => MessageActionsSheet.show(context, c, item.message!),
-        onRetry: () => c.retry(item.message!),
-      ),
+      ChatItemKind.message => _message(context, c, item),
       ChatItemKind.day => DayDivider(label: item.label),
       ChatItemKind.unread => UnreadDivider(label: item.label),
       ChatItemKind.loadingOlder => const LoadingOlderRow(),
@@ -150,6 +147,63 @@ class _MessageArea extends StatelessWidget {
       child: child,
     );
   }
+}
+
+Widget _message(BuildContext context, ConversationController c, ChatItem item) {
+  final m = item.message!;
+  if (m.kind != 'form') return _bubble(context, c, item);
+  // Reads the stored submission and the highlight, so the card follows both.
+  return Obx(() {
+    final card = c.formCardOf(m);
+    if (card == null) return _bubble(context, c, item);
+    final isSent = c.isSentForm(card);
+    final state = c.formStateOf(m);
+    final reactions = c.reactionsOf(m);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.bubbleGap),
+      child: Column(
+        crossAxisAlignment: m.isMine
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          AppFormCard(
+            data: card,
+            isSent: isSent,
+            senderName: !isSent && item.showName ? m.sender : null,
+            isFresh: item.isFresh,
+            state: state,
+            problem: state == AppFormCardState.failed
+                ? c.formProblemOf(m)
+                : null,
+            isHighlighted: c.highlighted.contains(m.msgId),
+            statusMark: m.isMine
+                ? MessageStatusMark(status: m.status, isDirect: c.isDirect)
+                : null,
+            onTap: () => c.tapForm(m, card),
+            onEdit: c.canEditForm(m, card) ? () => c.editForm(m, card) : null,
+            onLongPress: () => MessageActionsSheet.show(context, c, m),
+          ),
+          ReactionChips(
+            reactions: reactions,
+            onToggle: (emoji) => c.toggleReaction(m, emoji),
+          ),
+        ],
+      ),
+    );
+  });
+}
+
+Widget _bubble(BuildContext context, ConversationController c, ChatItem item) {
+  final m = item.message!;
+  return MessageBubble(
+    item: item,
+    isDirect: c.isDirect,
+    original: c.originalOf(m),
+    onLongPress: () => MessageActionsSheet.show(context, c, m),
+    onRetry: () => c.retry(m),
+    reactions: c.reactionsOf(m),
+    onReact: (emoji) => c.toggleReaction(m, emoji),
+  );
 }
 
 class _SkeletonBubbles extends StatelessWidget {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -12,6 +13,7 @@ import '../../data/db/app_database.dart';
 import '../../data/models/conversation.dart';
 import '../../data/models/ids.dart';
 import '../../data/redact.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
@@ -29,6 +31,7 @@ class DebugSocketController extends GetxController {
     required this.conversationRepository,
     required this.submissions,
     required this.presence,
+    required this.auth,
     required AppDatabase db,
   }) : _db = db;
 
@@ -39,6 +42,7 @@ class DebugSocketController extends GetxController {
   final ConversationRepository conversationRepository;
   final SubmissionRepository submissions;
   final PresenceRepository presence;
+  final AuthRepository auth;
   final AppDatabase _db;
 
   final orgId = TextEditingController();
@@ -51,6 +55,7 @@ class DebugSocketController extends GetxController {
   final sdAction = TextEditingController(text: 'users.search');
   final sdArgs = TextEditingController(text: '{"q":""}');
   final upTo = TextEditingController(text: '1');
+  final readCommand = TextEditingController(text: '/hosts');
   final formName = TextEditingController();
   final formValues = TextEditingController(text: '{}');
 
@@ -67,7 +72,10 @@ class DebugSocketController extends GetxController {
   void onInit() {
     super.onInit();
     _refreshOutbox();
-    _acks = socket.events.listen(_noteAck);
+    _acks = socket.events.listen((e) {
+      _noteAck(e);
+      _dumpEvent(e);
+    });
     _timer = Timer.periodic(
       const Duration(seconds: 2),
       (_) => _refreshOutbox(),
@@ -571,6 +579,142 @@ class DebugSocketController extends GetxController {
     await HomeReload.run();
   }
 
+  // ---- read-only investigation tools (full output goes to the log) -----------
+
+  static const _readOnly = [
+    '/hosts',
+    '/conversations',
+    '/groups',
+    '/list',
+    '/history ',
+    '/cmds',
+    '/getprofile',
+  ];
+
+  void _dump(String tag, Object? data) {
+    final text = jsonEncode(data);
+    for (var i = 0; i < text.length; i += 3000) {
+      debugPrint(
+        'RAW $tag [${i ~/ 3000}] ${text.substring(i, i + 3000 > text.length ? text.length : i + 3000)}',
+      );
+    }
+  }
+
+  void _dumpEvent(Map<String, dynamic> e) {
+    const quiet = {'users', 'typing', 'typing_dm', 'group_typing', 'profile'};
+    if (!quiet.contains(e['type'])) _dump('event ${e['type']}', e);
+  }
+
+  /// Sends one read-only chat command (a list, a history page or the command
+  /// menu); the answer is dumped to the log. Anything else is refused.
+  Future<void> sendReadCommand() async {
+    final line = readCommand.text.trim();
+    if (!_readOnly.any(line.startsWith)) {
+      _note('refused: only read-only commands (${_readOnly.join(' ')})');
+      return;
+    }
+    final sent = await socket.sendCommand(line);
+    _note('sent $line${sent ? '' : ' (offline)'}; the answer is in the log');
+  }
+
+  /// Runs one /sd action and dumps the full, unredacted answer to the log.
+  /// The caller is responsible for choosing read-only actions.
+  Future<void> readSd() async {
+    try {
+      final args = (jsonDecode(sdArgs.text) as Map).cast<String, dynamic>();
+      final data = await socket.sdCall(sdAction.text.trim(), args);
+      _dump('sd ${sdAction.text.trim()}', data);
+      _note('${sdAction.text.trim()}: ok, full answer in the log');
+    } on SocketCallError catch (e) {
+      _note('${sdAction.text.trim()} failed: ${e.code} ${e.message}');
+    } on FormatException catch (_) {
+      _note('args must be a JSON object');
+    }
+  }
+
+  /// Refreshes the enterprise list from `GET /me` and runs the public search
+  /// for [query]; reports what it found. Switches nothing.
+  Future<void> checkEnterprise(String query, String id) async {
+    try {
+      final me = await auth.refreshMe();
+      final list = me?.enterprises ?? const [];
+      _dump('me.enterprises', [
+        for (final m in list)
+          {'id': m.enterprise, 'name': m.name, 'status': m.status},
+      ]);
+      _note(
+        'on my account: ${list.map((m) => '${m.name} ${m.enterprise} (${m.status})').join('; ')}',
+      );
+    } on ApiException catch (e) {
+      _note('/me failed: ${e.code}');
+    }
+    try {
+      final hits = await auth.search(query);
+      _note(
+        'search "$query": ${hits.map((h) => '${h.name} ${h.id}').join('; ')}'
+            .trim(),
+      );
+      _dump('search', [
+        for (final h in hits) {'id': h.id, 'name': h.name},
+      ]);
+    } on ApiException catch (e) {
+      _note('search failed: ${e.code}');
+    }
+    try {
+      final hit = await auth.byId(id);
+      _note('by id $id: ${hit == null ? 'not found' : hit.name}');
+    } on ApiException catch (e) {
+      _note('by id failed: ${e.code}');
+    }
+  }
+
+  /// Runs the lines of a file on the phone, one read each: `cmd <command>`
+  /// for a read-only chat command, `sd <action> <json>` for an /sd action
+  /// whose name ends in .list, .get, .summary, .categories or .my. The
+  /// answers go to the log. Nothing that writes is accepted.
+  Future<void> runReadBatch() async {
+    final file = File(
+      '/sdcard/Android/data/com.agile.connectum/files/reads.txt',
+    );
+    if (!file.existsSync()) {
+      _note('no reads.txt on the phone');
+      return;
+    }
+    final safe = RegExp(
+      r'^[a-z_]+(\.[a-z_]+)*\.(list|get|summary|categories|my|names)$',
+    );
+    for (final raw in file.readAsLinesSync()) {
+      final line = raw.trim();
+      if (line.isEmpty || line.startsWith('#')) continue;
+      if (line.startsWith('cmd ')) {
+        final command = line.substring(4).trim();
+        if (!_readOnly.any(command.startsWith)) {
+          debugPrint('RAW skipped $command');
+          continue;
+        }
+        await socket.sendCommand(command);
+        await Future<void>.delayed(const Duration(milliseconds: 900));
+      } else if (line.startsWith('sd ')) {
+        final rest = line.substring(3).trim();
+        final space = rest.indexOf(' ');
+        final action = space < 0 ? rest : rest.substring(0, space);
+        final json = space < 0 ? '{}' : rest.substring(space + 1);
+        if (!safe.hasMatch(action)) {
+          debugPrint('RAW skipped $action');
+          continue;
+        }
+        try {
+          final args = (jsonDecode(json) as Map).cast<String, dynamic>();
+          _dump('sd $action', await socket.sdCall(action, args));
+        } on SocketCallError catch (e) {
+          debugPrint('RAW sd $action FAILED ${e.code} ${e.message}');
+        }
+      }
+    }
+    debugPrint('RAW batch done');
+    _note('read batch finished, answers in the log');
+  }
+
   Future<void> signOut() => session.signOut();
 
   @override
@@ -588,6 +732,7 @@ class DebugSocketController extends GetxController {
       formName,
       formValues,
       upTo,
+      readCommand,
       sdAction,
       sdArgs,
     ]) {

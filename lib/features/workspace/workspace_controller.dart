@@ -1,0 +1,209 @@
+import 'dart:async';
+
+import 'package:get/get.dart';
+
+import '../../core/debug/seed_messages.dart';
+import '../../core/routes/app_routes.dart';
+import '../../core/utils/chat_time.dart';
+import '../../core/widgets/app_state_view.dart';
+import '../../core/theme/app_motion.dart';
+import '../../core/widgets/app_form_card.dart';
+import '../../data/models/form_card.dart';
+import '../../data/repositories/form_options_repository.dart';
+import '../forms/forms_picker_controller.dart';
+import '../forms/models/form_launch.dart';
+import '../home_shell/home_shell_controller.dart';
+
+import '../../data/models/form_submission.dart';
+import '../../data/repositories/submission_repository.dart';
+import '../../data/session_store.dart';
+import '../../data/socket/connectivity_service.dart';
+import 'models/workspace_row.dart';
+
+/// My Work Space: the submissions I made as sent-style cards, newest at the
+/// bottom. It reads the cache; opening it refreshes the list when online.
+class WorkspaceController extends GetxController {
+  WorkspaceController({
+    required this.submissions,
+    required this.store,
+    required this.connectivity,
+    required this.formOptions,
+    required this.shell,
+  });
+
+  final SubmissionRepository submissions;
+  final SessionStore store;
+  final ConnectivityService connectivity;
+  final FormOptionsRepository formOptions;
+  final HomeShellController? shell;
+
+  /// The forms button's sheet. A form filled in here has no conversation.
+  late final picker = FormsPickerController(
+    options: formOptions,
+    connectivity: connectivity,
+    shell: shell,
+  );
+
+  final notice = RxnString();
+  final highlighted = <String>{}.obs;
+  final _signatures = <String, String>{};
+  Worker? _noticeWorker;
+  Timer? _noticeTimer;
+
+  /// Newest first, for a list that is reversed.
+  final rows = <WorkspaceRow>[].obs;
+  final viewState = AppViewState.loading.obs;
+
+  Worker? _submissionsWorker;
+  Worker? _definitionsWorker;
+  Worker? _loadedWorker;
+  Worker? _failuresWorker;
+
+  String get me => store.userId ?? SeedMessages.me;
+
+  /// The workspace's greeting, word for word as the web app builds it.
+  String get welcome {
+    final name = store.identity.value?.name ?? '';
+    final who = name.isNotEmpty
+        ? name
+        : (store.userId ?? '').isNotEmpty
+        ? store.userId!
+        : 'User';
+    return 'Welcome $who. This is your personal workspace for direct tasks, enterprise updates, and automation commands. You can type hash commands in the composer below to trigger actions, or use the sliders on the left and right to navigate conversations and priority notifications.';
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    _submissionsWorker = ever(submissions.submissions, (_) => _apply());
+    _definitionsWorker = ever(submissions.definitions, (_) => _apply());
+    _loadedWorker = ever(submissions.isLoaded, (_) => _apply());
+    _failuresWorker = ever(submissions.failures, (_) => _apply());
+    _noticeWorker = ever(submissions.notice, (message) {
+      if (message == null) return;
+      notice.value = message;
+      submissions.notice.value = null;
+      _noticeTimer?.cancel();
+      _noticeTimer = Timer(
+        const Duration(seconds: 4),
+        () => notice.value = null,
+      );
+    });
+    _apply();
+    if (connectivity.state.value == AppConnectivity.online) {
+      unawaited(submissions.syncFromServer());
+    }
+  }
+
+  void _apply() {
+    final mine =
+        submissions.submissions
+            .where((s) => s.byUser.toLowerCase() == me.toLowerCase())
+            .toList()
+          ..sort((a, b) => a.ts.compareTo(b.ts));
+    final now = DateTime.now();
+    final asc = <WorkspaceRow>[];
+    FormSubmission? prev;
+    for (final s in mine) {
+      if (prev == null || !ChatTime.isSameDay(prev.ts, s.ts)) {
+        asc.add(WorkspaceRow.day(ChatTime.day(s.ts, now)));
+      }
+      asc.add(
+        WorkspaceRow.card(
+          FormCardData.fromSubmission(
+            s,
+            definition: submissions.definitions[s.tstruct],
+          ),
+        ),
+      );
+      prev = s;
+    }
+    rows.assignAll(asc.reversed);
+    for (final s in mine) {
+      final sig = '${s.valuesJson.hashCode}|${s.editedTs}|${s.status}';
+      final before = _signatures[s.submissionId];
+      _signatures[s.submissionId] = sig;
+      if (before != null && before != sig && !s.isPending) {
+        highlighted.add(s.submissionId);
+        Timer(AppDurations.slow * 3, () => highlighted.remove(s.submissionId));
+      }
+    }
+    viewState.value = submissions.isLoaded.value
+        ? AppViewState.content
+        : AppViewState.loading;
+  }
+
+  void open(FormCardData d) => Get.toNamed(AppRoutes.submissionDetailOf(d.id));
+
+  bool canEdit(FormCardData d) => d.canEdit(me) || d.canFix(me);
+
+  AppFormCardState stateOf(FormCardData d) {
+    if (!d.isPending) return AppFormCardState.sent;
+    return submissions.failures.containsKey(d.id)
+        ? AppFormCardState.failed
+        : AppFormCardState.waiting;
+  }
+
+  bool isInvalidFailure(FormCardData d) =>
+      submissions.failures[d.id] == SubmissionRepository.invalidReason;
+
+  String problemOf(FormCardData d) => isInvalidFailure(d)
+      ? 'Not sent. Some answers need fixing. Tap to edit and resend'
+      : 'Not sent. Tap to retry';
+
+  /// A failed card is fixed or sent again; any other opens.
+  void tap(FormCardData d) {
+    if (stateOf(d) != AppFormCardState.failed) return open(d);
+    if (isInvalidFailure(d)) {
+      unawaited(editAndResend(d));
+    } else {
+      unawaited(submissions.retry(d.id));
+    }
+  }
+
+  Future<void> editAndResend(FormCardData d) async {
+    final pending = await submissions.pendingFor(d.id);
+    if (pending == null) return;
+    await Get.toNamed(
+      AppRoutes.form,
+      arguments: FormLaunch(
+        name: pending.name,
+        scope: pending.scope,
+        caption: pending.caption,
+        mode: FormMode.resend,
+        convId: null,
+        submissionId: d.id,
+        savedValues: pending.values,
+        errorDetails: pending.errors,
+      ),
+    );
+  }
+
+  Future<void> discard(FormCardData d) => submissions.discardPending(d.id);
+
+  Future<void> edit(FormCardData d) async {
+    final saved = submissions.submissionById(d.id);
+    if (saved == null) return;
+    await Get.toNamed(
+      AppRoutes.form,
+      arguments: FormLaunch.forSubmission(
+        d,
+        saved,
+        me: me,
+        scope: submissions.definitions[d.structure]?.scope ?? '',
+      ),
+    );
+  }
+
+  @override
+  void onClose() {
+    _submissionsWorker?.dispose();
+    _definitionsWorker?.dispose();
+    _loadedWorker?.dispose();
+    _failuresWorker?.dispose();
+    _noticeWorker?.dispose();
+    _noticeTimer?.cancel();
+    picker.onClose();
+    super.onClose();
+  }
+}

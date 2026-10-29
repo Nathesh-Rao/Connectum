@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 
-enum AppTransitionKind { push, tab, fade, intro, enter }
+enum AppTransitionKind { push, tab, fade, intro, enter, slideUp }
 
 class AppTransition extends CustomTransition {
   AppTransition(this.kind);
@@ -17,6 +17,7 @@ class AppTransition extends CustomTransition {
     AppTransitionKind.fade => AppDurations.base,
     AppTransitionKind.intro => AppDurations.slow,
     AppTransitionKind.enter => AppDurations.slow,
+    AppTransitionKind.slideUp => AppDurations.slow,
   };
 
   @override
@@ -41,6 +42,7 @@ class AppTransition extends CustomTransition {
       AppTransitionKind.push => _push(primary, secondaryAnimation, child),
       AppTransitionKind.tab => _rise(primary, AppDistances.tab, child),
       AppTransitionKind.enter => _rise(primary, AppDistances.enter, child),
+      AppTransitionKind.slideUp => _slideUp(animation, child),
       _ => FadeTransition(
         opacity: primary,
         child: ScaleTransition(
@@ -94,6 +96,33 @@ class AppTransition extends CustomTransition {
         ).animate(secondaryCurved),
         child: covered,
       ),
+    );
+  }
+
+  /// A panel rising from the bottom over a fading scrim; the screen under it
+  /// stays where it is.
+  Widget _slideUp(Animation<double> animation, Widget child) {
+    final scrim = CurvedAnimation(parent: animation, curve: AppCurves.out);
+    final panel = CurvedAnimation(
+      parent: animation,
+      curve: AppCurves.sheet,
+      reverseCurve: AppCurves.out,
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        FadeTransition(
+          opacity: scrim,
+          child: const ColoredBox(color: AppColors.sheetBackdrop),
+        ),
+        SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(panel),
+          child: child,
+        ),
+      ],
     );
   }
 
