@@ -130,15 +130,15 @@ class SubmissionsController extends GetxController {
     }
     final names = counts.keys.toList()
       ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
-    final previousForm = selectedForm.value > 0 &&
-            selectedForm.value <= forms.length
+    final previousForm =
+        selectedForm.value > 0 && selectedForm.value <= forms.length
         ? forms[selectedForm.value - 1].name
         : null;
     forms.assignAll([
       for (final n in names) FormFilter(n, labels[n] ?? n, counts[n]!),
     ]);
-    final previousStatus = selectedStatus.value > 0 &&
-            selectedStatus.value <= statuses.length
+    final previousStatus =
+        selectedStatus.value > 0 && selectedStatus.value <= statuses.length
         ? statuses[selectedStatus.value - 1]
         : null;
     statuses.assignAll({
@@ -196,8 +196,7 @@ class SubmissionsController extends GetxController {
     query.value = '';
   }
 
-  void open(FormCardData d) =>
-      Get.toNamed(AppRoutes.submissionDetailOf(d.id));
+  void open(FormCardData d) => Get.toNamed(AppRoutes.submissionDetailOf(d.id));
 
   @override
   void onClose() {

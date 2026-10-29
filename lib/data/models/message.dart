@@ -13,7 +13,8 @@ class Message {
     required this.status,
     this.kind = 'chat',
     this.replyTo,
-    this.isEncryptedUnsupported = false,
+    this.isEncrypted = false,
+    this.decryptState,
     this.editedTs,
     this.isDeleted = false,
     this.reactionsJson,
@@ -32,7 +33,13 @@ class Message {
   final int ts;
   final String? replyTo;
   final MessageStatus status;
-  final bool isEncryptedUnsupported;
+
+  /// The server flagged the text as an end-to-end envelope. [text] is then the
+  /// decrypted text when [decryptState] is `ok`, else the envelope.
+  final bool isEncrypted;
+
+  /// `ok`, `cant_decrypt` or `pending`; null for a plain message.
+  final String? decryptState;
   final int? editedTs;
   final bool isDeleted;
   final String? reactionsJson;
@@ -40,6 +47,11 @@ class Message {
   final String? failReason;
   final int localSeq;
   final String? cid;
+
+  bool get isDecrypting => isEncrypted && decryptState == 'pending';
+
+  /// Encrypted and not readable on this device (yet).
+  bool get isEncryptedUnsupported => isEncrypted && decryptState != 'ok';
 
   bool get isLocalTemp => msgId.startsWith('temp-');
 
@@ -59,7 +71,8 @@ class Message {
     status: status ?? this.status,
     kind: kind,
     replyTo: replyTo,
-    isEncryptedUnsupported: isEncryptedUnsupported,
+    isEncrypted: isEncrypted,
+    decryptState: decryptState,
     editedTs: editedTs,
     isDeleted: isDeleted ?? this.isDeleted,
     reactionsJson: reactionsJson ?? this.reactionsJson,
@@ -75,14 +88,17 @@ class Message {
     sender: idText(r['sender']),
     isMine: intOf(r['is_mine']) == 1,
     kind: idText(r['kind']),
-    text: idText(r['text']),
+    text: r['decrypt_state'] == 'ok' && r['plaintext'] != null
+        ? idText(r['plaintext'])
+        : idText(r['text']),
     ts: intOf(r['ts']),
     replyTo: r['reply_to'] == null ? null : idText(r['reply_to']),
     status: MessageStatus.values.firstWhere(
       (s) => s.name == r['status'],
       orElse: () => MessageStatus.sent,
     ),
-    isEncryptedUnsupported: intOf(r['is_encrypted_unsupported']) == 1,
+    isEncrypted: intOf(r['is_encrypted_unsupported']) == 1,
+    decryptState: r['decrypt_state'] as String?,
     editedTs: r['edited_ts'] == null ? null : intOf(r['edited_ts']),
     isDeleted: intOf(r['is_deleted']) == 1,
     reactionsJson: r['reactions_json'] as String?,

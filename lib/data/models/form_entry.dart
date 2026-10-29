@@ -93,7 +93,8 @@ class FormEntry {
           final cells = (row as Map).values
               .map(display)
               .where((c) => c.isNotEmpty);
-          if (cells.isNotEmpty) rows.add('${rows.length + 1}. ${cells.join(', ')}');
+          if (cells.isNotEmpty)
+            rows.add('${rows.length + 1}. ${cells.join(', ')}');
         }
         return rows.join('\n');
       }
@@ -194,7 +195,9 @@ class FormEntry {
       if (n.isNaN || n.isInfinite) return '';
       if (n == n.truncateToDouble() && n.abs() < 1e15) return _group(n.toInt());
       final s = n.toStringAsFixed(2);
-      return s.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+      return s
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
     }
     return _group(n.toInt());
   }
@@ -234,7 +237,8 @@ class FormGrid {
     final lines = <String>[];
     for (final row in rows) {
       final cells = row.where((c) => c.isNotEmpty);
-      if (cells.isNotEmpty) lines.add('${lines.length + 1}. ${cells.join(', ')}');
+      if (cells.isNotEmpty)
+        lines.add('${lines.length + 1}. ${cells.join(', ')}');
     }
     if (lines.isEmpty) return null;
     return FormEntry(name: name, caption: caption, text: lines.join('\n'));

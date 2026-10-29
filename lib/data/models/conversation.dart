@@ -104,7 +104,9 @@ class Conversation {
       convId: idText(r['conv_id']),
       kind: idText(r['kind']),
       title: idText(r['title']),
-      lastText: r['lm_text'] != null
+      lastText: r['lm_dstate'] == 'ok' && r['lm_plain'] != null
+          ? idText(r['lm_plain'])
+          : r['lm_text'] != null
           ? idText(r['lm_text'])
           : idText(r['last_text']),
       lastTs: intOf(r['last_ts']),
@@ -122,7 +124,7 @@ class Conversation {
               orElse: () => MessageStatus.sent,
             ),
       lastIsEncrypted:
-          intOf(r['lm_e2e']) == 1 ||
+          (intOf(r['lm_e2e']) == 1 && r['lm_dstate'] != 'ok') ||
           (r['lm_kind'] == null &&
               idText(r['last_text']) == '[encrypted message]'),
       lastIsDeleted: intOf(r['lm_deleted']) == 1,

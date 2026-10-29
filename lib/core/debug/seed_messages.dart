@@ -80,7 +80,7 @@ class SeedMessages {
     MessageStatus? status,
     String? replyTo,
     bool isDeleted = false,
-    bool isEncrypted = false,
+    String? decryptState,
     String? cid,
   }) {
     final isMine = sender == me;
@@ -94,7 +94,8 @@ class SeedMessages {
       status: status ?? (isMine ? MessageStatus.read : MessageStatus.sent),
       replyTo: replyTo,
       isDeleted: isDeleted,
-      isEncryptedUnsupported: isEncrypted,
+      isEncrypted: decryptState != null,
+      decryptState: decryptState,
       localSeq: id,
       cid: cid,
     );
@@ -237,9 +238,38 @@ class SeedMessages {
         ];
       case 'dm:ravi':
         return [
-          _m(c, 4001, 'ravi', 'e2e1:AAAA', 300, isEncrypted: true),
-          _m(c, 4002, me, 'e2e1:BBBB', 295, isEncrypted: true),
-          _m(c, 4003, 'ravi', 'e2e1:CCCC', 290, isEncrypted: true),
+          _m(c, 4001, 'ravi', 'e2e1:AAAA', 300, decryptState: 'cant_decrypt'),
+          _m(c, 4002, me, 'e2e1:BBBB', 295, decryptState: 'cant_decrypt'),
+          _m(
+            c,
+            4003,
+            'ravi',
+            'Sent after you set up this phone, so you can read this one.',
+            290,
+            decryptState: 'ok',
+          ),
+          _m(
+            c,
+            4004,
+            me,
+            'Great, I can read it.',
+            288,
+            decryptState: 'ok',
+            replyTo: '4003',
+          ),
+          _m(c, 4005, 'ravi', 'e2e1:DDDD', 286, decryptState: 'pending'),
+          _m(
+            c,
+            4006,
+            'ravi',
+            'See you at 5. Bring the signed copy.',
+            285,
+            decryptState: 'ok',
+          ),
+        ];
+      case 'dm:isha':
+        return [
+          _m(c, 4101, 'isha', 'e2e1:EEEE', 330, decryptState: 'cant_decrypt'),
         ];
       case 'dm:sana':
         return List.generate(300, (i) {

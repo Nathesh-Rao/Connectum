@@ -4,8 +4,10 @@ import 'package:get/get.dart';
 import '../../data/api/api_client.dart';
 import '../debug/seed_ui.dart';
 import '../../data/db/app_database.dart';
+import '../../data/e2e/e2e_key_store.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
+import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
@@ -38,18 +40,19 @@ class InitialBinding extends Bindings {
     );
     connectivity.attachSocket(socket.connection);
     final policy = Get.put(EncryptionPolicy(socket, store), permanent: true);
+    final e2e = Get.put(
+      E2eRepository(E2eKeyStore(), socket, store),
+      permanent: true,
+    );
     final conversations = Get.put(
-      ConversationRepository(db, store, socket),
+      ConversationRepository(db, store, socket, e2e),
       permanent: true,
     );
     final messages = Get.put(
-      MessageRepository(db, store, socket, conversations, policy),
+      MessageRepository(db, store, socket, conversations, policy, e2e),
       permanent: true,
     );
-    Get.put(
-      SubmissionRepository(db, store, socket, messages),
-      permanent: true,
-    );
+    Get.put(SubmissionRepository(db, store, socket, messages), permanent: true);
     Get.put(FormOptionsRepository(db, store, socket), permanent: true);
     Get.put(PresenceRepository(socket), permanent: true);
     Get.put(TypingRepository(socket), permanent: true);

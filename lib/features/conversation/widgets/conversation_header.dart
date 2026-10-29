@@ -17,6 +17,7 @@ class ConversationHeader extends StatelessWidget {
     required this.isSquareAvatar,
     required this.onBack,
     this.presence = AppPresenceDot.none,
+    this.isEncrypted = false,
     this.trailing = const [],
   });
 
@@ -24,6 +25,7 @@ class ConversationHeader extends StatelessWidget {
   final String? status;
   final bool isSquareAvatar;
   final AppPresenceDot presence;
+  final bool isEncrypted;
   final VoidCallback onBack;
   final List<Widget> trailing;
 
@@ -49,11 +51,26 @@ class ConversationHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.bodyStrong,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodyStrong,
+                      ),
+                    ),
+                    if (isEncrypted) ...[
+                      const SizedBox(width: AppSpacing.xxs),
+                      const Icon(
+                        Icons.lock,
+                        size: AppSpacing.statusIcon,
+                        color: AppColors.yesText,
+                        semanticLabel: 'End-to-end encrypted',
+                      ),
+                    ],
+                  ],
                 ),
                 if (status != null)
                   Text(

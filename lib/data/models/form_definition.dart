@@ -172,7 +172,8 @@ class FormDefinition {
   /// The sections in the order they are shown, with the fields that belong to
   /// none first (an empty section name).
   List<String> get sectionOrder => [
-    if (fields.any((f) => f.section.isEmpty || sectionOf(f.section) == null)) '',
+    if (fields.any((f) => f.section.isEmpty || sectionOf(f.section) == null))
+      '',
     for (final s in sections) s.name,
   ];
 

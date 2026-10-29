@@ -91,6 +91,15 @@ class MessageBubble extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (m.isEncrypted && !m.isEncryptedUnsupported) ...[
+                    const Icon(
+                      Icons.lock,
+                      size: AppSpacing.statusIcon,
+                      color: AppColors.yesText,
+                      semanticLabel: 'End-to-end encrypted',
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                  ],
                   Text(ChatTime.time(m.ts), style: AppText.caption),
                   if (isMine) ...[
                     const SizedBox(width: AppSpacing.xxs),
@@ -154,9 +163,13 @@ class _Body extends StatelessWidget {
         children: [
           const Icon(Icons.lock_outline, size: 14, color: AppColors.muted),
           const SizedBox(width: AppSpacing.xxs),
-          Text(
-            'Encrypted message',
-            style: AppText.message.copyWith(color: AppColors.muted),
+          Flexible(
+            child: Text(
+              message.isDecrypting
+                  ? 'Decrypting...'
+                  : "This message can't be read on this device",
+              style: AppText.message.copyWith(color: AppColors.muted),
+            ),
           ),
         ],
       );
@@ -177,7 +190,7 @@ class _Quote extends StatelessWidget {
         : original!.isDeleted
         ? 'Message deleted'
         : original!.isEncryptedUnsupported
-        ? 'Encrypted message'
+        ? "Can't be read on this device"
         : original!.text;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),

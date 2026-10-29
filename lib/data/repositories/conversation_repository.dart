@@ -4,17 +4,20 @@ import 'dart:convert';
 import 'package:get/get.dart';
 
 import '../db/app_database.dart';
+import '../e2e/e2e_models.dart';
 import '../models/conversation.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+import 'e2e_repository.dart';
 
 class ConversationRepository extends GetxService {
-  ConversationRepository(this._db, this._session, this._socket);
+  ConversationRepository(this._db, this._session, this._socket, this._e2e);
 
   final AppDatabase _db;
   final SessionStore _session;
   final SocketService _socket;
+  final E2eRepository _e2e;
 
   final conversations = <Conversation>[].obs;
   final isLoaded = false.obs;
@@ -52,7 +55,7 @@ class ConversationRepository extends GetxService {
     try {
       final rows = await _db.query(
         'SELECT c.*, m.text AS lm_text, m.kind AS lm_kind, m.is_mine AS lm_mine, m.status AS lm_status, '
-        'm.is_encrypted_unsupported AS lm_e2e, m.is_deleted AS lm_deleted, m.form_json AS lm_form '
+        'm.is_encrypted_unsupported AS lm_e2e, m.plaintext AS lm_plain, m.decrypt_state AS lm_dstate, m.is_deleted AS lm_deleted, m.form_json AS lm_form '
         'FROM conversations c LEFT JOIN messages m ON m.rowid = ('
         'SELECT x.rowid FROM messages x WHERE x.org_id = c.org_id AND x.user_id = c.user_id AND x.conv_id = c.conv_id '
         'ORDER BY x.ts DESC, x.local_seq DESC LIMIT 1) '
@@ -409,6 +412,35 @@ class ConversationRepository extends GetxService {
       )
       .then((_) => 0);
 
+  /// The list row of an encrypted thread carries the last envelope. When no
+  /// message row of the thread holds it yet, it is opened here so the preview
+  /// can show the text.
+  Future<void> _decryptPreviews(List<Map> list) async {
+    final org = _session.orgId;
+    final user = _session.userId;
+    if (org == null || user == null) return;
+    var isChanged = false;
+    for (final item in list) {
+      final text = idText(item['text']);
+      if (item['e2e'] != true || !text.startsWith('e2e1:')) continue;
+      final conv = 'dm:${idText(item['with']).toLowerCase()}';
+      final known = await _db.query(
+        'SELECT 1 FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+        [org, user, idText(item['id'])],
+      );
+      if (known.isNotEmpty) continue;
+      final reading = await _e2e.open(text: text, convId: conv);
+      if (reading.state != E2eReadState.ok) continue;
+      await _db.update(
+        'UPDATE conversations SET last_text = ? WHERE org_id = ? AND user_id = ? '
+        "AND conv_id = ? AND last_ts = ? AND last_text = '[encrypted message]'",
+        [reading.text, org, user, conv, intOf(item['ts'])],
+      );
+      isChanged = true;
+    }
+    if (isChanged) await reload();
+  }
+
   Future<void> _onEvent(Map<String, dynamic> e) async {
     final org = _session.orgId;
     final user = _session.userId;
@@ -452,6 +484,7 @@ class ConversationRepository extends GetxService {
             );
           }
         });
+        unawaited(_decryptPreviews((e['list'] as List? ?? []).cast<Map>()));
       case 'groups':
         await _db.transaction((sql) async {
           for (final g in (e['list'] as List? ?? []).cast<Map>()) {

@@ -162,7 +162,7 @@ class _Avatar extends StatelessWidget {
 
 /// The one-line preview. Mine starts with "You: ", a group message with the
 /// sender. A form shows its name, even in an encrypted thread (forms are
-/// never encrypted), an encrypted message a lock (mobile cannot read those in v1), a pending message a clock and a failed one an error mark.
+/// never encrypted), an encrypted message that cannot be read a lock, a pending message a clock and a failed one an error mark.
 class _Preview extends StatelessWidget {
   const _Preview({required this.conversation});
 

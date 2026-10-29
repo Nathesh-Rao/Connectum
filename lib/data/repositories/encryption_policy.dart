@@ -94,7 +94,7 @@ class EncryptionPolicy {
         final data = await _socket.sdCall('e2e.devices', {
           'users': [peer],
         });
-        final devices = (data['devices'] as Map?) ?? {};
+        final devices = (data['users'] as Map?) ?? {};
         hasKeys = devices.entries.any(
           (e) =>
               e.key.toString().toLowerCase() == peer.toLowerCase() &&
@@ -105,11 +105,11 @@ class EncryptionPolicy {
         final data = await _socket.sdCall('e2e.group_devices', {
           'group': convId.substring(6),
         });
-        hasKeys = ((data['members'] as List?) ?? []).cast<Map>().any(
+        hasKeys = ((data['members'] as Map?) ?? {}).entries.any(
           (m) =>
-              idText(m['user']).toLowerCase() != me &&
-              m['devices'] is List &&
-              (m['devices'] as List).isNotEmpty,
+              m.key.toString().toLowerCase() != me &&
+              m.value is List &&
+              (m.value as List).isNotEmpty,
         );
       }
       _peers[convId] = (hasKeys: hasKeys, at: DateTime.now());

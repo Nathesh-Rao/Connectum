@@ -117,7 +117,10 @@ class SubmissionRepository extends GetxService {
   }) async {
     final mine = submissionById(id);
     if (mine != null) {
-      return FormCardData.fromSubmission(mine, definition: definitions[mine.tstruct]);
+      return FormCardData.fromSubmission(
+        mine,
+        definition: definitions[mine.tstruct],
+      );
     }
     if (convId == null || msgId == null) return null;
     Message? message;
@@ -196,7 +199,16 @@ class SubmissionRepository extends GetxService {
         ],
       );
       if (chat != null) {
-        await _putPendingMessage(sql, tempId, chat, name, caption, values, now, cid: cid);
+        await _putPendingMessage(
+          sql,
+          tempId,
+          chat,
+          name,
+          caption,
+          values,
+          now,
+          cid: cid,
+        );
       }
     });
     await reload();
@@ -264,7 +276,8 @@ class SubmissionRepository extends GetxService {
     final order = [
       if (def != null)
         for (final f in def.fields)
-          if (!def.isGridSection(f.section) && values.containsKey(f.name)) f.name,
+          if (!def.isGridSection(f.section) && values.containsKey(f.name))
+            f.name,
       for (final k in values.keys)
         if (!(def?.fieldOf(k) != null) && values[k] is! List) k,
     ];
@@ -407,7 +420,15 @@ class SubmissionRepository extends GetxService {
 
   /// What a failed or waiting submission was filled in with, and the server's
   /// complaint about it, for "Edit and resend".
-  Future<({Map<String, dynamic> values, Object? errors, String name, String scope, String caption})?>
+  Future<
+    ({
+      Map<String, dynamic> values,
+      Object? errors,
+      String name,
+      String scope,
+      String caption,
+    })?
+  >
   pendingFor(String refId) async {
     final rows = await _db.query(
       "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ? AND kind = 'form_submit'",
@@ -921,7 +942,12 @@ class SubmissionRepository extends GetxService {
 
   /// The captions a list answer carries. A full definition that was fetched
   /// is never replaced by them.
-  Future<void> _storeCaptions(Sql sql, String name, String scope, Map structure) async {
+  Future<void> _storeCaptions(
+    Sql sql,
+    String name,
+    String scope,
+    Map structure,
+  ) async {
     final json = FormDefinition.captionsJson(structure);
     final args = [
       idText(structure['caption']),

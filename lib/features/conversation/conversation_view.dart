@@ -57,6 +57,7 @@ class ConversationView extends GetView<ConversationController> {
                 status: isReady ? c.status : null,
                 isSquareAvatar: c.kind != 'dm',
                 presence: c.presenceDot,
+                isEncrypted: c.isBlocked.value,
                 onBack: Get.back,
               );
             }),

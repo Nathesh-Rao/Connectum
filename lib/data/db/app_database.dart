@@ -21,7 +21,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 5;
+  static const _version = 6;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -104,6 +104,11 @@ class AppDatabase {
         scope TEXT, caption TEXT, used_ts INTEGER,
         PRIMARY KEY(org_id, user_id, name))''',
       'ALTER TABLE form_submissions ADD COLUMN rejection_json TEXT',
+    ],
+    6: [
+      'ALTER TABLE messages ADD COLUMN plaintext TEXT',
+      'ALTER TABLE messages ADD COLUMN decrypt_state TEXT',
+      "UPDATE messages SET decrypt_state = 'pending' WHERE is_encrypted_unsupported = 1",
     ],
   };
 

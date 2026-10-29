@@ -237,7 +237,10 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final note = problem != null
-        ? Text(problem!, style: AppText.caption.copyWith(color: AppColors.error))
+        ? Text(
+            problem!,
+            style: AppText.caption.copyWith(color: AppColors.error),
+          )
         : isAwaitingApproval
         ? Text(
             'Waiting for approval',
@@ -260,7 +263,10 @@ class _Footer extends StatelessWidget {
             const Icon(Icons.schedule, size: 12, color: AppColors.cardMuted),
             const SizedBox(width: AppSpacing.xxs),
           ],
-          Text(time, style: AppText.caption.copyWith(color: AppColors.cardMuted)),
+          Text(
+            time,
+            style: AppText.caption.copyWith(color: AppColors.cardMuted),
+          ),
           if (statusMark != null) ...[
             const SizedBox(width: AppSpacing.xxs),
             statusMark!,
@@ -350,12 +356,7 @@ class _Title extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.sm,
-        10,
-        AppSpacing.sm,
-        0,
-      ),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, 10, AppSpacing.sm, 0),
       child: Row(
         children: [
           Container(

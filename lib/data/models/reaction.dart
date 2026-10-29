@@ -12,7 +12,18 @@ class Reaction {
 
   /// The quick row of the long-press sheet, then the ones the "+" adds.
   static const quick = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-  static const more = ['🔥', '🎉', '👏', '💯', '🚀', '✨', '🤝', '🥰', '🤩', '👀'];
+  static const more = [
+    '🔥',
+    '🎉',
+    '👏',
+    '💯',
+    '🚀',
+    '✨',
+    '🤝',
+    '🥰',
+    '🤩',
+    '👀',
+  ];
 
   final String emoji;
   final int count;

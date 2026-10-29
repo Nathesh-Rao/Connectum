@@ -230,8 +230,7 @@ class FormCardData {
     final types = {for (final c in defined) c.name: c.type};
     return FormGrid(
       name: name,
-      caption:
-          definition?.sectionOf(name)?.caption ?? FormEntry.humanize(name),
+      caption: definition?.sectionOf(name)?.caption ?? FormEntry.humanize(name),
       columns: [
         for (final c in columns)
           definition?.captionOf(c) ?? FormEntry.humanize(c),

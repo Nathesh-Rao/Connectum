@@ -11,6 +11,8 @@ import '../models/outbox_entry.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
+import '../e2e/e2e_models.dart';
+import 'e2e_repository.dart';
 import 'encryption_policy.dart';
 
 enum SendResult { queued, blockedEncrypted, tooLong, invalid, noSession }
@@ -47,6 +49,7 @@ class MessageRepository extends GetxService {
     this._socket,
     this._conversations,
     this._policy,
+    this._e2e,
   );
 
   static const _ackTimeout = Duration(seconds: 15);
@@ -61,6 +64,7 @@ class MessageRepository extends GetxService {
   final SocketService _socket;
   final ConversationRepository _conversations;
   final EncryptionPolicy _policy;
+  final E2eRepository _e2e;
 
   final _lists = <String, RxList<Message>>{};
   final _historyWaiters = <String, Completer<_History>>{};
@@ -69,6 +73,7 @@ class MessageRepository extends GetxService {
   final _ackTimers = <int, Timer>{};
   Timer? _wakeTimer;
   Future<void> _queue = Future.value();
+  Future<void> _decrypting = Future.value();
   bool _isFlushing = false;
   bool _wantsFlush = false;
   bool _isSyncing = false;
@@ -91,7 +96,60 @@ class MessageRepository extends GetxService {
     });
     ever(_session.current, (_) {
       _lists.keys.toList().forEach(_reload);
+      _scheduleDecrypt();
     });
+    _scheduleDecrypt();
+  }
+
+  void _scheduleDecrypt() {
+    _decrypting = _decrypting
+        .then((_) => _decryptPending())
+        .catchError((Object _) {});
+  }
+
+  /// Opens every envelope still marked pending and stores the outcome. A
+  /// message that cannot be opened stays unreadable (one directory refresh is
+  /// tried inside [E2eRepository.open]); one that could not be tried because
+  /// the server was unreachable stays pending until the next connection.
+  Future<void> _decryptPending() async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return;
+    final rows = await _db.query(
+      'SELECT msg_id, conv_id, text FROM messages WHERE org_id = ? AND user_id = ? '
+      "AND decrypt_state = 'pending'",
+      [org, user],
+    );
+    final touched = <String>{};
+    for (final r in rows) {
+      final id = idText(r['msg_id']);
+      final convId = idText(r['conv_id']);
+      final envelope = idText(r['text']);
+      final reading = await _e2e.open(text: envelope, convId: convId);
+      if (reading.state == E2eReadState.pending) continue;
+      final isOk = reading.state == E2eReadState.ok;
+      await _db.update(
+        'UPDATE messages SET plaintext = ?, decrypt_state = ? WHERE org_id = ? AND user_id = ? '
+        'AND msg_id = ? AND text = ?',
+        [
+          isOk ? reading.text : null,
+          isOk ? 'ok' : 'cant_decrypt',
+          org,
+          user,
+          id,
+          envelope,
+        ],
+      );
+      if (kDebugMode) {
+        debugPrint('e2e: message $id ${isOk ? 'ok' : reading.code}');
+      }
+      touched.add(convId);
+    }
+    if (touched.isEmpty) return;
+    for (final convId in touched) {
+      if (_lists.containsKey(convId)) await _reload(convId);
+    }
+    await _conversations.reload();
   }
 
   RxList<Message> messages(String convId) {
@@ -650,6 +708,7 @@ class MessageRepository extends GetxService {
 
   Future<void> _onOnline() async {
     _policy.onReconnected();
+    _scheduleDecrypt();
     if (_isSyncing) return;
     _isSyncing = true;
     try {
@@ -1462,9 +1521,23 @@ class MessageRepository extends GetxService {
     final isMine = sender.toLowerCase() == user.toLowerCase();
     final form = m['form'];
     final exists = await sql.query(
-      'SELECT 1 FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+      'SELECT text, decrypt_state, plaintext FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
       [org, user, id],
     );
+    // An envelope already opened (or found unreadable) stays so; a new or
+    // edited one is queued for decryption.
+    final old = exists.isEmpty ? null : exists.first;
+    final isSame =
+        old != null &&
+        old['text'] == text &&
+        (old['decrypt_state'] == 'ok' ||
+            old['decrypt_state'] == 'cant_decrypt');
+    final decryptState = !isEncrypted
+        ? null
+        : isSame
+        ? old['decrypt_state']
+        : 'pending';
+    final plaintext = isEncrypted && isSame ? old['plaintext'] : null;
     final values = [
       sender,
       isMine ? 1 : 0,
@@ -1477,11 +1550,13 @@ class MessageRepository extends GetxService {
       m['deleted'] == true ? 1 : 0,
       m['reactions'] == null ? null : jsonEncode(m['reactions']),
       form == null ? null : jsonEncode(form),
+      decryptState,
+      plaintext,
     ];
     if (exists.isEmpty) {
       await sql.insert(
-        'INSERT INTO messages(sender, is_mine, kind, text, ts, reply_to, is_encrypted_unsupported, edited_ts, is_deleted, reactions_json, form_json, '
-        "org_id, user_id, msg_id, conv_id, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'sent')",
+        'INSERT INTO messages(sender, is_mine, kind, text, ts, reply_to, is_encrypted_unsupported, edited_ts, is_deleted, reactions_json, form_json, decrypt_state, plaintext, '
+        "org_id, user_id, msg_id, conv_id, status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'sent')",
         [
           ...values.sublist(0, 4),
           intOf(m['ts']),
@@ -1495,12 +1570,14 @@ class MessageRepository extends GetxService {
     } else {
       await sql.update(
         'UPDATE messages SET sender = ?, is_mine = ?, kind = ?, text = ?, ts = COALESCE(?, ts), reply_to = ?, is_encrypted_unsupported = ?, '
-        'edited_ts = ?, is_deleted = ?, reactions_json = COALESCE(?, reactions_json), form_json = COALESCE(?, form_json) '
+        'edited_ts = ?, is_deleted = ?, reactions_json = COALESCE(?, reactions_json), form_json = COALESCE(?, form_json), '
+        'decrypt_state = ?, plaintext = ? '
         'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
         [...values, org, user, id],
       );
     }
     final preview = isEncrypted ? '[encrypted message]' : text;
+    if (decryptState == 'pending') _scheduleDecrypt();
     if (isEncrypted) {
       await sql.update(
         'UPDATE conversations SET is_encrypted = 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
