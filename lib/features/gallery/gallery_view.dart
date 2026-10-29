@@ -12,6 +12,7 @@ import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/app_text_field.dart';
@@ -54,6 +55,7 @@ class GalleryView extends GetView<GalleryController> {
     'authentication': AppRoutes.authentication,
     'verification': AppRoutes.verification,
     'enterprises': AppRoutes.enterprises,
+    'enterprise_created': AppRoutes.enterpriseCreated,
     'chats': AppRoutes.chats,
     'ai_agents': AppRoutes.aiAgents,
     'conversation': '/conversation/demo',
@@ -62,6 +64,7 @@ class GalleryView extends GetView<GalleryController> {
     'profile': AppRoutes.profile,
     'notifications': AppRoutes.notifications,
     'debug/socket': AppRoutes.debugSocket,
+    'debug/assets': AppRoutes.debugAssets,
   };
 
   @override
@@ -248,7 +251,7 @@ class GalleryView extends GetView<GalleryController> {
               height: 320,
               child: AppStateView(
                 state: state,
-                emptyAnimation: 'empty-chats',
+                emptyImage: AppStateImageKind.emptyChats,
                 emptyTitle: 'No chats yet',
                 emptyMessage: 'Conversations will appear here.',
                 onRetry: () {},

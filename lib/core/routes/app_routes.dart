@@ -18,6 +18,7 @@ class AppRoutes {
   static const gallery = '/gallery';
   static const galleryAuth = '/gallery/auth';
   static const debugSocket = '/debug/socket';
+  static const debugAssets = '/debug/assets';
 
   /// A conversation id holds `:` and a group name may hold spaces or `/`.
   static String conversationOf(String id) =>

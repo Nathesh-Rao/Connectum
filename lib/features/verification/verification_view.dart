@@ -13,6 +13,7 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_flex_gap.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'verification_controller.dart';
 
@@ -197,6 +198,8 @@ class _Blocked extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Spacer(),
+        const Center(child: AppStateImage(kind: AppStateImageKind.locked)),
+        const SizedBox(height: AppSpacing.lg),
         const Text(
           "This account needs a step the mobile app doesn't support yet",
           style: AppText.title,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_state_view.dart';
 import 'submissions_controller.dart';
 
 class SubmissionsView extends GetView<SubmissionsController> {
@@ -10,9 +10,14 @@ class SubmissionsView extends GetView<SubmissionsController> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
+    return const AppScaffold(
       hasOuterBottomBar: true,
-      body: Center(child: Text('Submissions', style: AppText.title)),
+      body: AppStateView(
+        state: AppViewState.comingSoon,
+        emptyTitle: 'Submissions',
+        emptyMessage: 'Coming soon.',
+        child: SizedBox.shrink(),
+      ),
     );
   }
 }

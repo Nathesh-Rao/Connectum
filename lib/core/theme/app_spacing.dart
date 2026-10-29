@@ -22,6 +22,10 @@ class AppSpacing {
   static const double handleHeight = 4;
   static const double minTapTarget = 44;
   static const double checkBadge = 64;
+  static const double stateImage = 160;
+  static const double stateImageSmall = 96;
+  static const double stateImageRow = 40;
+  static const double successAnimation = 120;
   static const double slideTitleMaxWidth = 300;
   static const double slideCopyMaxWidth = 290;
   static const double slideCopyHeight = 136;

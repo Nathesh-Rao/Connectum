@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/relative_time.dart';
+import '../../../core/widgets/app_state_view.dart';
 import '../chats_controller.dart';
 import '../models/message_hit.dart';
 import 'conversation_tile.dart';
@@ -22,11 +23,12 @@ class SearchResults extends StatelessWidget {
       final conversations = c.searchConversations.toList();
       final messages = c.searchMessages.toList();
       if (conversations.isEmpty && messages.isEmpty) {
-        return const Align(
-          alignment: Alignment.topCenter,
-          child: Padding(
-            padding: EdgeInsets.only(top: AppSpacing.xxl),
-            child: Text('No conversations found.', style: AppText.body),
+        return const SingleChildScrollView(
+          child: AppStateView(
+            state: AppViewState.noResults,
+            emptyTitle: 'No results',
+            emptyMessage: 'Try a different name or word.',
+            child: SizedBox.shrink(),
           ),
         );
       }

@@ -12,6 +12,7 @@ import '../../core/widgets/app_list_row.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/models/identity_info.dart';
 import 'enterprises_controller.dart';
@@ -24,6 +25,11 @@ class EnterprisesView extends GetView<EnterprisesController> {
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    AppStateImage.precache(context, const [
+      AppStateImageKind.emptyEnterprises,
+      AppStateImageKind.error,
+      AppStateImageKind.offline,
+    ]);
     return AppScaffold(
       body: Obx(() {
         if (c.blockedReasons.isNotEmpty) {
@@ -197,10 +203,10 @@ class _List extends StatelessWidget {
             ? AppViewState.offline
             : AppViewState.empty;
         return SizedBox(
-          height: 300,
+          height: 360,
           child: AppStateView(
             state: state,
-            emptyAnimation: 'empty-enterprises',
+            emptyImage: AppStateImageKind.emptyEnterprises,
             emptyTitle: "You're not in an enterprise yet",
             emptyMessage: 'Join one below to get started.',
             errorMessage: c.loadError.value ?? 'Something went wrong.',

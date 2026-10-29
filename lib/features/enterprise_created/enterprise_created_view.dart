@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_ambient_backdrop.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_id_copy_strip.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_success_animation.dart';
 import 'enterprise_created_controller.dart';
 
 class EnterpriseCreatedView extends GetView<EnterpriseCreatedController> {
@@ -22,17 +22,7 @@ class EnterpriseCreatedView extends GetView<EnterpriseCreatedController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Spacer(),
-          Center(
-            child: Container(
-              width: AppSpacing.checkBadge,
-              height: AppSpacing.checkBadge,
-              decoration: const BoxDecoration(
-                color: AppColors.accentTint,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, size: 32, color: AppColors.accent),
-            ),
-          ),
+          const Center(child: AppSuccessAnimation()),
           const SizedBox(height: AppSpacing.lg),
           const Text(
             'Your enterprise is ready',

@@ -4,15 +4,26 @@ import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import 'app_animation_placeholder.dart';
 import 'app_button.dart';
+import 'app_state_image.dart';
 
-enum AppViewState { content, loading, empty, error, offline }
+enum AppViewState {
+  content,
+  loading,
+  empty,
+  error,
+  offline,
+  noResults,
+  locked,
+  comingSoon,
+}
 
 class AppStateView extends StatelessWidget {
   const AppStateView({
     super.key,
     required this.state,
     required this.child,
-    this.emptyAnimation = 'empty',
+    this.emptyImage = AppStateImageKind.emptyGeneric,
+    this.image,
     this.emptyTitle = 'Nothing here yet',
     this.emptyMessage,
     this.errorMessage = 'Something went wrong.',
@@ -24,7 +35,10 @@ class AppStateView extends StatelessWidget {
 
   final AppViewState state;
   final Widget child;
-  final String emptyAnimation;
+  final AppStateImageKind emptyImage;
+
+  /// Replaces the picture of any variant.
+  final AppStateImageKind? image;
   final String emptyTitle;
   final String? emptyMessage;
   final String errorMessage;
@@ -40,25 +54,40 @@ class AppStateView extends StatelessWidget {
     return switch (state) {
       AppViewState.content => child,
       AppViewState.loading =>
-        loadingChild ?? const _Message(animation: 'loading'),
+        loadingChild ?? const _Message(placeholder: 'loading'),
       AppViewState.empty => _Message(
-        animation: emptyAnimation,
+        image: image ?? emptyImage,
         title: emptyTitle,
         message: emptyMessage,
         actionLabel: emptyActionLabel,
         onAction: onEmptyAction,
       ),
       AppViewState.error => _Message(
-        animation: 'error',
+        image: image ?? AppStateImageKind.error,
         title: 'Could not load',
         message: errorMessage,
         onRetry: onRetry,
       ),
       AppViewState.offline => _Message(
-        animation: 'offline',
+        image: image ?? AppStateImageKind.offline,
         title: 'You are offline',
         message: 'Check your connection and try again.',
         onRetry: onRetry,
+      ),
+      AppViewState.noResults => _Message(
+        image: image ?? AppStateImageKind.noResults,
+        title: emptyTitle,
+        message: emptyMessage,
+      ),
+      AppViewState.locked => _Message(
+        image: image ?? AppStateImageKind.locked,
+        title: emptyTitle,
+        message: emptyMessage,
+      ),
+      AppViewState.comingSoon => _Message(
+        image: image ?? AppStateImageKind.comingSoon,
+        title: emptyTitle,
+        message: emptyMessage,
       ),
     };
   }
@@ -66,7 +95,8 @@ class AppStateView extends StatelessWidget {
 
 class _Message extends StatelessWidget {
   const _Message({
-    required this.animation,
+    this.image,
+    this.placeholder,
     this.title,
     this.message,
     this.onRetry,
@@ -74,7 +104,8 @@ class _Message extends StatelessWidget {
     this.onAction,
   });
 
-  final String animation;
+  final AppStateImageKind? image;
+  final String? placeholder;
   final String? title;
   final String? message;
   final VoidCallback? onRetry;
@@ -89,7 +120,10 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppAnimationPlaceholder(name: animation),
+            if (image != null)
+              AppStateImage(kind: image!)
+            else
+              AppAnimationPlaceholder(name: placeholder ?? 'loading'),
             if (title != null) ...[
               const SizedBox(height: AppSpacing.lg),
               Text(

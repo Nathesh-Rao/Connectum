@@ -6,6 +6,8 @@ import '../../features/authentication/authentication_binding.dart';
 import '../../features/authentication/authentication_view.dart';
 import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
+import '../../features/debug_assets/debug_assets_binding.dart';
+import '../../features/debug_assets/debug_assets_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
 import '../../features/debug_socket/debug_socket_view.dart';
 import '../../features/enterprise_created/enterprise_created_binding.dart';
@@ -128,6 +130,12 @@ class AppPages {
         AppRoutes.galleryAuth,
         () => const GalleryAuthView(),
         GalleryAuthBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugAssets,
+        () => const DebugAssetsView(),
+        DebugAssetsBinding(),
         AppTransitionKind.push,
       ),
       _page(

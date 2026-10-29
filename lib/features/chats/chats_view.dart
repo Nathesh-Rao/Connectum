@@ -13,6 +13,7 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_filter_tabs.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'chats_controller.dart';
@@ -28,6 +29,12 @@ class ChatsView extends GetView<ChatsController> {
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    AppStateImage.precache(context, const [
+      AppStateImageKind.emptyChats,
+      AppStateImageKind.error,
+      AppStateImageKind.offline,
+      AppStateImageKind.noResults,
+    ]);
     return AppScaffold(
       hasOuterBottomBar: true,
       isScrollable: false,
@@ -280,7 +287,7 @@ class _Body extends StatelessWidget {
           : AppStateView(
               key: ValueKey(state),
               state: state,
-              emptyAnimation: 'empty-chats',
+              emptyImage: AppStateImageKind.emptyChats,
               emptyTitle: 'No conversations yet',
               emptyMessage: 'Start a chat to see it here.',
               emptyActionLabel: 'Start a chat',

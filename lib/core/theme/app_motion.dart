@@ -13,6 +13,7 @@ class AppDurations {
   static const splashHold = Duration(milliseconds: 1800);
   static const copiedHold = Duration(milliseconds: 1500);
   static const spin = Duration(milliseconds: 900);
+  static const stateFloat = Duration(seconds: 3);
 }
 
 class AppCurves {
@@ -39,6 +40,8 @@ class AppDistances {
   AppDistances._();
 
   static const double rise = 12;
+  static const double stateFloat = 4;
+  static const double stateIntroScale = 0.94;
   static const double tab = 8;
   static const double modeShift = 24;
   static const double enter = 16;

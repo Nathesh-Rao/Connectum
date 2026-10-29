@@ -27,6 +27,7 @@ dependencies:
   connectivity_plus: ^7.3.2
   # Incoming App Links / Universal Links
   app_links: ^7.0.0
+  lottie: ^3.3.3
 
 dev_dependencies:
   flutter_test:
@@ -37,6 +38,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/connectum_logo.png
+    - assets/images/states/
+    - assets/lottie/
   fonts:
     - family: PlusJakartaSans
       fonts:

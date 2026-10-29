@@ -6,6 +6,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_list_row.dart';
+import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../new_chat_controller.dart';
 
@@ -59,13 +60,28 @@ class NewChatSheet extends StatelessWidget {
               if (people.isEmpty && !c.isSearching.value)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Text(
-                    query.isEmpty
-                        ? 'People you chat with will show up here.'
-                        : c.isOffline
-                        ? 'Finding someone new needs a connection.'
-                        : 'No one found.',
-                    style: AppText.readable,
+                  child: Column(
+                    children: [
+                      if (!c.isOffline)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: AppStateImage(
+                            kind: query.isEmpty
+                                ? AppStateImageKind.emptyChats
+                                : AppStateImageKind.noResults,
+                            size: AppSpacing.stateImageSmall,
+                          ),
+                        ),
+                      Text(
+                        query.isEmpty
+                            ? 'People you chat with will show up here.'
+                            : c.isOffline
+                            ? 'Finding someone new needs a connection.'
+                            : 'No one found.',
+                        style: AppText.readable,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               if (c.isSearching.value)
@@ -76,6 +92,11 @@ class NewChatSheet extends StatelessWidget {
               AppListRow(
                 title: 'New group',
                 subtitle: 'Not available yet',
+                leading: const AppStateImage(
+                  kind: AppStateImageKind.comingSoon,
+                  size: AppSpacing.stateImageRow,
+                  isAnimated: false,
+                ),
                 minHeight: AppSpacing.settingRowHeight,
                 titleStyle: AppText.rowTitle.copyWith(
                   color: AppColors.cardMuted,

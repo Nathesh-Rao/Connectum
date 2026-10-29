@@ -26,7 +26,7 @@
 - Shared widgets in `lib/core/widgets`, prefixed App: AppTextField, AppButton, AppScaffold, AppStateView, AppBottomSheet, AppAvatar, AppStatusPill. Screens never use raw TextField or ElevatedButton.
 - AppTextField is the only text field: min height via constraints (never SizedBox height), isDense, explicit symmetric contentPadding, textAlignVertical center, fixed line height, so text is always vertically centered.
 - AppScaffold keeps designed screens packed to the viewport (LayoutBuilder + scroll view with a minHeight constraint, spacing via Spacer/Expanded) so a page scrolls only when the keyboard covers content. Never replace a designed screen with a plain ListView.
-- Every list and screen handles loading, empty, error with retry, and offline, through AppStateView with one shared AppAnimationPlaceholder (visible label like "[animation: empty-chats]"). Real Lottie/Rive comes last, only when the user says so.
+- Every list and screen handles loading, empty, error with retry, and offline, through AppStateView. State pictures are PNGs in `assets/images/states/`, shown by AppStateImage (one enum maps state to file and display scale). AppAnimationPlaceholder (visible label like "[animation: empty-chats]") is only the fallback when a file is missing or fails. Lottie (`lottie` package) is used only for the onboarding slides (OnboardingLottie) and the success check (AppSuccessAnimation).
 - Min font sizes: 11 for labels/captions, 12 for readable text.
 
 ## Naming
@@ -50,7 +50,7 @@
 - `session_replaced`: wipe that org+user rows and outbox, go to login. Handshake error or expired token: clear the token, keep rows and outbox, go to login, flush after login. Explicit sign out: wipe. Only a real auth error clears the token; "Username taken" retries with backoff.
 
 ## Before release
-- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket` and `/gallery` routes and `lib/core/debug/seed_ui.dart` (`SEED_UI=1` fixture: debug and profile builds only, in-memory sample enterprises and about 13 sample chats, `SEED_ROWS=300` adds generated rows; turn it on with `--dart-define=SEED_UI=1`, best without `BASE_URL`).
+- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket`, `/debug/assets` and `/gallery` routes and `lib/core/debug/seed_ui.dart` (`SEED_UI=1` fixture: debug and profile builds only, in-memory sample enterprises and about 13 sample chats, `SEED_ROWS=300` adds generated rows; turn it on with `--dart-define=SEED_UI=1`, best without `BASE_URL`).
 
 ## Working rules
 - After a task, run `dart analyze` on changed files and run on the device when relevant. Do NOT run flutter test, integration, viewport or VM tests, or full builds unless asked.

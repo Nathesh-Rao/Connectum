@@ -3,14 +3,13 @@ import 'package:get/get.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_animation_placeholder.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_flex_gap.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/onboarding_lottie.dart';
 import '../../core/widgets/onboarding_stage.dart';
 import 'onboarding_controller.dart';
 
@@ -45,13 +44,9 @@ class OnboardingView extends GetView<OnboardingController> {
                 controller: c.pageController,
                 itemCount: slides.length,
                 onPageChanged: c.onPageChanged,
-                itemBuilder: (context, i) => ClipRRect(
-                  borderRadius: AppRadius.mdAll,
-                  child: AppAnimationPlaceholder(
-                    name: slides[i].animation,
-                    width: double.infinity,
-                    height: double.infinity,
-                  ),
+                itemBuilder: (context, i) => OnboardingLottie(
+                  file: OnboardingLottieFile.values[i],
+                  isActive: c.page.value == i,
                 ),
               ),
             ),

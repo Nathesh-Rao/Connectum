@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_state_view.dart';
 import 'profile_controller.dart';
 
 class ProfileView extends GetView<ProfileController> {
@@ -17,14 +17,19 @@ class ProfileView extends GetView<ProfileController> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Spacer(),
-          const Center(child: Text('Profile', style: AppText.title)),
-          const SizedBox(height: AppSpacing.xl),
+          const Expanded(
+            child: AppStateView(
+              state: AppViewState.comingSoon,
+              emptyTitle: 'Profile',
+              emptyMessage: 'Coming soon.',
+              child: SizedBox.shrink(),
+            ),
+          ),
           AppButton.secondary(
             label: 'Experience the introduction',
             onPressed: controller.replayIntroduction,
           ),
-          const Spacer(),
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );
