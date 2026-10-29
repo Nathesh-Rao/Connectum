@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../core/routes/home_reload.dart';
+import '../../data/e2e/e2e_models.dart';
 import '../../data/api/api_client.dart';
 import '../../data/db/app_database.dart';
 import '../../data/models/conversation.dart';
@@ -166,6 +167,11 @@ class DebugSocketController extends GetxController {
     );
     if (command == null) {
       _note('a client id works for dm:, group: and host: only');
+      return;
+    }
+    final gate = await messages.sendGate(_cidConv!, isLookup: true);
+    if (gate.verdict != E2eSendVerdict.plain) {
+      _note('not sent: $_cidConv is not a plain-text thread right now');
       return;
     }
     final sent = await socket.sendCommand(command);

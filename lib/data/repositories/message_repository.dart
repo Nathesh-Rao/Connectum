@@ -11,11 +11,12 @@ import '../models/outbox_entry.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
+import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_models.dart';
 import 'e2e_repository.dart';
 import 'encryption_policy.dart';
 
-enum SendResult { queued, blockedEncrypted, tooLong, invalid, noSession }
+enum SendResult { queued, blocked, tooLong, invalid, noSession }
 
 enum DeleteResult { deleted, denied, needsConnection, notSupported, failed }
 
@@ -78,6 +79,9 @@ class MessageRepository extends GetxService {
   bool _wantsFlush = false;
   bool _isSyncing = false;
   int _lastTemp = 0;
+
+  /// Why the last [sendText] was refused with [SendResult.blocked].
+  String lastBlock = '';
   String? _openConversation;
 
   String? get _org => _session.orgId;
@@ -177,15 +181,21 @@ class MessageRepository extends GetxService {
     await _syncConversation(convId);
   }
 
-  /// True when the thread is known to be end-to-end encrypted: plain sends are
-  /// blocked. An unknown verdict is not blocked (a send defers instead).
-  Future<bool> isEncrypted(String convId, {bool isLookup = false}) async {
-    final facts = await _facts(convId);
-    final verdict = isLookup && _socket.isOnline
-        ? await _policy.verdict(convId, facts)
-        : _policy.cached(convId, facts);
-    return verdict == EncryptionVerdict.encrypted;
-  }
+  /// What a send into [convId] would do right now, for the composer. Without
+  /// [isLookup] it reads caches only; an unanswered question is `unknown`,
+  /// which does not block typing (the send waits and decides when it goes out).
+  Future<E2eSendDecision> sendGate(
+    String convId, {
+    bool isLookup = false,
+  }) async => _policy.decideSend(
+    convId,
+    await _facts(convId),
+    isLookup: isLookup && _socket.isOnline,
+  );
+
+  /// True when the thread has encrypted history (shown as a lock).
+  Future<bool> hasEncryptedHistory(String convId) async =>
+      (await _facts(convId)).isE2e;
 
   /// Deletes one of my messages. A message that never reached the server (still
   /// waiting or failed) is removed here, offline too; a sent one needs the
@@ -293,6 +303,13 @@ class MessageRepository extends GetxService {
 
   // ---- composing ----------------------------------------------------------
 
+  static const _noCommands =
+      "Lines starting with # or @ can't be sent in encrypted chats yet";
+
+  /// A `#command` or a leading `@name`: blocked in encrypted threads.
+  static bool _isCommandLike(String text) =>
+      RegExp(r'^(#[A-Za-z]|@)').hasMatch(text);
+
   Future<SendResult> sendText(
     String convId,
     String text, {
@@ -308,9 +325,18 @@ class MessageRepository extends GetxService {
     if (replyTo != null && replyTo.startsWith('temp-')) {
       return SendResult.invalid;
     }
-    if (_policy.cached(convId, await _facts(convId)) ==
-        EncryptionVerdict.encrypted) {
-      return SendResult.blockedEncrypted;
+    // A send that can never work (no encryption set up by the peer, a changed
+    // key, an encrypted group) is refused here; one that may work later is
+    // queued and decided again when it goes out.
+    final facts = await _facts(convId);
+    final gate = await _policy.decideSend(convId, facts, isLookup: false);
+    if (gate.isBlocked && !gate.isTransient) {
+      lastBlock = gate.message;
+      return SendResult.blocked;
+    }
+    if ((gate.isEncrypt || facts.isE2e) && _isCommandLike(body)) {
+      lastBlock = _noCommands;
+      return SendResult.blocked;
     }
     final tempId = _tempId();
     final cid = newCid();
@@ -318,9 +344,24 @@ class MessageRepository extends GetxService {
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
       await sql.insert(
-        'INSERT INTO messages(org_id, user_id, msg_id, conv_id, sender, is_mine, kind, text, ts, reply_to, status, local_seq, cid) '
-        "VALUES(?,?,?,?,?,1,'chat',?,?,?,'pending',?,?)",
-        [org, user, tempId, convId, user, body, now, replyTo, now, cid],
+        'INSERT INTO messages(org_id, user_id, msg_id, conv_id, sender, is_mine, kind, text, ts, reply_to, status, local_seq, cid, '
+        'is_encrypted_unsupported, plaintext, decrypt_state) '
+        "VALUES(?,?,?,?,?,1,'chat',?,?,?,'pending',?,?,?,?,?)",
+        [
+          org,
+          user,
+          tempId,
+          convId,
+          user,
+          body,
+          now,
+          replyTo,
+          now,
+          cid,
+          gate.isEncrypt ? 1 : 0,
+          gate.isEncrypt ? body : null,
+          gate.isEncrypt ? 'ok' : null,
+        ],
       );
       await sql.insert(
         'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts, cid) '
@@ -363,6 +404,7 @@ class MessageRepository extends GetxService {
     if (!message.isMine || message.isDeleted || message.kind != 'chat') {
       return false;
     }
+    if (message.isEncrypted) return false;
     if (message.convId.startsWith('host:')) return false;
     if (message.isLocalTemp) {
       final pending = await _db.query(
@@ -515,19 +557,64 @@ class MessageRepository extends GetxService {
       await _fail(entry, couldNotConfirm);
       return _Outcome.finished;
     }
-    final verdict = await _policy.verdict(
+    // The only place chat text is put on the socket. The decision is asked
+    // again here, so a key change or a new device after composing is caught.
+    final decision = await _policy.decideSend(
       entry.convId,
       await _facts(entry.convId),
     );
-    if (verdict == EncryptionVerdict.encrypted) {
-      await _fail(entry, 'encrypted chat');
-      return _Outcome.finished;
+    switch (decision.verdict) {
+      case E2eSendVerdict.unknown:
+        await _defer(entry, const Duration(seconds: 15));
+        return _Outcome.deferred;
+      case E2eSendVerdict.blocked:
+        await _fail(entry, '${E2eSendDecision.failTag}${decision.message}');
+        return _Outcome.finished;
+      case E2eSendVerdict.plain:
+      case E2eSendVerdict.encrypt:
+        break;
     }
-    if (verdict == EncryptionVerdict.unknown) {
-      await _defer(entry, const Duration(seconds: 15));
-      return _Outcome.deferred;
+    String? envelope;
+    if (decision.isEncrypt) {
+      if (_isCommandLike('${entry.payload['text']}')) {
+        await _fail(entry, '${E2eSendDecision.failTag}$_noCommands');
+        return _Outcome.finished;
+      }
+      if (entry.kind == 'edit') {
+        await _fail(
+          entry,
+          "${E2eSendDecision.failTag}Editing isn't supported in encrypted chats yet",
+        );
+        return _Outcome.finished;
+      }
+      try {
+        envelope = await _e2e.seal(
+          decision,
+          entry.convId,
+          '${entry.payload['text']}',
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+            'e2e: could not encrypt (${e is E2eException ? e.code : e.runtimeType})',
+          );
+        }
+        await _fail(
+          entry,
+          '${E2eSendDecision.failTag}${E2eSendDecision.cantSend}: encryption failed',
+        );
+        return _Outcome.finished;
+      }
+      // Last line of defence: an encrypt verdict never goes out as plain text.
+      if (!E2eCrypto.isEnvelope(envelope)) {
+        await _fail(
+          entry,
+          '${E2eSendDecision.failTag}${E2eSendDecision.cantSend}',
+        );
+        return _Outcome.finished;
+      }
     }
-    final command = wireCommand(entry);
+    final command = wireCommand(entry, text: envelope);
     if (command == null) {
       await _fail(entry, 'unsupported in this conversation');
       return _Outcome.finished;
@@ -544,6 +631,18 @@ class MessageRepository extends GetxService {
         await sql.update(
           "UPDATE messages SET status = 'sending' WHERE org_id = ? AND user_id = ? AND msg_id = ?",
           [_org, _me, entry.refId],
+        );
+      }
+      if (envelope != null) {
+        // The row keeps my plaintext and holds the envelope as sent.
+        await sql.update(
+          "UPDATE messages SET text = ?, plaintext = ?, decrypt_state = 'ok', is_encrypted_unsupported = 1 "
+          'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [envelope, '${entry.payload['text']}', _org, _me, entry.refId],
+        );
+        await sql.update(
+          'UPDATE conversations SET is_encrypted = 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+          [_org, _me, entry.convId],
         );
       }
     });
@@ -576,8 +675,8 @@ class MessageRepository extends GetxService {
 
   /// The line put on the socket. A send to a DM, group or host goes inside
   /// `/c <cid> ...`; the global room cannot take a client id.
-  static String? wireCommand(OutboxEntry e) {
-    final command = _commandFor(e);
+  static String? wireCommand(OutboxEntry e, {String? text}) {
+    final command = _commandFor(e, text: text);
     if (command == null) return null;
     return e.usesCid ? '/c ${e.cid} $command' : command;
   }
@@ -595,8 +694,8 @@ class MessageRepository extends GetxService {
     return '/c $cid $command';
   }
 
-  static String? _commandFor(OutboxEntry e) {
-    final text = '${e.payload['text']}';
+  static String? _commandFor(OutboxEntry e, {String? text}) {
+    text ??= '${e.payload['text']}';
     final reply = e.payload['replyTo'] as String?;
     final kind = ConversationRepository.kindOf(e.convId);
     final target = ConversationRepository.targetOf(e.convId);
@@ -1047,10 +1146,23 @@ class MessageRepository extends GetxService {
         [_org, _me, serverId],
       );
       if (exists.isNotEmpty) {
+        final temp = await sql.query(
+          'SELECT plaintext, decrypt_state FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [_org, _me, entry.refId],
+        );
         await sql.update(
           'DELETE FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
           [_org, _me, entry.refId],
         );
+        if (temp.isNotEmpty &&
+            temp.first['decrypt_state'] == 'ok' &&
+            temp.first['plaintext'] != null) {
+          await sql.update(
+            "UPDATE messages SET plaintext = ?, decrypt_state = 'ok', is_encrypted_unsupported = 1 "
+            'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+            [temp.first['plaintext'], _org, _me, serverId],
+          );
+        }
         await sql.update(
           "UPDATE messages SET is_mine = 1, cid = COALESCE(cid, ?), status = CASE WHEN status IN ('delivered','read') THEN status ELSE ? END WHERE org_id = ? AND user_id = ? AND msg_id = ?",
           [entry.cid, status, _org, _me, serverId],
@@ -1097,8 +1209,44 @@ class MessageRepository extends GetxService {
     }
   }
 
+  static const _e2eErrors = {
+    'e2e_required',
+    'e2e_peer_not_ready',
+    'e2e_disabled',
+    'e2e_unsupported',
+    'bad_envelope',
+    'too_long',
+  };
+
+  /// The server refused a send on end-to-end grounds. The error names no
+  /// message and the server answers lines in order, so it belongs to the
+  /// oldest send in flight. The cached device lists and mode are dropped so
+  /// a retry asks again.
+  Future<void> _onE2eError(String code) async {
+    final sends = _inFlight.values.where((i) => i.isSend).toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    _policy.onReconnected();
+    if (sends.isEmpty) return;
+    final entry = sends.first;
+    final peer = ConversationRepository.targetOf(entry.convId);
+    if (entry.convId.startsWith('dm:')) _e2e.invalidate([peer, _me ?? '']);
+    final why = switch (code) {
+      'e2e_peer_not_ready' => "$peer hasn't set up encryption yet",
+      'e2e_disabled' => 'Encryption is switched off for this organisation',
+      'too_long' => 'That message is too large to send securely',
+      _ =>
+        "${E2eSendDecision.cantSend}: the server didn't accept the encrypted message",
+    };
+    if (kDebugMode) debugPrint('e2e: send refused ($code)');
+    await _fail(entry, '${E2eSendDecision.failTag}$why');
+  }
+
   Future<void> _onError(Map<String, dynamic> e) async {
     final code = idText(e['code']);
+    if (_e2eErrors.contains(code)) {
+      await _onE2eError(code);
+      return;
+    }
     if (code == 'bad_cid' || code == 'cid_unsupported') {
       final sends = _inFlight.values.where((i) => i.usesCid).toList();
       if (sends.length == 1) {
@@ -1521,17 +1669,28 @@ class MessageRepository extends GetxService {
     final isMine = sender.toLowerCase() == user.toLowerCase();
     final form = m['form'];
     final exists = await sql.query(
-      'SELECT text, decrypt_state, plaintext FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+      'SELECT text, decrypt_state, plaintext, edited_ts FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
       [org, user, id],
     );
     // An envelope already opened (or found unreadable) stays so; a new or
     // edited one is queued for decryption.
     final old = exists.isEmpty ? null : exists.first;
-    final isSame =
+    // My own sent message keeps the plaintext I wrote: the server hands the
+    // envelope back trimmed to my devices, so its text differs from the one
+    // sent. Only an edit (a changed edited time) is opened again.
+    final isMineOpened =
+        isMine &&
         old != null &&
-        old['text'] == text &&
-        (old['decrypt_state'] == 'ok' ||
-            old['decrypt_state'] == 'cant_decrypt');
+        old['plaintext'] != null &&
+        old['decrypt_state'] == 'ok' &&
+        (old['edited_ts'] == null ? null : intOf(old['edited_ts'])) ==
+            (m['editedTs'] == null ? null : intOf(m['editedTs']));
+    final isSame =
+        isMineOpened ||
+        (old != null &&
+            old['text'] == text &&
+            (old['decrypt_state'] == 'ok' ||
+                old['decrypt_state'] == 'cant_decrypt'));
     final decryptState = !isEncrypted
         ? null
         : isSame
@@ -1576,7 +1735,11 @@ class MessageRepository extends GetxService {
         [...values, org, user, id],
       );
     }
-    final preview = isEncrypted ? '[encrypted message]' : text;
+    final preview = !isEncrypted
+        ? text
+        : isMineOpened
+        ? '${old['plaintext']}'
+        : '[encrypted message]';
     if (decryptState == 'pending') _scheduleDecrypt();
     if (isEncrypted) {
       await sql.update(

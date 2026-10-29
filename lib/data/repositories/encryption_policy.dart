@@ -1,6 +1,8 @@
+import '../e2e/e2e_models.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+import 'e2e_repository.dart';
 
 enum EncryptionVerdict { encrypted, plain, unknown }
 
@@ -12,12 +14,13 @@ class ThreadFacts {
 }
 
 class EncryptionPolicy {
-  EncryptionPolicy(this._socket, this._store);
+  EncryptionPolicy(this._socket, this._store, this._e2e);
 
   static const _peerTtl = Duration(minutes: 5);
 
   final SocketService _socket;
   final SessionStore _store;
+  final E2eRepository _e2e;
 
   String? _mode;
   bool _isModeFresh = false;
@@ -69,10 +72,130 @@ class EncryptionPolicy {
     return verdict;
   }
 
-  Future<void> _loadMode() async {
+  /// THE rule for a send into a direct message, used by the composer, by
+  /// `sendText` and by the outbox flush. Nothing else decides whether text
+  /// may leave the phone unencrypted: only a `plain` verdict does.
+  ///  - mode off: plain.
+  ///  - the peer has a device (optional or required): encrypt. If that cannot
+  ///    be done (this phone not registered, a pinned key changed) the answer
+  ///    is blocked, never plain.
+  ///  - the peer has no device: plain only in optional mode on a thread with
+  ///    no encrypted history; otherwise blocked.
+  ///  - mode not known yet: unknown (the send waits and asks again).
+  static E2eSendDecision decide({
+    required String? mode,
+    required String peer,
+    required bool isEncryptedThread,
+    required List<E2eDevicePublic> peerDevices,
+    required List<E2eDevicePublic> myDevices,
+    required E2eDeviceKeys? keys,
+    required List<E2ePinChange> pinChanges,
+  }) {
+    if (mode == null) return const E2eSendDecision.unknown();
+    if (mode == 'off') return const E2eSendDecision.plain();
+    if (peerDevices.isEmpty) {
+      if (mode == 'required' || isEncryptedThread) {
+        return E2eSendDecision.blocked("$peer hasn't set up encryption yet");
+      }
+      return const E2eSendDecision.plain();
+    }
+    if (keys == null || !myDevices.any((d) => d.id == keys.id)) {
+      return const E2eSendDecision.blocked(
+        E2eSendDecision.cantSend,
+        reason: "this phone isn't registered for secure messaging",
+      );
+    }
+    if (pinChanges.isNotEmpty) {
+      final isPeer = pinChanges.any((c) => c.user == peer);
+      return E2eSendDecision.blocked(
+        isPeer
+            ? "$peer's security key changed"
+            : 'Your security key changed on another device',
+        isKeyChange: true,
+        keyChangeUser: peer,
+      );
+    }
+    return E2eSendDecision.encrypt(
+      recipients: [...peerDevices, ...myDevices],
+      keys: keys,
+    );
+  }
+
+  /// Gathers what [decide] needs. With [isLookup] it may ask the server and
+  /// pins first-seen keys (a send); without it, it reads caches only (the
+  /// composer) and an unanswered question is `unknown`.
+  Future<E2eSendDecision> decideSend(
+    String convId,
+    ThreadFacts facts, {
+    bool isLookup = true,
+  }) async {
+    final kind = convId.split(':').first;
+    if (kind != 'dm' && kind != 'group') return const E2eSendDecision.plain();
+    await _loadMode(isOnlineRead: isLookup);
+    if (kind == 'group') {
+      final v = isLookup ? await verdict(convId, facts) : cached(convId, facts);
+      return switch (v) {
+        EncryptionVerdict.encrypted => const E2eSendDecision.blocked(
+          "Can't send in encrypted groups from mobile yet",
+        ),
+        EncryptionVerdict.unknown => const E2eSendDecision.unknown(),
+        EncryptionVerdict.plain => const E2eSendDecision.plain(),
+      };
+    }
+    if (_mode == null) return const E2eSendDecision.unknown();
+    if (_mode == 'off') return const E2eSendDecision.plain();
+    final me = (_store.userId ?? '').toLowerCase();
+    final peer = convId.substring(3).toLowerCase();
+    var dirs = _e2e.cachedDevices([peer, me]);
+    final keys = await _e2e.keys();
+    Future<E2eSendDecision?> read({required bool isForced}) async {
+      try {
+        dirs = await _e2e.devicesOf([peer, me], isForced: isForced);
+        return null;
+      } on SocketCallError catch (_) {
+        if (!_socket.isOnline) return const E2eSendDecision.unknown();
+        return E2eSendDecision.blocked(
+          E2eSendDecision.cantSend,
+          reason: "couldn't check $peer's devices",
+          isTransient: true,
+        );
+      }
+    }
+
+    if (dirs == null) {
+      if (!isLookup) return const E2eSendDecision.unknown();
+      final failed = await read(isForced: false);
+      if (failed != null) return failed;
+    }
+    final isStale =
+        isLookup &&
+        keys != null &&
+        (dirs![peer] ?? const []).isNotEmpty &&
+        !(dirs![me] ?? const []).any((d) => d.id == keys.id);
+    if (isStale) {
+      // This phone may have registered after the directory was cached.
+      final failed = await read(isForced: true);
+      if (failed != null) return failed;
+    }
+    final found = dirs!;
+    final peerDevices = found[peer] ?? const <E2eDevicePublic>[];
+    return decide(
+      mode: _mode,
+      peer: peer,
+      isEncryptedThread: facts.isE2e,
+      peerDevices: peerDevices,
+      myDevices: found[me] ?? const [],
+      keys: keys,
+      pinChanges: peerDevices.isEmpty
+          ? const []
+          : await _e2e.checkPins(found, isRecord: isLookup),
+    );
+  }
+
+  Future<void> _loadMode({bool isOnlineRead = true}) async {
     final key = 'e2e.mode.${_store.orgId}';
     _mode ??= await _store.readValue(key);
-    if (_isModeFresh || !_socket.isOnline) return;
+    if (!isOnlineRead || _isModeFresh || !_socket.isOnline) return;
     try {
       final data = await _socket.sdCall('e2e.status', {});
       final mode = idText(data['mode']);

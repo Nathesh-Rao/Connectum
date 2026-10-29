@@ -21,9 +21,11 @@ import '../../data/models/form_submission.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 
+import '../../data/e2e/e2e_models.dart';
 import '../../data/models/message.dart';
 import '../../data/models/reaction.dart';
 import '../../data/repositories/conversation_repository.dart';
+import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
 import '../../data/repositories/submission_repository.dart';
@@ -51,6 +53,7 @@ class ConversationController extends GetxController
     required this.shell,
     required this.socket,
     required this.store,
+    required this.e2e,
   });
 
   static const maxLength = 2000;
@@ -70,6 +73,7 @@ class ConversationController extends GetxController
   final HomeShellController? shell;
   final SocketService socket;
   final SessionStore store;
+  final E2eRepository e2e;
 
   /// The forms button's sheet. A form is posted into this conversation only
   /// where the server takes one (a direct message or a group).
@@ -78,7 +82,7 @@ class ConversationController extends GetxController
     connectivity: connectivity,
     shell: shell,
     convId: kind == 'dm' || kind == 'group' ? conversationId : null,
-    isEncrypted: () => isBlocked.value,
+    isEncrypted: () => isLocked.value,
   );
 
   final highlighted = <String>{}.obs;
@@ -97,7 +101,17 @@ class ConversationController extends GetxController
   final hasOlderError = false.obs;
   final hasMore = RxnBool();
   final isRetired = false.obs;
+
+  /// The composer is closed (the send can never work); [blockReason] says why.
   final isBlocked = false.obs;
+  final blockReason = RxnString();
+
+  /// The blocked reason is a changed security key the person can review.
+  final isKeyChange = false.obs;
+
+  /// Messages here are end-to-end encrypted (lock and hint in the composer).
+  final isLocked = false.obs;
+  final isReviewing = false.obs;
   final isAway = false.obs;
   final newAway = 0.obs;
   final length = 0.obs;
@@ -337,7 +351,10 @@ class ConversationController extends GetxController
       submissions.notice.value = null;
     });
     _onlineWorker = ever(socket.connection, (state) {
-      if (state == SocketState.online && !SeedUi.isActive) _sync();
+      if (state == SocketState.online && !SeedUi.isActive) {
+        _sync();
+        unawaited(_refreshGate(isLookup: true));
+      }
     });
     _load();
   }
@@ -349,11 +366,11 @@ class ConversationController extends GetxController
     if (SeedUi.isActive) {
       _list = SeedMessages.of(conversationId);
       hasMore.value = false;
-      isBlocked.value = conversation?.isEncrypted ?? false;
+      _applySeedGate();
       _startSeedTimers();
     } else {
       _list = await messages.open(conversationId);
-      isBlocked.value = await messages.isEncrypted(conversationId);
+      await _refreshGate();
     }
     final list = _list!;
     _firstUnreadId = _firstUnread(list.toList());
@@ -369,11 +386,56 @@ class ConversationController extends GetxController
 
   Future<void> _checkEncryptedOnline() async {
     if (!socket.isOnline) return;
-    final encrypted = await messages.isEncrypted(
-      conversationId,
-      isLookup: true,
-    );
-    if (encrypted != isBlocked.value) isBlocked.value = encrypted;
+    await _refreshGate(isLookup: true);
+  }
+
+  /// Asks what a send would do (caches only, unless [isLookup]) and sets the
+  /// composer state from the answer. An unknown answer does not block typing.
+  Future<void> _refreshGate({bool isLookup = false}) async {
+    final gate = await messages.sendGate(conversationId, isLookup: isLookup);
+    final hasHistory = await messages.hasEncryptedHistory(conversationId);
+    final isClosed = gate.isBlocked && !gate.isTransient;
+    isBlocked.value = isClosed;
+    blockReason.value = isClosed ? gate.message : null;
+    isKeyChange.value = isClosed && gate.isKeyChange;
+    isLocked.value = gate.isEncrypt || hasHistory;
+  }
+
+  void _applySeedGate() {
+    final seed = SeedUi.e2eGate(conversationId);
+    isLocked.value = conversation?.isEncrypted ?? false;
+    isBlocked.value = seed != null;
+    blockReason.value = seed?.reason;
+    isKeyChange.value = seed?.isKeyChange ?? false;
+  }
+
+  Future<void> recheckGate() => _refreshGate(isLookup: true);
+
+  /// Reads the keys for the key-changed sheet. Null when they cannot be read.
+  Future<E2eKeyReview?> loadKeyReview() async {
+    if (isReviewing.value) return null;
+    isReviewing.value = true;
+    try {
+      if (SeedUi.isActive) return SeedUi.keyReview(target);
+      return await e2e.reviewKeys(target);
+    } on SocketCallError catch (_) {
+      _say("Couldn't check the security keys right now.");
+      return null;
+    } finally {
+      isReviewing.value = false;
+    }
+  }
+
+  /// "Trust new key": pins what the sheet showed, then opens the composer
+  /// again if nothing else stands in the way.
+  Future<void> trustKey(E2eKeyReview review) async {
+    if (SeedUi.isActive) {
+      SeedUi.trust(conversationId);
+      _applySeedGate();
+      return;
+    }
+    await e2e.trust(review);
+    await _refreshGate(isLookup: true);
   }
 
   /// The light sync on entering: the latest page, when online.
@@ -636,13 +698,19 @@ class ConversationController extends GetxController
       _say('Messages can be up to $maxLength characters.');
       return;
     }
-    final replyTo = reply.value?.msgId;
+    final replied = reply.value;
+    final replyTo = replied?.msgId;
     text.clear();
     length.value = 0;
     reply.value = null;
     _lastTyping = DateTime.fromMillisecondsSinceEpoch(0);
     if (SeedUi.isActive) {
-      SeedMessages.send(conversationId, body, replyTo: replyTo);
+      SeedMessages.send(
+        conversationId,
+        body,
+        replyTo: replyTo,
+        isEncrypted: isLocked.value,
+      );
     } else {
       final result = await messages.sendText(
         conversationId,
@@ -650,8 +718,12 @@ class ConversationController extends GetxController
         replyTo: replyTo,
       );
       switch (result) {
-        case SendResult.blockedEncrypted:
-          isBlocked.value = true;
+        case SendResult.blocked:
+          text.text = body;
+          length.value = body.characters.length;
+          reply.value = replied;
+          _say(messages.lastBlock);
+          await _refreshGate();
         case SendResult.tooLong:
           _say('Messages can be up to $maxLength characters.');
         case SendResult.invalid:

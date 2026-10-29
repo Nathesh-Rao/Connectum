@@ -1,3 +1,4 @@
+import '../e2e/e2e_models.dart';
 import 'ids.dart';
 
 enum MessageStatus { pending, sending, sent, delivered, read, failed }
@@ -52,6 +53,14 @@ class Message {
 
   /// Encrypted and not readable on this device (yet).
   bool get isEncryptedUnsupported => isEncrypted && decryptState != 'ok';
+
+  /// Why an encrypted send failed, in plain words; null for other failures.
+  String? get secureFailure {
+    final reason = failReason;
+    return reason != null && reason.startsWith(E2eSendDecision.failTag)
+        ? reason.substring(E2eSendDecision.failTag.length)
+        : null;
+  }
 
   bool get isLocalTemp => msgId.startsWith('temp-');
 

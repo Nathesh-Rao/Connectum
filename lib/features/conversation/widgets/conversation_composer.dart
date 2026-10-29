@@ -6,16 +6,20 @@ import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../data/models/message.dart';
 import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
+import 'key_change_sheet.dart';
 
 /// The composer: a field that grows to five lines, a send button that wakes
 /// as text appears, an attach button that is a placeholder for now and the
-/// forms button. In an encrypted thread the field is replaced by a blocked
-/// note, and the forms button stays.
+/// forms button. In an encrypted thread the lock and the hint "Encrypted
+/// message" show; where a send can never work (the peer has no encryption set
+/// up, a security key changed) the field is replaced by a note saying why, and
+/// the forms button stays.
 class ConversationComposer extends StatelessWidget {
   const ConversationComposer({super.key, required this.controller});
 
@@ -26,6 +30,7 @@ class ConversationComposer extends StatelessWidget {
     final c = controller;
     return Obx(() {
       if (c.isBlocked.value) return _Blocked(controller: c);
+      final isLocked = c.isLocked.value;
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,11 +98,24 @@ class ConversationComposer extends StatelessWidget {
                   FormsButton(
                     onTap: () => FormsPickerSheet.show(context, c.picker),
                   ),
+                  if (isLocked)
+                    const SizedBox(
+                      height: AppSpacing.composerButton,
+                      child: Padding(
+                        padding: EdgeInsets.only(left: AppSpacing.xxs),
+                        child: Icon(
+                          Icons.lock,
+                          size: AppSpacing.statusIcon,
+                          color: AppColors.yesText,
+                          semanticLabel: 'End-to-end encrypted',
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: AppTextField(
                       controller: c.text,
                       focusNode: c.focus,
-                      hint: 'Type a message…',
+                      hint: isLocked ? 'Encrypted message' : 'Type a message…',
                       minLines: 1,
                       maxLines: 5,
                       minHeight: AppSpacing.composerButton,
@@ -320,11 +338,24 @@ class _Blocked extends StatelessWidget {
           isAnimated: false,
         ),
         const SizedBox(width: AppSpacing.sm),
-        const Expanded(
-          child: Text(
-            "Can't send in encrypted chats from mobile yet",
-            style: AppText.readable,
+        Expanded(
+          child: Obx(
+            () => Text(
+              controller.blockReason.value ??
+                  "Can't send in this encrypted chat yet",
+              style: AppText.readable,
+            ),
           ),
+        ),
+        Obx(
+          () => controller.isKeyChange.value
+              ? AppButton.text(
+                  label: 'Review key',
+                  tone: AppTextButtonTone.accent,
+                  isLoading: controller.isReviewing.value,
+                  onPressed: () => KeyChangeSheet.open(context, controller),
+                )
+              : const SizedBox.shrink(),
         ),
         FormsButton(
           onTap: () => FormsPickerSheet.show(context, controller.picker),

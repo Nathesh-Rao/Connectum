@@ -126,3 +126,96 @@ class E2eEncryptedFile {
   final String key;
   final String iv;
 }
+
+enum E2eSendVerdict { plain, encrypt, blocked, unknown }
+
+/// What a send into a direct message must do. [plain] is the only verdict
+/// that lets text leave the phone unencrypted.
+class E2eSendDecision {
+  const E2eSendDecision.plain()
+    : verdict = E2eSendVerdict.plain,
+      headline = null,
+      reason = null,
+      recipients = const [],
+      keys = null,
+      isKeyChange = false,
+      isTransient = false,
+      keyChangeUser = null;
+
+  const E2eSendDecision.unknown()
+    : verdict = E2eSendVerdict.unknown,
+      headline = null,
+      reason = null,
+      recipients = const [],
+      keys = null,
+      isKeyChange = false,
+      isTransient = false,
+      keyChangeUser = null;
+
+  const E2eSendDecision.encrypt({
+    required this.recipients,
+    required E2eDeviceKeys this.keys,
+  }) : verdict = E2eSendVerdict.encrypt,
+       headline = null,
+       reason = null,
+       isKeyChange = false,
+       isTransient = false,
+       keyChangeUser = null;
+
+  /// [isTransient]: may work on a later try (a lookup failed), so the composer
+  /// stays open and the message fails at send time with a retry.
+  const E2eSendDecision.blocked(
+    String this.headline, {
+    this.reason,
+    this.isKeyChange = false,
+    this.isTransient = false,
+    this.keyChangeUser,
+  }) : verdict = E2eSendVerdict.blocked,
+       recipients = const [],
+       keys = null;
+
+  /// Stored in `fail_reason` of a message that could not be sent securely;
+  /// [Message.secureFailure] strips it again.
+  static const failTag = 'e2e:';
+  static const cantSend = "Can't send securely right now";
+
+  final E2eSendVerdict verdict;
+  final String? headline;
+  final String? reason;
+  final List<E2eDevicePublic> recipients;
+  final E2eDeviceKeys? keys;
+  final bool isKeyChange;
+  final bool isTransient;
+  final String? keyChangeUser;
+
+  bool get isBlocked => verdict == E2eSendVerdict.blocked;
+  bool get isEncrypt => verdict == E2eSendVerdict.encrypt;
+
+  /// The sentence shown to the person.
+  String get message => reason == null ? '$headline' : '$headline: $reason';
+}
+
+/// A device whose key differs from the one pinned when it was first seen.
+class E2ePinChange {
+  const E2ePinChange({required this.user, required this.device});
+
+  final String user;
+  final E2eDevicePublic device;
+}
+
+/// What the key-changed sheet shows.
+class E2eKeyReview {
+  const E2eKeyReview({
+    required this.user,
+    required this.safetyNumber,
+    required this.devices,
+    required this.changed,
+  });
+
+  final String user;
+  final String safetyNumber;
+
+  /// The directory as the sheet saw it; trusting pins exactly these.
+  final Map<String, List<E2eDevicePublic>> devices;
+  final List<E2ePinChange> changed;
+}

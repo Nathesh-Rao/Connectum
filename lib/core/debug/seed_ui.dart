@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../data/e2e/e2e_models.dart';
 import '../../data/models/conversation.dart';
 import '../../data/models/form_definition.dart';
 import '../../data/models/form_option.dart';
@@ -101,6 +102,41 @@ class SeedUi {
   static const _extraRows = int.fromEnvironment('SEED_ROWS');
 
   static const online = {'priya', 'meera'};
+
+  static final _trusted = <String>{};
+
+  /// The composer state of the encrypted sample threads. dm:ravi: this phone is
+  /// registered, so it unlocks (null). dm:isha: the peer has no device. dm:arjun:
+  /// a security key changed until it is trusted.
+  static ({String reason, bool isKeyChange})? e2eGate(String convId) {
+    if (convId == 'dm:isha') {
+      return (reason: "isha hasn't set up encryption yet", isKeyChange: false);
+    }
+    if (convId == 'dm:zoya' && !_trusted.contains(convId)) {
+      return (reason: "zoya's security key changed", isKeyChange: true);
+    }
+    return null;
+  }
+
+  static void trust(String convId) => _trusted.add(convId);
+
+  static E2eKeyReview keyReview(String user) => E2eKeyReview(
+    user: user,
+    safetyNumber:
+        '48210 93751 07264 55819 30427 71586 12093 64875 20318 97640 53172 80469',
+    devices: const {},
+    changed: [
+      E2ePinChange(
+        user: user,
+        device: const E2eDevicePublic(
+          id: '3f9a1c7e5b2d4086a1f0c9d8e7b6a5f4',
+          ecdh: '',
+          sign: '',
+          label: 'Chrome on Windows',
+        ),
+      ),
+    ],
+  );
   static const offline = {'arjun', 'ravi'};
 
   static List<Conversation>? _conversations;
@@ -691,6 +727,15 @@ class SeedUi {
         lastFrom: 'isha',
         isEncrypted: true,
         lastIsEncrypted: true,
+      ),
+      Conversation(
+        convId: 'dm:zoya',
+        kind: 'dm',
+        title: 'Zoya Ali',
+        lastText: 'Thanks, noted.',
+        lastTs: ago(const Duration(hours: 5, minutes: 40)),
+        lastFrom: 'zoya',
+        isEncrypted: true,
       ),
       Conversation(
         convId: 'dm:sana',

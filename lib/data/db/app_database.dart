@@ -21,7 +21,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 6;
+  static const _version = 7;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -109,6 +109,15 @@ class AppDatabase {
       'ALTER TABLE messages ADD COLUMN plaintext TEXT',
       'ALTER TABLE messages ADD COLUMN decrypt_state TEXT',
       "UPDATE messages SET decrypt_state = 'pending' WHERE is_encrypted_unsupported = 1",
+    ],
+    // Pins hold public keys only and are kept on sign-out (not in
+    // _scopedTables) so a key that changed while signed out is still noticed.
+    7: [
+      '''CREATE TABLE e2e_pins(
+        org_id TEXT NOT NULL, user_id TEXT NOT NULL, device_user TEXT NOT NULL,
+        device_id TEXT NOT NULL, ecdh TEXT NOT NULL, sign TEXT NOT NULL,
+        first_ts INTEGER, trusted_ts INTEGER,
+        PRIMARY KEY(org_id, user_id, device_user, device_id))''',
     ],
   };
 

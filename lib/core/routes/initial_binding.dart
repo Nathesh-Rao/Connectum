@@ -39,9 +39,12 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     connectivity.attachSocket(socket.connection);
-    final policy = Get.put(EncryptionPolicy(socket, store), permanent: true);
     final e2e = Get.put(
-      E2eRepository(E2eKeyStore(), socket, store),
+      E2eRepository(E2eKeyStore(), socket, store, db),
+      permanent: true,
+    );
+    final policy = Get.put(
+      EncryptionPolicy(socket, store, e2e),
       permanent: true,
     );
     final conversations = Get.put(

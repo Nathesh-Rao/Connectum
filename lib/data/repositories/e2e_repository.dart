@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
+import '../db/app_database.dart';
 import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_key_store.dart';
 import '../e2e/e2e_models.dart';
@@ -21,7 +22,7 @@ enum E2eRegisterResult {
 }
 
 class E2eRepository extends GetxService {
-  E2eRepository(this._keyStore, this._socket, this._session);
+  E2eRepository(this._keyStore, this._socket, this._session, this._db);
 
   static const _directoryTtl = Duration(minutes: 5);
   static const _labelMax = 60;
@@ -29,6 +30,7 @@ class E2eRepository extends GetxService {
   final E2eKeyStore _keyStore;
   final SocketService _socket;
   final SessionStore _session;
+  final AppDatabase _db;
   final _crypto = E2eCrypto();
 
   final mode = ''.obs;
@@ -163,6 +165,157 @@ class E2eRepository extends GetxService {
     return out;
   }
 
+  /// The directory entries when every one of [users] is still fresh, else
+  /// null. Never touches the network.
+  Map<String, List<E2eDevicePublic>>? cachedDevices(List<String> users) {
+    final out = <String, List<E2eDevicePublic>>{};
+    for (final name in {for (final u in users) u.trim().toLowerCase()}) {
+      final hit = _directory[name];
+      if (hit == null || DateTime.now().difference(hit.at) >= _directoryTtl) {
+        return null;
+      }
+      out[name] = hit.devices;
+    }
+    return out;
+  }
+
+  void invalidate(Iterable<String> users) {
+    for (final u in users) {
+      _directory.remove(u.trim().toLowerCase());
+    }
+  }
+
+  // ---- pins (trust on first use) -------------------------------------------
+
+  /// Devices of [current] whose id is pinned with other keys. Pure.
+  static List<E2eDevicePublic> pinMismatches(
+    Map<String, ({String ecdh, String sign})> pinned,
+    List<E2eDevicePublic> current,
+  ) => [
+    for (final d in current)
+      if (pinned[d.id] != null &&
+          (pinned[d.id]!.ecdh != d.ecdh || pinned[d.id]!.sign != d.sign))
+        d,
+  ];
+
+  /// Compares each listed device with its pin. With [isRecord] a device seen
+  /// for the first time is pinned. A changed key is returned, never replaced:
+  /// only [trust] replaces a pin.
+  Future<List<E2ePinChange>> checkPins(
+    Map<String, List<E2eDevicePublic>> byUser, {
+    required bool isRecord,
+  }) async {
+    final org = _org;
+    final scopeUser = _session.userId;
+    if (org == null || scopeUser == null) return const [];
+    final rows = await _db.query(
+      'SELECT device_user, device_id, ecdh, sign FROM e2e_pins WHERE org_id = ? AND user_id = ?',
+      [org, scopeUser],
+    );
+    final pinned = <String, Map<String, ({String ecdh, String sign})>>{};
+    for (final r in rows) {
+      pinned.putIfAbsent(idText(r['device_user']), () => {})[idText(
+        r['device_id'],
+      )] = (
+        ecdh: idText(r['ecdh']),
+        sign: idText(r['sign']),
+      );
+    }
+    final changes = <E2ePinChange>[];
+    for (final entry in byUser.entries) {
+      final known = pinned[entry.key] ?? const {};
+      for (final d in pinMismatches(known, entry.value)) {
+        changes.add(E2ePinChange(user: entry.key, device: d));
+      }
+      if (!isRecord) continue;
+      for (final d in entry.value.where((d) => !known.containsKey(d.id))) {
+        await _db.insert(
+          'INSERT OR IGNORE INTO e2e_pins(org_id, user_id, device_user, device_id, ecdh, sign, first_ts) '
+          'VALUES(?,?,?,?,?,?,?)',
+          [
+            org,
+            scopeUser,
+            entry.key,
+            d.id,
+            d.ecdh,
+            d.sign,
+            DateTime.now().millisecondsSinceEpoch,
+          ],
+        );
+      }
+    }
+    return changes;
+  }
+
+  /// What the key-changed sheet shows: a fresh directory read, the devices
+  /// whose key differs from the pin, and the safety number for the pair.
+  Future<E2eKeyReview> reviewKeys(String peer) async {
+    final me = _me ?? '';
+    final name = peer.trim().toLowerCase();
+    final devices = await devicesOf([name, me], isForced: true);
+    final changed = await checkPins(devices, isRecord: false);
+    return E2eKeyReview(
+      user: name,
+      safetyNumber: await _crypto.safetyNumber(
+        devices[me] ?? const [],
+        devices[name] ?? const [],
+      ),
+      devices: devices,
+      changed: changed,
+    );
+  }
+
+  /// "Trust new key": pins the keys the person was shown and records when.
+  Future<void> trust(E2eKeyReview review) async {
+    final org = _org;
+    final scopeUser = _session.userId;
+    if (org == null || scopeUser == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final c in review.changed) {
+      await _db.update(
+        'UPDATE e2e_pins SET ecdh = ?, sign = ?, trusted_ts = ? '
+        'WHERE org_id = ? AND user_id = ? AND device_user = ? AND device_id = ?',
+        [
+          c.device.ecdh,
+          c.device.sign,
+          now,
+          org,
+          scopeUser,
+          c.user,
+          c.device.id,
+        ],
+      );
+      if (kDebugMode) {
+        debugPrint('e2e: trusted new key for ${c.user} device ${c.device.id}');
+      }
+    }
+  }
+
+  // ---- sending -----------------------------------------------------------
+
+  /// The envelope for [text], wrapped for every device in [decision] (the
+  /// peer's and all of mine). Called only for an encrypt verdict.
+  Future<String> seal(
+    E2eSendDecision decision,
+    String convId,
+    String text,
+  ) async {
+    final keys = decision.keys;
+    final user = _me;
+    final conv = expectedConv(convId);
+    if (!decision.isEncrypt || keys == null || user == null || conv == null) {
+      throw const E2eException('not_sealable', 'nothing to encrypt for');
+    }
+    final byId = {for (final d in decision.recipients) d.id: d};
+    return _crypto.buildEnvelope(
+      user: user,
+      keys: keys,
+      conv: conv,
+      recipients: byId.values.toList(),
+      text: text,
+    );
+  }
+
   /// `e2e.group_devices`: members and their devices. Not cached.
   Future<Map<String, List<E2eDevicePublic>>> groupDevices(String group) async {
     final data = await _socket.sdCall('e2e.group_devices', {'group': group});
@@ -235,6 +388,7 @@ class E2eRepository extends GetxService {
           ? E2eRegisterResult.limitReached
           : E2eRegisterResult.refused;
     }
+    _directory.remove(user);
     await refreshStatus();
     return E2eRegisterResult.registered;
   }
@@ -259,6 +413,7 @@ class E2eRepository extends GetxService {
     _keys = null;
     hasKeys.value = false;
     deviceId.value = '';
+    _directory.remove(user);
     await refreshStatus();
     return true;
   }

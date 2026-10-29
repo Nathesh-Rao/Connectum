@@ -81,9 +81,14 @@ class MessageBubble extends StatelessWidget {
             _Body(message: m),
             const SizedBox(height: AppSpacing.xxs),
             if (failed)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 2),
-                child: Text('Not sent. Tap to retry', style: AppText.error),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  m.secureFailure == null
+                      ? 'Not sent. Tap to retry'
+                      : 'Not sent. ${m.secureFailure}. Tap to retry',
+                  style: AppText.error,
+                ),
               ),
             Align(
               alignment: Alignment.centerRight,

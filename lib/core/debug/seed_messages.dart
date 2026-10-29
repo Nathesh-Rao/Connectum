@@ -271,6 +271,18 @@ class SeedMessages {
         return [
           _m(c, 4101, 'isha', 'e2e1:EEEE', 330, decryptState: 'cant_decrypt'),
         ];
+      case 'dm:zoya':
+        return [
+          _m(
+            c,
+            4201,
+            me,
+            'Can you send the signed copy?',
+            340,
+            decryptState: 'ok',
+          ),
+          _m(c, 4202, 'zoya', 'Thanks, noted.', 335, decryptState: 'ok'),
+        ];
       case 'dm:sana':
         return List.generate(300, (i) {
           final isMine = i % 3 == 0;
@@ -435,7 +447,12 @@ class SeedMessages {
   }
 
   /// Adds a message of mine and walks it through the send states.
-  static void send(String convId, String text, {String? replyTo}) {
+  static void send(
+    String convId,
+    String text, {
+    String? replyTo,
+    bool isEncrypted = false,
+  }) {
     final list = of(convId);
     final id = 'temp-${_next++}';
     final isDm = convId.startsWith('dm:');
@@ -449,6 +466,8 @@ class SeedMessages {
         ts: DateTime.now().millisecondsSinceEpoch,
         status: MessageStatus.pending,
         replyTo: replyTo,
+        isEncrypted: isEncrypted,
+        decryptState: isEncrypted ? 'ok' : null,
         localSeq: _next,
         cid: newCid(),
       ),

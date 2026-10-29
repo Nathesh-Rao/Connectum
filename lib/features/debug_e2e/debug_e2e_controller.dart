@@ -10,6 +10,7 @@ import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_random.dart';
 import '../../core/config/app_config.dart';
 import '../../data/repositories/e2e_repository.dart';
+import '../../data/repositories/encryption_policy.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
 
@@ -167,6 +168,7 @@ class DebugE2eController extends GetxController {
       _encodings(vectors);
       await _roundTrip();
       await _repositoryOpen();
+      await _sendChecks();
       await _keyStoreRoundTrip();
     } catch (e) {
       _add('self-test aborted', false, e.runtimeType.toString());
@@ -611,6 +613,302 @@ class DebugE2eController extends GetxController {
       if (unknown.code != 'unknown_sender_device') return 'unknown not refused';
       return null;
     });
+  }
+
+  // ---- sending (fake devices only, nothing leaves the phone) ----------------
+
+  Future<void> _sendChecks() async {
+    final alice1 = await _crypto.generateDeviceKeys();
+    final alice2 = await _crypto.generateDeviceKeys();
+    final bob1 = await _crypto.generateDeviceKeys();
+    final bob2 = await _crypto.generateDeviceKeys();
+    final outsider = await _crypto.generateDeviceKeys();
+    final conv = E2eCrypto.dmLabel('alice', 'bob');
+    final recipients = [alice1, alice2, bob1, bob2].map((k) => k.asPublic);
+    const text = 'Send test ✓ héllo 你好 😀';
+    Future<String?> signKey(String user, String dev) async =>
+        user == 'alice' && dev == alice1.id ? alice1.signPub : null;
+    Future<String> build({String body = text}) => _crypto.buildEnvelope(
+      user: 'alice',
+      keys: alice1,
+      conv: conv,
+      recipients: recipients.toList(),
+      text: body,
+    );
+    Future<String?> opens(
+      String env,
+      E2eDeviceKeys reader, {
+      String? expectConv,
+    }) async {
+      try {
+        final opened = await _crypto.openEnvelope(
+          text: env,
+          keys: reader,
+          signKeyFor: signKey,
+          expectConv: expectConv ?? conv,
+        );
+        return opened.text == text ? 'ok' : 'text differs';
+      } on E2eException catch (e) {
+        return e.code;
+      }
+    }
+
+    String edit(String env, void Function(Map<String, dynamic> json) change) {
+      final json =
+          jsonDecode(env.substring(E2eCrypto.prefix.length))
+              as Map<String, dynamic>;
+      change(json);
+      return E2eCrypto.prefix + jsonEncode(json);
+    }
+
+    await _check('send: envelope shape and wire line', () async {
+      final env = await build();
+      final line = '/c m-test /msg bob $env';
+      if (!E2eCrypto.isEnvelope(env)) return 'no prefix';
+      if (env.contains('\n') || env.contains(' ')) return 'not one token';
+      if (env.codeUnits.any((c) => c > 126)) return 'not ascii';
+      if (env.length > 120000) return 'over the server cap';
+      if (line.split(' ').length != 5) return 'line splits wrongly';
+      final json =
+          jsonDecode(env.substring(E2eCrypto.prefix.length))
+              as Map<String, dynamic>;
+      final keys = json['keys'] as Map;
+      if (keys.length != 4) return 'expected 4 wraps, got ${keys.length}';
+      if (!keys.containsKey(alice2.id)) return 'my other device left out';
+      if (json['dev'] != alice1.id || json['from'] != 'alice') return 'sender';
+      if (json['ts'] is! int) return 'ts is not an integer';
+      for (final f in ['mid', 'ek', 'iv', 'ct', 'sig']) {
+        if ((json[f] as String).contains('=')) return '$f has padding';
+      }
+      return (json['mid'] as String).length == 22 ? null : 'mid length';
+    });
+    await _check('send: sender device and peer devices open it', () async {
+      final env = await build();
+      for (final reader in [alice1, alice2, bob1, bob2]) {
+        final r = await opens(env, reader);
+        if (r != 'ok') return r;
+      }
+      return null;
+    });
+    await _check('send: a device outside the list cannot open it', () async {
+      final r = await opens(await build(), outsider);
+      return r == 'not_for_this_device' ? null : 'got $r';
+    });
+    await _check('send: two messages share nothing random', () async {
+      final a = jsonDecode((await build()).substring(5)) as Map;
+      final b = jsonDecode((await build()).substring(5)) as Map;
+      for (final f in ['mid', 'ek', 'iv', 'ct']) {
+        if (a[f] == b[f]) return '$f repeated';
+      }
+      return null;
+    });
+    await _check('send: long text and padding edge', () async {
+      for (final n in [1, 59, 60, 64, 2000]) {
+        final body = 'x' * n;
+        final env = await build(body: body);
+        final opened = await _crypto.openEnvelope(
+          text: env,
+          keys: bob2,
+          signKeyFor: signKey,
+          expectConv: conv,
+        );
+        if (opened.text != body) return 'length $n differs';
+      }
+      return null;
+    });
+    await _check('send: tampering is refused', () async {
+      final env = await build();
+      Future<String?> expect(String name, String bad, String code) async {
+        final got = await opens(bad, bob1);
+        return got == code ? null : '$name: got $got, want $code';
+      }
+
+      final cases = <(String, String, String)>[
+        (
+          'ciphertext',
+          edit(env, (j) => j['ct'] = _flip(j['ct'] as String)),
+          'bad_signature',
+        ),
+        (
+          'timestamp',
+          edit(env, (j) => j['ts'] = (j['ts'] as int) + 1),
+          'bad_signature',
+        ),
+        (
+          'conversation',
+          edit(env, (j) => j['conv'] = 'dm:alice|carol'),
+          'wrong_conversation',
+        ),
+        (
+          'sender name',
+          edit(env, (j) => j['from'] = 'mallory'),
+          'unknown_sender_device',
+        ),
+        (
+          'signature',
+          edit(env, (j) => j['sig'] = _flip(j['sig'] as String)),
+          'bad_signature',
+        ),
+        (
+          'my wrap removed',
+          edit(env, (j) => (j['keys'] as Map).remove(bob1.id)),
+          'not_for_this_device',
+        ),
+        (
+          'my wrap altered',
+          edit(env, (j) {
+            final w = (j['keys'] as Map)[bob1.id] as Map;
+            w['w'] = _flip(w['w'] as String);
+          }),
+          'decrypt_failed',
+        ),
+        (
+          'wrap moved to another device',
+          edit(env, (j) {
+            final k = j['keys'] as Map;
+            k[bob1.id] = k[bob2.id];
+          }),
+          'decrypt_failed',
+        ),
+      ];
+      for (final c in cases) {
+        final problem = await expect(c.$1, c.$2, c.$3);
+        if (problem != null) return problem;
+      }
+      return null;
+    });
+    await _check('send: a signature from another device is refused', () async {
+      final forged = await _crypto.buildEnvelope(
+        user: 'alice',
+        keys: alice2,
+        conv: conv,
+        recipients: recipients.toList(),
+        text: text,
+      );
+      // Claims to come from device alice1 but is signed with alice2's key.
+      final claimed = edit(forged, (j) => j['dev'] = alice1.id);
+      final r = await opens(claimed, bob1);
+      return r == 'bad_signature' ? null : 'got $r';
+    });
+
+    _policyChecks(alice1, alice2.asPublic, bob1.asPublic);
+  }
+
+  String _flip(String b64) {
+    final first = b64.codeUnitAt(0);
+    return String.fromCharCode(first == 0x41 ? 0x42 : 0x41) + b64.substring(1);
+  }
+
+  /// The one rule for "plain, encrypt or blocked", on made-up inputs.
+  void _policyChecks(
+    E2eDeviceKeys mine,
+    E2eDevicePublic otherOfMine,
+    E2eDevicePublic peer,
+  ) {
+    E2eSendVerdict verdict({
+      String? mode = 'optional',
+      bool isEncryptedThread = false,
+      List<E2eDevicePublic>? peerDevices,
+      List<E2eDevicePublic>? myDevices,
+      E2eDeviceKeys? keys,
+      List<E2ePinChange> pinChanges = const [],
+      bool hasKeys = true,
+    }) => EncryptionPolicy.decide(
+      mode: mode,
+      peer: 'bob',
+      isEncryptedThread: isEncryptedThread,
+      peerDevices: peerDevices ?? [peer],
+      myDevices: myDevices ?? [mine.asPublic, otherOfMine],
+      keys: hasKeys ? (keys ?? mine) : null,
+      pinChanges: pinChanges,
+    ).verdict;
+    void expect(String name, E2eSendVerdict got, E2eSendVerdict want) => _add(
+      'policy: $name',
+      got == want,
+      got == want ? '' : 'got ${got.name}',
+    );
+
+    expect('mode off sends plain', verdict(mode: 'off'), E2eSendVerdict.plain);
+    expect(
+      'mode off ignores a peer with devices',
+      verdict(mode: 'off', isEncryptedThread: true),
+      E2eSendVerdict.plain,
+    );
+    expect('unknown mode waits', verdict(mode: null), E2eSendVerdict.unknown);
+    expect('peer with a device encrypts', verdict(), E2eSendVerdict.encrypt);
+    expect(
+      'required mode, peer with a device',
+      verdict(mode: 'required'),
+      E2eSendVerdict.encrypt,
+    );
+    expect(
+      'optional, peer without devices, no history: plain',
+      verdict(peerDevices: []),
+      E2eSendVerdict.plain,
+    );
+    expect(
+      'optional, peer without devices, encrypted history: blocked',
+      verdict(peerDevices: [], isEncryptedThread: true),
+      E2eSendVerdict.blocked,
+    );
+    expect(
+      'required, peer without devices: blocked',
+      verdict(mode: 'required', peerDevices: []),
+      E2eSendVerdict.blocked,
+    );
+    expect(
+      'this phone not registered: blocked, not plain',
+      verdict(myDevices: [otherOfMine]),
+      E2eSendVerdict.blocked,
+    );
+    expect(
+      'no keys on this phone: blocked, not plain',
+      verdict(hasKeys: false),
+      E2eSendVerdict.blocked,
+    );
+    final changed = EncryptionPolicy.decide(
+      mode: 'optional',
+      peer: 'bob',
+      isEncryptedThread: false,
+      peerDevices: [peer],
+      myDevices: [mine.asPublic],
+      keys: mine,
+      pinChanges: [E2ePinChange(user: 'bob', device: peer)],
+    );
+    _add(
+      'policy: a changed key blocks and offers a review',
+      changed.isBlocked && changed.isKeyChange && changed.recipients.isEmpty,
+    );
+    final sent = EncryptionPolicy.decide(
+      mode: 'optional',
+      peer: 'bob',
+      isEncryptedThread: false,
+      peerDevices: [peer],
+      myDevices: [mine.asPublic, otherOfMine],
+      keys: mine,
+      pinChanges: const [],
+    );
+    _add(
+      'policy: recipients are the peer and all my devices',
+      sent.recipients.length == 3 &&
+          sent.recipients.any((d) => d.id == mine.id) &&
+          sent.recipients.any((d) => d.id == otherOfMine.id),
+    );
+
+    const pin = (ecdh: 'E1', sign: 'S1');
+    const same = E2eDevicePublic(id: 'd1', ecdh: 'E1', sign: 'S1');
+    const other = E2eDevicePublic(id: 'd1', ecdh: 'E2', sign: 'S1');
+    const newId = E2eDevicePublic(id: 'd2', ecdh: 'E9', sign: 'S9');
+    _add(
+      'pins: same key passes, other key or sign is a change, a new id is not',
+      E2eRepository.pinMismatches({'d1': pin}, [same, newId]).isEmpty &&
+          E2eRepository.pinMismatches({'d1': pin}, [other]).length == 1 &&
+          E2eRepository.pinMismatches(
+                {'d1': pin},
+                [const E2eDevicePublic(id: 'd1', ecdh: 'E1', sign: 'S2')],
+              ).length ==
+              1,
+    );
   }
 
   Future<void> _keyStoreRoundTrip() async {
