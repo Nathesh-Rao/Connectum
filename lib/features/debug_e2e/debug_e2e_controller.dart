@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +8,10 @@ import '../../data/e2e/e2e_crypto.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_random.dart';
+import '../../core/config/app_config.dart';
 import '../../data/repositories/e2e_repository.dart';
+import '../../data/session_store.dart';
+import '../../data/socket/socket_service.dart';
 
 class E2eCheck {
   const E2eCheck(this.name, this.isPassed, [this.detail = '']);
@@ -20,18 +22,22 @@ class E2eCheck {
 }
 
 class DebugE2eController extends GetxController {
-  DebugE2eController({required E2eKeyStore keyStore, required this.e2e})
-    : _keyStore = keyStore;
+  DebugE2eController({
+    required E2eKeyStore keyStore,
+    required this.e2e,
+    required this.session,
+    required this.socket,
+  }) : _keyStore = keyStore;
 
   static const _vectorsAsset = 'mobile-handoff/e2e-vectors.json';
 
   final E2eKeyStore _keyStore;
   final E2eRepository e2e;
+  final SessionStore session;
+  final SocketService socket;
   final _crypto = E2eCrypto();
 
-  final label = TextEditingController(
-    text: 'Connectum mobile (${Platform.operatingSystem})',
-  );
+  final label = TextEditingController(text: 'Connectum mobile (moto g32)');
   final message = ''.obs;
   final isBusy = false.obs;
 
@@ -58,7 +64,37 @@ class DebugE2eController extends GetxController {
     super.onClose();
   }
 
+  /// Why the server buttons cannot work right now, or null when they can.
+  /// Reads the session and socket Rx, so an Obx around it rebuilds.
+  String? get blockedReason {
+    if (!AppConfig.isConfigured) {
+      return 'Server address not set (run with BASE_URL and WS_URL)';
+    }
+    if (session.current.value == null) return 'Not signed in';
+    if (socket.connection.value != SocketState.online) return 'Socket offline';
+    return null;
+  }
+
+  /// Why Register cannot be tapped, or null. It needs a status read that
+  /// succeeded, an encryption mode that is on and a free device slot.
+  String? get registerBlockedReason {
+    final reason = blockedReason;
+    if (reason != null) return reason;
+    if (!e2e.isStatusKnown.value) return 'Tap Refresh status first';
+    final mode = e2e.mode.value;
+    if (mode == 'off') return 'Encryption is off in this organisation';
+    if (mode != 'optional' && mode != 'required') {
+      return 'Unknown encryption mode "$mode"';
+    }
+    if (e2e.maxDevices.value > 0 &&
+        e2e.myDevices.length >= e2e.maxDevices.value) {
+      return 'Device limit reached';
+    }
+    return null;
+  }
+
   Future<void> refreshDevices() async {
+    armed.value = '';
     isBusy.value = true;
     final isOk = await e2e.refreshStatus();
     message.value = isOk ? 'Status refreshed.' : 'Could not read the status.';
@@ -68,18 +104,19 @@ class DebugE2eController extends GetxController {
   /// Registers this phone. Generates keys only when none exist, and asks for
   /// a second tap when keys exist that the server does not know.
   Future<void> register() async {
-    if (isBusy.value) return;
-    final hasUnregistered = e2e.hasKeys.value && !e2e.isRegistered;
-    if (hasUnregistered && armed.value != 'register') {
+    if (isBusy.value || registerBlockedReason != null) return;
+    if (armed.value != 'register') {
       armed.value = 'register';
-      message.value =
-          'Keys exist on this phone but the server does not list this device. '
-          'Tap Register again to register those keys.';
+      message.value = e2e.hasKeys.value && !e2e.isRegistered
+          ? 'Keys exist on this phone but the server does not list this device. '
+                'Tap Register again to register those keys.'
+          : 'This creates keys on this phone and registers it as a device. '
+                'Tap Register again to confirm.';
       return;
     }
     armed.value = '';
     isBusy.value = true;
-    final result = await e2e.register(label.text, isConfirmed: hasUnregistered);
+    final result = await e2e.register(label.text, isConfirmed: true);
     message.value = switch (result) {
       E2eRegisterResult.registered => 'Registered this phone.',
       E2eRegisterResult.alreadyRegistered =>
