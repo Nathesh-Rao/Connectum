@@ -14,6 +14,9 @@ class AppDurations {
   static const copiedHold = Duration(milliseconds: 1500);
   static const spin = Duration(milliseconds: 900);
   static const stateFloat = Duration(seconds: 3);
+  static const sheetResize = Duration(milliseconds: 230);
+  static const scanSweep = Duration(seconds: 1);
+  static const scanSuccess = Duration(milliseconds: 300);
 }
 
 class AppCurves {

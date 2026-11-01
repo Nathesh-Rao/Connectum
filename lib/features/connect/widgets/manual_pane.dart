@@ -18,6 +18,7 @@ class ManualPane extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
@@ -36,7 +37,10 @@ class ManualPane extends StatelessWidget {
           onSubmitted: (_) => c.submitManual(),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Expanded(
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxHeight: AppSpacing.connectResultsMaxHeight,
+          ),
           child: SingleChildScrollView(
             child: Obx(() {
               if (c.isSearching.value) {
@@ -49,6 +53,7 @@ class ManualPane extends StatelessWidget {
               }
               final error = c.searchMessage.value;
               return Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (error != null) Text(error, style: AppText.readable),

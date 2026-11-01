@@ -1,9 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../data/models/identity_info.dart';
 import 'connect_controller.dart';
 import 'widgets/confirm_pane.dart';
@@ -22,8 +20,8 @@ class ConnectView extends GetView<ConnectController> {
   Widget build(BuildContext context) {
     final c = controller;
     return AnimatedSize(
-      duration: AppDurations.fast,
-      curve: AppCurves.out,
+      duration: AppDurations.sheetResize,
+      curve: AppCurves.inOut,
       alignment: Alignment.topCenter,
       child: Obx(() {
         final phase = c.phase.value;
@@ -55,18 +53,13 @@ class _Entry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    return SizedBox(
-      height:
-          AppSpacing.connectPaneHeight +
-          (kDebugMode ? AppSpacing.connectDebugExtra : 0),
-      child: Obx(
-        () => _Fade(
-          child: KeyedSubtree(
-            key: ValueKey(c.mode.value),
-            child: c.mode.value == ConnectMode.scan
-                ? ScannerPane(controller: c)
-                : ManualPane(controller: c),
-          ),
+    return Obx(
+      () => _Fade(
+        child: KeyedSubtree(
+          key: ValueKey(c.mode.value),
+          child: c.mode.value == ConnectMode.scan
+              ? ScannerPane(controller: c)
+              : ManualPane(controller: c),
         ),
       ),
     );
@@ -86,7 +79,11 @@ class _Fade extends StatelessWidget {
       switchOutCurve: AppCurves.easeIn,
       layoutBuilder: (current, previous) => Stack(
         alignment: Alignment.topCenter,
-        children: [...previous, ?current],
+        children: [
+          for (final p in previous)
+            Positioned(top: 0, left: 0, right: 0, child: p),
+          ?current,
+        ],
       ),
       child: child,
     );

@@ -10,6 +10,7 @@ import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../connect_controller.dart';
 import 'viewfinder_overlay.dart';
@@ -22,43 +23,75 @@ class ScannerPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: AppSpacing.scannerHeight,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
-            child: Obx(() {
-              final state = c.cameraState.value;
-              if (state == ConnectCameraState.denied ||
-                  state == ConnectCameraState.unavailable) {
-                return _CameraProblem(
-                  controller: c,
-                  isDenied: state == ConnectCameraState.denied,
-                );
-              }
-              return _Preview(controller: c);
-            }),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        const Text(
-          'Point the camera at a Connectum QR code',
-          style: AppText.readable,
-          textAlign: TextAlign.center,
-        ),
-        const Spacer(),
-        AppButton.secondary(
-          label: 'Enter code manually',
-          icon: Icons.keyboard_outlined,
-          onPressed: c.showManual,
-        ),
-        if (kDebugMode) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _SimulateScan(controller: c),
-        ],
-      ],
+    final maxHeight = AppSheetScope.maybeMaxBodyHeight(context) ?? 0;
+    return SizedBox(
+      height: maxHeight < AppSpacing.scannerMinPaneHeight
+          ? AppSpacing.scannerMinPaneHeight + (kDebugMode ? AppSpacing.connectDebugExtra : 0)
+          : maxHeight,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.maxWidth
+              .clamp(AppSpacing.scannerMinSize, AppSpacing.scannerMaxSize)
+              .clamp(0.0, constraints.maxWidth)
+              .toDouble();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              Center(
+                child: SizedBox(
+                  width: size,
+                  height: size,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(AppRadius.lg),
+                    ),
+                    child: Obx(() {
+                      final state = c.cameraState.value;
+                      if (state == ConnectCameraState.denied ||
+                          state == ConnectCameraState.unavailable) {
+                        return _CameraProblem(
+                          controller: c,
+                          isDenied: state == ConnectCameraState.denied,
+                        );
+                      }
+                      return _Preview(controller: c);
+                    }),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'Point the camera at a Connectum QR code',
+                style: AppText.readable,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              SizedBox(
+                height: AppSpacing.minTapTarget,
+                child: Obx(
+                  () => c.hasTorch.value
+                      ? _TorchButton(
+                          isOn: c.isTorchOn.value,
+                          onTap: c.toggleTorch,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+              const Spacer(),
+              AppButton.secondary(
+                label: 'Enter code manually',
+                icon: Icons.keyboard_outlined,
+                onPressed: c.showManual,
+              ),
+              if (kDebugMode) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _SimulateScan(controller: c),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -85,12 +118,18 @@ class _Preview extends StatelessWidget {
               duration: AppDurations.fast,
               child: MobileScanner(
                 controller: camera,
+                fit: BoxFit.cover,
                 placeholderBuilder: (_) => const SizedBox.shrink(),
                 errorBuilder: (_, _) => const SizedBox.shrink(),
               ),
             );
           }),
-          const ViewfinderOverlay(),
+          Obx(
+            () => ViewfinderOverlay(
+              isScanning: c.cameraState.value == ConnectCameraState.ready,
+              isSuccess: c.isScanSuccess.value,
+            ),
+          ),
           Obx(
             () => c.cameraState.value == ConnectCameraState.starting
                 ? const Align(
@@ -105,15 +144,6 @@ class _Preview extends StatelessWidget {
                     ),
                   )
                 : const SizedBox.shrink(),
-          ),
-          Positioned(
-            top: AppSpacing.xs,
-            right: AppSpacing.xs,
-            child: Obx(
-              () => c.hasTorch.value
-                  ? _TorchButton(isOn: c.isTorchOn.value, onTap: c.toggleTorch)
-                  : const SizedBox.shrink(),
-            ),
           ),
           Positioned(
             left: AppSpacing.sm,

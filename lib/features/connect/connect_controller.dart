@@ -55,6 +55,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   final hasTorch = false.obs;
   final isTorchOn = false.obs;
   final scanNotice = RxnString();
+  final isScanSuccess = false.obs;
   MobileScannerController? _scanner;
   StreamSubscription<BarcodeCapture>? _detections;
   Timer? _noticeTimer;
@@ -95,6 +96,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     _isOpen = true;
     _cooldownUntil = null;
     scanNotice.value = null;
+    isScanSuccess.value = false;
     query.clear();
     results.clear();
     searchMessage.value = null;
@@ -150,6 +152,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   void backToEntry() {
     phase.value = ConnectPhase.entry;
     card.value = null;
+    isScanSuccess.value = false;
     if (mode.value == ConnectMode.scan) unawaited(startCamera());
   }
 
@@ -247,6 +250,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
       return;
     }
     HapticFeedback.lightImpact();
+    isScanSuccess.value = true;
     resolve(link);
   }
 

@@ -48,7 +48,21 @@ class _SheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final bottomInset =
+        MediaQuery.viewInsetsOf(context).bottom +
+        MediaQuery.paddingOf(context).bottom;
+    return LayoutBuilder(
+      builder: (context, constraints) => AppSheetScope(
+        maxBodyHeight:
+            constraints.maxHeight -
+            AppSpacing.sheetPaddingTop -
+            AppSpacing.handleHeight -
+            AppSpacing.lg -
+            AppSpacing.minTapTarget -
+            AppSpacing.sm -
+            AppSpacing.sheetPaddingBottom -
+            bottomInset,
+        child: Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
@@ -87,6 +101,27 @@ class _SheetBody extends StatelessWidget {
           ],
         ),
       ),
+        ),
+      ),
     );
   }
+}
+
+/// The most height the sheet's body can use, for a body that wants to be tall.
+class AppSheetScope extends InheritedWidget {
+  const AppSheetScope({
+    super.key,
+    required this.maxBodyHeight,
+    required super.child,
+  });
+
+  final double maxBodyHeight;
+
+  static double? maybeMaxBodyHeight(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<AppSheetScope>()
+      ?.maxBodyHeight;
+
+  @override
+  bool updateShouldNotify(AppSheetScope oldWidget) =>
+      maxBodyHeight != oldWidget.maxBodyHeight;
 }
