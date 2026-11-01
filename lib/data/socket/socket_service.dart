@@ -144,7 +144,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     _hasWelcome = false;
     try {
       final client = HttpClient();
-      if (!kReleaseMode) {
+      if (kDebugMode) {
         client.badCertificateCallback = (_, host, _) =>
             AppConfig.trustedHosts.contains(host);
       }
@@ -326,14 +326,32 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     String action,
     Map<String, dynamic> args, {
     Duration timeout = const Duration(seconds: 12),
-  }) async {
-    if (!isOnline) throw const SocketCallError('not_connected');
+  }) {
     final id = 'm-${++_callSeq}';
+    return _call(
+      id,
+      '/sd $action ${jsonEncode({...args, 'reqId': id})}',
+      timeout,
+    );
+  }
+
+  /// Sends a raw `#command` line whose answer is an `sd` envelope. The server
+  /// sets its `reqId` to `#<canonical command name>`.
+  Future<Map<String, dynamic>> hashCall(
+    String line,
+    String name, {
+    Duration timeout = const Duration(seconds: 12),
+  }) => _call('#$name', line, timeout);
+
+  Future<Map<String, dynamic>> _call(
+    String id,
+    String line,
+    Duration timeout,
+  ) async {
+    if (!isOnline) throw const SocketCallError('not_connected');
     final completer = Completer<Map<String, dynamic>>();
     _calls[id] = completer;
-    final sent = await sendCommand(
-      '/sd $action ${jsonEncode({...args, 'reqId': id})}',
-    );
+    final sent = await sendCommand(line);
     if (!sent) {
       _calls.remove(id);
       throw const SocketCallError('not_connected');

@@ -6,10 +6,13 @@ import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
 import '../../data/repositories/conversation_repository.dart';
+import '../../data/repositories/e2e_repository.dart';
+import '../security/security_controller.dart';
+import '../security/widgets/security_sheets.dart';
 
 class HomeShellController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  HomeShellController({required this.conversations});
+  HomeShellController({required this.conversations, required this.security});
 
   static const tabRoutes = [
     AppRoutes.chats,
@@ -19,6 +22,8 @@ class HomeShellController extends GetxController
   ];
 
   final ConversationRepository conversations;
+  final SecurityController security;
+  bool _isSheetOpen = false;
 
   final index = 0.obs;
   final hasUnread = false.obs;
@@ -46,7 +51,24 @@ class HomeShellController extends GetxController
     }
     ever(conversations.conversations, (_) => _updateDot());
     ever(SeedUi.chatsState, (_) => _updateDot());
+    ever(security.e2e.phase, _onSetupPhase);
     _updateDot();
+  }
+
+  /// Opens the setup sheet when secure-messaging setup needs the person.
+  /// A phone the person removed themselves is not nagged: Security offers it.
+  void _onSetupPhase(E2eSetupPhase phase) {
+    final needsPerson =
+        phase == E2eSetupPhase.limit ||
+        phase == E2eSetupPhase.removed ||
+        phase == E2eSetupPhase.refused;
+    final context = Get.context;
+    if (!needsPerson || _isSheetOpen || context == null) return;
+    _isSheetOpen = true;
+    SecuritySheets.openIssue(
+      context,
+      security,
+    ).whenComplete(() => _isSheetOpen = false);
   }
 
   void _updateDot() {

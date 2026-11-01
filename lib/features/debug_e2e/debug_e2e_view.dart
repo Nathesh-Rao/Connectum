@@ -112,7 +112,8 @@ class _Device extends StatelessWidget {
             'Max devices: ${isKnown ? e2e.maxDevices.value : '-'}',
             'Keys on this phone: ${e2e.hasKeys.value ? 'YES (${_short(id)})' : 'NO'}',
             'This phone registered: ${isKnown ? (e2e.isRegistered ? 'YES' : 'NO') : 'unknown'}',
-            'My registered devices (${e2e.myDevices.length}):',
+            'Recovery key: ${isKnown ? (e2e.isRecoveryOn.value ? 'on' : 'off') : 'unknown'}',
+            'My registered devices (${e2e.myDevices.length}, recovery key not counted):',
             for (final d in e2e.myDevices)
               '  ${_short(d.id)}  ${d.label.isEmpty ? '(no label)' : d.label}'
                   '  added ${_date(d.ts)}${d.id == id ? '  <- this phone' : ''}',

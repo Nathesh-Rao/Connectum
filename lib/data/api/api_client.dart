@@ -23,6 +23,10 @@ class ApiException implements Exception {
     return {for (final e in fields.entries) '${e.key}': '${e.value}'};
   }
 
+  /// Seconds from the `Retry-After` header of a rate-limited answer.
+  int? get retryAfterSeconds =>
+      details is Map ? (details as Map)['retryAfter'] as int? : null;
+
   bool get isUnauthorized => status == 401 || code == 'unauthenticated';
 
   @override
@@ -43,7 +47,7 @@ class ApiClient {
     );
     (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
-      if (!kReleaseMode) {
+      if (kDebugMode) {
         client.badCertificateCallback = (_, host, _) =>
             AppConfig.trustedHosts.contains(host);
       }
@@ -93,17 +97,30 @@ class ApiClient {
     } on DioException catch (e) {
       final data = e.response?.data;
       final status = e.response?.statusCode;
+      final retryAfter = int.tryParse(
+        e.response?.headers.value('retry-after') ?? '',
+      );
       if (data is Map && data['ok'] == false) {
         final error = ApiException(
           '${(data['error'] as Map?)?['code'] ?? 'error'}',
           '${(data['error'] as Map?)?['message'] ?? ''}',
           status: status,
-          details: (data['error'] as Map?)?['details'],
+          details:
+              (data['error'] as Map?)?['details'] ??
+              (retryAfter == null ? null : {'retryAfter': retryAfter}),
         );
         if (isSessionCall && error.isUnauthorized) _unauthorized.add(null);
         throw error;
       }
       if (isSessionCall && status == 401) _unauthorized.add(null);
+      if (status == 429) {
+        throw ApiException(
+          'rate_limited',
+          '',
+          status: status,
+          details: retryAfter == null ? null : {'retryAfter': retryAfter},
+        );
+      }
       throw ApiException(
         'network',
         e.message ?? 'Network error',

@@ -107,6 +107,17 @@ class _Feed extends StatelessWidget {
           }
           final row = rows[i];
           final card = row.card;
+          final note = row.note;
+          if (note != null) {
+            return Obx(
+              () => SystemRow(
+                key: ValueKey(row.key),
+                text: note.text.value,
+                isProblem: note.isProblem.value,
+                onTap: note.convId == null ? null : () => c.openChat(note),
+              ),
+            );
+          }
           if (card == null) {
             return DayDivider(key: ValueKey(row.key), label: row.label);
           }

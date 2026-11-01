@@ -17,6 +17,7 @@ class AppSpacing {
   static const double sheetPaddingBottom = 30;
   static const double iconButton = 44;
   static const double avatar = 44;
+  static const double avatarSmall = 36;
   static const double statusPillHeight = 22;
   static const double handleWidth = 34;
   static const double handleHeight = 4;
@@ -37,6 +38,13 @@ class AppSpacing {
   static const double buttonPaddingX = 18;
   static const double compactButtonPaddingX = 14;
   static const double sheetFieldHeight = 49;
+  static const double connectPaneHeight = 356;
+  static const double connectDebugExtra = 44;
+  static const double scannerHeight = 252;
+  static const double viewfinderSize = 168;
+  static const double bracketLength = 26;
+  static const double bracketStroke = 4;
+  static const double tagHeight = 22;
   static const double otpCellHeight = 58;
   static const double otpCellGap = 7;
   static const double dotCell = 28;

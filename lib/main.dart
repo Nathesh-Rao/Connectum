@@ -8,12 +8,17 @@ import 'core/routes/app_pages.dart';
 import 'core/routes/conversation_route.dart';
 import 'core/routes/initial_binding.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_config_error.dart';
 import 'core/widgets/app_connectivity_scope.dart';
 import 'data/socket/connectivity_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  AppConfig.validate();
+  final configError = AppConfig.validate();
+  if (configError != null) {
+    runApp(AppConfigError(message: configError));
+    return;
+  }
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(ConnectumApp(connectivity: ConnectivityService()));

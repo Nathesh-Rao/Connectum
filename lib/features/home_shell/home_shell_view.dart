@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../ai_agents/ai_agents_view.dart';
 import '../chats/chats_view.dart';
@@ -34,6 +36,25 @@ class HomeShellView extends GetView<HomeShellController> {
         if (c.isRetired.value) return const SizedBox.shrink();
         return Column(
           children: [
+            Obx(() {
+              final text = c.security.e2e.notice.value;
+              if (text.isEmpty) return const SizedBox.shrink();
+              return SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.xs,
+                    AppSpacing.page,
+                    0,
+                  ),
+                  child: AppNoticeBanner(
+                    message: text,
+                    onDismiss: c.security.dismissNotice,
+                  ),
+                ),
+              );
+            }),
             Expanded(
               // The bar stays put under the keyboard, so a tab only gives up the
               // part of the keyboard that rises above the bar.

@@ -59,6 +59,17 @@ class AppColors {
     AppTilePalette(Color(0xFFF7F2ED), Color(0xFFEAE1D8), Color(0xFF967552)),
   ];
 
+  /// Name colours for the senders in a group, picked by a stable hash of the
+  /// username. All read on [bubbleIn].
+  static const senderInks = [
+    accentInk,
+    Color(0xFF5F6B47),
+    Color(0xFF7A5C2E),
+    Color(0xFF8A4B5F),
+    Color(0xFF3F6B73),
+    Color(0xFF5B5A8F),
+  ];
+
   static const scrim = Color(0xFF28211D);
   static const sheetBackdrop = Color(0x6628211D);
   static const sheetHandle = Color(0xFFD8D0C5);

@@ -18,6 +18,7 @@ class ConversationHeader extends StatelessWidget {
     required this.onBack,
     this.presence = AppPresenceDot.none,
     this.isEncrypted = false,
+    this.onStatusTap,
     this.trailing = const [],
   });
 
@@ -27,6 +28,7 @@ class ConversationHeader extends StatelessWidget {
   final AppPresenceDot presence;
   final bool isEncrypted;
   final VoidCallback onBack;
+  final VoidCallback? onStatusTap;
   final List<Widget> trailing;
 
   @override
@@ -73,11 +75,15 @@ class ConversationHeader extends StatelessWidget {
                   ],
                 ),
                 if (status != null)
-                  Text(
-                    status!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption,
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onStatusTap,
+                    child: Text(
+                      status!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption,
+                    ),
                   ),
               ],
             ),

@@ -19,13 +19,16 @@ class AppConfig {
       if (url.isNotEmpty) Uri.parse(url).host,
   };
 
-  static void validate() {
-    if (!kReleaseMode) return;
+  /// Null when the build is configured; otherwise what is wrong. Debug builds
+  /// may run unconfigured or on plain http/ws.
+  static String? validate() {
+    if (kDebugMode) return null;
+    if (baseUrl.isEmpty || wsUrl.isEmpty) {
+      return 'BASE_URL and WS_URL were not set for this build.';
+    }
     final isSecure =
         Uri.tryParse(baseUrl)?.scheme == 'https' &&
         Uri.tryParse(wsUrl)?.scheme == 'wss';
-    if (!isSecure) {
-      throw StateError('Release builds need https BASE_URL and wss WS_URL.');
-    }
+    return isSecure ? null : 'BASE_URL must be https and WS_URL must be wss.';
   }
 }

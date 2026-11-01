@@ -26,6 +26,11 @@ class ProfileView extends GetView<ProfileController> {
             ),
           ),
           AppButton.secondary(
+            label: 'Security',
+            onPressed: controller.openSecurity,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
             label: 'Experience the introduction',
             onPressed: controller.replayIntroduction,
           ),

@@ -16,6 +16,7 @@ class AppRoutes {
   static const form = '/form';
   static const profile = '/profile';
   static const notifications = '/notifications';
+  static const security = '/security';
 
   static const gallery = '/gallery';
   static const galleryAuth = '/gallery/auth';

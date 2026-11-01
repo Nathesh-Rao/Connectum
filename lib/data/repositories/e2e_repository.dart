@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../db/app_database.dart';
 import '../e2e/e2e_crypto.dart';
+import '../e2e/e2e_device_label.dart';
 import '../e2e/e2e_key_store.dart';
 import '../e2e/e2e_models.dart';
 import '../models/ids.dart';
@@ -18,6 +20,19 @@ enum E2eRegisterResult {
   limitReached,
   needsConfirmation,
   needsConnection,
+  refused,
+}
+
+/// Where automatic setup stands. `limit`, `removed` and `refused` need the
+/// person; `optedOut` is their own earlier removal of this phone.
+enum E2eSetupPhase {
+  idle,
+  working,
+  ready,
+  off,
+  limit,
+  removed,
+  optedOut,
   refused,
 }
 
@@ -35,19 +50,50 @@ class E2eRepository extends GetxService {
 
   final mode = ''.obs;
   final maxDevices = 0.obs;
+
+  /// My devices without the recovery key.
   final myDevices = <E2eDevicePublic>[].obs;
+  final isRecoveryOn = false.obs;
   final deviceId = ''.obs;
   final hasKeys = false.obs;
   final isStatusKnown = false.obs;
   final lastError = ''.obs;
+  final phase = E2eSetupPhase.idle.obs;
+  final issueReason = ''.obs;
+
+  /// The one-time notice text, empty once dismissed.
+  final notice = ''.obs;
+
+  static const noticeText =
+      "Secure messaging is on in this organisation. Older messages can't be read on this phone.";
+  static const earlierText =
+      ' Earlier installs stay listed until you remove them in Security.';
+  static const _backoffStart = Duration(minutes: 1);
+  static const _backoffCap = Duration(minutes: 30);
+
+  Timer? _retryTimer;
+  Duration _backoff = _backoffStart;
+  DateTime _retryAfter = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _isSetupRunning = false;
 
   final _directory = <String, ({List<E2eDevicePublic> devices, DateTime at})>{};
+  final _groups =
+      <String, ({Map<String, List<E2eDevicePublic>> members, DateTime at})>{};
   E2eDeviceKeys? _keys;
   String? _keysScope;
   bool _isKeysLoaded = false;
 
   String? get _org => _session.orgId;
   String? get _me => _session.userId?.toLowerCase();
+
+  /// False once setup needs the person (limit, removed, refused, opted out).
+  bool get isSettingUp => switch (phase.value) {
+    E2eSetupPhase.limit ||
+    E2eSetupPhase.removed ||
+    E2eSetupPhase.optedOut ||
+    E2eSetupPhase.refused => false,
+    _ => true,
+  };
 
   bool get isRegistered =>
       deviceId.value.isNotEmpty && myDevices.any((d) => d.id == deviceId.value);
@@ -56,7 +102,14 @@ class E2eRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.events.listen(_onEvent);
+    _socket.onOnline.listen((_) => unawaited(ensureSetup()));
     ever(_session.current, (_) => _reset());
+  }
+
+  @override
+  void onClose() {
+    _retryTimer?.cancel();
+    super.onClose();
   }
 
   void _reset() {
@@ -64,12 +117,20 @@ class E2eRepository extends GetxService {
     _keysScope = null;
     _isKeysLoaded = false;
     _directory.clear();
+    _groups.clear();
     mode.value = '';
     maxDevices.value = 0;
     myDevices.clear();
+    isRecoveryOn.value = false;
     deviceId.value = '';
     hasKeys.value = false;
     isStatusKnown.value = false;
+    phase.value = E2eSetupPhase.idle;
+    issueReason.value = '';
+    notice.value = '';
+    _retryTimer?.cancel();
+    _backoff = _backoffStart;
+    _retryAfter = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   void _onEvent(Map<String, dynamic> e) {
@@ -81,7 +142,7 @@ class E2eRepository extends GetxService {
       return;
     }
     _directory.remove(user);
-    if (user == _me) unawaited(refreshStatus());
+    if (user == _me) unawaited(ensureSetup());
   }
 
   /// This device's keys, read from the key store (never generated here).
@@ -109,13 +170,62 @@ class E2eRepository extends GetxService {
       final data = await _socket.sdCall('e2e.status', {});
       mode.value = idText(data['mode']);
       maxDevices.value = intOf(data['maxDevices']);
-      myDevices.assignAll(_devices(data['devices']));
+      final all = _devices(data['devices']);
+      myDevices.assignAll(all.where((d) => !d.isRecovery));
+      isRecoveryOn.value =
+          data['recovery'] == true || all.any((d) => d.isRecovery);
       isStatusKnown.value = true;
       lastError.value = '';
+      unawaited(_saveStatus());
       return true;
     } on SocketCallError catch (e) {
       lastError.value = 'e2e.status: ${e.code}';
       return false;
+    }
+  }
+
+  String get _statusKey => 'e2e.status.$_org.$_me';
+
+  /// Public facts only (labels, ids, dates), kept so the Security screen has
+  /// something to show offline.
+  Future<void> _saveStatus() => _session.writeValue(
+    _statusKey,
+    jsonEncode({
+      'mode': mode.value,
+      'max': maxDevices.value,
+      'recovery': isRecoveryOn.value,
+      'devices': [
+        for (final d in myDevices) {'id': d.id, 'label': d.label, 'ts': d.ts},
+      ],
+    }),
+  );
+
+  /// The last status read, or null. Never touches the network.
+  Future<
+    ({String mode, int max, bool isRecovery, List<E2eDevicePublic> devices})?
+  >
+  readSavedStatus() async {
+    try {
+      final raw = await _session.readValue(_statusKey);
+      if (raw == null || raw.isEmpty) return null;
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return (
+        mode: idText(json['mode']),
+        max: intOf(json['max']),
+        isRecovery: json['recovery'] == true,
+        devices: [
+          for (final d in (json['devices'] as List? ?? []).whereType<Map>())
+            E2eDevicePublic(
+              id: idText(d['id']),
+              ecdh: '',
+              sign: '',
+              label: idText(d['label']),
+              ts: intOf(d['ts']),
+            ),
+        ],
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -127,11 +237,19 @@ class E2eRepository extends GetxService {
         sign: idText(d['sign']),
         label: idText(d['label']),
         ts: intOf(d['ts']),
+        isRecovery: d['recovery'] == true,
       ),
   ];
 
-  /// `e2e.devices` for people, through the 5-minute cache. A user missing from
-  /// the result is absent from the map. Throws [SocketCallError] when the
+  /// The devices that can read now: the list without the recovery key.
+  static List<E2eDevicePublic> readers(List<E2eDevicePublic> all) => [
+    for (final d in all)
+      if (!d.isRecovery) d,
+  ];
+
+  /// `e2e.devices` for people, through the 5-minute cache (display and reading
+  /// only: a send passes [isForced]). A user missing from the result is absent
+  /// from the map. Throws [SocketCallError] when the
   /// lookup fails.
   Future<Map<String, List<E2eDevicePublic>>> devicesOf(
     List<String> users, {
@@ -249,10 +367,15 @@ class E2eRepository extends GetxService {
 
   /// What the key-changed sheet shows: a fresh directory read, the devices
   /// whose key differs from the pin, and the safety number for the pair.
-  Future<E2eKeyReview> reviewKeys(String peer) async {
+  Future<E2eKeyReview> reviewKeys(String peer, {String? group}) async {
     final me = _me ?? '';
     final name = peer.trim().toLowerCase();
-    final devices = await devicesOf([name, me], isForced: true);
+    final devices = group == null
+        ? await devicesOf([name, me], isForced: true)
+        : {
+            for (final e in (await groupDevices(group)).entries)
+              if (e.key == name || e.key == me) e.key: e.value,
+          };
     final changed = await checkPins(devices, isRecord: false);
     return E2eKeyReview(
       user: name,
@@ -316,14 +439,257 @@ class E2eRepository extends GetxService {
     );
   }
 
-  /// `e2e.group_devices`: members and their devices. Not cached.
+  /// `e2e.group_devices`: every member (me included) and their devices, from
+  /// the server every time. It also refreshes the per-person directory, so a
+  /// sender's signing key is found for reading. Throws [SocketCallError].
   Future<Map<String, List<E2eDevicePublic>>> groupDevices(String group) async {
     final data = await _socket.sdCall('e2e.group_devices', {'group': group});
     final members = (data['members'] as Map?) ?? {};
-    return {
+    final out = {
       for (final e in members.entries)
         e.key.toString().toLowerCase(): _devices(e.value),
     };
+    final now = DateTime.now();
+    for (final e in out.entries) {
+      _directory[e.key] = (devices: e.value, at: now);
+    }
+    _groups[group.trim().toLowerCase()] = (members: out, at: now);
+    return out;
+  }
+
+  /// The last group list when it is still fresh, else null. For the composer
+  /// only: a send always asks the server. Never touches the network.
+  Map<String, List<E2eDevicePublic>>? cachedGroupDevices(String group) {
+    final hit = _groups[group.trim().toLowerCase()];
+    if (hit == null || DateTime.now().difference(hit.at) >= _directoryTtl) {
+      return null;
+    }
+    return hit.members;
+  }
+
+  void invalidateGroup(String group) =>
+      _groups.remove(group.trim().toLowerCase());
+
+  // ---- automatic setup -----------------------------------------------------
+
+  String get _stateKey => 'e2e.state.$_org.$_me';
+  String get _noticeKey => 'e2e.notice.$_org.$_me';
+
+  /// Local mark per organisation and user: `on` (set up), `pending` (a
+  /// registration was started with the stored keys), `out` (the person removed
+  /// this phone, so nothing registers it again by itself) or empty.
+  Future<String> _readState() async =>
+      await _session.readValue(_stateKey) ?? '';
+
+  Future<void> _writeState(String value) =>
+      _session.writeValue(_stateKey, value);
+
+  /// Brings this phone to a registered state without the person's help
+  /// whenever the organisation uses secure messaging. Runs in the background
+  /// on every socket-online event; reads `e2e.status` first and changes
+  /// nothing when the mode is off or this phone is already listed. Keys that
+  /// exist are never regenerated here.
+  Future<void> ensureSetup() async {
+    if (_isSetupRunning || _org == null || _me == null) return;
+    if (!_socket.isOnline || DateTime.now().isBefore(_retryAfter)) return;
+    _isSetupRunning = true;
+    final scope = _keysScope;
+    try {
+      if (phase.value != E2eSetupPhase.ready) {
+        phase.value = E2eSetupPhase.working;
+      }
+      if (!await refreshStatus()) {
+        if (phase.value == E2eSetupPhase.working) {
+          phase.value = E2eSetupPhase.idle;
+        }
+        return;
+      }
+      await _loadNotice();
+      if (mode.value == 'off' || mode.value.isEmpty) {
+        phase.value = E2eSetupPhase.off;
+        return;
+      }
+      final stored = await keys();
+      final state = await _readState();
+      if (stored != null && isRegistered) {
+        if (state != 'on') await _writeState('on');
+        _settle();
+        return;
+      }
+      if (stored != null && state != 'pending') {
+        _raise(E2eSetupPhase.removed);
+        return;
+      }
+      if (stored == null && state == 'out') {
+        phase.value = E2eSetupPhase.optedOut;
+        return;
+      }
+      await _registerThisPhone(isReplacing: false);
+    } finally {
+      _isSetupRunning = false;
+      if (scope != _keysScope) phase.value = E2eSetupPhase.idle;
+    }
+  }
+
+  /// "Set up again" and "Retry": registers with new keys. The old keys are
+  /// replaced only once the server has accepted the new device.
+  Future<void> setUpAgain() async {
+    if (_isSetupRunning || _org == null || _me == null) return;
+    _isSetupRunning = true;
+    try {
+      phase.value = E2eSetupPhase.working;
+      _retryAfter = DateTime.fromMillisecondsSinceEpoch(0);
+      await _registerThisPhone(isReplacing: _keys != null);
+    } finally {
+      _isSetupRunning = false;
+    }
+  }
+
+  Future<void> _registerThisPhone({required bool isReplacing}) async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return;
+    // Look at the server list again right before registering.
+    if (!await refreshStatus()) {
+      phase.value = E2eSetupPhase.idle;
+      return;
+    }
+    if (isReplacing && isRegistered) {
+      _settle();
+      return;
+    }
+    if (maxDevices.value > 0 && myDevices.length >= maxDevices.value) {
+      _raise(E2eSetupPhase.limit);
+      return;
+    }
+    final label = await E2eDeviceLabel.current();
+    final hasEarlier = myDevices.any(
+      (d) => d.label.trim().toLowerCase() == label.toLowerCase(),
+    );
+    final fresh = isReplacing || _keys == null
+        ? await _crypto.generateDeviceKeys()
+        : _keys!;
+    if (!isReplacing && _keys == null) {
+      await _keyStore.save(org, user, fresh);
+      _keys = fresh;
+      _keysScope = '$org|$user';
+      _isKeysLoaded = true;
+      hasKeys.value = true;
+      deviceId.value = fresh.id;
+    }
+    await _writeState('pending');
+    try {
+      await _socket.sdCall('e2e.register', {
+        'id': fresh.id,
+        'ecdh': fresh.ecdhPub,
+        'sign': fresh.signPub,
+        'label': label,
+        'proof': await _crypto.registrationProof(user: user, keys: fresh),
+      });
+    } on SocketCallError catch (e) {
+      lastError.value = 'e2e.register: ${e.code} ${e.message}';
+      if (e.isConnectionGap) {
+        phase.value = E2eSetupPhase.idle;
+        return;
+      }
+      // A definitive refusal leaves no registration.
+      if (!isReplacing && _keys != null && _keys!.id == fresh.id) {
+        await _keyStore.remove(org, user);
+        _keys = null;
+        hasKeys.value = false;
+        deviceId.value = '';
+      }
+      await _writeState(isReplacing ? 'on' : '');
+      if (e.code == 'rate_limited') {
+        _retryAfter = DateTime.now().add(_backoff);
+        _retryTimer?.cancel();
+        _retryTimer = Timer(_backoff, () => unawaited(ensureSetup()));
+        _backoff = _backoff * 2 > _backoffCap ? _backoffCap : _backoff * 2;
+        phase.value = E2eSetupPhase.idle;
+        return;
+      }
+      if (e.code == 'limit') {
+        await refreshStatus();
+        _raise(E2eSetupPhase.limit);
+        return;
+      }
+      _raise(
+        E2eSetupPhase.refused,
+        reason: e.message.isEmpty ? e.code : '${e.code}: ${e.message}',
+      );
+      return;
+    }
+    if (isReplacing) {
+      await _keyStore.save(org, user, fresh);
+      _keys = fresh;
+      _keysScope = '$org|$user';
+      _isKeysLoaded = true;
+      hasKeys.value = true;
+      deviceId.value = fresh.id;
+    }
+    await _writeState('on');
+    _backoff = _backoffStart;
+    _directory.remove(user);
+    await refreshStatus();
+    if (!isReplacing) {
+      final text = hasEarlier ? 'earlier' : 'plain';
+      await _session.writeValue(_noticeKey, text);
+      await _loadNotice();
+    }
+    _settle();
+  }
+
+  void _settle() {
+    issueReason.value = '';
+    phase.value = E2eSetupPhase.ready;
+  }
+
+  void _raise(E2eSetupPhase next, {String reason = ''}) {
+    issueReason.value = reason;
+    phase.value = next;
+  }
+
+  Future<void> _loadNotice() async {
+    final raw = await _session.readValue(_noticeKey) ?? '';
+    notice.value = raw.isEmpty
+        ? ''
+        : raw == 'earlier'
+        ? '$noticeText$earlierText'
+        : noticeText;
+  }
+
+  Future<void> dismissNotice() async {
+    notice.value = '';
+    await _session.writeValue(_noticeKey, '');
+  }
+
+  /// `e2e.remove` for [id]. When it is this phone, the keys go too and the
+  /// phone stays off until the person sets it up again.
+  Future<bool> removeDevice(String id) async {
+    final own = _keys?.id ?? deviceId.value;
+    if (id == own) {
+      // Marked first: the server's "devices changed" push must not set the
+      // phone up again.
+      final before = await _readState();
+      await _writeState('out');
+      final isOk = await removeThisDevice();
+      if (isOk) {
+        phase.value = E2eSetupPhase.optedOut;
+      } else {
+        await _writeState(before);
+      }
+      return isOk;
+    }
+    try {
+      await _socket.sdCall('e2e.remove', {'id': id});
+    } on SocketCallError catch (e) {
+      if (e.code != 'not_found') {
+        lastError.value = 'e2e.remove: ${e.code}';
+        return false;
+      }
+    }
+    await refreshStatus();
+    return true;
   }
 
   // ---- registration, only on an explicit call ----------------------------
@@ -427,7 +793,7 @@ class E2eRepository extends GetxService {
       return E2eCrypto.dmLabel(me, convId.substring(3));
     }
     if (convId.startsWith('group:')) {
-      return E2eCrypto.groupLabel(convId.substring(6));
+      return E2eCrypto.groupLabel(convId.substring(6).trim());
     }
     return null;
   }
@@ -448,11 +814,17 @@ class E2eRepository extends GetxService {
     final own = keys ?? await this.keys();
     if (own == null) return _logged(const E2eReading.cannot('no_device'));
     var isOffline = false;
+    final group = convId.startsWith('group:') ? convId.substring(6) : null;
     Future<String?> lookup(String user, String dev) async {
       if (signKeyFor != null) return signKeyFor(user, dev);
       try {
         for (final isForced in [false, true]) {
-          final all = await devicesOf([user], isForced: isForced);
+          // A group sender is looked up through the group list.
+          final all = group != null
+              ? (isForced
+                    ? await groupDevices(group)
+                    : cachedDevices([user]) ?? const {})
+              : await devicesOf([user], isForced: isForced);
           for (final d in all[user.toLowerCase()] ?? <E2eDevicePublic>[]) {
             if (d.id == dev) return d.sign;
           }

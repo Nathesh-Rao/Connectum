@@ -18,6 +18,7 @@ class E2eDevicePublic {
     required this.sign,
     this.label = '',
     this.ts = 0,
+    this.isRecovery = false,
   });
 
   final String id;
@@ -25,6 +26,10 @@ class E2eDevicePublic {
   final String sign;
   final String label;
   final int ts;
+
+  /// The recovery key, listed by the server as a device (`recovery: true`). It
+  /// is wrapped for like any device but is not one of a person's devices.
+  final bool isRecovery;
 }
 
 enum E2eReadState { ok, cantDecrypt, pending }
@@ -140,6 +145,7 @@ class E2eSendDecision {
       keys = null,
       isKeyChange = false,
       isTransient = false,
+      isSetupPending = false,
       keyChangeUser = null;
 
   const E2eSendDecision.unknown()
@@ -150,6 +156,7 @@ class E2eSendDecision {
       keys = null,
       isKeyChange = false,
       isTransient = false,
+      isSetupPending = false,
       keyChangeUser = null;
 
   const E2eSendDecision.encrypt({
@@ -160,6 +167,7 @@ class E2eSendDecision {
        reason = null,
        isKeyChange = false,
        isTransient = false,
+       isSetupPending = false,
        keyChangeUser = null;
 
   /// [isTransient]: may work on a later try (a lookup failed), so the composer
@@ -171,13 +179,31 @@ class E2eSendDecision {
     this.isTransient = false,
     this.keyChangeUser,
   }) : verdict = E2eSendVerdict.blocked,
+       isSetupPending = false,
        recipients = const [],
        keys = null;
+
+  /// This phone has no keys yet and setup is running: blocked in the composer,
+  /// but a message already queued waits instead of failing.
+  const E2eSendDecision.setupPending()
+    : verdict = E2eSendVerdict.blocked,
+      headline = settingUp,
+      reason = null,
+      recipients = const [],
+      keys = null,
+      isKeyChange = false,
+      isTransient = false,
+      isSetupPending = true,
+      keyChangeUser = null;
 
   /// Stored in `fail_reason` of a message that could not be sent securely;
   /// [Message.secureFailure] strips it again.
   static const failTag = 'e2e:';
   static const cantSend = "Can't send securely right now";
+
+  /// No tag: the bubble then reads "Not sent. Tap to retry".
+  static const staleFailure = 'stale devices';
+  static const settingUp = 'Setting up secure messaging';
 
   final E2eSendVerdict verdict;
   final String? headline;
@@ -186,6 +212,7 @@ class E2eSendDecision {
   final E2eDeviceKeys? keys;
   final bool isKeyChange;
   final bool isTransient;
+  final bool isSetupPending;
   final String? keyChangeUser;
 
   bool get isBlocked => verdict == E2eSendVerdict.blocked;

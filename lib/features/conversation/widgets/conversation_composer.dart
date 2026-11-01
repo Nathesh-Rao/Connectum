@@ -12,6 +12,7 @@ import '../../../core/widgets/app_text_field.dart';
 import '../../../data/models/message.dart';
 import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
+import 'commands_panel.dart';
 import 'key_change_sheet.dart';
 
 /// The composer: a field that grows to five lines, a send button that wakes
@@ -70,6 +71,11 @@ class ConversationComposer extends StatelessWidget {
               ),
             );
           }),
+          CommandsPanel(
+            prompt: c.prompt,
+            onPick: c.pickCommand,
+            isOnline: () => c.commands.isOnline,
+          ),
           Obx(() => _ReplyBar(message: c.reply.value, onClose: c.clearReply)),
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -115,7 +121,9 @@ class ConversationComposer extends StatelessWidget {
                     child: AppTextField(
                       controller: c.text,
                       focusNode: c.focus,
-                      hint: isLocked ? 'Encrypted message' : 'Type a message…',
+                      hint: isLocked
+                          ? 'Encrypted message'
+                          : "Type a message or '#' for commands…",
                       minLines: 1,
                       maxLines: 5,
                       minHeight: AppSpacing.composerButton,
@@ -131,7 +139,10 @@ class ConversationComposer extends StatelessWidget {
                   ),
                   Obx(() {
                     final isActive = c.length.value > 0 && c.canSend;
-                    return _SendButton(isActive: isActive, onTap: c.send);
+                    return ComposerSendButton(
+                      isActive: isActive,
+                      onTap: c.send,
+                    );
                   }),
                 ],
               ),
@@ -170,8 +181,12 @@ class _Placeholder extends StatelessWidget {
   );
 }
 
-class _SendButton extends StatelessWidget {
-  const _SendButton({required this.isActive, required this.onTap});
+class ComposerSendButton extends StatelessWidget {
+  const ComposerSendButton({
+    super.key,
+    required this.isActive,
+    required this.onTap,
+  });
 
   final bool isActive;
   final VoidCallback onTap;

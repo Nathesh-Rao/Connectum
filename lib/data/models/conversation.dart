@@ -30,6 +30,7 @@ class Conversation {
     this.peerDeliveredId = '',
     this.avatar,
     this.memberCount = 0,
+    this.members = const [],
   });
 
   final String convId;
@@ -62,6 +63,9 @@ class Conversation {
   /// Members of a group, from the stored list (0 when not known).
   final int memberCount;
 
+  /// Usernames of a group's members from the stored list (empty when not known).
+  final List<String> members;
+
   /// "99+" past the cap, a plain number below it, nothing at 0.
   String get unreadLabel => unreadMore || unread > 99 ? '99+' : '$unread';
 
@@ -93,6 +97,7 @@ class Conversation {
     peerDeliveredId: peerDeliveredId,
     avatar: avatar,
     memberCount: memberCount,
+    members: members,
   );
 
   /// The other person's username for a direct message.
@@ -138,7 +143,22 @@ class Conversation {
       peerDeliveredId: idText(r['peer_delivered_id']),
       avatar: r['avatar'] == null ? null : idText(r['avatar']),
       memberCount: _count(r['members_json'] as String?),
+      members: _names(r['members_json'] as String?),
     );
+  }
+
+  static List<String> _names(String? json) {
+    if (json == null) return const [];
+    try {
+      final members = jsonDecode(json);
+      if (members is! List) return const [];
+      return [
+        for (final m in members)
+          if (m is Map) idText(m['name'] ?? m['user']) else idText(m),
+      ].where((n) => n.isNotEmpty).toList();
+    } on FormatException {
+      return const [];
+    }
   }
 
   static int _count(String? json) {

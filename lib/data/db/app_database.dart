@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -135,12 +138,26 @@ class AppDatabase {
 
   Database? _db;
 
-  Future<Database> get _database async => _db ??= await openDatabase(
-    p.join(await getDatabasesPath(), 'connectum.db'),
-    version: _version,
-    onCreate: (db, _) => _migrate(db, 0, _version),
-    onUpgrade: _migrate,
-  );
+  Future<Database> get _database async => _db ??= await _open();
+
+  /// The database holds decrypted text, so on iOS its folder is kept out of
+  /// iCloud and device backups (Android is covered by the manifest rules).
+  Future<Database> _open() async {
+    final folder = await getDatabasesPath();
+    if (Platform.isIOS) {
+      try {
+        await const MethodChannel(
+          'connectum/device',
+        ).invokeMethod<bool>('excludeFromBackup', folder);
+      } catch (_) {}
+    }
+    return openDatabase(
+      p.join(folder, 'connectum.db'),
+      version: _version,
+      onCreate: (db, _) => _migrate(db, 0, _version),
+      onUpgrade: _migrate,
+    );
+  }
 
   static Future<void> _migrate(Database db, int from, int to) async {
     for (var v = from + 1; v <= to; v++) {

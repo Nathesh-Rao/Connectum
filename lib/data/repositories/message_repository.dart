@@ -55,6 +55,7 @@ class MessageRepository extends GetxService {
 
   static const _ackTimeout = Duration(seconds: 15);
   static const _maxAttempts = 5;
+  static const _maxStaleRetries = 2;
   static const _historyPage = 50;
   static const _maxGapPages = 10;
   static const _cidMemory = Duration(hours: 23);
@@ -72,6 +73,11 @@ class MessageRepository extends GetxService {
   final _deleteWaiters = <String, Completer<DeleteResult>>{};
   final _inFlight = <int, OutboxEntry>{};
   final _ackTimers = <int, Timer>{};
+
+  /// Outbox id -> the `mid` of the envelope last put on the socket for it, so
+  /// a stale-devices refusal (which names only a `mid`) finds its send.
+  final _sealedMids = <int, String>{};
+  final _staleTries = <int, int>{};
   Timer? _wakeTimer;
   Future<void> _queue = Future.value();
   Future<void> _decrypting = Future.value();
@@ -82,6 +88,9 @@ class MessageRepository extends GetxService {
 
   /// Why the last [sendText] was refused with [SendResult.blocked].
   String lastBlock = '';
+
+  /// The client id of the last [sendText] that was queued.
+  String lastCid = '';
   String? _openConversation;
 
   String? get _org => _session.orgId;
@@ -338,6 +347,7 @@ class MessageRepository extends GetxService {
       lastBlock = _noCommands;
       return SendResult.blocked;
     }
+    final isSecure = gate.isEncrypt || facts.isE2e;
     final tempId = _tempId();
     final cid = newCid();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -358,9 +368,9 @@ class MessageRepository extends GetxService {
           replyTo,
           now,
           cid,
-          gate.isEncrypt ? 1 : 0,
-          gate.isEncrypt ? body : null,
-          gate.isEncrypt ? 'ok' : null,
+          isSecure ? 1 : 0,
+          isSecure ? body : null,
+          isSecure ? 'ok' : null,
         ],
       );
       await sql.insert(
@@ -382,11 +392,17 @@ class MessageRepository extends GetxService {
         [body, now, user, org, user, convId],
       );
     });
+    lastCid = cid;
     await _reload(convId);
     await _conversations.reload();
     unawaited(flush());
     return SendResult.queued;
   }
+
+  /// What the policy says about [convId] right now, asking the server when
+  /// it has to. Used before a raw `#` line may leave the phone.
+  Future<EncryptionVerdict> verdictOf(String convId) async =>
+      _policy.verdict(convId, await _facts(convId));
 
   Future<bool> editText(String msgId, String text) async {
     final org = _org;
@@ -568,6 +584,10 @@ class MessageRepository extends GetxService {
         await _defer(entry, const Duration(seconds: 15));
         return _Outcome.deferred;
       case E2eSendVerdict.blocked:
+        if (decision.isSetupPending) {
+          await _defer(entry, const Duration(seconds: 15));
+          return _Outcome.deferred;
+        }
         await _fail(entry, '${E2eSendDecision.failTag}${decision.message}');
         return _Outcome.finished;
       case E2eSendVerdict.plain:
@@ -613,6 +633,10 @@ class MessageRepository extends GetxService {
         );
         return _Outcome.finished;
       }
+    }
+    if (envelope != null) {
+      final mid = E2eCrypto.midOf(envelope);
+      if (mid != null) _sealedMids[entry.id] = mid;
     }
     final command = wireCommand(entry, text: envelope);
     if (command == null) {
@@ -757,12 +781,14 @@ class MessageRepository extends GetxService {
   }
 
   void _settle(int outboxId) {
+    _sealedMids.remove(outboxId);
     _inFlight.remove(outboxId);
     _ackTimers.remove(outboxId)?.cancel();
   }
 
   Future<void> _fail(OutboxEntry e, String reason) async {
     _settle(e.id);
+    _staleTries.remove(e.id);
     await _db.transaction((sql) async {
       await sql.update(
         "UPDATE outbox SET status = 'failed', last_error = ? WHERE id = ?",
@@ -789,6 +815,7 @@ class MessageRepository extends GetxService {
       timer.cancel();
     }
     _ackTimers.clear();
+    _sealedMids.clear();
     _inFlight.clear();
     for (final waiter in _historyWaiters.values) {
       if (!waiter.isCompleted) waiter.completeError(StateError('dropped'));
@@ -1137,6 +1164,7 @@ class MessageRepository extends GetxService {
     bool moveCursor = true,
   }) async {
     _settle(entry.id);
+    _staleTries.remove(entry.id);
     final status = delivered && entry.convId.startsWith('dm:')
         ? MessageStatus.delivered.name
         : MessageStatus.sent.name;
@@ -1222,15 +1250,18 @@ class MessageRepository extends GetxService {
   /// message and the server answers lines in order, so it belongs to the
   /// oldest send in flight. The cached device lists and mode are dropped so
   /// a retry asks again.
-  Future<void> _onE2eError(String code) async {
+  Future<void> _onE2eError(String code, {String text = ''}) async {
     final sends = _inFlight.values.where((i) => i.isSend).toList()
       ..sort((a, b) => a.id.compareTo(b.id));
     _policy.onReconnected();
     if (sends.isEmpty) return;
     final entry = sends.first;
     final peer = ConversationRepository.targetOf(entry.convId);
+    final isGroup = entry.convId.startsWith('group:');
     if (entry.convId.startsWith('dm:')) _e2e.invalidate([peer, _me ?? '']);
+    if (isGroup) _e2e.invalidateGroup(peer);
     final why = switch (code) {
+      'e2e_peer_not_ready' when isGroup => _notReadyNames(text),
       'e2e_peer_not_ready' => "$peer hasn't set up encryption yet",
       'e2e_disabled' => 'Encryption is switched off for this organisation',
       'too_long' => 'That message is too large to send securely',
@@ -1241,10 +1272,71 @@ class MessageRepository extends GetxService {
     await _fail(entry, '${E2eSendDecision.failTag}$why');
   }
 
+  /// `e2e_stale_devices`: somebody's devices changed while the envelope was
+  /// being written, and nothing was stored. The refusal names its message by
+  /// `mid`, so the send is found exactly (no "oldest in flight" guess). The
+  /// row goes back to pending without counting the attempt; the next
+  /// [_send] asks `e2e.devices` again and seals a NEW envelope (new `mid`,
+  /// same text) under the SAME `cid`. The server does not remember a refused
+  /// send, so the same cid is accepted and a repeat is still answered as
+  /// `duplicate:true`. At most [_maxStaleRetries] silent tries, then the
+  /// message fails (never a loop, never plain text). It does not depend on
+  /// the conversation kind: the lookup is made by [_send] through the policy.
+  Future<void> _onStaleDevices(Map<String, dynamic> e) async {
+    final mid = idText(e['mid']);
+    final conv = idText(e['conv']).toLowerCase();
+    int? outboxId;
+    for (final item in _sealedMids.entries) {
+      final entry = _inFlight[item.key];
+      if (item.value == mid &&
+          entry != null &&
+          (conv.isEmpty || entry.convId.toLowerCase() == conv)) {
+        outboxId = item.key;
+      }
+    }
+    final entry = outboxId == null ? null : _inFlight[outboxId];
+    if (entry == null) {
+      if (kDebugMode) debugPrint('e2e: stale refusal for an unknown mid');
+      return;
+    }
+    if (entry.convId.startsWith('group:')) {
+      _e2e.invalidateGroup(ConversationRepository.targetOf(entry.convId));
+    }
+    final users = e['users'];
+    _e2e.invalidate([
+      if (users is List) ...users.map((u) => '$u'),
+      _me ?? '',
+    ]);
+    final tries = (_staleTries[entry.id] ?? 0) + 1;
+    if (tries > _maxStaleRetries) {
+      if (kDebugMode) debugPrint('e2e: stale devices, giving up');
+      await _fail(entry, E2eSendDecision.staleFailure);
+      return;
+    }
+    _staleTries[entry.id] = tries;
+    if (kDebugMode) debugPrint('e2e: stale devices, resend $tries');
+    _settle(entry.id);
+    await _backToPending(entry, countAttempt: false);
+    unawaited(flush());
+  }
+
+  /// "These people have not set up secure messaging yet: a, b." -> "a, b
+  /// haven't set up encryption yet"; the group's own words when it differs.
+  static String _notReadyNames(String text) {
+    final i = text.indexOf(': ');
+    final names = i < 0 ? '' : text.substring(i + 2).replaceAll(RegExp(r'\.$'), '');
+    if (names.isEmpty) return "some members haven't set up encryption yet";
+    return '$names ${names.contains(',') ? "haven't" : "hasn't"} set up encryption yet';
+  }
+
   Future<void> _onError(Map<String, dynamic> e) async {
     final code = idText(e['code']);
+    if (code == 'e2e_stale_devices') {
+      await _onStaleDevices(e);
+      return;
+    }
     if (_e2eErrors.contains(code)) {
-      await _onE2eError(code);
+      await _onE2eError(code, text: idText(e['text']));
       return;
     }
     if (code == 'bad_cid' || code == 'cid_unsupported') {

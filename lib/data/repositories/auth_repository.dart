@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
+import '../../core/utils/connect_code.dart';
 import '../api/api_client.dart';
+import '../models/connect_card.dart';
 import '../models/identity_info.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
@@ -257,6 +259,15 @@ class AuthRepository extends GetxService {
   Future<Map<String, dynamic>> publicPage(String id) =>
       _api.get('/enterprise/$id');
 
+  /// The organisation's public card for a scanned or typed code (no session).
+  Future<ConnectCard> connectCard(ConnectCode link) async {
+    final data = await _api.get(
+      '/connect/${link.code}',
+      query: {'org': ?link.org, 'branch': ?link.branch},
+    );
+    return ConnectCard.fromJson(data);
+  }
+
   Future<Map<String, dynamic>> joinCheck(String enterprise, String category) =>
       _api.post(
         '/join/check',
@@ -268,13 +279,18 @@ class AuthRepository extends GetxService {
         bearer: _identityToken(),
       );
 
-  Future<Map<String, dynamic>> join(String enterprise, String category) async {
+  Future<Map<String, dynamic>> join(
+    String enterprise,
+    String category, {
+    String? branch,
+  }) async {
     final data = await _api.post(
       '/join',
       body: {
         'enterprise': enterprise,
         'isEmployee': false,
         'category': category,
+        'connectBranch': ?branch,
       },
       bearer: _identityToken(),
     );

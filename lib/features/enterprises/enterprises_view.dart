@@ -14,10 +14,11 @@ import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
+import '../../core/widgets/app_tag.dart';
 import '../../data/models/identity_info.dart';
+import '../connect/connect_view.dart';
 import 'enterprises_controller.dart';
 import 'widgets/enterprise_tile.dart';
-import 'widgets/join_sheet.dart';
 
 class EnterprisesView extends GetView<EnterprisesController> {
   const EnterprisesView({super.key});
@@ -97,12 +98,12 @@ class EnterprisesView extends GetView<EnterprisesController> {
                     icon: Icons.chevron_right,
                     isCompact: true,
                     onPressed: () {
-                      c.resetJoin();
+                      c.connect.open();
                       AppBottomSheet.show<void>(
                         context,
                         title: 'Join another enterprise',
-                        child: JoinSheet(controller: c),
-                      );
+                        child: ConnectView(onEnter: c.enter),
+                      ).whenComplete(c.connect.close);
                     },
                   ),
                 ],
@@ -227,9 +228,7 @@ class _List extends StatelessWidget {
               title: list[i].name,
               subtitle: list[i].isActive
                   ? 'Member · ${list[i].enterprise}'
-                  : list[i].status == 'pending'
-                  ? 'Waiting for approval · ${list[i].enterprise}'
-                  : 'Not approved · ${list[i].enterprise}',
+                  : list[i].enterprise,
               trailing: c.enteringId.value == list[i].enterprise
                   ? const SizedBox(
                       width: 18,
@@ -243,7 +242,13 @@ class _List extends StatelessWidget {
                   ? const EnterpriseCurrentCheck()
                   : list[i].isActive
                   ? const _Chevron()
-                  : null,
+                  : list[i].status == 'pending'
+                  ? const AppTag(
+                      label: 'Waiting for approval',
+                      tone: AppTagTone.accent,
+                      icon: Icons.hourglass_top,
+                    )
+                  : const AppTag(label: 'Not approved'),
               onTap: () => c.enter(list[i]),
             ),
         ],

@@ -1,6 +1,14 @@
 import '../../../data/models/message.dart';
 
-enum ChatItemKind { message, day, unread, loadingOlder, olderError, start }
+enum ChatItemKind {
+  message,
+  day,
+  unread,
+  system,
+  loadingOlder,
+  olderError,
+  start,
+}
 
 /// One row of the conversation list: a message, or a divider or status row
 /// between messages. Built from the cached messages, newest first.
@@ -12,10 +20,12 @@ class ChatItem {
     this.showName = false,
     this.isFresh = false,
   }) : kind = ChatItemKind.message,
-       label = '';
+       label = '',
+       refId = '';
 
   const ChatItem.day(this.label)
     : kind = ChatItemKind.day,
+      refId = '',
       message = null,
       isFirstOfRun = true,
       isLastOfRun = true,
@@ -24,6 +34,16 @@ class ChatItem {
 
   const ChatItem.unread(this.label)
     : kind = ChatItemKind.unread,
+      refId = '',
+      message = null,
+      isFirstOfRun = true,
+      isLastOfRun = true,
+      showName = false,
+      isFresh = false;
+
+  /// A small row of my own, not stored: the answer of a `#` command.
+  const ChatItem.system(this.label, {required this.refId})
+    : kind = ChatItemKind.system,
       message = null,
       isFirstOfRun = true,
       isLastOfRun = true,
@@ -33,6 +53,7 @@ class ChatItem {
   const ChatItem.status(this.kind)
     : message = null,
       label = '',
+      refId = '',
       isFirstOfRun = true,
       isLastOfRun = true,
       showName = false,
@@ -41,6 +62,7 @@ class ChatItem {
   final ChatItemKind kind;
   final Message? message;
   final String label;
+  final String refId;
 
   /// First and last message of a run from the same sender: the tail sits on
   /// the last one, a received name above the first.
@@ -55,6 +77,7 @@ class ChatItem {
     ChatItemKind.message => 'm-${message!.cid ?? message!.msgId}',
     ChatItemKind.day => 'd-$label',
     ChatItemKind.unread => 'unread',
+    ChatItemKind.system => 's-$refId',
     _ => kind.name,
   };
 }

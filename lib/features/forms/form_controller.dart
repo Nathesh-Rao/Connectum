@@ -167,7 +167,7 @@ class FormController extends GetxController {
   /// depends on, so an Obx around it rebuilds when they change.
   bool isVisible(FormFieldDef f, {RowInput? row}) {
     final def = definition;
-    if (def == null) return false;
+    if (def == null || f.raw['hidden'] == true) return false;
     final section = def.sectionOf(f.section);
     if (section != null &&
         !FormRules.matches(section.condition, (n) => _valueOf(n, null))) {

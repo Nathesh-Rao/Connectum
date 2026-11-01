@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
@@ -89,6 +90,57 @@ class OlderErrorRow extends StatelessWidget {
         const Text("Couldn't load older messages", style: AppText.caption),
         AppButton.text(label: 'Retry', onPressed: onRetry),
       ],
+    ),
+  );
+}
+
+/// A small centred line of my own that is not a message: the answer of a `#`
+/// command, or "Sent to @name" in the workspace (which opens that chat).
+class SystemRow extends StatelessWidget {
+  const SystemRow({super.key, required this.text, this.onTap, this.isProblem});
+
+  final String text;
+  final VoidCallback? onTap;
+  final bool? isProblem;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+    child: Center(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xxs,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.bubbleIn,
+            borderRadius: AppRadius.controlAll,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: AppText.caption.copyWith(
+                    color: isProblem == true ? AppColors.error : null,
+                  ),
+                ),
+              ),
+              if (onTap != null)
+                const Icon(
+                  Icons.chevron_right,
+                  size: 14,
+                  color: AppColors.muted,
+                ),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }

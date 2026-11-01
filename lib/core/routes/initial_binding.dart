@@ -6,6 +6,7 @@ import '../debug/seed_ui.dart';
 import '../../data/db/app_database.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
@@ -53,6 +54,10 @@ class InitialBinding extends Bindings {
     );
     final messages = Get.put(
       MessageRepository(db, store, socket, conversations, policy, e2e),
+      permanent: true,
+    );
+    Get.put(
+      CommandRepository(socket, store, connectivity, messages, conversations),
       permanent: true,
     );
     Get.put(SubmissionRepository(db, store, socket, messages), permanent: true);

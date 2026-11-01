@@ -17,6 +17,7 @@ import 'widgets/conversation_composer.dart';
 import 'widgets/conversation_header.dart';
 import 'widgets/message_actions_sheet.dart';
 import 'widgets/message_bubble.dart';
+import 'widgets/members_sheet.dart';
 import 'widgets/message_status_mark.dart';
 import 'widgets/reaction_chips.dart';
 import 'widgets/scroll_to_latest_button.dart';
@@ -57,7 +58,15 @@ class ConversationView extends GetView<ConversationController> {
                 status: isReady ? c.status : null,
                 isSquareAvatar: c.kind != 'dm',
                 presence: c.presenceDot,
-                isEncrypted: c.isBlocked.value,
+                isEncrypted: c.isLocked.value || c.isBlocked.value,
+                onStatusTap: c.kind == 'group' && c.members.isNotEmpty
+                    ? () => MembersSheet.open(
+                        context,
+                        title: c.title,
+                        members: c.members,
+                        me: c.me,
+                      )
+                    : null,
                 onBack: Get.back,
               );
             }),
@@ -139,6 +148,7 @@ class _MessageArea extends StatelessWidget {
       ChatItemKind.message => _message(context, c, item),
       ChatItemKind.day => DayDivider(label: item.label),
       ChatItemKind.unread => UnreadDivider(label: item.label),
+      ChatItemKind.system => SystemRow(text: item.label),
       ChatItemKind.loadingOlder => const LoadingOlderRow(),
       ChatItemKind.olderError => OlderErrorRow(onRetry: c.retryOlder),
       ChatItemKind.start => const StartRow(),

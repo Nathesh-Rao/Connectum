@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
+import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
+import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
@@ -19,6 +21,8 @@ class WorkspaceBinding extends Bindings {
         shell: Get.isRegistered<HomeShellController>()
             ? Get.find<HomeShellController>()
             : null,
+        commands: Get.find<CommandRepository>(),
+        messages: Get.find<MessageRepository>(),
       ),
     );
   }

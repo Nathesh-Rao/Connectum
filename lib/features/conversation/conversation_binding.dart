@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/home_reload.dart';
+import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
@@ -36,6 +37,7 @@ class ConversationBinding extends Bindings {
         socket: Get.find<SocketService>(),
         store: Get.find<SessionStore>(),
         e2e: Get.find<E2eRepository>(),
+        commands: Get.find<CommandRepository>(),
       ),
       tag: id,
     );

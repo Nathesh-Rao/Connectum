@@ -694,6 +694,49 @@ class DebugE2eController extends GetxController {
       final r = await opens(await build(), outsider);
       return r == 'not_for_this_device' ? null : 'got $r';
     });
+    await _check('send: a recovery key in the list is wrapped for', () async {
+      final recovery = await _crypto.generateDeviceKeys();
+      final list = [
+        ...recipients,
+        E2eDevicePublic(
+          id: recovery.id,
+          ecdh: recovery.ecdhPub,
+          sign: recovery.signPub,
+          label: 'Recovery key',
+          isRecovery: true,
+        ),
+      ];
+      final env = await _crypto.buildEnvelope(
+        user: 'alice',
+        keys: alice1,
+        conv: conv,
+        recipients: list,
+        text: text,
+      );
+      final wraps = (jsonDecode(env.substring(5)) as Map)['keys'] as Map;
+      if (wraps.length != 5 || !wraps.containsKey(recovery.id)) {
+        return 'recovery key not wrapped (${wraps.length} wraps)';
+      }
+      for (final reader in [recovery, bob1, alice2]) {
+        final r = await opens(env, reader);
+        if (r != 'ok') return r;
+      }
+      return null;
+    });
+    await _check(
+      'send: a resend has a new mid, the text is the same',
+      () async {
+        final a = await build();
+        final b = await build();
+        final midA = E2eCrypto.midOf(a);
+        final midB = E2eCrypto.midOf(b);
+        if (midA == null || midB == null) return 'mid not read';
+        if (midA == midB) return 'mid repeated';
+        return E2eCrypto.midOf('plain text') == null
+            ? null
+            : 'mid of plain text';
+      },
+    );
     await _check('send: two messages share nothing random', () async {
       final a = jsonDecode((await build()).substring(5)) as Map;
       final b = jsonDecode((await build()).substring(5)) as Map;
@@ -893,6 +936,109 @@ class DebugE2eController extends GetxController {
       sent.recipients.length == 3 &&
           sent.recipients.any((d) => d.id == mine.id) &&
           sent.recipients.any((d) => d.id == otherOfMine.id),
+    );
+
+    const recovery = E2eDevicePublic(
+      id: 'rec-bob',
+      ecdh: 'E7',
+      sign: 'S7',
+      isRecovery: true,
+    );
+    const myRecovery = E2eDevicePublic(
+      id: 'rec-me',
+      ecdh: 'E8',
+      sign: 'S8',
+      isRecovery: true,
+    );
+    final withRecovery = EncryptionPolicy.decide(
+      mode: 'optional',
+      peer: 'bob',
+      isEncryptedThread: false,
+      peerDevices: [peer, recovery],
+      myDevices: [mine.asPublic, otherOfMine, myRecovery],
+      keys: mine,
+      pinChanges: const [],
+    );
+    _add(
+      'policy: recovery keys are recipients too',
+      withRecovery.isEncrypt &&
+          withRecovery.recipients.length == 5 &&
+          withRecovery.recipients.any((d) => d.id == recovery.id) &&
+          withRecovery.recipients.any((d) => d.id == myRecovery.id),
+    );
+    expect(
+      'peer with only a recovery key, no history: plain',
+      verdict(peerDevices: [recovery]),
+      E2eSendVerdict.plain,
+    );
+    expect(
+      'peer with only a recovery key, encrypted history: blocked',
+      verdict(peerDevices: [recovery], isEncryptedThread: true),
+      E2eSendVerdict.blocked,
+    );
+    expect(
+      'required, peer with only a recovery key: blocked',
+      verdict(mode: 'required', peerDevices: [recovery]),
+      E2eSendVerdict.blocked,
+    );
+    _add(
+      'recovery keys are left out of "my devices"',
+      E2eRepository.readers([peer, recovery]).length == 1,
+    );
+
+    E2eSendDecision group({
+      String mode = 'optional',
+      bool isEncryptedThread = false,
+      Map<String, List<E2eDevicePublic>>? members,
+      List<E2ePinChange> pinChanges = const [],
+    }) => EncryptionPolicy.decideGroup(
+      mode: mode,
+      me: 'alice',
+      isEncryptedThread: isEncryptedThread,
+      members:
+          members ??
+          {
+            'alice': [mine.asPublic, otherOfMine, myRecovery],
+            'bob': [peer, recovery],
+            'carol': [const E2eDevicePublic(id: 'c1', ecdh: 'E3', sign: 'S3')],
+          },
+      keys: mine,
+      pinChanges: pinChanges,
+    );
+    final everyone = group();
+    _add(
+      'group: wrapped for every device of every member, recovery included',
+      everyone.isEncrypt && everyone.recipients.length == 6,
+      everyone.isEncrypt ? '' : everyone.verdict.name,
+    );
+    final lacking = {
+      'alice': [mine.asPublic],
+      'bob': [peer],
+      'carol': <E2eDevicePublic>[],
+      'dev': [recovery],
+    };
+    final named = group(members: lacking, isEncryptedThread: true);
+    _add(
+      'group: a member without a reader blocks and is named',
+      named.isBlocked && named.message.startsWith('carol, dev haven'),
+      named.message,
+    );
+    _add(
+      'group: optional, no encrypted history, member without a device: plain',
+      group(members: lacking).verdict == E2eSendVerdict.plain,
+    );
+    _add(
+      'group: required mode never goes plain',
+      group(members: lacking, mode: 'required').isBlocked,
+    );
+    final groupChanged = group(
+      pinChanges: [E2ePinChange(user: 'carol', device: peer)],
+    );
+    _add(
+      'group: a changed key blocks and names the member',
+      groupChanged.isBlocked &&
+          groupChanged.keyChangeUser == 'carol' &&
+          groupChanged.message.startsWith("carol's"),
     );
 
     const pin = (ecdh: 'E1', sign: 'S1');

@@ -30,6 +30,8 @@ import '../../features/notifications/notifications_binding.dart';
 import '../../features/notifications/notifications_view.dart';
 import '../../features/onboarding/onboarding_binding.dart';
 import '../../features/onboarding/onboarding_view.dart';
+import '../../features/security/security_binding.dart';
+import '../../features/security/security_view.dart';
 import '../../features/splash/splash_binding.dart';
 import '../../features/splash/splash_view.dart';
 import '../../features/submission_detail/submission_detail_binding.dart';
@@ -44,7 +46,7 @@ import 'app_transitions.dart';
 class AppPages {
   AppPages._();
 
-  static String get initial => !kReleaseMode && AppConfig.startRoute.isNotEmpty
+  static String get initial => kDebugMode && AppConfig.startRoute.isNotEmpty
       ? AppConfig.startRoute
       : AppRoutes.splash;
 
@@ -143,7 +145,13 @@ class AppPages {
       NotificationsBinding(),
       AppTransitionKind.push,
     ),
-    if (!kReleaseMode) ...[
+    _page(
+      AppRoutes.security,
+      () => const SecurityView(),
+      SecurityBinding(),
+      AppTransitionKind.push,
+    ),
+    if (kDebugMode) ...[
       _page(
         AppRoutes.gallery,
         () => const GalleryView(),

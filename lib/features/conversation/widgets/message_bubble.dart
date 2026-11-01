@@ -40,6 +40,14 @@ class MessageBubble extends StatelessWidget {
   final List<Reaction> reactions;
   final void Function(String emoji) onReact;
 
+  static Color _senderInk(String name) {
+    var h = 0;
+    for (final u in name.toLowerCase().codeUnits) {
+      h = (h * 31 + u) & 0x7fffffff;
+    }
+    return AppColors.senderInks[h % AppColors.senderInks.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final m = item.message!;
@@ -74,7 +82,7 @@ class MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
                 child: Text(
                   m.sender,
-                  style: AppText.label.copyWith(color: AppColors.accentInk),
+                  style: AppText.label.copyWith(color: _senderInk(m.sender)),
                 ),
               ),
             if (m.replyTo != null && !m.isDeleted) _Quote(original: original),

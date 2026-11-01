@@ -10,8 +10,10 @@ import '../../data/models/conversation.dart';
 import '../../data/models/form_definition.dart';
 import '../../data/models/form_option.dart';
 import '../../data/models/form_submission.dart';
+import '../../data/models/hash_command.dart';
 import '../../data/models/identity_info.dart';
 import '../../data/models/message.dart';
+import '../../data/repositories/e2e_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 
@@ -24,8 +26,8 @@ class SeedUi {
 
   static const _requested = String.fromEnvironment('SEED_UI') == '1';
 
-  /// Debug and profile builds only (profile is needed for the scrolling check).
-  static bool get isActive => !kReleaseMode && _requested;
+  /// Debug builds only.
+  static bool get isActive => kDebugMode && _requested;
 
   /// A corner ribbon on every screen while sample data is on.
   static Widget withRibbon(Widget child) => Directionality(
@@ -89,6 +91,18 @@ class SeedUi {
             username: 'alex',
             status: 'active',
           ),
+        for (final (name, id, status) in [
+          ('Northwind Traders', 'NW7D-3QPX', 'pending'),
+          ('Orchard Co-op', '8RCH-4RD1', 'rejected'),
+        ])
+          EnterpriseMembership(
+            enterprise: id,
+            name: name,
+            city: '',
+            category: 'Vendor',
+            username: 'alex',
+            status: status,
+          ),
       ],
     );
   }
@@ -109,8 +123,20 @@ class SeedUi {
   /// registered, so it unlocks (null). dm:isha: the peer has no device. dm:arjun:
   /// a security key changed until it is trusted.
   static ({String reason, bool isKeyChange})? e2eGate(String convId) {
+    if (e2eState.value == 'required' && convId.startsWith('dm:')) {
+      return (reason: 'Setting up secure messaging', isKeyChange: false);
+    }
     if (convId == 'dm:isha') {
       return (reason: "isha hasn't set up encryption yet", isKeyChange: false);
+    }
+    if (convId == 'group:Night Shift') {
+      return (
+        reason: "meera and isha haven't set up encryption yet",
+        isKeyChange: false,
+      );
+    }
+    if (convId == 'group:Finance' && !_trusted.contains(convId)) {
+      return (reason: "kavitha's security key changed", isKeyChange: true);
     }
     if (convId == 'dm:zoya' && !_trusted.contains(convId)) {
       return (reason: "zoya's security key changed", isKeyChange: true);
@@ -119,6 +145,302 @@ class SeedUi {
   }
 
   static void trust(String convId) => _trusted.add(convId);
+
+  static const e2eStates = [
+    'devices',
+    'pending',
+    'notice',
+    'limit',
+    'removed',
+    'earlier',
+    'required',
+  ];
+
+  /// The secure-messaging setup state shown by the sample screens ('required':
+  /// required mode before setup finished).
+  static final e2eState = 'devices'.obs;
+
+  static E2eDevicePublic _device(String id, String label, int daysAgo) =>
+      E2eDevicePublic(
+        id: id,
+        ecdh: '',
+        sign: '',
+        label: label,
+        ts: DateTime.now()
+            .subtract(Duration(days: daysAgo))
+            .millisecondsSinceEpoch,
+      );
+
+  /// Puts a setup state into the E2E repository's in-memory fields. Nothing
+  /// is registered, stored or sent.
+  static void applyE2e(E2eRepository e2e, String state) {
+    e2eState.value = state;
+    const mine = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+    final phone = _device(mine, 'Connectum mobile (moto g32)', 0);
+    final older = [
+      _device('9f8e7d6c5b4a39281706f5e4d3c2b1a0', 'Chrome on Mac', 41),
+      _device('0a1b2c3d4e5f60718293a4b5c6d7e8f1', 'Firefox on Windows', 12),
+    ];
+    e2e.mode.value = state == 'required' ? 'required' : 'optional';
+    e2e.maxDevices.value = state == 'limit' ? 3 : 10;
+    e2e.isStatusKnown.value = true;
+    e2e.isRecoveryOn.value = state == 'devices' || state == 'earlier';
+    e2e.issueReason.value = '';
+    e2e.notice.value = '';
+    e2e.hasKeys.value = true;
+    e2e.deviceId.value = mine;
+    e2e.myDevices.assignAll([phone, ...older]);
+    switch (state) {
+      case 'pending':
+      case 'required':
+        e2e.hasKeys.value = false;
+        e2e.deviceId.value = '';
+        e2e.myDevices.assignAll(older);
+        e2e.phase.value = E2eSetupPhase.working;
+      case 'notice':
+        e2e.notice.value = E2eRepository.noticeText;
+        e2e.phase.value = E2eSetupPhase.ready;
+      case 'earlier':
+        e2e.notice.value =
+            '${E2eRepository.noticeText}${E2eRepository.earlierText}';
+        e2e.myDevices.assignAll([
+          phone,
+          _device('1111c3d4e5f60718293a4b5c6d7e8f90', phone.label, 30),
+          ...older,
+        ]);
+        e2e.phase.value = E2eSetupPhase.ready;
+      case 'limit':
+        e2e.hasKeys.value = false;
+        e2e.deviceId.value = '';
+        e2e.myDevices.assignAll([
+          ...older,
+          _device('2222c3d4e5f60718293a4b5c6d7e8f90', 'iPhone', 90),
+        ]);
+        e2e.phase.value = E2eSetupPhase.limit;
+      case 'removed':
+        e2e.myDevices.assignAll(older);
+        e2e.phase.value = E2eSetupPhase.removed;
+      default:
+        e2e.phase.value = E2eSetupPhase.ready;
+    }
+  }
+
+  static bool isEncrypted(String convId) =>
+      conversations().any((c) => c.convId == convId && c.isEncrypted);
+
+  /// A fake `/cmds` catalog: the real names, sample summaries.
+  static List<HashCommand> commands() {
+    HashCommand c(
+      String name,
+      String summary,
+      String usage,
+      String reply, {
+      List<String> aliases = const [],
+      String category = 'lookup',
+      bool isAvailable = true,
+    }) => HashCommand(
+      name: name,
+      aliases: aliases,
+      category: category,
+      summary: summary,
+      usage: usage,
+      replies: [reply],
+      isAvailable: isAvailable,
+    );
+    return [
+      c(
+        'dm',
+        'Send a direct message to someone',
+        '#dm <user> <text...>',
+        'dm_ack',
+        aliases: ['msg', 'pm'],
+        category: 'messaging',
+      ),
+      c(
+        'reply',
+        'Reply to a message in the global room',
+        '#reply <messageId> <text...>',
+        'own_message_id',
+        category: 'messaging',
+      ),
+      c(
+        'replydm',
+        'Reply to a message in a direct conversation',
+        '#replydm <user> <messageId> <text...>',
+        'dm_ack',
+        category: 'messaging',
+      ),
+      c(
+        'groupmsg',
+        'Send a message to a group',
+        '#groupmsg <group> <text...>',
+        'group_msg_ack',
+        aliases: ['gm'],
+        category: 'messaging',
+      ),
+      c(
+        'replygroup',
+        'Reply to a message in a group',
+        '#replygroup <group> <messageId> <text...>',
+        'group_msg_ack',
+        category: 'messaging',
+      ),
+      c(
+        'users',
+        'Who is online right now',
+        '#users',
+        'users',
+        aliases: ['online', 'who'],
+      ),
+      c('groups', 'The groups you are in', '#groups', 'groups'),
+      c(
+        'inbox',
+        'Your direct-message threads, newest first',
+        '#inbox',
+        'conversations',
+        aliases: ['conversations'],
+      ),
+      c(
+        'profile',
+        "See someone's avatar and status",
+        '#profile <user>',
+        'profile',
+      ),
+      c(
+        'creategroup',
+        'Create a group',
+        '#creategroup <name>',
+        'group_created',
+        aliases: ['newgroup'],
+        category: 'groups',
+      ),
+      c(
+        'leavegroup',
+        'Leave a group',
+        '#leavegroup <group>',
+        'left_group',
+        aliases: ['leave'],
+        category: 'groups',
+      ),
+      c(
+        'me',
+        'Your account, permissions and counters',
+        '#me',
+        'sd',
+        aliases: ['whoami'],
+        category: 'people',
+      ),
+      c(
+        'associates',
+        'People you are connected with',
+        '#associates',
+        'sd',
+        aliases: ['contacts'],
+        category: 'people',
+      ),
+      c(
+        'find',
+        'Find a person by username, email or mobile',
+        '#find <query...>',
+        'sd',
+        aliases: ['search'],
+        category: 'people',
+      ),
+      c(
+        'requests',
+        'Your pending approvals and invitations',
+        '#requests [status]',
+        'sd',
+        aliases: ['approvals'],
+        category: 'people',
+      ),
+      c(
+        'accept',
+        'Accept a request or invitation',
+        '#accept <requestId>',
+        'sd',
+        category: 'people',
+      ),
+      c(
+        'reject',
+        'Reject a request or invitation',
+        '#reject <requestId>',
+        'sd',
+        category: 'people',
+      ),
+      c(
+        'transfer',
+        'Ask another host to take over one of your users',
+        '#transfer <user> <toHost>',
+        'sd',
+        category: 'people',
+        isAvailable: false,
+      ),
+      c(
+        'notifications',
+        'Your notifications (unread first)',
+        '#notifications [category]',
+        'sd',
+        aliases: ['notifs'],
+        category: 'inbox',
+      ),
+      c(
+        'remind',
+        'Add a reminder card for yourself',
+        '#remind <text...>',
+        'sd',
+        aliases: ['reminder'],
+        category: 'inbox',
+      ),
+      c(
+        'forms',
+        'The forms and options available to you',
+        '#forms',
+        'sd',
+        category: 'forms',
+      ),
+      c(
+        'tstruct',
+        'Open a form in the viewer',
+        '#tstruct <name>',
+        'sd',
+        aliases: ['ts', 'structure'],
+        category: 'forms',
+      ),
+      c(
+        'submissions',
+        'Forms you have submitted',
+        '#submissions',
+        'sd',
+        category: 'forms',
+      ),
+      c(
+        'help',
+        'List all # commands, or explain one',
+        '#help [command]',
+        'cmd_catalog',
+        aliases: ['commands'],
+        category: 'help',
+      ),
+      const HashCommand(
+        name: 'leaverequest',
+        category: 'custom',
+        summary: 'Request time off',
+        usage: '#leaverequest [input]',
+        isCustom: true,
+      ),
+    ];
+  }
+
+  /// The fake answer of a command that is not a message send.
+  static String hashInfo(HashCommand cmd) => switch (cmd.name) {
+    'users' => 'Online: priya, meera',
+    'groups' => 'Groups: Design Collective, Product & Engineering',
+    'me' => 'Signed in as alex',
+    'forms' => '4 options: Clinical examination, Leave request, Expense, Visit',
+    'associates' => '3 users: priya, meera, arjun',
+    _ => 'Done (sample result)',
+  };
 
   static E2eKeyReview keyReview(String user) => E2eKeyReview(
     user: user,
@@ -138,6 +460,15 @@ class SeedUi {
     ],
   );
   static const offline = {'arjun', 'ravi'};
+
+  static const _careMembers = [
+    'alex',
+    'isha',
+    'kavitha',
+    'meera',
+    'nina',
+    'raj',
+  ];
 
   static List<Conversation>? _conversations;
 
@@ -669,6 +1000,39 @@ class SeedUi {
         isMuted: true,
         lastIsMine: true,
         lastStatus: MessageStatus.sent,
+      ),
+      Conversation(
+        convId: 'group:Care Team',
+        kind: 'group',
+        title: 'Care Team',
+        lastText: 'Thanks all.',
+        lastTs: ago(const Duration(minutes: 3)),
+        lastFrom: 'kavitha',
+        isEncrypted: true,
+        memberCount: 6,
+        members: _careMembers,
+      ),
+      Conversation(
+        convId: 'group:Night Shift',
+        kind: 'group',
+        title: 'Night Shift',
+        lastText: 'Thanks all.',
+        lastTs: ago(const Duration(minutes: 20)),
+        lastFrom: 'kavitha',
+        isEncrypted: true,
+        memberCount: 6,
+        members: _careMembers,
+      ),
+      Conversation(
+        convId: 'group:Finance',
+        kind: 'group',
+        title: 'Finance',
+        lastText: 'Thanks all.',
+        lastTs: ago(const Duration(minutes: 40)),
+        lastFrom: 'kavitha',
+        isEncrypted: true,
+        memberCount: 6,
+        members: _careMembers,
       ),
       Conversation(
         convId: 'dm:arjun',

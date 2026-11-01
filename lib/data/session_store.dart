@@ -8,7 +8,12 @@ import 'models/identity_info.dart';
 import 'models/session_info.dart';
 
 class SessionStore {
-  static const _storage = FlutterSecureStorage();
+  // Never restored onto another device from a backup.
+  static const _storage = FlutterSecureStorage(
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
   static const _currentKey = 'session.current';
 
   final current = Rxn<SessionInfo>();

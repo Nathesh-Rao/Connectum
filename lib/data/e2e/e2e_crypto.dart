@@ -37,13 +37,25 @@ class E2eCrypto {
   static bool isEnvelope(String? text) =>
       text != null && text.startsWith(prefix);
 
+  /// The `mid` inside an envelope, or null when [text] is not one.
+  static String? midOf(String? text) {
+    if (!isEnvelope(text)) return null;
+    try {
+      final json = jsonDecode(text!.substring(prefix.length));
+      final mid = json is Map ? json['mid'] : null;
+      return mid is String && mid.isNotEmpty ? mid : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// `dm:` plus both lower-cased names sorted, or `group:` plus the name.
   static String dmLabel(String a, String b) {
     final names = [a, b].map((n) => n.toLowerCase()).toList()..sort();
     return 'dm:${names.join('|')}';
   }
 
-  static String groupLabel(String name) => 'group:${name.toLowerCase()}';
+  static String groupLabel(String name) => 'group:${name.trim().toLowerCase()}';
 
   String newDeviceId() =>
       _random.bytes(16).map((b) => b.toRadixString(16).padLeft(2, '0')).join();

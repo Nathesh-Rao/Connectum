@@ -236,6 +236,45 @@ class SeedMessages {
           _m(c, 3006, 'ravi', 'Looks good from my side.', 15),
           _m(c, 3007, 'meera', 'One small thing on the badge colour.', 12),
         ];
+      case 'group:Care Team' || 'group:Night Shift' || 'group:Finance':
+        return [
+          _m(c, 3101, 'nina', 'e2e1:GGGG', 400, decryptState: 'cant_decrypt'),
+          _m(
+            c,
+            3102,
+            'kavitha',
+            'Sent after you set up this phone, so you can read this one.',
+            60,
+            decryptState: 'ok',
+          ),
+          _m(
+            c,
+            3103,
+            'raj',
+            'Rounds start at 9. Bring the updated handover sheet.',
+            45,
+            decryptState: 'ok',
+          ),
+          _m(
+            c,
+            3104,
+            me,
+            'Got it, on my way.',
+            40,
+            status: MessageStatus.sent,
+            decryptState: 'ok',
+          ),
+          _m(c, 3105, 'nina', 'e2e1:HHHH', 5, decryptState: 'pending'),
+          _m(
+            c,
+            3106,
+            'kavitha',
+            'Thanks all.',
+            3,
+            decryptState: 'ok',
+            replyTo: '3103',
+          ),
+        ];
       case 'dm:ravi':
         return [
           _m(c, 4001, 'ravi', 'e2e1:AAAA', 300, decryptState: 'cant_decrypt'),
@@ -447,7 +486,7 @@ class SeedMessages {
   }
 
   /// Adds a message of mine and walks it through the send states.
-  static void send(
+  static String send(
     String convId,
     String text, {
     String? replyTo,
@@ -456,6 +495,7 @@ class SeedMessages {
     final list = of(convId);
     final id = 'temp-${_next++}';
     final isDm = convId.startsWith('dm:');
+    final cid = newCid();
     list.add(
       Message(
         msgId: id,
@@ -469,10 +509,11 @@ class SeedMessages {
         isEncrypted: isEncrypted,
         decryptState: isEncrypted ? 'ok' : null,
         localSeq: _next,
-        cid: newCid(),
+        cid: cid,
       ),
     );
-    _walk(convId, id, isDm);
+    _walk(convId, id, isDm, text: isEncrypted ? text : '');
+    return cid;
   }
 
   /// A form of mine: a pending card that turns into a sent one (or a failed
@@ -580,14 +621,38 @@ class SeedMessages {
   }
 
   static void retry(String convId, String id) {
+    final text = of(convId).firstWhereOrNull((m) => m.msgId == id)?.text ?? '';
     _set(convId, id, (m) => m.copyWith(status: MessageStatus.pending));
-    _walk(convId, id, convId.startsWith('dm:'));
+    _walk(convId, id, convId.startsWith('dm:'), text: text);
   }
 
-  static void _walk(String convId, String id, bool isDm) {
+  /// In an encrypted chat, text starting with `stale ok` is refused twice with
+  /// `e2e_stale_devices` and sent on the third try; `stale fail` is refused
+  /// three times and fails with "Not sent. Tap to retry". The retries are
+  /// silent in the app; only the clock icon blinks between tries.
+  static void _walk(String convId, String id, bool isDm, {String text = ''}) {
+    final lower = text.toLowerCase();
+    final isStaleOk = lower.startsWith('stale ok');
+    final isStaleFail = lower.startsWith('stale fail');
+    final shift = isStaleOk ? 2200 : 0;
+    if (isStaleOk || isStaleFail) {
+      void to(int ms, MessageStatus status) => Timer(
+        Duration(milliseconds: ms),
+        () => _set(convId, id, (m) => m.copyWith(status: status)),
+      );
+      to(700, MessageStatus.sending);
+      to(1500, MessageStatus.pending);
+      to(1800, MessageStatus.sending);
+      to(2600, MessageStatus.pending);
+      to(2900, MessageStatus.sending);
+      if (isStaleFail) {
+        to(3700, MessageStatus.failed);
+        return;
+      }
+    }
     var current = id;
     void step(int ms, MessageStatus status, {bool isFinal = false}) {
-      Timer(Duration(milliseconds: ms), () {
+      Timer(Duration(milliseconds: ms + shift), () {
         final serverId = status == MessageStatus.sent ? '${_next++}' : null;
         _set(
           convId,

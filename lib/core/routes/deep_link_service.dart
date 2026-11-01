@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 
 import '../../data/session_store.dart';
+import '../utils/connect_code.dart';
 import 'app_routes.dart';
 
 class AppLink {
@@ -60,19 +61,9 @@ class DeepLinkService extends GetxService {
     }
   }
 
-  // https://<host>/connect/<CODE>[?branch=<Name>] and connectum:<CODE>[?branch=<Name>]
   AppLink? map(Uri uri) {
-    final rawCode = uri.scheme == 'connectum'
-        ? uri.path
-        : (uri.pathSegments.length == 2 && uri.pathSegments.first == 'connect'
-              ? uri.pathSegments[1]
-              : '');
-    final code = rawCode.replaceAll(RegExp(r'[-\s]'), '').toUpperCase();
-    if (code.isEmpty) return null;
-    return AppLink(
-      code: code,
-      branch: uri.queryParameters['branch'],
-      host: uri.host,
-    );
+    final parsed = ConnectLinkParser.parse(uri.toString()).value;
+    if (parsed == null) return null;
+    return AppLink(code: parsed.code, branch: parsed.branch, host: uri.host);
   }
 }

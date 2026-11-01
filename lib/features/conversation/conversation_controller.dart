@@ -12,6 +12,7 @@ import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/chat_time.dart';
 import '../../data/models/conversation.dart';
+import '../../data/models/hash_command.dart';
 import '../../data/models/form_card.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../forms/forms_picker_controller.dart';
@@ -24,6 +25,7 @@ import '../../data/socket/connectivity_service.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/models/message.dart';
 import '../../data/models/reaction.dart';
+import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/message_repository.dart';
@@ -34,6 +36,7 @@ import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
 import '../../core/widgets/app_avatar.dart';
 import 'models/chat_item.dart';
+import 'models/command_prompt.dart';
 
 /// One conversation. A controller exists per conversation id (the binding puts
 /// it under that id as its tag), so one route's disposal can never delete
@@ -54,6 +57,7 @@ class ConversationController extends GetxController
     required this.socket,
     required this.store,
     required this.e2e,
+    required this.commands,
   });
 
   static const maxLength = 2000;
@@ -74,6 +78,10 @@ class ConversationController extends GetxController
   final SocketService socket;
   final SessionStore store;
   final E2eRepository e2e;
+  final CommandRepository commands;
+
+  /// The "#" commands list of the composer.
+  late final prompt = CommandPrompt(commands);
 
   /// The forms button's sheet. A form is posted into this conversation only
   /// where the server takes one (a direct message or a group).
@@ -118,12 +126,16 @@ class ConversationController extends GetxController
   final reply = Rxn<Message>();
   final notice = RxnString();
 
+  final _notes = <({String id, String text, int ts})>[];
+  int _noteSeq = 0;
+  bool _isRunning = false;
   final _byId = <String, Message>{};
   final _seen = <String>{};
   final _fresh = <String>{};
   RxList<Message>? _list;
   Worker? _listWorker;
   Worker? _onlineWorker;
+  Worker? _setupWorker;
   Timer? _readTimer;
   Timer? _noticeTimer;
   Timer? _seedTimer;
@@ -178,6 +190,9 @@ class ConversationController extends GetxController
     final count = conversation?.memberCount ?? 0;
     return kind == 'group' && count > 0 ? '$count members' : null;
   }
+
+  /// A group's members from the stored list, empty when not known.
+  List<String> get members => conversation?.members ?? const [];
 
   AppPresenceDot get presenceDot {
     if (!isDirect) return AppPresenceDot.none;
@@ -356,6 +371,13 @@ class ConversationController extends GetxController
         unawaited(_refreshGate(isLookup: true));
       }
     });
+    _setupWorker = ever(e2e.phase, (_) {
+      if (SeedUi.isActive) {
+        _applySeedGate();
+      } else {
+        unawaited(_refreshGate());
+      }
+    });
     _load();
   }
 
@@ -398,6 +420,7 @@ class ConversationController extends GetxController
     isBlocked.value = isClosed;
     blockReason.value = isClosed ? gate.message : null;
     isKeyChange.value = isClosed && gate.isKeyChange;
+    keyChangeMember = gate.keyChangeUser;
     isLocked.value = gate.isEncrypt || hasHistory;
   }
 
@@ -409,6 +432,9 @@ class ConversationController extends GetxController
     isKeyChange.value = seed?.isKeyChange ?? false;
   }
 
+  /// The member whose key changed, for the review sheet (set with the gate).
+  String? keyChangeMember;
+
   Future<void> recheckGate() => _refreshGate(isLookup: true);
 
   /// Reads the keys for the key-changed sheet. Null when they cannot be read.
@@ -417,7 +443,9 @@ class ConversationController extends GetxController
     isReviewing.value = true;
     try {
       if (SeedUi.isActive) return SeedUi.keyReview(target);
-      return await e2e.reviewKeys(target);
+      return kind == 'group'
+          ? await e2e.reviewKeys(keyChangeMember ?? '', group: target)
+          : await e2e.reviewKeys(target);
     } on SocketCallError catch (_) {
       _say("Couldn't check the security keys right now.");
       return null;
@@ -515,8 +543,13 @@ class ConversationController extends GetxController
     }
     final out = <ChatItem>[];
     Message? prev;
+    var noteAt = 0;
     for (var i = 0; i < asc.length; i++) {
       final m = asc[i];
+      while (noteAt < _notes.length && _notes[noteAt].ts <= m.ts) {
+        out.add(ChatItem.system(_notes[noteAt].text, refId: _notes[noteAt].id));
+        noteAt++;
+      }
       final isNewDay = prev == null || !ChatTime.isSameDay(prev.ts, m.ts);
       if (isNewDay) out.add(ChatItem.day(ChatTime.day(m.ts, now)));
       final isUnreadStart = m.msgId == _firstUnreadId;
@@ -539,6 +572,9 @@ class ConversationController extends GetxController
         ),
       );
       prev = m;
+    }
+    for (; noteAt < _notes.length; noteAt++) {
+      out.add(ChatItem.system(_notes[noteAt].text, refId: _notes[noteAt].id));
     }
     final reversed = out.reversed.toList();
     if (isLoadingOlder.value) {
@@ -667,6 +703,7 @@ class ConversationController extends GetxController
 
   void onChanged(String value) {
     length.value = value.characters.length;
+    prompt.onTextChanged(value);
     if (value.trim().isEmpty || !canType || !socket.isOnline) return;
     final now = DateTime.now();
     if (now.difference(_lastTyping) < _typingEvery) return;
@@ -691,9 +728,57 @@ class ConversationController extends GetxController
     _noticeTimer = Timer(const Duration(seconds: 4), () => notice.value = null);
   }
 
+  /// Puts `#name ` into the composer; nothing runs until send.
+  void pickCommand(HashCommand command) {
+    final value = '#${command.name} ';
+    text.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    length.value = value.characters.length;
+    prompt.onTextChanged(value);
+    focus.requestFocus();
+  }
+
+  /// A `#` line: online only, shown as a notice, a small row, or the normal
+  /// events of the message it sends.
+  Future<void> _runHash(String body) async {
+    if (_isRunning) return;
+    _isRunning = true;
+    try {
+      final result = await commands.run(body);
+      switch (result.kind) {
+        case HashKind.info:
+          _notes.add((
+            id: 'n${_noteSeq++}',
+            text: result.text,
+            ts: DateTime.now().millisecondsSinceEpoch,
+          ));
+          _rebuild();
+        case HashKind.directQueued:
+          if (result.convId != conversationId) {
+            _say('Sent to @${result.user}');
+          }
+        case HashKind.done:
+          break;
+        default:
+          _say(result.text);
+      }
+      if (result.isFinished) {
+        text.clear();
+        length.value = 0;
+        prompt.close();
+        WidgetsBinding.instance.addPostFrameCallback((_) => scrollToLatest());
+      }
+    } finally {
+      _isRunning = false;
+    }
+  }
+
   Future<void> send() async {
     final body = text.text.trim();
     if (body.isEmpty) return;
+    if (CommandRepository.isHashLine(body)) return _runHash(body);
     if (body.characters.length > maxLength) {
       _say('Messages can be up to $maxLength characters.');
       return;
@@ -824,6 +909,7 @@ class ConversationController extends GetxController
     _seedTimer?.cancel();
     _listWorker?.dispose();
     _onlineWorker?.dispose();
+    _setupWorker?.dispose();
     _noticeWorker?.dispose();
     picker.onClose();
     scroll.removeListener(_onScroll);
