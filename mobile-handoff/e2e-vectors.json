@@ -388,5 +388,40 @@
   "paddingNote": {
     "x*41 payload JSON bytes + 4": 59,
     "rule": "padded length = ceil((4 + len(payloadJsonUtf8)) / 64) * 64; first 4 bytes big-endian length; remainder zeros"
+  },
+  "lateBox": {
+    "note": "A device of the recipient added after the message was sent. Its box was made later by the recipient's first device and carries its own one-time key (ek); open it with that ek, not the envelope's.",
+    "device": {
+      "user": "reference-bob",
+      "id": "ac30d8a7b01774a27052b3a1aab2c62f",
+      "ecdh": {
+        "pub": "BOaKQdBjSCPbcfc0JxLyBdqJ_nyGAtbKfj0x-x1TmrfrleW27wzFJur7rqMeobytRAPDs-hFuCfISHG5ovfTSjo",
+        "d": "ZY5zA5D8kTqkf3nFaIMm50VNwMvEboxib0JWVzgJz3s",
+        "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgZY5zA5D8kTqkf3nFaIMm50VNwMvEboxib0JWVzgJz3uhRANCAATmikHQY0gj23H3NCcS8gXaif58hgLWyn49MfsdU5q365Xltu8MxSbq-66jHqG8rUQDw7PoRbgnyEhxuaL300o6"
+      },
+      "sign": {
+        "pub": "BNjsouQp7eM8ivRKwaR8dHjD3fMsorlhTxeCAthZib4r-YhoCugdcbD_VP0vlfx8omXAalXD3s254HajaIIAvog",
+        "d": "Ie33svfWz0JLqIdIFIWS3GmE-ab9f_3l7cdSMw07wgk",
+        "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgIe33svfWz0JLqIdIFIWS3GmE-ab9f_3l7cdSMw07wgmhRANCAATY7KLkKe3jPIr0SsGkfHR4w93zLKK5YU8XggLYWYm-K_mIaAroHXGw_1T9L5X8fKJlwGpVw97NueB2o2iCAL6I"
+      }
+    },
+    "envelope": {
+      "text": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"ac30d8a7b01774a27052b3a1aab2c62f\":{\"iv\":\"w0cmLqTwFXK_TRKB\",\"w\":\"53nsBXIpz4R5YC0TBt4_zuH29pocfvCFse_v0tE9JWg3kXFmj4jSICTNAWdGj2PJ\",\"ek\":\"BF1nEst1QYfRa3PV_eMaYHhWaATr3-WDPSD5EuV36f2TChCjn5JUMBgGAVIw6aWL0reZ-9ismsiV_ueRKZeqV4U\"}}}",
+      "expectConv": "dm:reference-ann|reference-bob"
+    },
+    "intermediates": {
+      "boxEk": "BF1nEst1QYfRa3PV_eMaYHhWaATr3-WDPSD5EuV36f2TChCjn5JUMBgGAVIw6aWL0reZ-9ismsiV_ueRKZeqV4U",
+      "ecdhSharedSecretHex": "bd62ab820e7562cda6de4696925583d3dfc119c28eac2c8e02c42dcc759318b8",
+      "wrapKeyHex": "6a7179edd13fb2003e1cc8fac147f2700a4dfb784c5e18dc13c8b891f1a09a09",
+      "hkdfInfo": "connectum-e2e-wrap|ac30d8a7b01774a27052b3a1aab2c62f|7282251cafd6326cf79fadc1e6ea6eff",
+      "wrapAad": "e2e1-wrap|4m1BDDbS54nDe_439URewQ|ac30d8a7b01774a27052b3a1aab2c62f"
+    },
+    "sender": {
+      "user": "reference-ann",
+      "id": "7282251cafd6326cf79fadc1e6ea6eff",
+      "signPub": "BDuo7H3eik3rLE1B1cA_yZ74RFG_-Aa26cwI---hHqmDuG9K05Zc1GBPwvnul0pi7uQUodj-VMVUQOX5F1PUQxc"
+    },
+    "expectedText": "e2e1 reference message: if you can read this, your client follows the spec.",
+    "_about": "Copied unchanged from the web repo docs/e2e-test-vectors.json (lateBox, plus the sender signing key and expected text from the same file). Throwaway keys."
   }
 }

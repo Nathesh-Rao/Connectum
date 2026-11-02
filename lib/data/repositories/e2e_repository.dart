@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../db/app_database.dart';
@@ -36,11 +37,14 @@ enum E2eSetupPhase {
   refused,
 }
 
-class E2eRepository extends GetxService {
+class E2eRepository extends GetxService with WidgetsBindingObserver {
   E2eRepository(this._keyStore, this._socket, this._session, this._db);
 
   static const _directoryTtl = Duration(minutes: 5);
   static const _labelMax = 60;
+  static const _pollEvery = Duration(seconds: 60);
+  static const _eventDebounce = Duration(seconds: 2);
+  static const _rateLimitedTicks = 5;
 
   final E2eKeyStore _keyStore;
   final SocketService _socket;
@@ -61,6 +65,22 @@ class E2eRepository extends GetxService {
   final phase = E2eSetupPhase.idle.obs;
   final issueReason = ''.obs;
 
+  /// This device was added after another one existed (`late` from the
+  /// server): earlier messages stay locked until an older device hands them on.
+  final isLate = false.obs;
+
+  /// Devices that can show this one the past (`e2e.sync.pending`), valid when
+  /// [isHelpersKnown].
+  final helpers = <E2eDevicePublic>[].obs;
+  final isHelpersKnown = false.obs;
+
+  /// The one-time hint for Chats while late, empty once dismissed.
+  final lateHint = ''.obs;
+
+  /// Fires when this device stops being late and the locked messages should be
+  /// fetched again.
+  Stream<void> get unlockRequests => _unlockRequests.stream;
+
   /// The one-time notice text, empty once dismissed.
   final notice = ''.obs;
 
@@ -68,10 +88,19 @@ class E2eRepository extends GetxService {
       "Secure messaging is on in this organisation. Older messages can't be read on this phone.";
   static const earlierText =
       ' Earlier installs stay listed until you remove them in Security.';
+  static const lateHintText =
+      "Your earlier messages aren't shown on this phone yet. See Security.";
+  static const readableText =
+      'Your earlier messages are now readable on this phone.';
   static const _backoffStart = Duration(minutes: 1);
   static const _backoffCap = Duration(minutes: 30);
 
+  final _unlockRequests = StreamController<void>.broadcast();
   Timer? _retryTimer;
+  Timer? _pollTimer;
+  Timer? _eventTimer;
+  int _skipTicks = 0;
+  bool _isForeground = true;
   Duration _backoff = _backoffStart;
   DateTime _retryAfter = DateTime.fromMillisecondsSinceEpoch(0);
   bool _isSetupRunning = false;
@@ -104,12 +133,23 @@ class E2eRepository extends GetxService {
     _socket.events.listen(_onEvent);
     _socket.onOnline.listen((_) => unawaited(ensureSetup()));
     ever(_session.current, (_) => _reset());
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _retryTimer?.cancel();
+    _pollTimer?.cancel();
+    _eventTimer?.cancel();
+    _unlockRequests.close();
     super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isForeground = state == AppLifecycleState.resumed;
+    if (_isForeground && isLate.value) unawaited(_pollOnce());
   }
 
   void _reset() {
@@ -128,6 +168,12 @@ class E2eRepository extends GetxService {
     phase.value = E2eSetupPhase.idle;
     issueReason.value = '';
     notice.value = '';
+    isLate.value = false;
+    helpers.clear();
+    isHelpersKnown.value = false;
+    lateHint.value = '';
+    _pollTimer?.cancel();
+    _eventTimer?.cancel();
     _retryTimer?.cancel();
     _backoff = _backoffStart;
     _retryAfter = DateTime.fromMillisecondsSinceEpoch(0);
@@ -142,7 +188,14 @@ class E2eRepository extends GetxService {
       return;
     }
     _directory.remove(user);
-    if (user == _me) unawaited(ensureSetup());
+    if (user != _me) return;
+    if (phase.value != E2eSetupPhase.ready) {
+      unawaited(ensureSetup());
+      return;
+    }
+    // A burst of events (a device finishing, then a removal) is read once.
+    _eventTimer?.cancel();
+    _eventTimer = Timer(_eventDebounce, () => unawaited(_pollOnce()));
   }
 
   /// This device's keys, read from the key store (never generated here).
@@ -157,6 +210,10 @@ class E2eRepository extends GetxService {
     _isKeysLoaded = true;
     hasKeys.value = _keys != null;
     deviceId.value = _keys?.id ?? '';
+    if (_keys != null && await _readLate() == _lateWaiting) {
+      isLate.value = true;
+      await _loadLateHint();
+    }
     return _keys;
   }
 
@@ -177,6 +234,7 @@ class E2eRepository extends GetxService {
       isStatusKnown.value = true;
       lastError.value = '';
       unawaited(_saveStatus());
+      await _applyLate(all);
       return true;
     } on SocketCallError catch (e) {
       lastError.value = 'e2e.status: ${e.code}';
@@ -238,8 +296,100 @@ class E2eRepository extends GetxService {
         label: idText(d['label']),
         ts: intOf(d['ts']),
         isRecovery: d['recovery'] == true,
+        isLate: d['late'] == true,
       ),
   ];
+
+  // ---- late device: the past is not shown here yet -------------------------
+
+  static const _lateWaiting = '1';
+  static const _lateUnlock = '2';
+  static const _hintDone = 'done';
+
+  String get _lateKey => 'e2e.late.$_org.$_me';
+  String get _hintKey => 'e2e.latehint.$_org.$_me';
+
+  /// Local mark per organisation and user, kept across restarts and sessions:
+  /// `1` while waiting, `2` once the locked messages still have to be fetched
+  /// again, empty otherwise. Never removed with the keys or the session.
+  Future<String> _readLate() async => await _session.readValue(_lateKey) ?? '';
+
+  Future<void> _writeLate(String value) => _session.writeValue(_lateKey, value);
+
+  Future<void> _loadLateHint() async {
+    final isDone = await _session.readValue(_hintKey) == _hintDone;
+    lateHint.value = isDone ? '' : lateHintText;
+  }
+
+  Future<void> dismissLateHint() async {
+    lateHint.value = '';
+    await _session.writeValue(_hintKey, _hintDone);
+  }
+
+  /// Reads `late` for this device from a status list. Becoming late starts
+  /// the slow poll; stopping asks for the locked messages to be fetched again
+  /// (once, remembered across restarts until that finished).
+  Future<void> _applyLate(List<E2eDevicePublic> all) async {
+    final own = all.where((d) => d.id == deviceId.value).firstOrNull;
+    if (own == null) return;
+    final mark = await _readLate();
+    if (own.isLate && mode.value != 'off') {
+      isLate.value = true;
+      if (mark != _lateWaiting) await _writeLate(_lateWaiting);
+      await _loadLateHint();
+      _startPolling();
+      return;
+    }
+    isLate.value = false;
+    helpers.clear();
+    isHelpersKnown.value = false;
+    lateHint.value = '';
+    _pollTimer?.cancel();
+    if (mark.isEmpty) return;
+    if (mark == _lateWaiting) {
+      await _writeLate(_lateUnlock);
+      await _session.writeValue(_hintKey, '');
+    }
+    if (!_unlockRequests.isClosed) _unlockRequests.add(null);
+  }
+
+  /// The locked messages were fetched again (completely or as far as the
+  /// server allows): the mark goes. [readable] is how many opened.
+  Future<void> finishUnlock({required int readable}) async {
+    await _writeLate('');
+    if (readable > 0) notice.value = readableText;
+  }
+
+  void _startPolling() {
+    if (_pollTimer?.isActive ?? false) return;
+    unawaited(refreshPending());
+    _pollTimer = Timer.periodic(_pollEvery, (_) => unawaited(_pollOnce()));
+  }
+
+  /// One slow-poll step: the status (late may have ended) and the helpers. Only
+  /// in the foreground, only while late; a rate limit skips the next ticks.
+  Future<void> _pollOnce() async {
+    if (!_isForeground || !_socket.isOnline) return;
+    if (_skipTicks > 0) {
+      _skipTicks--;
+      return;
+    }
+    if (!await refreshStatus() || !isLate.value) return;
+    await refreshPending();
+  }
+
+  /// `e2e.sync.pending` on a late device: which devices can show it the past.
+  Future<void> refreshPending() async {
+    if (!_socket.isOnline || !isLate.value) return;
+    try {
+      final data = await _socket.sdCall('e2e.sync.pending', {});
+      helpers.assignAll(_devices(data['helpers']));
+      isHelpersKnown.value = true;
+    } on SocketCallError catch (e) {
+      lastError.value = 'e2e.sync.pending: ${e.code}';
+      if (e.code == 'rate_limited') _skipTicks = _rateLimitedTicks;
+    }
+  }
 
   /// The devices that can read now: the list without the recovery key.
   static List<E2eDevicePublic> readers(List<E2eDevicePublic> all) => [

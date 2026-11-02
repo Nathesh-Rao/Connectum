@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:webcrypto/webcrypto.dart';
 
 import '../../data/e2e/e2e_crypto.dart';
 import '../../data/e2e/e2e_key_store.dart';
@@ -162,6 +163,7 @@ class DebugE2eController extends GetxController {
       final devices = await _importDevices(vectors);
       await _envelopes(vectors, devices);
       await _negatives(vectors, devices);
+      await _lateBox(vectors);
       await _registration(vectors, devices);
       await _file(vectors);
       await _safety(vectors, devices);
@@ -396,6 +398,134 @@ class DebugE2eController extends GetxController {
   }
 
   // ---- registration proof ----------------------------------------------
+
+  // ---- a box made later (its own one-time key) --------------------------
+
+  /// `lateBox`: a device added after the message was sent, opened with the
+  /// box's own `ek`; then the same message with the box or the envelope
+  /// tampered with, which must all be refused.
+  Future<void> _lateBox(Map<String, dynamic> vectors) async {
+    final vector = vectors['lateBox'] as Map<String, dynamic>?;
+    if (vector == null) {
+      _add('lateBox: vector present', false, 'not in the vectors file');
+      return;
+    }
+    final device = vector['device'] as Map<String, dynamic>;
+    final sender = vector['sender'] as Map<String, dynamic>;
+    final text = (vector['envelope'] as Map<String, dynamic>)['text'] as String;
+    final conv = (vector['envelope'] as Map<String, dynamic>)['expectConv'];
+    final inter = vector['intermediates'] as Map<String, dynamic>;
+    final keys = await _crypto.importDeviceKeys(
+      id: device['id'] as String,
+      ecdhScalar: E2eCrypto.decode((device['ecdh'] as Map)['d'] as String),
+      signScalar: E2eCrypto.decode((device['sign'] as Map)['d'] as String),
+      ecdhPub: (device['ecdh'] as Map)['pub'] as String,
+      signPub: (device['sign'] as Map)['pub'] as String,
+    );
+    Future<String?> signKey(String user, String dev) async =>
+        user == sender['user'] && dev == sender['id']
+        ? sender['signPub'] as String
+        : null;
+
+    Future<E2eOpened> open(String envelope) => _crypto.openEnvelope(
+      text: envelope,
+      keys: keys,
+      signKeyFor: signKey,
+      expectConv: conv as String,
+    );
+
+    String change(void Function(Map<String, dynamic> json) edit) {
+      final json =
+          jsonDecode(text.substring(E2eCrypto.prefix.length))
+              as Map<String, dynamic>;
+      edit(json);
+      return E2eCrypto.prefix + jsonEncode(json);
+    }
+
+    Map<String, dynamic> myBox(Map<String, dynamic> json) =>
+        (json['keys'] as Map<String, dynamic>)[keys.id] as Map<String, dynamic>;
+
+    final envelope = _crypto.parseEnvelope(text);
+    final boxEk = envelope.keys[keys.id]?['ek'];
+
+    await _check('lateBox: the box carries its own ek', () async {
+      if (boxEk == null) return 'ek not parsed from the box';
+      if (boxEk != inter['boxEk']) return 'ek differs from the vector';
+      if (boxEk == envelope.ek) return 'box ek equals the envelope ek';
+      return null;
+    });
+
+    await _check('lateBox: opens with the box ek', () async {
+      final opened = await open(text);
+      if (opened.text != vector['expectedText']) return 'plaintext differs';
+      if (opened.from != sender['user'] || opened.dev != sender['id']) {
+        return 'sender differs';
+      }
+      return null;
+    });
+
+    await _check('lateBox: wrap key matches the vector', () async {
+      final shared = await keys.ecdhPrivate.deriveBits(
+        256,
+        await EcdhPublicKey.importRawKey(
+          E2eCrypto.decode(boxEk!),
+          EllipticCurve.p256,
+        ),
+      );
+      return _toHex(shared) == inter['ecdhSharedSecretHex']
+          ? null
+          : 'shared secret differs';
+    });
+
+    Future<void> refused(String name, String envelopeText, String code) =>
+        _check(name, () async {
+          try {
+            await open(envelopeText);
+          } on E2eException catch (e) {
+            return e.code == code ? null : 'refused as ${e.code}, not $code';
+          }
+          return 'opened a tampered message';
+        });
+
+    await refused(
+      'lateBox: tamper, envelope ek used instead of the box ek',
+      change((j) => myBox(j).remove('ek')),
+      'decrypt_failed',
+    );
+    await refused(
+      'lateBox: tamper, box ek replaced by another valid point',
+      change((j) => myBox(j)['ek'] = envelope.ek),
+      'decrypt_failed',
+    );
+    await refused(
+      'lateBox: tamper, box ek is not a 65-byte point',
+      change((j) => myBox(j)['ek'] = E2eCrypto.encode(List.filled(33, 2))),
+      'bad_key',
+    );
+    await refused(
+      'lateBox: tamper, box ek is not text',
+      change((j) => myBox(j)['ek'] = 7),
+      'not_for_this_device',
+    );
+    await refused(
+      'lateBox: tamper, one bit of the box changed',
+      change((j) {
+        final w = E2eCrypto.decode(myBox(j)['w'] as String);
+        w[0] ^= 1;
+        myBox(j)['w'] = E2eCrypto.encode(w);
+      }),
+      'decrypt_failed',
+    );
+    await refused(
+      'lateBox: tamper, ciphertext changed (signature still checked)',
+      change((j) {
+        final ct = E2eCrypto.decode(j['ct'] as String);
+        ct[0] ^= 1;
+        j['ct'] = E2eCrypto.encode(ct);
+      }),
+      'bad_signature',
+    );
+  }
 
   Future<void> _registration(
     Map<String, dynamic> vectors,

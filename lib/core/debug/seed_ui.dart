@@ -107,6 +107,43 @@ class SeedUi {
     );
   }
 
+  /// Profile tab fixtures: typical, long (long name and email) or sparse
+  /// (optional fields missing); and how many unsent messages the log out
+  /// sheet reports.
+  static final profileVariant = 'typical'.obs;
+  static final profileUnsent = 0.obs;
+
+  static ({
+    String name,
+    String username,
+    String email,
+    String connectumId,
+    String category,
+  })
+  profile() => switch (profileVariant.value) {
+    'long' => (
+      name: 'Alexandria Montgomery-Featherstonehaugh',
+      username: 'alexandria.montgomery.featherstonehaugh',
+      email: 'alexandria.montgomery-featherstonehaugh@very-long-company-domain.example.com',
+      connectumId: 'MN68-2CQ9',
+      category: 'Regional distribution partner',
+    ),
+    'sparse' => (
+      name: 'Alex Morgan',
+      username: '',
+      email: '',
+      connectumId: 'MN68-2CQ9',
+      category: '',
+    ),
+    _ => (
+      name: 'Alex Morgan',
+      username: 'alex',
+      email: 'alex@example.com',
+      connectumId: 'MN68-2CQ9',
+      category: 'Employee',
+    ),
+  };
+
   /// Which state the Chats screen shows: content, loading, empty, error or
   /// offline. Switched by the debug chips on the screen.
   static final chatsState = 'content'.obs;
@@ -154,22 +191,30 @@ class SeedUi {
     'removed',
     'earlier',
     'required',
+    'late',
+    'late-none',
+    'readable',
   ];
 
   /// The secure-messaging setup state shown by the sample screens ('required':
   /// required mode before setup finished).
   static final e2eState = 'devices'.obs;
 
-  static E2eDevicePublic _device(String id, String label, int daysAgo) =>
-      E2eDevicePublic(
-        id: id,
-        ecdh: '',
-        sign: '',
-        label: label,
-        ts: DateTime.now()
-            .subtract(Duration(days: daysAgo))
-            .millisecondsSinceEpoch,
-      );
+  static E2eDevicePublic _device(
+    String id,
+    String label,
+    int daysAgo, {
+    bool isLate = false,
+  }) => E2eDevicePublic(
+    id: id,
+    ecdh: '',
+    sign: '',
+    isLate: isLate,
+    label: label,
+    ts: DateTime.now()
+        .subtract(Duration(days: daysAgo))
+        .millisecondsSinceEpoch,
+  );
 
   /// Puts a setup state into the E2E repository's in-memory fields. Nothing
   /// is registered, stored or sent.
@@ -187,6 +232,10 @@ class SeedUi {
     e2e.isRecoveryOn.value = state == 'devices' || state == 'earlier';
     e2e.issueReason.value = '';
     e2e.notice.value = '';
+    e2e.isLate.value = false;
+    e2e.helpers.clear();
+    e2e.isHelpersKnown.value = false;
+    e2e.lateHint.value = '';
     e2e.hasKeys.value = true;
     e2e.deviceId.value = mine;
     e2e.myDevices.assignAll([phone, ...older]);
@@ -208,6 +257,23 @@ class SeedUi {
           _device('1111c3d4e5f60718293a4b5c6d7e8f90', phone.label, 30),
           ...older,
         ]);
+        e2e.phase.value = E2eSetupPhase.ready;
+      case 'late':
+      case 'late-none':
+        // This phone is late: with a helper (an older device active lately),
+        // or with none, which points to the recovery code.
+        final isHelped = state == 'late';
+        e2e.myDevices.assignAll([
+          _device(mine, phone.label, 0, isLate: true),
+          ...older,
+        ]);
+        e2e.isLate.value = true;
+        e2e.isHelpersKnown.value = true;
+        if (isHelped) e2e.helpers.assignAll([older.first]);
+        e2e.lateHint.value = E2eRepository.lateHintText;
+        e2e.phase.value = E2eSetupPhase.ready;
+      case 'readable':
+        e2e.notice.value = E2eRepository.readableText;
         e2e.phase.value = E2eSetupPhase.ready;
       case 'limit':
         e2e.hasKeys.value = false;

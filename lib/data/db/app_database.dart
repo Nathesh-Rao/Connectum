@@ -226,6 +226,22 @@ class AppDatabase {
     return db.transaction((txn) => action(Sql(txn)));
   }
 
+  /// Messages still waiting to go out, over every organisation.
+  Future<int> unsentCount() async {
+    final rows = await query(
+      "SELECT COUNT(*) AS n FROM outbox WHERE status IN ('pending','sending','failed')",
+    );
+    return (rows.first['n'] as int?) ?? 0;
+  }
+
+  /// Every cached row of every organisation (a full log out). The encryption
+  /// keys and `e2e_pins` stay.
+  Future<void> wipeAll() => transaction((sql) async {
+    for (final table in _scopedTables) {
+      await sql.update('DELETE FROM $table');
+    }
+  });
+
   Future<void> wipeScope(String orgId, String userId) =>
       transaction((sql) async {
         for (final table in _scopedTables) {

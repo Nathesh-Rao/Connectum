@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -58,6 +59,8 @@ class MessageRepository extends GetxService {
   static const _maxStaleRetries = 2;
   static const _historyPage = 50;
   static const _maxGapPages = 10;
+  static const _maxUnlockPages = 30;
+  static const _unlockPause = Duration(seconds: 1);
   static const _cidMemory = Duration(hours: 23);
   static const couldNotConfirm = AppDatabase.couldNotConfirm;
 
@@ -84,6 +87,8 @@ class MessageRepository extends GetxService {
   bool _isFlushing = false;
   bool _wantsFlush = false;
   bool _isSyncing = false;
+  bool _isUnlocking = false;
+  String? _unlockingConv;
   int _lastTemp = 0;
 
   /// Why the last [sendText] was refused with [SendResult.blocked].
@@ -103,6 +108,7 @@ class MessageRepository extends GetxService {
       _queue = _queue.then((_) => _handle(e)).catchError((Object _) {});
     });
     _socket.onOnline.listen((_) => _onOnline());
+    _e2e.unlockRequests.listen((_) => unawaited(_unlockLocked()));
     _conversations.receiptsChanged.listen(applyReceipts);
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _onDropped();
@@ -118,6 +124,75 @@ class MessageRepository extends GetxService {
     _decrypting = _decrypting
         .then((_) => _decryptPending())
         .catchError((Object _) {});
+  }
+
+  /// After this device stopped being late: the server now serves the earlier
+  /// envelopes with this device's boxes, but the saved copies are the old ones.
+  /// Fetches history again, one conversation at a time and newest first, only
+  /// for conversations that hold locked messages, one page a second, and stops
+  /// at the oldest locked message, the end of history, [_maxUnlockPages] pages
+  /// or the first failed request (then the mark stays and a later connection
+  /// tries again). A changed envelope becomes pending and is opened by
+  /// [_decryptPending], so the row and the chat preview update in place.
+  Future<void> _unlockLocked() async {
+    final org = _org;
+    final user = _me;
+    if (_isUnlocking || org == null || user == null || !_socket.isOnline) {
+      return;
+    }
+    _isUnlocking = true;
+    try {
+      const locked = "decrypt_state = 'cant_decrypt'";
+      final before = await _lockedCount(org, user);
+      final rows = await _db.query(
+        'SELECT conv_id, MIN(ts) AS oldest FROM messages WHERE org_id = ? AND user_id = ? '
+        'AND $locked GROUP BY conv_id ORDER BY MAX(ts) DESC',
+        [org, user],
+      );
+      var isComplete = true;
+      for (final r in rows) {
+        if (!await _refetchLocked(idText(r['conv_id']), intOf(r['oldest']))) {
+          isComplete = false;
+          break;
+        }
+        await _decrypting;
+      }
+      await _decrypting;
+      if (!isComplete || _org != org || _me != user) return;
+      await _e2e.finishUnlock(readable: before - await _lockedCount(org, user));
+    } finally {
+      _unlockingConv = null;
+      _isUnlocking = false;
+    }
+  }
+
+  Future<int> _lockedCount(String org, String user) async {
+    final rows = await _db.query(
+      'SELECT COUNT(*) AS n FROM messages WHERE org_id = ? AND user_id = ? '
+      "AND decrypt_state = 'cant_decrypt'",
+      [org, user],
+    );
+    return rows.isEmpty ? 0 : intOf(rows.first['n']);
+  }
+
+  /// Latest page, then older ones, until the page reaches [oldestTs]. False
+  /// when a request failed or the connection went.
+  Future<bool> _refetchLocked(String convId, int oldestTs) async {
+    _unlockingConv = convId;
+    var page = await _fetchHistory(convId);
+    for (var n = 0; n < _maxUnlockPages; n++) {
+      if (page == null || !_socket.isOnline) return false;
+      final stamps = [
+        for (final i in page.items)
+          if (i['ts'] != null) intOf(i['ts']),
+      ];
+      final isReached =
+          stamps.isNotEmpty && stamps.reduce(math.min) <= oldestTs;
+      if (isReached || !page.hasMore || page.next == null) return true;
+      await Future<void>.delayed(_unlockPause);
+      page = await _fetchHistory(convId, before: page.next);
+    }
+    return true;
   }
 
   /// Opens every envelope still marked pending and stores the outcome. A
@@ -1303,10 +1378,7 @@ class MessageRepository extends GetxService {
       _e2e.invalidateGroup(ConversationRepository.targetOf(entry.convId));
     }
     final users = e['users'];
-    _e2e.invalidate([
-      if (users is List) ...users.map((u) => '$u'),
-      _me ?? '',
-    ]);
+    _e2e.invalidate([if (users is List) ...users.map((u) => '$u'), _me ?? '']);
     final tries = (_staleTries[entry.id] ?? 0) + 1;
     if (tries > _maxStaleRetries) {
       if (kDebugMode) debugPrint('e2e: stale devices, giving up');
@@ -1324,7 +1396,9 @@ class MessageRepository extends GetxService {
   /// haven't set up encryption yet"; the group's own words when it differs.
   static String _notReadyNames(String text) {
     final i = text.indexOf(': ');
-    final names = i < 0 ? '' : text.substring(i + 2).replaceAll(RegExp(r'\.$'), '');
+    final names = i < 0
+        ? ''
+        : text.substring(i + 2).replaceAll(RegExp(r'\.$'), '');
     if (names.isEmpty) return "some members haven't set up encryption yet";
     return '$names ${names.contains(',') ? "haven't" : "hasn't"} set up encryption yet';
   }
@@ -1632,11 +1706,14 @@ class MessageRepository extends GetxService {
         }
       }
       if (isOlder) {
-        await _setCursor(sql, convId, null);
-        await sql.update(
-          'UPDATE sync_cursor SET has_more = ?, next_id = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-          [hasMore ? 1 : 0, next, org, user, convId],
-        );
+        // Fetching locked messages again must not move the "load older" spot.
+        if (convId != _unlockingConv) {
+          await _setCursor(sql, convId, null);
+          await sql.update(
+            'UPDATE sync_cursor SET has_more = ?, next_id = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+            [hasMore ? 1 : 0, next, org, user, convId],
+          );
+        }
       } else {
         await _countHistory(sql, convId, items, fresh);
         await _setCursor(

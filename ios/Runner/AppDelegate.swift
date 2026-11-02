@@ -14,6 +14,11 @@ import UIKit
           switch call.method {
           case "model":
             result(UIDevice.current.model)
+          case "appVersion":
+            let info = Bundle.main.infoDictionary
+            let name = info?["CFBundleShortVersionString"] as? String ?? ""
+            let build = info?["CFBundleVersion"] as? String ?? ""
+            result("\(name) (\(build))")
           case "openSettings":
             guard let url = URL(string: UIApplication.openSettingsURLString) else { return result(false) }
             UIApplication.shared.open(url)

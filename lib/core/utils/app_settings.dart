@@ -12,4 +12,13 @@ class AppSettings {
       await _channel.invokeMethod<bool>('openSettings');
     } catch (_) {}
   }
+
+  /// "0.1.0 (1)" from the installed app, or null when it cannot be read.
+  static Future<String?> version() async {
+    try {
+      return await _channel.invokeMethod<String>('appVersion');
+    } catch (_) {
+      return null;
+    }
+  }
 }

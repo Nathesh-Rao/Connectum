@@ -81,6 +81,11 @@ class AuthenticationController extends GetxController
   @override
   void onInit() {
     super.onInit();
+    final prefill = session.loginEmail.value;
+    if (prefill != null) {
+      email.text = prefill;
+      session.loginEmail.value = null;
+    }
     tabController = TabController(
       length: tabLabels.length,
       vsync: this,

@@ -367,7 +367,12 @@ class E2eCrypto {
       if (id is! String || wrap is! Map) return;
       final iv = wrap['iv'];
       final w = wrap['w'];
-      if (iv is String && w is String) wraps[id] = {'iv': iv, 'w': w};
+      final ek = wrap['ek'];
+      if (iv is! String || w is! String) return;
+      // A box that names an `ek` which is not text is unusable, never read
+      // with the envelope's key instead.
+      if (wrap.containsKey('ek') && ek is! String) return;
+      wraps[id] = {'iv': iv, 'w': w, if (ek is String) 'ek': ek};
     });
     return E2eEnvelope(
       mid: str('mid'),
@@ -437,9 +442,11 @@ class E2eCrypto {
     }
     final String payloadText;
     try {
+      // A box made later has its own one-time key; the sender's boxes use the
+      // envelope's.
       final shared = await keys.ecdhPrivate.deriveBits(
         256,
-        await _importEcdhPublic(e.ek),
+        await _importEcdhPublic(mine['ek'] ?? e.ek),
       );
       final wrapKey = await _wrapKey(shared, e.mid, keys.id, e.dev);
       final raw = await wrapKey.decryptBytes(

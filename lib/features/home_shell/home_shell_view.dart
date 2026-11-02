@@ -55,6 +55,28 @@ class HomeShellView extends GetView<HomeShellController> {
                 ),
               );
             }),
+            Obx(() {
+              final e2e = c.security.e2e;
+              final text = c.index.value == 0 && e2e.notice.value.isEmpty
+                  ? e2e.lateHint.value
+                  : '';
+              if (text.isEmpty) return const SizedBox.shrink();
+              return SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.xs,
+                    AppSpacing.page,
+                    0,
+                  ),
+                  child: AppNoticeBanner(
+                    message: text,
+                    onDismiss: c.security.dismissLateHint,
+                  ),
+                ),
+              );
+            }),
             Expanded(
               // The bar stays put under the keyboard, so a tab only gives up the
               // part of the keyboard that rises above the bar.

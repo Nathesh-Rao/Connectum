@@ -15,12 +15,16 @@ class AppAvatar extends StatelessWidget {
     required this.name,
     this.size = AppSpacing.avatar,
     this.isSquare = false,
+    this.isAccent = false,
     this.presence = AppPresenceDot.none,
   });
 
   final String name;
   final double size;
   final bool isSquare;
+
+  /// White initials on the accent colour, in the larger title size (profile).
+  final bool isAccent;
   final AppPresenceDot presence;
 
   String get _initials {
@@ -47,11 +51,13 @@ class AppAvatar extends StatelessWidget {
         borderRadius: isSquare
             ? const BorderRadius.all(Radius.circular(AppRadius.control))
             : null,
-        color: AppColors.avatarBg,
+        color: isAccent ? AppColors.accent : AppColors.avatarBg,
       ),
       child: Text(
         _initials,
-        style: AppText.readableStrong.copyWith(color: AppColors.avatarText),
+        style: isAccent
+            ? AppText.title.copyWith(color: AppColors.background)
+            : AppText.readableStrong.copyWith(color: AppColors.avatarText),
       ),
     );
     if (presence == AppPresenceDot.none) return avatar;

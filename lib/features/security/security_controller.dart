@@ -49,6 +49,27 @@ class SecurityController extends GetxController {
   bool get isRecoveryOn =>
       e2e.isStatusKnown.value ? e2e.isRecoveryOn.value : isSavedRecovery.value;
 
+  /// The waiting line for a phone added after other devices, else null.
+  String? get lateTitle => e2e.isLate.value
+      ? 'Waiting for your other device to show your earlier messages'
+      : null;
+
+  /// Who can show the past (from `e2e.sync.pending`), or the way out when no
+  /// device was active recently. Null until that read has answered.
+  String? get lateDetail {
+    if (!e2e.isLate.value || !e2e.isHelpersKnown.value) return null;
+    final names = [
+      for (final d in e2e.helpers)
+        if (d.label.trim().isNotEmpty) d.label.trim(),
+    ];
+    if (e2e.helpers.isEmpty) {
+      return 'None of your other devices was active recently. If you set up a recovery code, you can use it to bring them back.';
+    }
+    return names.isEmpty
+        ? 'One of your other devices can show them.'
+        : 'Can show them: ${names.join(', ')}.';
+  }
+
   bool isThisPhone(E2eDevicePublic d) => d.id == e2e.deviceId.value;
 
   @override
@@ -124,6 +145,14 @@ class SecurityController extends GetxController {
     } finally {
       isBusy.value = false;
     }
+  }
+
+  void dismissLateHint() {
+    if (SeedUi.isActive) {
+      e2e.lateHint.value = '';
+      return;
+    }
+    e2e.dismissLateHint();
   }
 
   void dismissNotice() {

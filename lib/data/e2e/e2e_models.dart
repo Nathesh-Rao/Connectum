@@ -19,6 +19,7 @@ class E2eDevicePublic {
     this.label = '',
     this.ts = 0,
     this.isRecovery = false,
+    this.isLate = false,
   });
 
   final String id;
@@ -30,6 +31,10 @@ class E2eDevicePublic {
   /// The recovery key, listed by the server as a device (`recovery: true`). It
   /// is wrapped for like any device but is not one of a person's devices.
   final bool isRecovery;
+
+  /// `late` from the server: added after another device existed, so earlier
+  /// messages have no box for it until an older device hands them on.
+  final bool isLate;
 }
 
 enum E2eReadState { ok, cantDecrypt, pending }
@@ -98,7 +103,8 @@ class E2eEnvelope {
   final String ct;
   final String sig;
 
-  /// Recipient device id -> `{iv, w}`.
+  /// Recipient device id -> `{iv, w}`, plus `ek` when the box was made later
+  /// and carries its own one-time key.
   final Map<String, Map<String, String>> keys;
 }
 

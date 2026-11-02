@@ -27,6 +27,9 @@ class SessionRepository extends GetxService {
   final SocketService _socket;
 
   final loginNotice = RxnString();
+
+  /// Set by a log out so the sign-in screen opens with the email filled in.
+  final loginEmail = RxnString();
   final _ready = Completer<void>();
 
   /// Completes once the stored session has been read.
@@ -144,6 +147,35 @@ class SessionRepository extends GetxService {
     await _db.wipeScope(info.orgId, info.userId);
     await _store.clear();
     _goToLogin(null);
+  }
+
+  Future<int> unsentCount() => _db.unsentCount();
+
+  /// The person's own log out. Ends both server sessions (best effort, a
+  /// failure never blocks), stops the socket, drops the organisation token and
+  /// the account session, and wipes every cached row and the outbox. Kept:
+  /// the encryption keys and key pins, the remember-this-device tokens and the
+  /// device id. The people and screens behind it read from the stores, which
+  /// are emptied here, so nothing stale is left for the next sign-in.
+  Future<void> logOut({required String notice}) async {
+    _isHandling = true;
+    final email = _store.identity.value?.email;
+    final orgToken = _store.token;
+    final identityToken = _store.identity.value?.token;
+    await Future.wait([
+      for (final token in [orgToken, identityToken])
+        if (token != null)
+          _api
+              .post('/logout', bearer: token)
+              .timeout(const Duration(seconds: 3))
+              .then((_) {}, onError: (_) {}),
+    ]);
+    await _socket.stop();
+    await _db.wipeAll();
+    await _store.clear();
+    await _store.clearIdentity();
+    loginEmail.value = email;
+    _goToLogin(notice);
   }
 
   void _goToLogin(String? notice) {

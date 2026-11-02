@@ -15,6 +15,11 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "model" -> result.success(Build.MODEL)
+                    "appVersion" -> {
+                        val info = packageManager.getPackageInfo(packageName, 0)
+                        val build = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode else @Suppress("DEPRECATION") info.versionCode.toLong()
+                        result.success("${info.versionName} ($build)")
+                    }
                     "openSettings" -> {
                         startActivity(
                             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))

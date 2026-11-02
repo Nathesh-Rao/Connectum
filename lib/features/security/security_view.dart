@@ -11,6 +11,7 @@ import '../../core/widgets/app_scaffold.dart';
 import '../../data/repositories/e2e_repository.dart';
 import 'security_controller.dart';
 import 'widgets/device_row.dart';
+import 'widgets/late_notice.dart';
 import 'widgets/security_sheets.dart';
 
 class SecurityView extends GetView<SecurityController> {
@@ -75,6 +76,10 @@ class SecurityView extends GetView<SecurityController> {
                       caption: 'Recovery key',
                       value: c.isRecoveryOn ? 'On' : 'Off',
                     ),
+                    if (c.lateTitle != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      LateNotice(title: c.lateTitle!, detail: c.lateDetail),
+                    ],
                     const SizedBox(height: AppSpacing.lg),
                     const Text('My devices', style: AppText.subtitle),
                     const SizedBox(height: AppSpacing.xs),

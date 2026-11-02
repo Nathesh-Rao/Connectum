@@ -23,6 +23,7 @@ class AppButton extends StatefulWidget {
     this.isCentered = false,
     this.isCompact = false,
   }) : _kind = _AppButtonKind.primary,
+       isDanger = false,
        tone = AppTextButtonTone.muted,
        semanticLabel = null;
 
@@ -31,10 +32,11 @@ class AppButton extends StatefulWidget {
     required String this.label,
     required this.onPressed,
     this.icon,
+    this.leadingIcon,
+    this.isDanger = false,
     this.isLoading = false,
   }) : _kind = _AppButtonKind.secondary,
        tone = AppTextButtonTone.muted,
-       leadingIcon = null,
        isCentered = true,
        isCompact = false,
        semanticLabel = null;
@@ -47,6 +49,7 @@ class AppButton extends StatefulWidget {
     this.leadingIcon,
     this.isLoading = false,
   }) : _kind = _AppButtonKind.text,
+       isDanger = false,
        icon = null,
        isCentered = true,
        isCompact = false,
@@ -58,6 +61,7 @@ class AppButton extends StatefulWidget {
     required this.onPressed,
     required String this.semanticLabel,
   }) : _kind = _AppButtonKind.icon,
+       isDanger = false,
        tone = AppTextButtonTone.muted,
        label = null,
        leadingIcon = null,
@@ -71,6 +75,9 @@ class AppButton extends StatefulWidget {
   final IconData? icon;
   final IconData? leadingIcon;
   final AppTextButtonTone tone;
+
+  /// Secondary only: the label, icon and border use the error colour.
+  final bool isDanger;
 
   /// Primary buttons put the label on the left and the icon on the right
   /// (the prototype); sheets centre them.
@@ -238,7 +245,11 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
 
   Widget _buildLabelled() {
     final isPrimary = widget._kind == _AppButtonKind.primary;
-    final foreground = isPrimary ? AppColors.background : AppColors.ink;
+    final foreground = isPrimary
+        ? AppColors.background
+        : widget.isDanger
+        ? AppColors.error
+        : AppColors.ink;
     final background = isPrimary
         ? (_isEnabled || widget.isLoading
               ? AppColors.accent
@@ -264,7 +275,13 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: background,
           borderRadius: AppRadius.controlAll,
-          border: isPrimary ? null : Border.all(color: AppColors.inputBorder),
+          border: isPrimary
+              ? null
+              : Border.all(
+                  color: widget.isDanger
+                      ? AppColors.error
+                      : AppColors.inputBorder,
+                ),
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(
