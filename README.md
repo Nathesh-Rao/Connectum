@@ -1,3 +1,1 @@
-# connectum
-
-A new Flutter project.
+# Connectum
