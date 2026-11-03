@@ -1,0 +1,18 @@
+{
+  "name": "sample_file",
+  "caption": "Sample: files",
+  "fields": [
+    {
+      "name": "photo",
+      "type": "file",
+      "caption": "One photo",
+      "required": true
+    },
+    {
+      "name": "documents",
+      "type": "file",
+      "caption": "Up to ten documents",
+      "multi": true
+    }
+  ]
+}

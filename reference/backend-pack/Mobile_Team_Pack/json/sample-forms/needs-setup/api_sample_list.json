@@ -1,0 +1,7 @@
+{
+  "about": "An API (admin.api.save) that answers a list. {{API_BASE}} is replaced by the address of the stand-in API (tools/sample-forms/stand-in-api.mjs) or of your own service.",
+  "name": "sample_list",
+  "type": "list",
+  "url": "{{API_BASE}}/list",
+  "cacheSec": 120
+}

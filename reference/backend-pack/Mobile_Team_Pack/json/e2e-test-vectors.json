@@ -1,0 +1,272 @@
+{
+  "note": "Throwaway test keys. Everything here was made by the app's own crypto; see docs/E2E_MOBILE_KIT.md. Regenerate with node tools/e2e-kit/make-vectors.mjs.",
+  "recipient": {
+    "user": "reference-bob",
+    "id": "e4a7c80875a31d2aac65f69c55501225",
+    "ecdh": {
+      "pub": "BNqu2e3gck_LI6WG82RPhDwdNqVoR-rJeugYyh9XQDc0-Do0mxOJvAFGhb6GxuSE-678f4ZHa_S3yje8jJ0_Ilk",
+      "d": "P8clttKAR5MKtJgeLau5XyoJFprizeV0TWNk1SEB-qg",
+      "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgP8clttKAR5MKtJgeLau5XyoJFprizeV0TWNk1SEB-qihRANCAATartnt4HJPyyOlhvNkT4Q8HTalaEfqyXroGMofV0A3NPg6NJsTibwBRoW-hsbkhPuu_H-GR2v0t8o3vIydPyJZ"
+    },
+    "sign": {
+      "pub": "BIKCsw62M2d4DZcvamj8YA6FNDu0l61DxAsKYtObTgVFLMiOoSOx1wVmFDAYoiyjqiSA-Kj9OdJKgkclqo45PmY",
+      "d": "aUYE8Bg2nvC4W_6H5P4sW9ticnquvEh9N4izRK_sMBk",
+      "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgaUYE8Bg2nvC4W_6H5P4sW9ticnquvEh9N4izRK_sMBmhRANCAASCgrMOtjNneA2XL2po_GAOhTQ7tJetQ8QLCmLTm04FRSzIjqEjsdcFZhQwGKIso6okgPio_TnSSoJHJaqOOT5m"
+    }
+  },
+  "sender": {
+    "user": "reference-ann",
+    "id": "7282251cafd6326cf79fadc1e6ea6eff",
+    "ecdh": {
+      "pub": "BPfMkGE-95ROjKAPoAN3ru_od48jYv2O11H8m1yuY42I-Fg6eWfneNd9MlT3eOg-jSmClLOQO99qLGD2E_HgJhM",
+      "d": "SvQ0OLY7tfCGCFO-3SDuxLdxqsm1SfsRYtPRw7kS3wQ",
+      "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgSvQ0OLY7tfCGCFO-3SDuxLdxqsm1SfsRYtPRw7kS3wShRANCAAT3zJBhPveUToygD6ADd67v6HePI2L9jtdR_JtcrmONiPhYOnln53jXfTJU93joPo0pgpSzkDvfaixg9hPx4CYT"
+    },
+    "sign": {
+      "pub": "BDuo7H3eik3rLE1B1cA_yZ74RFG_-Aa26cwI---hHqmDuG9K05Zc1GBPwvnul0pi7uQUodj-VMVUQOX5F1PUQxc",
+      "d": "Fl2R2wFkYvmkpPfOXWZZd9JRsghNDBjPUuL8XqjIkFw",
+      "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgFl2R2wFkYvmkpPfOXWZZd9JRsghNDBjPUuL8XqjIkFyhRANCAAQ7qOx93opN6yxNQdXAP8me-ERRv_gGtunMCPvvoR6pg7hvStOWXNRgT8L57pdKYu7kFKHY_lTFVEDl-RdT1EMX"
+    }
+  },
+  "registration": {
+    "user": "reference-bob",
+    "id": "e4a7c80875a31d2aac65f69c55501225",
+    "ecdh": "BNqu2e3gck_LI6WG82RPhDwdNqVoR-rJeugYyh9XQDc0-Do0mxOJvAFGhb6GxuSE-678f4ZHa_S3yje8jJ0_Ilk",
+    "sign": "BIKCsw62M2d4DZcvamj8YA6FNDu0l61DxAsKYtObTgVFLMiOoSOx1wVmFDAYoiyjqiSA-Kj9OdJKgkclqo45PmY",
+    "proof": "na12kpHzvFfATgKvh44Ri9TJ0J8-kLCtadUBbPLSbfoWEGcM9HoJpX2XD-bEHXdBL6C7c0bUp1N_d30F5-8w0g",
+    "signedText": "connectum-e2e-register|reference-bob|e4a7c80875a31d2aac65f69c55501225|BNqu2e3gck_LI6WG82RPhDwdNqVoR-rJeugYyh9XQDc0-Do0mxOJvAFGhb6GxuSE-678f4ZHa_S3yje8jJ0_Ilk|BIKCsw62M2d4DZcvamj8YA6FNDu0l61DxAsKYtObTgVFLMiOoSOx1wVmFDAYoiyjqiSA-Kj9OdJKgkclqo45PmY"
+  },
+  "envelope": {
+    "text": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"}}}",
+    "expectConv": "dm:reference-ann|reference-bob"
+  },
+  "expected": {
+    "plaintextPayload": {
+      "v": 1,
+      "t": "e2e1 reference message: if you can read this, your client follows the spec."
+    }
+  },
+  "lateBox": {
+    "note": "A device of the recipient added after the message was sent. Its box was made later by the recipient's first device and carries its own one-time key (ek); open it with that ek, not the envelope's.",
+    "device": {
+      "user": "reference-bob",
+      "id": "ac30d8a7b01774a27052b3a1aab2c62f",
+      "ecdh": {
+        "pub": "BOaKQdBjSCPbcfc0JxLyBdqJ_nyGAtbKfj0x-x1TmrfrleW27wzFJur7rqMeobytRAPDs-hFuCfISHG5ovfTSjo",
+        "d": "ZY5zA5D8kTqkf3nFaIMm50VNwMvEboxib0JWVzgJz3s",
+        "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgZY5zA5D8kTqkf3nFaIMm50VNwMvEboxib0JWVzgJz3uhRANCAATmikHQY0gj23H3NCcS8gXaif58hgLWyn49MfsdU5q365Xltu8MxSbq-66jHqG8rUQDw7PoRbgnyEhxuaL300o6"
+      },
+      "sign": {
+        "pub": "BNjsouQp7eM8ivRKwaR8dHjD3fMsorlhTxeCAthZib4r-YhoCugdcbD_VP0vlfx8omXAalXD3s254HajaIIAvog",
+        "d": "Ie33svfWz0JLqIdIFIWS3GmE-ab9f_3l7cdSMw07wgk",
+        "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgIe33svfWz0JLqIdIFIWS3GmE-ab9f_3l7cdSMw07wgmhRANCAATY7KLkKe3jPIr0SsGkfHR4w93zLKK5YU8XggLYWYm-K_mIaAroHXGw_1T9L5X8fKJlwGpVw97NueB2o2iCAL6I"
+      }
+    },
+    "envelope": {
+      "text": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"ac30d8a7b01774a27052b3a1aab2c62f\":{\"iv\":\"w0cmLqTwFXK_TRKB\",\"w\":\"53nsBXIpz4R5YC0TBt4_zuH29pocfvCFse_v0tE9JWg3kXFmj4jSICTNAWdGj2PJ\",\"ek\":\"BF1nEst1QYfRa3PV_eMaYHhWaATr3-WDPSD5EuV36f2TChCjn5JUMBgGAVIw6aWL0reZ-9ismsiV_ueRKZeqV4U\"}}}",
+      "expectConv": "dm:reference-ann|reference-bob"
+    },
+    "intermediates": {
+      "boxEk": "BF1nEst1QYfRa3PV_eMaYHhWaATr3-WDPSD5EuV36f2TChCjn5JUMBgGAVIw6aWL0reZ-9ismsiV_ueRKZeqV4U",
+      "ecdhSharedSecretHex": "bd62ab820e7562cda6de4696925583d3dfc119c28eac2c8e02c42dcc759318b8",
+      "wrapKeyHex": "6a7179edd13fb2003e1cc8fac147f2700a4dfb784c5e18dc13c8b891f1a09a09",
+      "hkdfInfo": "connectum-e2e-wrap|ac30d8a7b01774a27052b3a1aab2c62f|7282251cafd6326cf79fadc1e6ea6eff",
+      "wrapAad": "e2e1-wrap|4m1BDDbS54nDe_439URewQ|ac30d8a7b01774a27052b3a1aab2c62f"
+    }
+  },
+  "intermediates": {
+    "signatureInput": "e2e1|4m1BDDbS54nDe_439URewQ|reference-ann|7282251cafd6326cf79fadc1e6ea6eff|dm:reference-ann|reference-bob|1793546468065|BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM|O7NcGJfI_YP_4U1_|WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS",
+    "messageAad": "e2e1-msg|4m1BDDbS54nDe_439URewQ|dm:reference-ann|reference-bob|reference-ann|7282251cafd6326cf79fadc1e6ea6eff",
+    "wrapAad": "e2e1-wrap|4m1BDDbS54nDe_439URewQ|e4a7c80875a31d2aac65f69c55501225",
+    "hkdfInfo": "connectum-e2e-wrap|e4a7c80875a31d2aac65f69c55501225|7282251cafd6326cf79fadc1e6ea6eff",
+    "hkdfSaltHex": "e26d410c36d2e789c37bfe37f5445ec1",
+    "ecdhSharedSecretHex": "c17d8cef9687292eb4a317767a7ea2559ce10cca089b617fed3cf18b080c3697",
+    "wrapKeyHex": "e1f4f3ea4163ec152f184ad2981d60b41452ef016abb1ab6b36754705432a4a6",
+    "sizes": {
+      "midBytes": 16,
+      "ekBytes": 65,
+      "ivBytes": 12,
+      "sigBytes": 64,
+      "wrapBytes": 48,
+      "paddingMultiple": 64
+    }
+  },
+  "rewrap": {
+    "note": "The older device's job with the one-time key and the iv FIXED, so the output is the same bytes every time. Throwaway keys. See docs/E2E_HISTORY_SYNC_MOBILE.md, 'Handing on, byte by byte', and tools/e2e-kit/e2e-rewrap.mjs (node tools/e2e-kit/e2e-rewrap.mjs reference).",
+    "senderSignPub": "BDuo7H3eik3rLE1B1cA_yZ74RFG_-Aa26cwI---hHqmDuG9K05Zc1GBPwvnul0pi7uQUodj-VMVUQOX5F1PUQxc",
+    "expectConv": "dm:reference-ann|reference-bob",
+    "how": "olderDevice opens its own box of `input.envelope`, then locks the 32-byte message key for `input.target`: ephemeral ECDH key = `fixed.ephPrivateJwk` (P-256; `d` is the private scalar), iv = `fixed.iv`. Result must equal `expected.item` byte for byte. `expected.intermediates` has every value on the way.",
+    "positive": [
+      {
+        "name": "a waiting device",
+        "note": "The normal case: a device added after the message was sent, shown the past by the older device.",
+        "input": {
+          "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"}}}",
+          "olderDevice": {
+            "id": "e4a7c80875a31d2aac65f69c55501225",
+            "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgP8clttKAR5MKtJgeLau5XyoJFprizeV0TWNk1SEB-qihRANCAATartnt4HJPyyOlhvNkT4Q8HTalaEfqyXroGMofV0A3NPg6NJsTibwBRoW-hsbkhPuu_H-GR2v0t8o3vIydPyJZ"
+          },
+          "target": {
+            "id": "5a7c237d891db44ee3cfd0c656f7a872",
+            "ecdh": "BLF3GL8avwKK33A1R_2Y-mKtUNQ0frSmW-V2ABBGr_eH2X9IH6CRrhdduq8SnayXUObirMYJRyFeU0W_GJc0XvE"
+          },
+          "targetEcdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+          "fixed": {
+            "ephPrivateJwk": {
+              "key_ops": [
+                "deriveBits"
+              ],
+              "ext": true,
+              "kty": "EC",
+              "x": "Kfc-z9w3koacbvzxOlf4OFXtwqOQkZTofNxJuubbjpM",
+              "y": "0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE",
+              "crv": "P-256",
+              "d": "VtD7sTPPlhBgtoZBKNHfVw7wDIvS0P0Ds1OGFfII_80"
+            },
+            "iv": "atBD30TBT3dTBh7U"
+          }
+        },
+        "expected": {
+          "item": {
+            "mid": "4m1BDDbS54nDe_439URewQ",
+            "iv": "atBD30TBT3dTBh7U",
+            "w": "6RZGtxtIMPuV3WRYakcEBJC_gTt3jo6g_oo_bhxkdYyOJEmpXMmJax904Li46tn5",
+            "ek": "BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE"
+          },
+          "intermediates": {
+            "ownBoxEk": "BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM",
+            "ownSharedSecretHex": "c17d8cef9687292eb4a317767a7ea2559ce10cca089b617fed3cf18b080c3697",
+            "ownWrapKeyHex": "e1f4f3ea4163ec152f184ad2981d60b41452ef016abb1ab6b36754705432a4a6",
+            "ownHkdfInfo": "connectum-e2e-wrap|e4a7c80875a31d2aac65f69c55501225|7282251cafd6326cf79fadc1e6ea6eff",
+            "msgKeyHex": "024baa35469e6dbffbb9c35efb5a823e433711821ac7e4194b843a4c65c6db90",
+            "ephemeralPublic": "BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE",
+            "sharedSecretHex": "8a33079a9984af3a81762d6061fb84bd0a8ffda136c5a6dfdb6626af5a8f7f42",
+            "hkdfSaltHex": "e26d410c36d2e789c37bfe37f5445ec1",
+            "hkdfInfo": "connectum-e2e-wrap|5a7c237d891db44ee3cfd0c656f7a872|7282251cafd6326cf79fadc1e6ea6eff",
+            "wrapKeyHex": "3b6414a250ae5805c122c84d9ff6e32cec05d843e15f4b963ce764076f69c021",
+            "wrapAad": "e2e1-wrap|4m1BDDbS54nDe_439URewQ|5a7c237d891db44ee3cfd0c656f7a872"
+          },
+          "envelopeWithBox": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"6RZGtxtIMPuV3WRYakcEBJC_gTt3jo6g_oo_bhxkdYyOJEmpXMmJax904Li46tn5\",\"ek\":\"BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE\"}}}"
+        }
+      },
+      {
+        "name": "the recovery key as the target (the backup)",
+        "note": "Exactly the same bytes and steps; only the target is the person's recovery key (flagged `recovery: true` in e2e.devices). The server accepts e2e.sync.put for it.",
+        "input": {
+          "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"}}}",
+          "olderDevice": {
+            "id": "e4a7c80875a31d2aac65f69c55501225",
+            "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgP8clttKAR5MKtJgeLau5XyoJFprizeV0TWNk1SEB-qihRANCAATartnt4HJPyyOlhvNkT4Q8HTalaEfqyXroGMofV0A3NPg6NJsTibwBRoW-hsbkhPuu_H-GR2v0t8o3vIydPyJZ"
+          },
+          "target": {
+            "id": "d429f6b748dbc62019a27801ec386b58",
+            "ecdh": "BD9iqiE-zlyDw7M7_8FpD5lJGZygamzSqR5N8ZVFbCDklYQAc5hRjj9rm3X2zcuKqfIIJHy5gqz174mePFQ-4-A"
+          },
+          "targetEcdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgA0hPNIaP6fKo85Ko5KycLURs5yqAwXzVOveE4GHEfLOhRANCAAQ_YqohPs5cg8OzO__BaQ-ZSRmcoGps0qkeTfGVRWwg5JWEAHOYUY4_a5t19s3LiqnyCCR8uYKs9e-JnjxUPuPg",
+          "fixed": {
+            "ephPrivateJwk": {
+              "key_ops": [
+                "deriveBits"
+              ],
+              "ext": true,
+              "kty": "EC",
+              "x": "Fw3Z2VAAEwtO2_sYCdXhlIyWqPc4stCxBxrzbGnqJg8",
+              "y": "fzutzU6-aO6CHPkqCVd9wHyNv7XN35ELuvpnLG098Ns",
+              "crv": "P-256",
+              "d": "Z6eY4yUeUIFZBdXo5trT-MbwOV0OvfkiWmUwz5S1iI0"
+            },
+            "iv": "y39i8cPpY-xqtOnd"
+          },
+          "recovery": true
+        },
+        "expected": {
+          "item": {
+            "mid": "4m1BDDbS54nDe_439URewQ",
+            "iv": "y39i8cPpY-xqtOnd",
+            "w": "EGlslQ4VXsfwSEN-SGZNpwtEsbCtRhvel_IPddL0JsZKklQZbFfeOgDLhpUGEU08",
+            "ek": "BBcN2dlQABMLTtv7GAnV4ZSMlqj3OLLQsQca82xp6iYPfzutzU6-aO6CHPkqCVd9wHyNv7XN35ELuvpnLG098Ns"
+          },
+          "intermediates": {
+            "ownBoxEk": "BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM",
+            "ownSharedSecretHex": "c17d8cef9687292eb4a317767a7ea2559ce10cca089b617fed3cf18b080c3697",
+            "ownWrapKeyHex": "e1f4f3ea4163ec152f184ad2981d60b41452ef016abb1ab6b36754705432a4a6",
+            "ownHkdfInfo": "connectum-e2e-wrap|e4a7c80875a31d2aac65f69c55501225|7282251cafd6326cf79fadc1e6ea6eff",
+            "msgKeyHex": "024baa35469e6dbffbb9c35efb5a823e433711821ac7e4194b843a4c65c6db90",
+            "ephemeralPublic": "BBcN2dlQABMLTtv7GAnV4ZSMlqj3OLLQsQca82xp6iYPfzutzU6-aO6CHPkqCVd9wHyNv7XN35ELuvpnLG098Ns",
+            "sharedSecretHex": "9887c59c305f639511b106440c1a458f5831c4f002921b2dd4235a5b559c9af1",
+            "hkdfSaltHex": "e26d410c36d2e789c37bfe37f5445ec1",
+            "hkdfInfo": "connectum-e2e-wrap|d429f6b748dbc62019a27801ec386b58|7282251cafd6326cf79fadc1e6ea6eff",
+            "wrapKeyHex": "2b570d4c5c0fc0ea85bd89546f166a1c030be4c9fdbe2864066895420c86160d",
+            "wrapAad": "e2e1-wrap|4m1BDDbS54nDe_439URewQ|d429f6b748dbc62019a27801ec386b58"
+          },
+          "envelopeWithBox": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"d429f6b748dbc62019a27801ec386b58\":{\"iv\":\"y39i8cPpY-xqtOnd\",\"w\":\"EGlslQ4VXsfwSEN-SGZNpwtEsbCtRhvel_IPddL0JsZKklQZbFfeOgDLhpUGEU08\",\"ek\":\"BBcN2dlQABMLTtv7GAnV4ZSMlqj3OLLQsQca82xp6iYPfzutzU6-aO6CHPkqCVd9wHyNv7XN35ELuvpnLG098Ns\"}}}"
+        }
+      }
+    ],
+    "negative": [
+      {
+        "name": "a box made for another message (wrong mid)",
+        "why": "The HKDF salt and the additional data both contain the message id: a box for message B does not open on message A.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"TQxT21UN3m1iDsPB4efDoNDcnhev1c-EA9xcI-hkt_CoCFaqrOWhKuTMRkLfPAwU\",\"ek\":\"BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:reference-ann|reference-bob",
+        "expectFailsAt": "5 open the box"
+      },
+      {
+        "name": "the older device's id in the HKDF info (it must be the ORIGINAL SENDER's device)",
+        "why": "info = connectum-e2e-wrap|<waiting device>|<envelope.dev>. Using the id of the device that made the box is the classic mistake.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"4YNiNC_7I08kMg7weGkmYqFA7GOV0iKJ2pgdXViF5gurZVobigFQEJnKP52yOt3r\",\"ek\":\"BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:reference-ann|reference-bob",
+        "expectFailsAt": "5 open the box"
+      },
+      {
+        "name": "the older device's id in the additional data (it must be the WAITING device's)",
+        "why": "aad = e2e1-wrap|<mid>|<waiting device>.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"6RZGtxtIMPuV3WRYakcEBJC_gTt3jo6g_oo_bhxkdYy5ypO5XhkHG2seN-0KINkR\",\"ek\":\"BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:reference-ann|reference-bob",
+        "expectFailsAt": "5 open the box"
+      },
+      {
+        "name": "the box has no ek of its own",
+        "why": "A box made later must carry its own one-time key; without it the reader uses the envelope's ek and the key agreement is wrong.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"6RZGtxtIMPuV3WRYakcEBJC_gTt3jo6g_oo_bhxkdYyOJEmpXMmJax904Li46tn5\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:reference-ann|reference-bob",
+        "expectFailsAt": "5 open the box"
+      },
+      {
+        "name": "the wrapped key was changed (one bit)",
+        "why": "AES-GCM refuses it.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"6BZGtxtIMPuV3WRYakcEBJC_gTt3jo6g_oo_bhxkdYyOJEmpXMmJax904Li46tn5\",\"ek\":\"BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:reference-ann|reference-bob",
+        "expectFailsAt": "5 open the box"
+      },
+      {
+        "name": "a box that is fine, delivered in another conversation",
+        "why": "The envelope says which conversation it belongs to; a message that arrives in another chat is refused before anything is opened.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"},\"5a7c237d891db44ee3cfd0c656f7a872\":{\"iv\":\"atBD30TBT3dTBh7U\",\"w\":\"6RZGtxtIMPuV3WRYakcEBJC_gTt3jo6g_oo_bhxkdYyOJEmpXMmJax904Li46tn5\",\"ek\":\"BCn3Ps_cN5KGnG788TpX-DhV7cKjkJGU6HzcSbrm246T0GJ_eGbD09Y3CyjZifAk7T4DvhKmN9yhLXZ-TTrn3dE\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:someone|else",
+        "expectFailsAt": "2 conversation"
+      },
+      {
+        "name": "an envelope with no box for this device",
+        "why": "The device was added after the message and nothing was handed on for it: the message stays a grey line.",
+        "envelope": "e2e1:{\"v\":1,\"mid\":\"4m1BDDbS54nDe_439URewQ\",\"from\":\"reference-ann\",\"dev\":\"7282251cafd6326cf79fadc1e6ea6eff\",\"conv\":\"dm:reference-ann|reference-bob\",\"ts\":1793546468065,\"ek\":\"BHm9bbuLuLV6Td-pjgiiXyouTXXjuwh96yTAYygJheTtY2gLy2ycP-b_w0FE10qtuyCojssfHIaJabRhNtmMeIM\",\"iv\":\"O7NcGJfI_YP_4U1_\",\"ct\":\"WQn2tGGeRS3Sh0zIARqd_hXfDRThkQ72rXU5D0h8MjMBii29dSctj-HIUOzwHZFQGr3zXzFOKy2DzHT1oj_sopvHaHXhaRmlIL1mVsZ2C7uzinmx5P6U3e9H-s4ogTaL7iynQTwdaOeUTo1HSWUWL9nNuTJFndhVE4zKuPIhPB53ylTdOTdLlddydASbjTZS\",\"sig\":\"RPlJ094p3nJl2vHzZjY7KhBgeK4-UhoO31NP4uA5RlVxVLe2iv-eUEBXfSHiySnu4QHR6SOYLt3dzG5N3T7VNA\",\"keys\":{\"e4a7c80875a31d2aac65f69c55501225\":{\"iv\":\"3B2YN3NdfgRK0YcS\",\"w\":\"G5pvdHcgdlRjXrS1ZytmXubc3Gf_0TptSeHLg9CTYOUWrNxqbh2JEGzwARj7LG03\"},\"7282251cafd6326cf79fadc1e6ea6eff\":{\"iv\":\"6YV0T82WKx8WaSnP\",\"w\":\"oJiP6HXWifPhYxhLZgeGW6MU2CG9f0U4E5bjGXT0IBjETzXA_92RlYZiQb_Pr2JS\"}}}",
+        "deviceId": "5a7c237d891db44ee3cfd0c656f7a872",
+        "ecdhPkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgt8DFpJwhLb4FNquj6-7B9oO3cQX61g-Qeijkwx8b-SihRANCAASxdxi_Gr8Cit9wNUf9mPpirVDUNH60plvldgAQRq_3h9l_SB-gka4XXbqvEp2sl1Dm4qzGCUchXlNFvxiXNF7x",
+        "expectConv": "dm:reference-ann|reference-bob",
+        "expectFailsAt": "3 box for this device"
+      }
+    ]
+  }
+}

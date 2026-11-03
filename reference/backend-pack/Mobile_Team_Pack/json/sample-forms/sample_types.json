@@ -1,0 +1,82 @@
+{
+  "name": "sample_types",
+  "caption": "Sample: one field of every basic kind (the value each one is saved as)",
+  "fields": [
+    {
+      "name": "text",
+      "type": "text",
+      "caption": "Short text"
+    },
+    {
+      "name": "email",
+      "type": "email",
+      "caption": "Email"
+    },
+    {
+      "name": "url",
+      "type": "url",
+      "caption": "Web address"
+    },
+    {
+      "name": "mobile",
+      "type": "mobile",
+      "caption": "Mobile"
+    },
+    {
+      "name": "mobileIntl",
+      "type": "mobile",
+      "caption": "Mobile with country code",
+      "withCountryCode": true
+    },
+    {
+      "name": "count",
+      "type": "wholenumber",
+      "caption": "Whole number",
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "name": "amount",
+      "type": "number",
+      "caption": "Decimal number"
+    },
+    {
+      "name": "day",
+      "type": "date",
+      "caption": "Date"
+    },
+    {
+      "name": "clock",
+      "type": "time",
+      "caption": "Time"
+    },
+    {
+      "name": "place",
+      "type": "location",
+      "caption": "Location"
+    },
+    {
+      "name": "code",
+      "type": "barcode",
+      "caption": "Barcode or QR"
+    },
+    {
+      "name": "pay",
+      "type": "payment",
+      "caption": "Payment",
+      "methods": [
+        "Cash",
+        "Card",
+        "UPI"
+      ],
+      "currency": "INR"
+    },
+    {
+      "name": "invoice",
+      "type": "autogenerate",
+      "caption": "Invoice number (made by the server)",
+      "prefix": "INV-",
+      "digits": 4
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+class AppRoutes {
+  AppRoutes._();
+
+  static const splash = '/splash';
+  static const onboarding = '/onboarding';
+  static const authentication = '/authentication';
+  static const verification = '/verification';
+  static const enterprises = '/enterprises';
+  static const enterpriseCreated = '/enterprise-created';
+  static const chats = '/chats';
+  static const aiAgents = '/ai-agents';
+  static const conversation = '/conversation/:id';
+  static const submissions = '/submissions';
+  static const submissionDetail = '/submissions/:id';
+  static const workspace = '/workspace';
+  static const form = '/form';
+  static const profile = '/profile';
+  static const notifications = '/notifications';
+  static const security = '/security';
+
+  static const gallery = '/gallery';
+  static const galleryAuth = '/gallery/auth';
+  static const debugSocket = '/debug/socket';
+  static const debugAssets = '/debug/assets';
+  static const debugE2e = '/debug/e2e';
+  static const debugFormLogic = '/debug/formlogic';
+  static const debugForms = '/debug/forms';
+
+  /// A conversation id holds `:` and a group name may hold spaces or `/`.
+  static String conversationOf(String id) =>
+      '/conversation/${Uri.encodeComponent(id)}';
+
+  /// A submission's detail. [convId] and [msgId] name the form message it was
+  /// opened from, which is where a submission that is not mine is read from.
+  static String submissionDetailOf(
+    String id, {
+    String? convId,
+    String? msgId,
+  }) => Uri(
+    path: '/submissions/${Uri.encodeComponent(id)}',
+    queryParameters: {
+      if (convId != null && msgId != null) ...{'conv': convId, 'msg': msgId},
+    },
+  ).toString();
+}

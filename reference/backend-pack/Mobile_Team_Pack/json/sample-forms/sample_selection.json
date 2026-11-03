@@ -1,0 +1,40 @@
+{
+  "name": "sample_selection",
+  "caption": "Sample: choices from another form, and a fill",
+  "fields": [
+    {
+      "name": "pick",
+      "type": "selection",
+      "caption": "Colour (from the sample_colour records)",
+      "source": {
+        "type": "query",
+        "form": "sample_colour",
+        "valueField": "colour",
+        "labelField": "colour",
+        "columns": [
+          "code"
+        ]
+      },
+      "required": true
+    },
+    {
+      "name": "picks",
+      "type": "selection",
+      "caption": "Several colours",
+      "multi": true,
+      "source": {
+        "type": "query",
+        "form": "sample_colour",
+        "valueField": "colour",
+        "labelField": "colour"
+      }
+    },
+    {
+      "name": "pickCode",
+      "type": "fill",
+      "caption": "Code (filled from the colour you picked)",
+      "fillFrom": "pick",
+      "sourceProp": "code"
+    }
+  ]
+}

@@ -1,0 +1,527 @@
+{
+ "about": "Parity vectors: the calc and rules cases of mobile pack json/sample-forms/cases.json with the matching sample forms (fields split into ordinary and grid). Not part of the backend manifest.",
+ "forms": {
+  "sample_calc": {
+   "fields": [
+    {
+     "name": "qty",
+     "type": "wholenumber",
+     "caption": "Quantity",
+     "required": true,
+     "min": 1
+    },
+    {
+     "name": "price",
+     "type": "number",
+     "caption": "Price",
+     "required": true,
+     "min": 0
+    },
+    {
+     "name": "total",
+     "type": "number",
+     "caption": "Total",
+     "calc": {
+      "expr": "qty*price"
+     }
+    },
+    {
+     "name": "age",
+     "type": "wholenumber",
+     "caption": "Age"
+    },
+    {
+     "name": "group",
+     "type": "list",
+     "caption": "Group",
+     "options": [
+      "Adult",
+      "Minor"
+     ],
+     "calc": {
+      "expr": "IIF(age>18,\"Adult\",\"Minor\")"
+     }
+    },
+    {
+     "name": "stamp",
+     "type": "wholenumber",
+     "caption": "Reference number (hidden, worked out)",
+     "hidden": true,
+     "calc": {
+      "expr": "qty*1000+age"
+     }
+    }
+   ],
+   "grids": []
+  },
+  "sample_rule": {
+   "fields": [
+    {
+     "name": "phone",
+     "type": "text",
+     "caption": "Phone (10 digits)",
+     "rule": {
+      "expr": "Length(phone)=10",
+      "message": "The phone must have 10 digits"
+     }
+    },
+    {
+     "name": "age",
+     "type": "wholenumber",
+     "caption": "Age (18 or more)",
+     "rule": {
+      "expr": "age>=18",
+      "message": "You must be 18 or older"
+     }
+    },
+    {
+     "name": "email",
+     "type": "text",
+     "caption": "Email",
+     "rule": {
+      "expr": "CheckEmail(email)",
+      "message": "That is not an email address"
+     }
+    },
+    {
+     "name": "start",
+     "type": "date",
+     "caption": "Start date"
+    },
+    {
+     "name": "finish",
+     "type": "date",
+     "caption": "Finish date (not before the start)",
+     "rule": {
+      "expr": "Val(finish)>=Val(start)",
+      "message": "The finish cannot be before the start"
+     }
+    }
+   ],
+   "grids": []
+  },
+  "sample_grid": {
+   "fields": [
+    {
+     "name": "customer",
+     "type": "text",
+     "caption": "Customer",
+     "section": "summary",
+     "required": true
+    },
+    {
+     "name": "grandTotal",
+     "type": "number",
+     "caption": "Grand total",
+     "section": "summary",
+     "calc": {
+      "expr": "Total(lineTotal)"
+     }
+    }
+   ],
+   "grids": [
+    {
+     "id": "items",
+     "fields": [
+      {
+       "name": "item",
+       "type": "text",
+       "caption": "Item",
+       "section": "items",
+       "required": true
+      },
+      {
+       "name": "qty",
+       "type": "wholenumber",
+       "caption": "Quantity",
+       "section": "items",
+       "required": true,
+       "min": 1
+      },
+      {
+       "name": "rate",
+       "type": "number",
+       "caption": "Rate",
+       "section": "items",
+       "required": true,
+       "min": 0
+      },
+      {
+       "name": "lineTotal",
+       "type": "number",
+       "caption": "Line total",
+       "section": "items",
+       "calc": {
+        "expr": "qty*rate"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "sample_dates": {
+   "fields": [
+    {
+     "name": "joined",
+     "type": "date",
+     "caption": "Date joined (not in the future)",
+     "max": "2099-12-31",
+     "min": "2000-01-01"
+    },
+    {
+     "name": "today",
+     "type": "date",
+     "caption": "Today (filled in)",
+     "defaultNow": true,
+     "readOnly": true
+    },
+    {
+     "name": "at",
+     "type": "time",
+     "caption": "Time"
+    },
+    {
+     "name": "nextWeek",
+     "type": "date",
+     "caption": "A week after the date joined",
+     "calc": {
+      "expr": "AddToDate(joined,7)"
+     }
+    }
+   ],
+   "grids": []
+  }
+ },
+ "cases": [
+  {
+   "form": "sample_calc",
+   "kind": "calc",
+   "label": "sample_calc calc #1",
+   "values": {
+    "qty": 3,
+    "price": 2.5,
+    "age": 20
+   },
+   "expect": {
+    "total": "7.5",
+    "group": "Adult",
+    "stamp": "3020"
+   }
+  },
+  {
+   "form": "sample_calc",
+   "kind": "calc",
+   "label": "sample_calc calc #2",
+   "values": {
+    "qty": 3,
+    "price": 2.5,
+    "age": 10
+   },
+   "expect": {
+    "total": "7.5",
+    "group": "Minor",
+    "stamp": "3010"
+   }
+  },
+  {
+   "form": "sample_calc",
+   "kind": "calc",
+   "label": "sample_calc calc #3",
+   "values": {
+    "qty": 3,
+    "price": 2.5,
+    "age": 18
+   },
+   "expect": {
+    "group": "Minor"
+   },
+   "note": "exactly 18 is not over 18"
+  },
+  {
+   "form": "sample_calc",
+   "kind": "calc",
+   "label": "sample_calc calc #4",
+   "values": {
+    "qty": 3,
+    "price": 2.5
+   },
+   "expect": {
+    "total": "7.5"
+   },
+   "absent": [
+    "group",
+    "stamp"
+   ],
+   "note": "a value that reads an empty field stays empty"
+  },
+  {
+   "form": "sample_calc",
+   "kind": "calc",
+   "label": "sample_calc calc #5",
+   "values": {
+    "qty": 4,
+    "price": 0.1,
+    "age": 19
+   },
+   "expect": {
+    "total": "0.4"
+   }
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #1 (phone)",
+   "field": "phone",
+   "values": {
+    "phone": "123"
+   },
+   "error": "The phone must have 10 digits"
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #2 (phone)",
+   "field": "phone",
+   "values": {
+    "phone": "9876543210"
+   },
+   "error": null
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #3 (phone)",
+   "field": "phone",
+   "values": {
+    "phone": ""
+   },
+   "error": null,
+   "note": "an empty field is not checked (use required)"
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #4 (age)",
+   "field": "age",
+   "values": {
+    "age": 17
+   },
+   "error": "You must be 18 or older"
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #5 (age)",
+   "field": "age",
+   "values": {
+    "age": 18
+   },
+   "error": null
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #6 (email)",
+   "field": "email",
+   "values": {
+    "email": "nope"
+   },
+   "error": "That is not an email address"
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #7 (email)",
+   "field": "email",
+   "values": {
+    "email": "a@b.co"
+   },
+   "error": null
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #8 (finish)",
+   "field": "finish",
+   "values": {
+    "start": "2026-11-05",
+    "finish": "2026-11-01"
+   },
+   "error": "The finish cannot be before the start"
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #9 (finish)",
+   "field": "finish",
+   "values": {
+    "start": "2026-11-01",
+    "finish": "2026-11-05"
+   },
+   "error": null
+  },
+  {
+   "form": "sample_rule",
+   "kind": "rule",
+   "label": "sample_rule rule #10 (finish)",
+   "field": "finish",
+   "values": {
+    "start": "2026-11-01",
+    "finish": "2026-11-01"
+   },
+   "error": null
+  },
+  {
+   "form": "sample_grid",
+   "kind": "calc",
+   "label": "sample_grid calc #1",
+   "values": {
+    "items": [
+     {
+      "item": "Bolt",
+      "qty": 2,
+      "rate": 10
+     },
+     {
+      "item": "Nut",
+      "qty": 5,
+      "rate": 1.5
+     }
+    ],
+    "customer": "A"
+   },
+   "expect": {
+    "grandTotal": "27.5"
+   },
+   "rows": [
+    {
+     "lineTotal": "20"
+    },
+    {
+     "lineTotal": "7.5"
+    }
+   ],
+   "note": "each row works out its own total; the total outside reads the whole column"
+  },
+  {
+   "form": "sample_grid",
+   "kind": "calc",
+   "label": "sample_grid calc #2",
+   "values": {
+    "items": [
+     {
+      "item": "Bolt",
+      "qty": 2,
+      "rate": 10
+     }
+    ],
+    "customer": "A"
+   },
+   "expect": {
+    "grandTotal": "20"
+   },
+   "rows": [
+    {
+     "lineTotal": "20"
+    }
+   ]
+  },
+  {
+   "form": "sample_grid",
+   "kind": "calc",
+   "label": "sample_grid calc #3",
+   "values": {
+    "items": [
+     {
+      "item": "Bolt",
+      "qty": 2
+     }
+    ],
+    "customer": "A"
+   },
+   "expect": {
+    "grandTotal": "0"
+   },
+   "rows": [
+    {}
+   ],
+   "note": "a row whose rate is still empty has no line total, and counts as nothing in the total"
+  },
+  {
+   "form": "sample_grid",
+   "kind": "calc",
+   "label": "sample_grid calc #4",
+   "values": {
+    "items": [
+     {
+      "item": "Bolt",
+      "qty": 2,
+      "rate": 10
+     },
+     {
+      "item": "Nut",
+      "qty": 2
+     }
+    ],
+    "customer": "A"
+   },
+   "expect": {
+    "grandTotal": "20"
+   },
+   "rows": [
+    {
+     "lineTotal": "20"
+    },
+    {}
+   ]
+  },
+  {
+   "form": "sample_grid",
+   "kind": "calc",
+   "label": "sample_grid calc #5",
+   "values": {
+    "items": [],
+    "customer": "A"
+   },
+   "expect": {
+    "grandTotal": "0"
+   },
+   "note": "no rows: the total is 0"
+  },
+  {
+   "form": "sample_dates",
+   "kind": "calc",
+   "label": "sample_dates calc #1",
+   "values": {
+    "joined": "2026-11-02"
+   },
+   "expect": {
+    "nextWeek": "2026-11-09"
+   }
+  },
+  {
+   "form": "sample_dates",
+   "kind": "calc",
+   "label": "sample_dates calc #2",
+   "values": {
+    "joined": "2026-12-28"
+   },
+   "expect": {
+    "nextWeek": "2027-01-04"
+   },
+   "note": "over a year end"
+  },
+  {
+   "form": "sample_dates",
+   "kind": "calc",
+   "label": "sample_dates calc #3",
+   "values": {
+    "joined": "2028-02-26"
+   },
+   "expect": {
+    "nextWeek": "2028-03-04"
+   },
+   "note": "over a leap day"
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "sample_api_choice",
+  "caption": "Sample: choices from an API (a drop down fed by a list API)",
+  "fields": [
+    {
+      "name": "pick",
+      "type": "selection",
+      "caption": "Pick one (from the list API)",
+      "source": {
+        "type": "api",
+        "name": "sample_list",
+        "params": {}
+      }
+    }
+  ]
+}
