@@ -24,7 +24,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 7;
+  static const _version = 8;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -122,6 +122,17 @@ class AppDatabase {
         first_ts INTEGER, trusted_ts INTEGER,
         PRIMARY KEY(org_id, user_id, device_user, device_id))''',
     ],
+    // The form's rev is kept with its definition; the choice cache holds the
+    // lists `form.options` gave, one per form, field and parent values.
+    8: [
+      'ALTER TABLE form_definitions ADD COLUMN rev TEXT',
+      '''CREATE TABLE form_choice_cache(
+        org_id TEXT NOT NULL, user_id TEXT NOT NULL, form TEXT NOT NULL,
+        field TEXT NOT NULL, cache_key TEXT NOT NULL, reply_json TEXT NOT NULL,
+        etag TEXT, cache_sec INTEGER DEFAULT 0, fetched_ts INTEGER NOT NULL,
+        rev TEXT,
+        PRIMARY KEY(org_id, user_id, form, field, cache_key))''',
+    ],
   };
 
   static const _scopedTables = [
@@ -131,6 +142,7 @@ class AppDatabase {
     'form_submissions',
     'form_definitions',
     'form_options',
+    'form_choice_cache',
     'form_recents',
     'outbox',
     'sync_cursor',
@@ -229,7 +241,7 @@ class AppDatabase {
   /// Messages still waiting to go out, over every organisation.
   Future<int> unsentCount() async {
     final rows = await query(
-      "SELECT COUNT(*) AS n FROM outbox WHERE status IN ('pending','sending','failed')",
+      "SELECT COUNT(*) AS n FROM outbox WHERE status IN ('pending','sending','failed','draft')",
     );
     return (rows.first['n'] as int?) ?? 0;
   }

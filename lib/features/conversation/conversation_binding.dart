@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/home_reload.dart';
+import '../../data/attachment_cache.dart';
+import '../../data/repositories/attachment_repository.dart';
 import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
@@ -38,6 +40,8 @@ class ConversationBinding extends Bindings {
         store: Get.find<SessionStore>(),
         e2e: Get.find<E2eRepository>(),
         commands: Get.find<CommandRepository>(),
+        attachments: Get.find<AttachmentRepository>(),
+        attachmentCache: Get.find<AttachmentCache>(),
       ),
       tag: id,
     );

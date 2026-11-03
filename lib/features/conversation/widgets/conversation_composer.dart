@@ -6,19 +6,20 @@ import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/utils/attachment_tag.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../data/models/message.dart';
 import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
+import 'attach_sheet.dart';
 import 'commands_panel.dart';
 import 'key_change_sheet.dart';
 
 /// The composer: a field that grows to five lines, a send button that wakes
-/// as text appears, an attach button that is a placeholder for now and the
-/// forms button. In an encrypted thread the lock and the hint "Encrypted
-/// message" show; where a send can never work (the peer has no encryption set
+/// as text appears, an attach button for photos and the forms button. In an
+/// encrypted thread the lock and the hint "Encrypted message" show; where a send can never work (the peer has no encryption set
 /// up, a security key changed) the field is replaced by a note saying why, and
 /// the forms button stays.
 class ConversationComposer extends StatelessWidget {
@@ -96,10 +97,11 @@ class ConversationComposer extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _Placeholder(
-                    icon: Icons.add,
-                    label: 'Attach',
-                    onTap: c.tapPlaceholder,
+                  _AttachButton(
+                    reason: c.attachBlock,
+                    onTap: () {
+                      if (c.tapAttach()) AttachSheet.show(context, c);
+                    },
                   ),
                   FormsButton(
                     onTap: () => FormsPickerSheet.show(context, c.picker),
@@ -154,31 +156,37 @@ class ConversationComposer extends StatelessWidget {
   }
 }
 
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+/// The attach button. Where photos cannot be sent (an encrypted thread, a
+/// team, the global room) it is dimmed and says why; a tap shows the reason.
+class _AttachButton extends StatelessWidget {
+  const _AttachButton({required this.reason, required this.onTap});
 
-  final IconData icon;
-  final String label;
+  final String? reason;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: 'Coming soon',
-    triggerMode: TooltipTriggerMode.tap,
-    child: Semantics(
-      label: '$label, coming soon',
+  Widget build(BuildContext context) {
+    final isDisabled = reason != null;
+    return Semantics(
+      button: true,
+      enabled: !isDisabled,
+      label: isDisabled ? 'Attach, $reason' : 'Attach',
       excludeSemantics: true,
-      child: SizedBox(
-        width: AppSpacing.composerButton,
-        height: AppSpacing.composerButton,
-        child: Icon(icon, size: 22, color: AppColors.cardMuted),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: AppSpacing.composerButton,
+          height: AppSpacing.composerButton,
+          child: Icon(
+            Icons.add,
+            size: 22,
+            color: isDisabled ? AppColors.cardMuted : AppColors.ink,
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class ComposerSendButton extends StatelessWidget {
@@ -275,7 +283,7 @@ class _ReplyBar extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          m.text,
+                          AttachmentTag.preview(m.text) ?? m.text,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.caption,

@@ -15,11 +15,18 @@ import '../models/ids.dart';
 import '../models/message.dart';
 import '../models/outbox_entry.dart';
 import '../session_store.dart';
+import 'form_options_repository.dart';
 import 'message_repository.dart';
 import '../socket/socket_service.dart';
 
 class SubmissionRepository extends GetxService {
-  SubmissionRepository(this._db, this._session, this._socket, this._messages);
+  SubmissionRepository(
+    this._db,
+    this._session,
+    this._socket,
+    this._messages,
+    this._options,
+  );
 
   static const couldNotConfirm = "couldn't confirm delivery";
   static const invalidReason = 'Some answers need fixing.';
@@ -33,6 +40,7 @@ class SubmissionRepository extends GetxService {
   final SessionStore _session;
   final SocketService _socket;
   final MessageRepository _messages;
+  final FormOptionsRepository _options;
 
   /// A plain-words problem with a save that happened in the background (an
   /// edit that was refused); the open screen shows it once.
@@ -48,6 +56,10 @@ class SubmissionRepository extends GetxService {
   /// Saves that never reached the server and won't on their own: the local id
   /// of each and the plain reason. A card shows them as failed.
   final failures = <String, String>{}.obs;
+
+  /// Saves kept on the phone as drafts: the local id of each and the captions
+  /// of the made-for fields still empty. A draft is never sent on its own.
+  final drafts = <String, List<String>>{}.obs;
   bool _isFlushing = false;
 
   String? get _org => _session.orgId;
@@ -65,6 +77,8 @@ class SubmissionRepository extends GetxService {
     if (SeedUi.isActive) {
       definitions.assignAll(SeedUi.definitions());
       submissions.assignAll(SeedUi.submissions());
+      failures.assignAll(SeedUi.formFailures);
+      drafts.assignAll(SeedUi.formDrafts);
       isLoaded.value = true;
       return;
     }
@@ -74,7 +88,7 @@ class SubmissionRepository extends GetxService {
       return;
     }
     final defs = await _db.query(
-      'SELECT name, scope, definition_json FROM form_definitions WHERE org_id = ? AND user_id = ?',
+      'SELECT name, scope, definition_json, rev, fetched_ts FROM form_definitions WHERE org_id = ? AND user_id = ?',
       [_org, _me],
     );
     final rows = await _db.query(
@@ -87,6 +101,8 @@ class SubmissionRepository extends GetxService {
           idText(d['name']),
           idText(d['scope']),
           idText(d['definition_json']),
+          rev: idText(d['rev']),
+          fetchedTs: intOf(d['fetched_ts']),
         ),
     });
     submissions.assignAll(rows.map(FormSubmission.fromRow));
@@ -96,6 +112,14 @@ class SubmissionRepository extends GetxService {
     );
     failures.assignAll({
       for (final f in failed) idText(f['ref_id']): idText(f['last_error']),
+    });
+    final kept = await _db.query(
+      "SELECT ref_id, payload_json FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'draft' AND kind = 'form_submit'",
+      [_org, _me],
+    );
+    drafts.assignAll({
+      for (final d in kept)
+        idText(d['ref_id']): OutboxEntry.waitingOf(idText(d['payload_json'])),
     });
     isLoaded.value = true;
   }
@@ -157,11 +181,17 @@ class SubmissionRepository extends GetxService {
     String scope = '',
     String caption = '',
     String? chat,
+    List<String>? waiting,
   }) async {
     if (SeedUi.isActive) {
-      _seedSubmit(name, values, caption: caption, chat: chat);
+      if (waiting != null) {
+        _seedDraft(name, values, waiting, caption: caption, scope: scope);
+      } else {
+        _seedSubmit(name, values, caption: caption, chat: chat);
+      }
       return;
     }
+    final isDraft = waiting != null;
     final org = _org;
     final user = _me;
     if (org == null || user == null) return;
@@ -181,7 +211,7 @@ class SubmissionRepository extends GetxService {
       );
       await sql.insert(
         'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts, cid) '
-        "VALUES(?,?,?,'form_submit',?,?,'pending',?,?)",
+        "VALUES(?,?,?,'form_submit',?,?,?,?,?)",
         [
           org,
           user,
@@ -192,13 +222,15 @@ class SubmissionRepository extends GetxService {
             'caption': caption.isNotEmpty ? caption : def?.caption ?? '',
             'values': values,
             'chat': chat,
+            if (isDraft) 'waiting': waiting,
           }),
           tempId,
+          isDraft ? 'draft' : 'pending',
           now,
           cid,
         ],
       );
-      if (chat != null) {
+      if (chat != null && !isDraft) {
         await _putPendingMessage(
           sql,
           tempId,
@@ -212,8 +244,8 @@ class SubmissionRepository extends GetxService {
       }
     });
     await reload();
-    if (chat != null) await _messages.reloadAfterLocalChange();
-    unawaited(flush());
+    if (chat != null && !isDraft) await _messages.reloadAfterLocalChange();
+    if (!isDraft) unawaited(flush());
   }
 
   Future<void> _putPendingMessage(
@@ -376,30 +408,44 @@ class SubmissionRepository extends GetxService {
   }
 
   /// Fixes a submission that never reached the server (it was refused, or
-  /// still waits): the entry keeps its place and its id and is sent again.
-  Future<void> resendFailed(String refId, Map<String, dynamic> values) async {
+  /// still waits, or is a draft): the entry keeps its place, its id and its
+  /// client id and is sent again. With [waiting] it stays a draft instead.
+  Future<void> resendFailed(
+    String refId,
+    Map<String, dynamic> values, {
+    List<String>? waiting,
+  }) async {
+    if (SeedUi.isActive) {
+      _seedResend(refId, values, waiting);
+      return;
+    }
     final org = _org;
     final user = _me;
     if (org == null || user == null) return;
     final rows = await _db.query(
-      "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ? AND kind = 'form_submit' AND status IN ('pending','failed')",
+      "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ? AND kind = 'form_submit' AND status IN ('pending','failed','draft')",
       [org, user, refId],
     );
     if (rows.isEmpty) return;
     final entry = OutboxEntry.fromRow(rows.first);
-    final payload = {...entry.payload, 'values': values}..remove('errors');
+    final wasDraft = entry.status == 'draft';
+    final isDraft = waiting != null;
+    final payload = {...entry.payload, 'values': values}
+      ..remove('errors')
+      ..remove('waiting');
+    if (isDraft) payload['waiting'] = waiting;
     await _db.transaction((sql) async {
       await sql.update(
-        "UPDATE outbox SET payload_json = ?, status = 'pending', retry_count = 0, next_attempt_ts = 0, "
+        "UPDATE outbox SET payload_json = ?, status = ?, retry_count = 0, next_attempt_ts = 0, "
         'last_error = NULL, first_attempt_ts = NULL WHERE id = ?',
-        [jsonEncode(payload), entry.id],
+        [jsonEncode(payload), isDraft ? 'draft' : 'pending', entry.id],
       );
       await sql.update(
         'UPDATE form_submissions SET values_json = ? WHERE org_id = ? AND user_id = ? AND submission_id = ?',
         [jsonEncode(values), org, user, refId],
       );
       final chat = payload['chat'];
-      if (chat is String) {
+      if (chat is String && !isDraft) {
         await _putPendingMessage(
           sql,
           refId,
@@ -407,15 +453,15 @@ class SubmissionRepository extends GetxService {
           idText(payload['name']),
           idText(payload['caption']),
           values,
-          entry.createdTs,
+          wasDraft ? DateTime.now().millisecondsSinceEpoch : entry.createdTs,
           cid: entry.cid ?? '',
-          isReplace: true,
+          isReplace: !wasDraft,
         );
       }
     });
     await reload();
     await _messages.reloadAfterLocalChange();
-    unawaited(flush());
+    if (!isDraft) unawaited(flush());
   }
 
   /// What a failed or waiting submission was filled in with, and the server's
@@ -427,9 +473,11 @@ class SubmissionRepository extends GetxService {
       String name,
       String scope,
       String caption,
+      bool isDraft,
     })?
   >
   pendingFor(String refId) async {
+    if (SeedUi.isActive) return SeedUi.formPending[refId];
     final rows = await _db.query(
       "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ? AND kind = 'form_submit'",
       [_org, _me, refId],
@@ -442,6 +490,7 @@ class SubmissionRepository extends GetxService {
       name: idText(p['name']),
       scope: idText(p['scope']),
       caption: idText(p['caption']),
+      isDraft: OutboxEntry.fromRow(rows.first).status == 'draft',
     );
   }
 
@@ -613,6 +662,7 @@ class SubmissionRepository extends GetxService {
       await _setMessageStatus(entry, 'pending');
       return;
     }
+    if (e.code == 'invalid_values') await _dropRefusedLists(entry, e.details);
     if (e.code == 'invalid_values' && entry.kind == 'form_submit') {
       await _db.update('UPDATE outbox SET payload_json = ? WHERE id = ?', [
         jsonEncode({...entry.payload, 'errors': e.details}),
@@ -620,6 +670,21 @@ class SubmissionRepository extends GetxService {
       ]);
     }
     await _fail(entry, _plainReason(e));
+  }
+
+  /// A choice the server refused: the lists kept for that field are dropped,
+  /// so the next time the form opens it asks again.
+  Future<void> _dropRefusedLists(OutboxEntry entry, Object? details) async {
+    final fields = details is Map ? details['fields'] : null;
+    if (fields is! Map) return;
+    final name = idText(entry.payload['name']);
+    final def = definitions[name];
+    if (def == null || _org == null || _me == null) return;
+    for (final key in fields.keys) {
+      final field = def.fieldOf(idText(key).split('.').last);
+      if (field == null || field.type != 'selection') continue;
+      await _options.dropField(name, field.name);
+    }
   }
 
   static String _plainReason(SocketCallError e) {
@@ -875,6 +940,67 @@ class SubmissionRepository extends GetxService {
     });
   }
 
+  void _seedDraft(
+    String name,
+    Map<String, dynamic> values,
+    List<String> waiting, {
+    required String caption,
+    required String scope,
+  }) {
+    final id = 'temp-${DateTime.now().millisecondsSinceEpoch}';
+    SeedUi.formDrafts[id] = waiting;
+    SeedUi.formPending[id] = (
+      values: values,
+      errors: null,
+      name: name,
+      scope: scope,
+      caption: caption,
+      isDraft: true,
+    );
+    submissions.insert(
+      0,
+      FormSubmission(
+        submissionId: id,
+        tstruct: name,
+        byUser: SeedMessages.me,
+        ts: DateTime.now().millisecondsSinceEpoch,
+        valuesJson: jsonEncode(values),
+        syncState: 'pending_create',
+      ),
+    );
+    drafts.assignAll(SeedUi.formDrafts);
+  }
+
+  /// A draft saved again, or a draft / refused record sent.
+  void _seedResend(
+    String refId,
+    Map<String, dynamic> values,
+    List<String>? waiting,
+  ) {
+    final held = SeedUi.formPending[refId];
+    if (held == null) return;
+    if (waiting != null) {
+      SeedUi.formDrafts[refId] = waiting;
+      SeedUi.formPending[refId] = (
+        values: values,
+        errors: null,
+        name: held.name,
+        scope: held.scope,
+        caption: held.caption,
+        isDraft: true,
+      );
+      drafts.assignAll(SeedUi.formDrafts);
+      return;
+    }
+    SeedUi.formDrafts.remove(refId);
+    SeedUi.formFailures.remove(refId);
+    SeedUi.formPending.remove(refId);
+    submissions.removeWhere((s) => s.submissionId == refId);
+    failures.assignAll(SeedUi.formFailures);
+    drafts.assignAll(SeedUi.formDrafts);
+    _seedSubmit(held.name, values, caption: held.caption);
+  }
+
   void _seedEdit(String id, Map<String, dynamic> values) {
     final i = submissions.indexWhere((s) => s.submissionId == id);
     if (i < 0) return;
@@ -1001,8 +1127,18 @@ class SubmissionRepository extends GetxService {
             {'name': name},
           );
           final tstruct = (data['tstruct'] as Map).cast<String, dynamic>();
+          final rev = idText(data['rev']);
+          final now = DateTime.now().millisecondsSinceEpoch;
+          final before = await _db.query(
+            'SELECT rev FROM form_definitions WHERE org_id = ? AND user_id = ? AND name = ?',
+            [org, user, name],
+          );
+          // Another version of the form: what was kept for the old one goes.
+          if (before.isNotEmpty && idText(before.first['rev']) != rev) {
+            await _options.dropForm(name);
+          }
           await _db.insert(
-            'INSERT OR REPLACE INTO form_definitions(org_id, user_id, name, scope, caption, definition_json, fetched_ts) VALUES(?,?,?,?,?,?,?)',
+            'INSERT OR REPLACE INTO form_definitions(org_id, user_id, name, scope, caption, definition_json, fetched_ts, rev) VALUES(?,?,?,?,?,?,?,?)',
             [
               org,
               user,
@@ -1010,10 +1146,17 @@ class SubmissionRepository extends GetxService {
               s,
               idText(tstruct['caption']),
               jsonEncode(tstruct),
-              DateTime.now().millisecondsSinceEpoch,
+              now,
+              rev,
             ],
           );
-          final parsed = FormDefinition.fromMap(name, s, tstruct);
+          final parsed = FormDefinition.fromMap(
+            name,
+            s,
+            tstruct,
+            rev: rev,
+            fetchedTs: now,
+          );
           definitions[name] = parsed;
           return parsed;
         } on SocketCallError catch (_) {

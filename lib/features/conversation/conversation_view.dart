@@ -12,6 +12,7 @@ import '../../core/widgets/app_skeleton.dart';
 import '../../core/widgets/app_state_image.dart';
 import 'conversation_controller.dart';
 import 'models/chat_item.dart';
+import 'widgets/attachment_view.dart';
 import 'widgets/chat_rows.dart';
 import 'widgets/conversation_composer.dart';
 import 'widgets/conversation_header.dart';
@@ -22,6 +23,7 @@ import 'widgets/message_status_mark.dart';
 import 'widgets/reaction_chips.dart';
 import 'widgets/scroll_to_latest_button.dart';
 import 'widgets/typing_dots.dart';
+import 'widgets/upload_bubble.dart';
 
 /// The conversation screen. It takes its id from its own route and uses the
 /// controller put under that id, so two conversations can be open at once.
@@ -113,7 +115,10 @@ class _MessageArea extends StatelessWidget {
           child: Obx(() {
             if (!c.isLoaded.value) return const _SkeletonBubbles();
             final items = c.items;
-            if (items.isEmpty) return const _EmptyConversation();
+            final uploads = c.uploads;
+            if (items.isEmpty && uploads.isEmpty) {
+              return const _EmptyConversation();
+            }
             return ListView.builder(
               key: c.listKey,
               reverse: true,
@@ -123,8 +128,19 @@ class _MessageArea extends StatelessWidget {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.sm,
               ),
-              itemCount: items.length,
-              itemBuilder: (context, index) => _row(context, c, items[index]),
+              itemCount: uploads.length + items.length,
+              itemBuilder: (context, index) {
+                if (index >= uploads.length) {
+                  return _row(context, c, items[index - uploads.length]);
+                }
+                final upload = uploads[uploads.length - 1 - index];
+                return UploadBubble(
+                  key: ValueKey(upload.id),
+                  upload: upload,
+                  onRetry: () => c.retryUpload(upload),
+                  onCancel: () => c.cancelUpload(upload),
+                );
+              },
             );
           }),
         ),
@@ -214,6 +230,7 @@ Widget _bubble(BuildContext context, ConversationController c, ChatItem item) {
     onRetry: () => c.retry(m),
     reactions: c.reactionsOf(m),
     onReact: (emoji) => c.toggleReaction(m, emoji),
+    attachmentOf: (tag) => AttachmentView(tag: tag, controller: c),
   );
 }
 

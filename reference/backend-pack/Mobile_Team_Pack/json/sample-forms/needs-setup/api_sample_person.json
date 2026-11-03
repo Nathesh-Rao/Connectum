@@ -1,0 +1,11 @@
+{
+  "about": "A Get API: one record for a code. The form sends the parameter `code`.",
+  "name": "sample_person",
+  "type": "get",
+  "url": "{{API_BASE}}/person",
+  "params": [
+    {
+      "name": "code"
+    }
+  ]
+}

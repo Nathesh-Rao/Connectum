@@ -71,6 +71,8 @@ class FormDefinition {
     required this.captions,
     required this.isFull,
     this.raw = const {},
+    this.rev = '',
+    this.fetchedTs = 0,
   });
 
   static const captionsOnlyMarker = 'captionsOnly';
@@ -86,10 +88,29 @@ class FormDefinition {
   final bool isFull;
   final Map<String, dynamic> raw;
 
-  factory FormDefinition.parse(String name, String scope, String json) {
+  /// The server's fingerprint of the saved form (`rev` of `tstruct.get`), and
+  /// when this copy was fetched; empty / 0 when unknown.
+  final String rev;
+  final int fetchedTs;
+
+  factory FormDefinition.parse(
+    String name,
+    String scope,
+    String json, {
+    String rev = '',
+    int fetchedTs = 0,
+  }) {
     try {
       final data = jsonDecode(json);
-      if (data is Map) return FormDefinition.fromMap(name, scope, data);
+      if (data is Map) {
+        return FormDefinition.fromMap(
+          name,
+          scope,
+          data,
+          rev: rev,
+          fetchedTs: fetchedTs,
+        );
+      }
     } on FormatException {
       // Falls through to an empty definition.
     }
@@ -104,7 +125,13 @@ class FormDefinition {
     );
   }
 
-  factory FormDefinition.fromMap(String name, String scope, Map data) {
+  factory FormDefinition.fromMap(
+    String name,
+    String scope,
+    Map data, {
+    String rev = '',
+    int fetchedTs = 0,
+  }) {
     final rawFields = data['fields'];
     final fields = <FormFieldDef>[];
     final captions = <String, String>{};
@@ -158,6 +185,8 @@ class FormDefinition {
       captions: captions,
       isFull: data[captionsOnlyMarker] != true && fields.isNotEmpty,
       raw: data.cast<String, dynamic>(),
+      rev: rev,
+      fetchedTs: fetchedTs,
     );
   }
 

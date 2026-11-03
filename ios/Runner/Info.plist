@@ -41,7 +41,9 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Connectum uses the camera to scan QR codes.</string>
+	<string>Connectum uses the camera to scan QR codes and to take photos you send.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Connectum lets you choose photos to send in a chat.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

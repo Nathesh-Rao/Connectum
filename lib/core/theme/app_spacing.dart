@@ -22,6 +22,7 @@ class AppSpacing {
   static const double handleWidth = 34;
   static const double handleHeight = 4;
   static const double minTapTarget = 44;
+  static const double chipHeight = 40;
   static const double checkBadge = 64;
   static const double stateImage = 160;
   static const double stateImageSmall = 96;
@@ -83,4 +84,12 @@ class AppSpacing {
   static const double scrollButton = 40;
   static const double composerPad = 3;
   static const double composerButton = 44;
+  static const double fileIcon = 28;
+  static const double attachmentWidth = 240;
+  static const double attachmentHeight = 180;
+  static const double progressHeight = 3;
+  static const double menuRowHeight = 42;
+  static const double menuMaxRows = 6;
+  static const double menuGap = 4;
+  static const double menuEdge = 8;
 }

@@ -1,0 +1,635 @@
+{
+  "status_older_device": {
+    "note": "The OLDER device (the phone's role in this story): its own device is not late; the new device is.",
+    "request": {
+      "action": "e2e.status",
+      "args": {
+        "id": "1bd6d3cab2c42004583acba1701e9188"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "devices": [
+          {
+            "ecdh": "BLZvZxf1yMLPfFiH7UcqCjzGUF3bjzUkeXdcdflPyR_L-FiGHWul5ElaC2fI-R7UPhI_3te0D9D8LbYKJ46P1A4",
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "late": false,
+            "sign": "BKyhmTPguMtrkfbFdJsS6lvcp_n7Uq0dYPszAltYDbi03Xfr3GRU_dU9Gsg7bu-wOPR9zy1MU_rAn5li-v8pwuw",
+            "ts": 1793596324053
+          },
+          {
+            "ecdh": "BOQJnZfvgr1HnO7dJUih9Rm9wkAz-4BuBQga9J5OZwwcHo5GLGtRldUT-Tv01eQE5zW2arRoBkurX_O5AdONm_U",
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "late": true,
+            "sign": "BA8C9wL0gVWSAOMzhzehJY_uft6fdBlqjXDVHElkpi-tsJ4oiy9nue3W90DVaGsVmgSyMc1uguTtNcUx2M7y86Q",
+            "ts": 1793596324566
+          }
+        ],
+        "maxDevices": 10,
+        "mode": "optional",
+        "recovery": false
+      }
+    }
+  },
+  "pending_older_device": {
+    "note": "The OLDER device: `waiting` is not empty: offer \"Show your earlier messages on <label>?\". `helpers` here lists the devices that can show the past (itself included).",
+    "request": {
+      "action": "e2e.sync.pending",
+      "args": {}
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "helpers": [
+          {
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "seen": 1793596324593,
+            "ts": 1793596324053
+          }
+        ],
+        "recovery": null,
+        "waiting": [
+          {
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "ts": 1793596324566
+          }
+        ]
+      }
+    }
+  },
+  "status_new_device": {
+    "note": "The NEW device (asked with its own id): `late: true` on its own entry.",
+    "request": {
+      "action": "e2e.status",
+      "args": {
+        "id": "1d16eaa4acaa62ed9be52613c71088e0"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "devices": [
+          {
+            "ecdh": "BLZvZxf1yMLPfFiH7UcqCjzGUF3bjzUkeXdcdflPyR_L-FiGHWul5ElaC2fI-R7UPhI_3te0D9D8LbYKJ46P1A4",
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "late": false,
+            "sign": "BKyhmTPguMtrkfbFdJsS6lvcp_n7Uq0dYPszAltYDbi03Xfr3GRU_dU9Gsg7bu-wOPR9zy1MU_rAn5li-v8pwuw",
+            "ts": 1793596324053
+          },
+          {
+            "ecdh": "BOQJnZfvgr1HnO7dJUih9Rm9wkAz-4BuBQga9J5OZwwcHo5GLGtRldUT-Tv01eQE5zW2arRoBkurX_O5AdONm_U",
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "late": true,
+            "sign": "BA8C9wL0gVWSAOMzhzehJY_uft6fdBlqjXDVHElkpi-tsJ4oiy9nue3W90DVaGsVmgSyMc1uguTtNcUx2M7y86Q",
+            "ts": 1793596324566
+          }
+        ],
+        "maxDevices": 10,
+        "mode": "optional",
+        "recovery": false
+      }
+    }
+  },
+  "pending_new_device": {
+    "note": "The NEW device: `waiting` is the same list; the device checks whether ITS id is in `late` (from e2e.status) and shows `helpers` as who can help.",
+    "request": {
+      "action": "e2e.sync.pending",
+      "args": {}
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "helpers": [
+          {
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "seen": 1793596324593,
+            "ts": 1793596324053
+          }
+        ],
+        "recovery": null,
+        "waiting": [
+          {
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "seen": 1793596324644,
+            "ts": 1793596324566
+          }
+        ]
+      }
+    }
+  },
+  "page_1": {
+    "note": "The first page (the server ran with a page size of 2 here so a `next` cursor shows; the default is 400). Newest first inside a conversation. Each `text` is the envelope narrowed to this person's own boxes.",
+    "request": {
+      "action": "e2e.sync.page",
+      "args": {}
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "items": [
+          {
+            "id": 4,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"odHm3_K54IdnsutZQP3xH1gNtz01BWbZyUKYSjgtOQAOO95P3ZpPBKP9YR9Hczr02Zd74T7Tj21AbeYWHtbb0BLfeMiolif1_O2v2t7WQXE\",\"dev\":\"1bd6d3cab2c42004583acba1701e9188\",\"ek\":\"BHE3k1tRa9Sx4u0CkP2S0203yNDCv-wRoUsMc_T9BY7rYmkw47bzykluLJ5UuPPVU3jUXKhQR7Q1tWhtn1vrkwE\",\"from\":\"annxwjq\",\"iv\":\"8b07n3OyPdKbyc3H\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"2OET0_0jcErYtAr4\",\"w\":\"QdQsQZ4oKOSWFTYgKSKLkoiN27AuizRi5RzWwQYzsstOK8Y-8N2TNQYweW4SDr7p\"}},\"mid\":\"VqT66SZssfLIaGFS_fdhMQ\",\"sig\":\"sBcIRdnwZObBleTPC96deQy-plRnt8TBwGxRlILmKVz_OEk92eNEa9fv_rsHp7ocG8WFId9ZzXVWD97_25fe4g\",\"ts\":1793596324508,\"v\":1}"
+          },
+          {
+            "id": 3,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"IqqpmKDerhNaQMep8EshYbFwva8ehD_IMlVqompOXai4njdW8dLpeXBaEO0fhlWy25Syc1AQnmlRflmXdo7Xd8xNr6_y5mD0FFfI5z6E9HU\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BFIKTwa7FKPoCZzZD2zDUr2RCrvGJo6zcNnFqRKz6db_oE2Lu0oBXiO0FYVIMA169o8EieT8M1lZv1twizpPhCw\",\"from\":\"bobxwjq\",\"iv\":\"7HugE_EnJrABbsml\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"Qhe3F-Qv2vrFXc9f\",\"w\":\"3qWUo8YKeivHDhSRlSfKBTZtkPftR1h1lW7ZxPULtT9q4cfCebbOIkM_hwL23ZYq\"}},\"mid\":\"RdOuKJYc_xG-pK7HVCdfgQ\",\"sig\":\"jAHjtNA_N1hXn45PlWk1MHv1rFLCHeVKR8Ze2nuJQiuA2Hn0wwRecvuKV8mC2QVeUZzQ3rvVzW1H7KM16KQcGQ\",\"ts\":1793596324392,\"v\":1}"
+          },
+          {
+            "id": 2,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"NdsGmOiE23KhL9Y0YgCq0oHcR3kJexyezTUncSz6pUEOz7Qo28H7lBHKpP6boZosRl6JMYqHi3UvvvmHZQNc78fs_dSQ6ZgnvwwUIn1RLwM\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BC7h2UMGjjaXmEfOI-ZN_vTTPU55hUeVbv6RApR8EBhbl0sdpcR2nZ3KrNyFZBRT_GbyarUP_JgPAm7oS7IAky4\",\"from\":\"bobxwjq\",\"iv\":\"OWOkR1oTgHv8xjeO\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"MvO2rXGRZhMd1fhp\",\"w\":\"2D1M2MAJ3QzG6490mnl1mLgn1qhkSAcu7XToH9P_QvXLM6ujNMJ178m1oHJ9ZNTW\"}},\"mid\":\"W1h8D6Ehk6x6qLm5vAjSAg\",\"sig\":\"m3HHNEqXTya5iYDbsrHRjLw2XJupZBY7lqKH4naX0Ij8w2jWGtEYX8yTvDKcHbt4eYhaUOlU8sBpI0y-pp7Q3g\",\"ts\":1793596324277,\"v\":1}"
+          },
+          {
+            "id": 1,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"r3zuHy6PB0b-1rjLFbUh3rayhKOom2b46uoPLm9AdR5eTHyy-yGUMfNbJC9YYPLFplTApknGQQLr6AZYBqnJjST9u44vYrlniNNMyD0cIoQ\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BFWY_wGgzclQ6H7nJanrpu8Y53Hrdm-PdoEVktjRKQHDcmUo5Tt734NK2sPN2MJvPczxjn6p69HvPosf2L6K5Oo\",\"from\":\"bobxwjq\",\"iv\":\"lgnbmphImv3UkiaK\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"n5PPfpeQz2NS2X48\",\"w\":\"b_dALwoaELUpYHgKPYjartu-cc9urka_-0-C41g2uAoZkYokQk0pGlK3NSZ4Eh_h\"}},\"mid\":\"HK4ISPZGGemcVVbJ5Gm01Q\",\"sig\":\"j8Ta1AvzddbHBQZOquS3kQNMyfDyWzXMCvjU9gwg-8SZFW6wExD2LDe-wdfpqIgd5hVRxRqs_sP43DyQv1aoCA\",\"ts\":1793596324159,\"v\":1}"
+          }
+        ],
+        "next": null
+      }
+    }
+  },
+  "page_count": {
+    "note": "How many pages and items the whole history took here.",
+    "pages": 1,
+    "items": 4
+  },
+  "put_stored": {
+    "note": "Stored. `stored` is the number of items in the call (not the number that were new).",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0",
+        "items": [
+          {
+            "mid": "VqT66SZssfLIaGFS_fdhMQ",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          },
+          {
+            "mid": "RdOuKJYc_xG-pK7HVCdfgQ",
+            "iv": "7_E1YPo6CGNMS-uj",
+            "w": "Xon4Zlq2DfoUklo5KBWc-cuwUs_w7Jpr9ydM7cVxjJPU-KydYPMM0hfHP50QTjXT",
+            "ek": "BLUvQdrNJt2d1KMafcwVY4MLhHiM71hf2RqLH0M0TlEC33J1Ip3nhvNtzHYzTicOIyu2I8Et8ub7OQCGvUJGOSk"
+          },
+          {
+            "mid": "W1h8D6Ehk6x6qLm5vAjSAg",
+            "iv": "yPNJRovK86QubdJ6",
+            "w": "6GPrPA5t9ByvdjV-X1rknh6YVzyZEL4uFMkdJDErQuTIrqK-M7ZO5FIUxM9Fysy4",
+            "ek": "BEye60hLaa_CTiZxIcw2-dWatD6NliZ0mQ0Kgnlecci_jg_XZfr-teirTJqm7WIRT7L5C1_LAkVfoaA0UMSlkNQ"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "stored": 3
+      }
+    }
+  },
+  "put_same_again": {
+    "note": "The same message again is safe: the box is replaced. `stored` is still the number of items in the call.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0",
+        "items": [
+          {
+            "mid": "VqT66SZssfLIaGFS_fdhMQ",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "stored": 1
+      }
+    }
+  },
+  "put_bad_item": {
+    "note": "One bad item among good ones refuses the WHOLE call (`invalid`); nothing from it is stored. Failures are not per item.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0",
+        "items": [
+          {
+            "mid": "VqT66SZssfLIaGFS_fdhMQ",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          },
+          {
+            "mid": "bad",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "invalid",
+        "message": "Each item needs a message id (mid) and a wrap (iv, w, ek, base64url)."
+      }
+    }
+  },
+  "put_empty": {
+    "note": "1 to 500 items per call.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0",
+        "items": []
+      }
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "invalid",
+        "message": "items must be a list of 1 to 500 wraps."
+      }
+    }
+  },
+  "put_unknown_device": {
+    "note": "A device that is not the person's.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "00000000000000000000000000000000",
+        "items": [
+          {
+            "mid": "VqT66SZssfLIaGFS_fdhMQ",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "not_found",
+        "message": "No such device of yours."
+      }
+    }
+  },
+  "put_other_person": {
+    "note": "Another person writing for Ann's device: the same `not_found`.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0",
+        "items": [
+          {
+            "mid": "VqT66SZssfLIaGFS_fdhMQ",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "not_found",
+        "message": "No such device of yours."
+      }
+    }
+  },
+  "status_still_waiting": {
+    "note": "Boxes are stored but `done` was not called: the device is still late. The job can be run again.",
+    "request": {
+      "action": "e2e.status",
+      "args": {
+        "id": "1d16eaa4acaa62ed9be52613c71088e0"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "devices": [
+          {
+            "ecdh": "BLZvZxf1yMLPfFiH7UcqCjzGUF3bjzUkeXdcdflPyR_L-FiGHWul5ElaC2fI-R7UPhI_3te0D9D8LbYKJ46P1A4",
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "late": false,
+            "sign": "BKyhmTPguMtrkfbFdJsS6lvcp_n7Uq0dYPszAltYDbi03Xfr3GRU_dU9Gsg7bu-wOPR9zy1MU_rAn5li-v8pwuw",
+            "ts": 1793596324053
+          },
+          {
+            "ecdh": "BOQJnZfvgr1HnO7dJUih9Rm9wkAz-4BuBQga9J5OZwwcHo5GLGtRldUT-Tv01eQE5zW2arRoBkurX_O5AdONm_U",
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "late": true,
+            "sign": "BA8C9wL0gVWSAOMzhzehJY_uft6fdBlqjXDVHElkpi-tsJ4oiy9nue3W90DVaGsVmgSyMc1uguTtNcUx2M7y86Q",
+            "ts": 1793596324566
+          }
+        ],
+        "maxDevices": 10,
+        "mode": "optional",
+        "recovery": false
+      }
+    }
+  },
+  "put_last": {
+    "note": "The rest.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0",
+        "items": [
+          {
+            "mid": "HK4ISPZGGemcVVbJ5Gm01Q",
+            "iv": "oTJtT6QXlQjhJzBc",
+            "w": "vdBwbOLPygsiGMOMHtALlk7LzLcApVII0qdZ46J2NJ5rn-yBHaznlf2UEE0NEImc",
+            "ek": "BFmEOawUMZ9Qrh7BiOD6adF01ZAX42k0G4CeTG4M10wfUu77si98HUNO_-VRIwpQKUdD9RfHjyy69W0HkV0OCt0"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "stored": 1
+      }
+    }
+  },
+  "done": {
+    "note": "After the last put. The device stops waiting; the person's devices get `e2e_devices_changed`.",
+    "request": {
+      "action": "e2e.sync.done",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "done": true
+      }
+    }
+  },
+  "done_again": {
+    "note": "Calling it again is harmless.",
+    "request": {
+      "action": "e2e.sync.done",
+      "args": {
+        "device": "1d16eaa4acaa62ed9be52613c71088e0"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "done": true
+      }
+    }
+  },
+  "done_unknown_device": {
+    "note": "A device that is not the person's.",
+    "request": {
+      "action": "e2e.sync.done",
+      "args": {
+        "device": "ffffffffffffffffffffffffffffffff"
+      }
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "not_found",
+        "message": "No such device of yours."
+      }
+    }
+  },
+  "pending_after_done": {
+    "note": "Nobody is waiting any more.",
+    "request": {
+      "action": "e2e.sync.pending",
+      "args": {}
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "helpers": [
+          {
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "seen": 1793596324593,
+            "ts": 1793596324053
+          },
+          {
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "seen": 1793596324644,
+            "ts": 1793596324566
+          }
+        ],
+        "recovery": null,
+        "waiting": []
+      }
+    }
+  },
+  "status_after_done": {
+    "note": "`late` is false: the app drops its saved copy of the conversations once and reads them again.",
+    "request": {
+      "action": "e2e.status",
+      "args": {
+        "id": "1d16eaa4acaa62ed9be52613c71088e0"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "devices": [
+          {
+            "ecdh": "BLZvZxf1yMLPfFiH7UcqCjzGUF3bjzUkeXdcdflPyR_L-FiGHWul5ElaC2fI-R7UPhI_3te0D9D8LbYKJ46P1A4",
+            "id": "1bd6d3cab2c42004583acba1701e9188",
+            "label": "Ann laptop",
+            "late": false,
+            "sign": "BKyhmTPguMtrkfbFdJsS6lvcp_n7Uq0dYPszAltYDbi03Xfr3GRU_dU9Gsg7bu-wOPR9zy1MU_rAn5li-v8pwuw",
+            "ts": 1793596324053
+          },
+          {
+            "ecdh": "BOQJnZfvgr1HnO7dJUih9Rm9wkAz-4BuBQga9J5OZwwcHo5GLGtRldUT-Tv01eQE5zW2arRoBkurX_O5AdONm_U",
+            "id": "1d16eaa4acaa62ed9be52613c71088e0",
+            "label": "Ann phone",
+            "late": false,
+            "sign": "BA8C9wL0gVWSAOMzhzehJY_uft6fdBlqjXDVHElkpi-tsJ4oiy9nue3W90DVaGsVmgSyMc1uguTtNcUx2M7y86Q",
+            "ts": 1793596324566
+          }
+        ],
+        "maxDevices": 10,
+        "mode": "optional",
+        "recovery": false
+      }
+    }
+  },
+  "remove_not_me": {
+    "note": "\"That is not me\": the waiting device is removed. The server records `e2e.device_removed`.",
+    "request": {
+      "action": "e2e.remove",
+      "args": {
+        "id": "a0f4243e3125d80be954ab9f96f111d6"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "removed": true
+      }
+    }
+  },
+  "put_removed_device": {
+    "note": "A device removed during the job: stop and close the card.",
+    "request": {
+      "action": "e2e.sync.put",
+      "args": {
+        "device": "a0f4243e3125d80be954ab9f96f111d6",
+        "items": [
+          {
+            "mid": "VqT66SZssfLIaGFS_fdhMQ",
+            "iv": "IoQ_a2hLqUWKy6Fc",
+            "w": "Z1sMXcWIvb1b8sNO9SWJ_bKD0GwTtVLDxQ2tZNYahX54WscI-th5oeTuN0PQVVrR",
+            "ek": "BGavN32pET8ScvuEgmpLgBbZQ0nRvErGPbgbbg-WTbWLu2NiHVOIoHphE6ZIeuONNYjn1gNr2N_SqophOQEU4U0"
+          }
+        ]
+      }
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "not_found",
+        "message": "No such device of yours."
+      }
+    }
+  },
+  "put_rate_limited": {
+    "note": "The 401st call of e2e.sync.put in ten minutes (this person). `e2e.sync.page`: 600 calls, `e2e.devices`: 600. Back off and retry the batch.",
+    "request": {
+      "action": "e2e.sync.put"
+    },
+    "reply": {
+      "ok": false,
+      "error": {
+        "code": "rate_limited",
+        "message": "Too many history uploads; try again in a moment."
+      }
+    }
+  },
+  "page_long_first": {
+    "note": "A long history, first page: more than the limit, so `next` is an object. Send it back as `cursor` EXACTLY as it is (treat it as opaque).",
+    "request": {
+      "action": "e2e.sync.page",
+      "args": {}
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "items": [
+          {
+            "id": 114,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"wWzLUVG6khlJzVfT17jao0VrU9WBy2Bu3nZ6t9EdfQ9Af0yisupvuV-3AXpVy43dEiVNvXxeHBriVyo0Q7KOVJywk-3TwOm10nzQXXUIGB0\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BKKR0QEIs8o0nc5RTauIOfxXwrXVpGnR7PXwectUWUp2Z5PseQ_vbrEkF7HraXOdogBBFAamPcmsFWQranHZlIg\",\"from\":\"bobxwjq\",\"iv\":\"wd2uhHZu7tQGvvY7\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"QDbNnYrFXtGh6ZYY\",\"w\":\"TTKgr9QJLQsVEpcPgAnDJE7_OIuGd9QtIXhatFqWYtPs_OE548OeGrH-nT7FyGMa\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"62kXjFH7Cg-KvQiC\",\"w\":\"oIfo6dJB00UfgUyAJyNam0WeHb7I1Im0GIKKMMV9PwTv52JyAvZb_gzss0-T1r_6\"}},\"mid\":\"ulV_81kts6aGqBc_R9gCKA\",\"sig\":\"72Pe_OeCDJwPycpB_OKocAA_1cnsJjQHVQXyEdMx3pc37CsMO-opCDoMZ-Ccbt5-uVZbb2f4u1cKaGfw2uKy8w\",\"ts\":1793596341644,\"v\":1}"
+          },
+          {
+            "id": 113,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"F2eWDrogD4Qh74AhdCY3tSAo1pwx5BEi5-dxc3tdtslFSJItG-NJicbRl7KTmvaci0J2M-YUcVmR9CUM82Y6qBb7UZL3NM4EJYnJ_bBJrPM\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BJ7E2GWaX99oiw1VyMmlv3kI_uYVWuinBlm37TB8BOB4AqB1jlUzHR5hJkREkmvDOvR4JRFAiDlunCJiZdiE4FY\",\"from\":\"bobxwjq\",\"iv\":\"uvYCVeQYRjsaJiPh\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"vaLNrD0ItXaSiSMe\",\"w\":\"8eTOr7uxicGY5Mtd6mtRkanRpx4faWIn6vXAtmNafcX9jPocS5E14UGER8zmKTL4\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"kGrlYSriquNCVxnp\",\"w\":\"FMMBvtpDETPM3mzkb-I3nj3WxRx2bdIa4bTMxxvxwlN6La6LNEESocSnqQaGRYzJ\"}},\"mid\":\"XIFz0JbFSYJ_L8H0MeTfag\",\"sig\":\"45FK5iYF1LniXWwuRRV0U6PmBGh0rJ2g6JSE51pKkVPmQJp0k-TkXwAD83QTwTpNACEgY-0G45WFigrgcWeK2Q\",\"ts\":1793596341591,\"v\":1}"
+          },
+          {
+            "id": 112,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"S9zsz2ouhSbktahKki2oCp1LZJRxNrfkkWixUsJiDdifbjCk1hbUj0CjbwnwP-BJOrqJuLXRAaJhNSvZTvB94vPyHEy6Zp0iTjZg2PomgFw\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BLyP-4RyFPyf_L5bj9Z9fyG0Zx0ixc4Ln9xSrh8SBUegc7ceZKdC4w7iVjhLtiw1ALoN_fB1SAXJj8WxLPeAsmc\",\"from\":\"bobxwjq\",\"iv\":\"N_4vL4JejvBaVskP\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"OaK8wYP-S3jbDBQe\",\"w\":\"2gm-FHTJ62rnOMJd-wE7vYjAnRWNWkucRdBpyyZVa34N_cgQ0wTy8JlJbSN7PqF-\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"h6mZQEtU1IdHN8M3\",\"w\":\"1LvTalWjPayRayeZvBsCOh9UVFfi-BH2fFtpUYKr2gzoImeAabPLyo90bKDRGTlD\"}},\"mid\":\"IbHav9Lqill6iDvXqUitcA\",\"sig\":\"t8y01fdDACbU5rX1BKJfZhBughV0I2jPgp0C9JYuwzIuPSWAz3zwFqzRN5vrL9aYLh96gUzr9qK6wb9pJZdfpA\",\"ts\":1793596341535,\"v\":1}"
+          }
+        ],
+        "next": {
+          "b": 65,
+          "c": 0
+        },
+        "_trimmed": "50 items in this page; the first 3 are shown"
+      }
+    }
+  },
+  "page_long_second": {
+    "note": "The next page, with the cursor sent back.",
+    "request": {
+      "action": "e2e.sync.page",
+      "args": {
+        "cursor": {
+          "b": 65,
+          "c": 0
+        }
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "items": [
+          {
+            "id": 64,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"-Dpt1GYG7BBMA9JM2v2FS21X9U_WL6eABCy8DQwj4XYWoQCpPsPU8PNiwkTEAMWz86IhCoPHgEQnHz2y0jsiIuAfzIU1v_qMjGylhr9Pzks\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BI_fGqLAmOZSRMK3F-W-mpo-Yk7VKD1SyuQvQCxdxa8tyUVh-cHwnh-GjpOmCko4YdWqzrf8Zi1kZXJfaDtAHu8\",\"from\":\"bobxwjq\",\"iv\":\"SIrCggorEq2QSJZJ\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"pkU8oB1_dwxTNRyF\",\"w\":\"lTkypbcK4jJmrA0CxI_EGHxpavvwXkAtQrGJ7VO21GbJ4UNVh0FOI9LSRCg4vg1c\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"7egEtfAH8fTkFUzZ\",\"w\":\"jq6eq6-3QOdBR5k-cnvZ9FMG4pEwN3CfDfmchREsk-OP3Eo_HOC2ZyMTssOKTEK8\"}},\"mid\":\"MjL6VJR-Q8IBWctz6YSXdw\",\"sig\":\"3llnQy7tkoz8PsM1VChgK_MAehzzR_t5JVeXEqyOffkGSJLu4lktFWW3JzG23cxjGcU86tmk2anKaQLHaWxWZw\",\"ts\":1793596338865,\"v\":1}"
+          },
+          {
+            "id": 63,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"tsREEJXSjYZ1HBGoK0HBJ8fgyxcF11WJdRabs1XItp40_Y9AllD56DYfMhWxCfX_C2rG3KQH5Nhn-Fehf2upJJcmCpU59z61EZNjtGfkR5I\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BCScvXuc6Pnw-YLLJcBicwxHAfVB_K2df6VAUNn2Kpa8OZuOl3WF8llVzLTKqXVZo5wR79-PGmrKMyEV3d6IlaE\",\"from\":\"bobxwjq\",\"iv\":\"QkeBEcKHTsbXw3y3\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"15mauwtQkrXlhj9-\",\"w\":\"_p1UQGKo-RZSBCfE_175TO2tc609PBrYojcyuH2-EfNlmH4MS_SEy70jWtgU83ta\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"x93c3w0QtEVGeYkK\",\"w\":\"Trr2PsL_0PvP9fA2TJuICjVLoty-2C5YbMzFU9k-LbZyQLMOHSmUjiNpTGCBo-fl\"}},\"mid\":\"J1YtTpb0zbsy9ynid1Ycrg\",\"sig\":\"53TFyC2CEQvh7ctCBtgIUl_jfTEcuNFQYYYkXM-gX16j15adC7IMUn9U4_HPXAmTYGGtN6_7SmRMqSDd6J9GZw\",\"ts\":1793596338811,\"v\":1}"
+          },
+          {
+            "id": 62,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"q-eFemZXWXmckvbCgdmeKnBDxBP5VxW5DwLHUNS7eMdS39NQfJb2329fSVEhv-6ZLFKp53MguoEXMcLI7AFobnaSHqysXkY7U6SmIlPr_hI\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BAyhWTnDwIbIrqKtVcm7BbEgLDwMT4d0Xx1i_zjUwNNPcghp3qBOFLVYY5hqQlrrPsZx_9GGIH040K654WH6igg\",\"from\":\"bobxwjq\",\"iv\":\"THp1V_wmsDkEWqKW\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"X_CVeW3RrdnHPeJt\",\"w\":\"uGqd3WclDiymZ0uzb_ZkvhthwcjinXAKYnJ2SKr75sBOOUAuMKFY-LPsxqrrIQtq\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"sbpj3uSpBr0ahtkZ\",\"w\":\"XPVqKG-gRr8zk6AqsOQlgvHgMJlT08R7OVU5f50Jt30BzpztHGMK3gKNAWbH5YnZ\"}},\"mid\":\"wHYYieO-5qPXjJjLrudyZQ\",\"sig\":\"DqAsaF8EVtgr167ysOhfwDQZAuhb6SBciMQyY95Qxlt3FP5MR3_xQhfRKARk6-7y8kwR_HCrcJzduza6sqdqxQ\",\"ts\":1793596338755,\"v\":1}"
+          }
+        ],
+        "next": {
+          "b": 15,
+          "c": 0
+        },
+        "_trimmed": "50 items in this page; the first 3 are shown"
+      }
+    }
+  },
+  "page_long_last": {
+    "note": "The walk ended: the last reply has next = null. 3 pages for 114 distinct messages here.",
+    "request": {
+      "action": "e2e.sync.page",
+      "args": {
+        "cursor": "<the last next>"
+      }
+    },
+    "reply": {
+      "ok": true,
+      "data": {
+        "items": [
+          {
+            "id": 14,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"9lCWGm4VkbhGKUiUJBxUbqDksNnzZaFquw06hePUJc7-fcdrTXKQngoslE-9R2xEZvU74KnlYDwAMkF6lfOY3ix7TDg1uAj17yk_gjR3BDY\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BDhJmPgYkERgOSrgioM71euyxEXwl8IvIR3bQtf-61D-1nxzTo-EiQlyO73-U972zYdOVJfWv0p3IbnZ5uI6Ibk\",\"from\":\"bobxwjq\",\"iv\":\"iRabuA2L9UjyEdqC\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"kBj9CcvQuhopyHvx\",\"w\":\"UD2pM-d4PL-f7KOm7pcfHXKCU9-hSeu4k_COzzRUvaa2yDqdNsT8OD-RhezEOUin\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"aO8YhTP7Uxyn-8Ae\",\"w\":\"Zx1sv0jgxO2PzyRQh1hAzYUcreOdNq7mXT04CPvC1W5U6Pg9HvF9D1mfO0apKZHf\"}},\"mid\":\"WYg_MaHvXtS7AZGulHcfIQ\",\"sig\":\"6xvQYM2R2_aXIJpbmu8pUf_RplZEWkO1WUXB-dpIFJIRXamcjYtaPTiC7lZZNnBMhDCBBLLqLEmSfKhwTlU5VA\",\"ts\":1793596336079,\"v\":1}"
+          },
+          {
+            "id": 13,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"_RoawYLjzK3OofLWcE6ns5uguikrxsl9Xwn_aI3rTJNQIJlobbPs5UKdNrMfa6fEbAH1ZFZyeXhoWJRvuFldkzMtVL4nWhnfepjrucOeEkQ\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BHwY5M2ryBEpeJFPyHVqUppAL3sd74u_PiwAPJMiLbBnCSIR-l3_GVB-Rj7TywCKJmOUOXKLIilMRwtj8_Dei3U\",\"from\":\"bobxwjq\",\"iv\":\"Hr5HFgDC6QUxzQYN\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"v4Ao0apJuCjecOvl\",\"w\":\"3jN4-SLOX4pRnbkpqPaP9m460mairOMFVv_6NX6KOu-UPPGcsSTFFP8Q9hdtk_WU\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"cmitd77kavCc-AFe\",\"w\":\"1TKZQhiuYxNOlBWqunWNNqcpaF-8implJQI04uoIvHVUGmMZkTLsBdfRc_zEIST8\"}},\"mid\":\"rB_LMgDliCXUkg1gZfq98Q\",\"sig\":\"09XUpzfnz9FVLrH7ww4W8KBQnxPUiq9LxeDgoaPhkJNeL--h8JkhvK9owbAlPLOUYl1E4sJRaUKLev45KZimHw\",\"ts\":1793596336024,\"v\":1}"
+          },
+          {
+            "id": 12,
+            "text": "e2e1:{\"conv\":\"dm:annxwjq|bobxwjq\",\"ct\":\"GPJo-h1EWtlnsfTDrs_ZcXaQ3I07xwk5kioax5mCCp55Wu3YfzCyD_YEIBBQEZZ8FR1Is4iBBpNmkPysOJo6vmM9tBPLnNT4PasfyzEanYk\",\"dev\":\"e6c86326d6b01534aed4f542743273db\",\"ek\":\"BIF9omBYS3D_P_Zv1q9wh9BImFB4iYROou4eo-L0xImGNVtmwQ8Df-QRGHTfH5YQMksaRb21-dxo-1FJOyLaHT4\",\"from\":\"bobxwjq\",\"iv\":\"-wHeIyOnrGXf5xDJ\",\"keys\":{\"1bd6d3cab2c42004583acba1701e9188\":{\"iv\":\"1dqrNl0GjUlvsRwh\",\"w\":\"JmaFwcqQhivfivE2lyORXY3Xs3A0YvAIrpVOGfu8A8V-ijNR103IycN6ZA3wCXle\"},\"1d16eaa4acaa62ed9be52613c71088e0\":{\"iv\":\"kYdCgdDs7TQ0ZvxV\",\"w\":\"Io8pZj-ptRZiuFbPpfsIwOiUMIHD14c4q3iVFxj6xR9cEII-bWfumDRFLYG2gufx\"}},\"mid\":\"jZ-36TP0BYYfDAruROC7kw\",\"sig\":\"pCovsuS_mIsw5yB9S38xirnhdvfDug56CKeNZYhDNdOKfE8_Puk-mX7-rgztjLcnxZ4eOSQvsWsBxvyLvEo4UA\",\"ts\":1793596335969,\"v\":1}"
+          }
+        ],
+        "next": null,
+        "_trimmed": "14 items in this page; the first 3 are shown"
+      }
+    }
+  },
+  "_about": "Real replies captured from a running server by tools/e2e-kit/capture-sync-replies.mjs. Throwaway people and devices. Ids and keys are different on every run; the shapes are what matters."
+}

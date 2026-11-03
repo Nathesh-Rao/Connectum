@@ -1,0 +1,47 @@
+{
+  "name": "sample_rule",
+  "caption": "Sample: rules (checks the app makes)",
+  "fields": [
+    {
+      "name": "phone",
+      "type": "text",
+      "caption": "Phone (10 digits)",
+      "rule": {
+        "expr": "Length(phone)=10",
+        "message": "The phone must have 10 digits"
+      }
+    },
+    {
+      "name": "age",
+      "type": "wholenumber",
+      "caption": "Age (18 or more)",
+      "rule": {
+        "expr": "age>=18",
+        "message": "You must be 18 or older"
+      }
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "caption": "Email",
+      "rule": {
+        "expr": "CheckEmail(email)",
+        "message": "That is not an email address"
+      }
+    },
+    {
+      "name": "start",
+      "type": "date",
+      "caption": "Start date"
+    },
+    {
+      "name": "finish",
+      "type": "date",
+      "caption": "Finish date (not before the start)",
+      "rule": {
+        "expr": "Val(finish)>=Val(start)",
+        "message": "The finish cannot be before the start"
+      }
+    }
+  ]
+}

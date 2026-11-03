@@ -146,10 +146,12 @@ class _Card extends StatelessWidget {
           isSent: true,
           state: state,
           problem: state == AppFormCardState.failed ? c.problemOf(card) : null,
+          stripLabel: c.stripLabelOf(card),
+          note: c.noteOf(card),
           isHighlighted: c.highlighted.contains(card.id),
           onTap: () => c.tap(card),
           onEdit: c.canEdit(card) ? () => c.edit(card) : null,
-          onLongPress: state == AppFormCardState.failed
+          onLongPress: state == AppFormCardState.failed || c.isDraft(card)
               ? () => _FailedSheet.show(context, c, card)
               : null,
         ),
@@ -179,9 +181,9 @@ class _FailedSheet extends StatelessWidget {
     final c = controller;
     return Column(
       children: [
-        if (c.isInvalidFailure(card))
+        if (c.isInvalidFailure(card) || c.isDraft(card))
           AppListRow(
-            title: 'Edit and resend',
+            title: c.isDraft(card) ? 'Finish and send' : 'Edit and resend',
             minHeight: AppSpacing.settingRowHeight,
             leading: const Icon(
               Icons.edit_outlined,

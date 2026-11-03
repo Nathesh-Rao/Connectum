@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
 import '../api/api_client.dart';
+import '../attachment_cache.dart';
 import '../db/app_database.dart';
 import '../models/ids.dart';
 import '../models/session_info.dart';
@@ -12,7 +13,13 @@ import '../session_store.dart';
 import '../socket/socket_service.dart';
 
 class SessionRepository extends GetxService {
-  SessionRepository(this._store, this._db, this._api, this._socket);
+  SessionRepository(
+    this._store,
+    this._db,
+    this._api,
+    this._socket,
+    this._attachmentCache,
+  );
 
   static const replacedNotice =
       'You were signed out because this account signed in on another tab or device.';
@@ -22,6 +29,7 @@ class SessionRepository extends GetxService {
       'This account was opened on another device, so this one was signed out. Sign in again to use it here.';
 
   final SessionStore _store;
+  final AttachmentCache _attachmentCache;
   final AppDatabase _db;
   final ApiClient _api;
   final SocketService _socket;
@@ -103,9 +111,14 @@ class SessionRepository extends GetxService {
   /// organisation and user) and go out when the person enters it again.
   Future<void> leaveCurrent({required bool endOnServer}) async {
     final token = _store.token;
-    if (_store.current.value == null) return;
+    final info = _store.current.value;
+    if (info == null) return;
     _isHandling = true;
     await _socket.stop();
+    await _db.update(
+      'DELETE FROM form_choice_cache WHERE org_id = ? AND user_id = ?',
+      [info.orgId, info.userId],
+    );
     if (endOnServer && token != null) {
       unawaited(
         _api.post('/logout', bearer: token).then((_) {}, onError: (_) {}),
@@ -122,6 +135,7 @@ class SessionRepository extends GetxService {
     _isHandling = true;
     await _socket.stop();
     await _db.wipeScope(info.orgId, info.userId);
+    await _attachmentCache.clear();
     await _store.clear();
     _goToLogin(replacedNotice);
   }
@@ -145,6 +159,7 @@ class SessionRepository extends GetxService {
     } catch (_) {}
     await _socket.stop();
     await _db.wipeScope(info.orgId, info.userId);
+    await _attachmentCache.clear();
     await _store.clear();
     _goToLogin(null);
   }
@@ -172,6 +187,7 @@ class SessionRepository extends GetxService {
     ]);
     await _socket.stop();
     await _db.wipeAll();
+    await _attachmentCache.clear();
     await _store.clear();
     await _store.clearIdentity();
     loginEmail.value = email;

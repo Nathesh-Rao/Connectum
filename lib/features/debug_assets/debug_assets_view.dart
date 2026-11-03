@@ -45,6 +45,15 @@ class DebugAssetsView extends GetView<DebugAssetsController> {
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
+          const Text('Attachment tag vectors', style: AppText.title),
+          for (final (label, isOk) in c.tagResults)
+            Text(
+              '${isOk ? 'PASS' : 'FAIL'}  $label',
+              style: AppText.caption.copyWith(
+                color: isOk ? AppColors.yesText : AppColors.error,
+              ),
+            ),
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );

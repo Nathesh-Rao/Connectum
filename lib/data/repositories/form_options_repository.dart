@@ -3,12 +3,34 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 
+import '../../core/debug/seed_sample_forms.dart';
 import '../../core/debug/seed_ui.dart';
 import '../db/app_database.dart';
 import '../models/form_option.dart';
 import '../models/ids.dart';
+import '../models/slot_day.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+
+/// One list `form.options` gave, as kept for a form, a field and the values of
+/// the fields it depends on.
+class KeptChoices {
+  const KeptChoices({
+    required this.reply,
+    required this.etag,
+    required this.cacheSec,
+    required this.fetchedTs,
+    required this.rev,
+  });
+
+  final Map<String, dynamic> reply;
+  final String etag;
+  final int cacheSec;
+  final int fetchedTs;
+  final String rev;
+
+  FieldRows get rows => FieldRows.fromReply(reply);
+}
 
 /// What the forms button offers: `options.list` and `options.categories`,
 /// cached per organisation and user for offline, plus the last forms used and
@@ -17,6 +39,11 @@ class FormOptionsRepository extends GetxService {
   FormOptionsRepository(this._db, this._session, this._socket);
 
   static const recentCount = 3;
+
+  /// How long a kept list is reused when the server gives no time (0), and how
+  /// long one is still shown when the server can't be asked.
+  static const defaultReuse = Duration(minutes: 5);
+  static const staleLimit = Duration(days: 2);
 
   final AppDatabase _db;
   final SessionStore _session;
@@ -30,6 +57,7 @@ class FormOptionsRepository extends GetxService {
 
   final _choices = <String, List<FormChoice>>{};
   bool _isFetching = false;
+  (String, String)? _lastScope;
 
   String? get _org => _session.orgId;
   String? get _me => _session.userId;
@@ -37,9 +65,24 @@ class FormOptionsRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    ever(_session.current, (_) {
+    ever(_session.current, (info) {
       _choices.clear();
+      final scope = info == null ? null : (info.orgId, info.userId);
+      final last = _lastScope;
+      // A different organisation or person: what was kept for the last one goes.
+      if (scope != null && last != null && scope != last) {
+        unawaited(clearScope(last.$1, last.$2));
+      }
+      if (scope != null) _lastScope = scope;
       unawaited(load());
+    });
+    _lastScope = _session.current.value == null
+        ? null
+        : (_session.current.value!.orgId, _session.current.value!.userId);
+    _socket.events.listen((e) {
+      if (e['type'] == 'sd_event' && e['event'] == 'options_changed') {
+        unawaited(clearOrg());
+      }
     });
     _socket.onOnline.listen((_) => unawaited(refresh()));
     unawaited(load());
@@ -232,5 +275,242 @@ class FormOptionsRepository extends GetxService {
       }
     }
     return out;
+  }
+
+  // ---- choices of selection, fill and fetch fields ---------------------------
+
+  /// The key of a kept list: the values of the fields it depends on, in a
+  /// fixed order (a cascading list is another list for each parent value).
+  static String cacheKey(Map<String, dynamic> values) {
+    final names = values.keys.toList()..sort();
+    return jsonEncode({for (final n in names) n: values[n]});
+  }
+
+  /// A kept list is reused for the server's `cacheSec`, or [defaultReuse]
+  /// when that is 0.
+  static bool isFresh(int fetchedTs, int cacheSec, int nowTs) {
+    final reuse = cacheSec > 0 ? Duration(seconds: cacheSec) : defaultReuse;
+    return nowTs - fetchedTs < reuse.inMilliseconds;
+  }
+
+  /// With no connection, a kept list is still shown for [staleLimit].
+  static bool isUsableOffline(int fetchedTs, int nowTs) =>
+      nowTs - fetchedTs <= staleLimit.inMilliseconds;
+
+  /// What a field that reads a source offers now (`form.options`), given the
+  /// values of the fields its parameters come from. A kept list is used while
+  /// it is fresh, checked again with its etag when it is not, and shown
+  /// marked as old when the server can't be reached. Null when it can't be
+  /// had (nothing usable kept and no connection, or the server refused).
+  Future<FieldRows?> fieldRows({
+    required String form,
+    required String scope,
+    required String field,
+    required Map<String, dynamic> values,
+    int limit = 500,
+    String rev = '',
+  }) async {
+    if (SeedUi.isActive) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      return SeedSampleForms.fieldRows(form, field, values);
+    }
+    final org = _org;
+    final user = _me;
+    final key = cacheKey(values);
+    final kept = org == null || user == null
+        ? null
+        : await keptFor(org, user, form, field, key, rev);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    FieldRows? offline() => kept != null && isUsableOffline(kept.fetchedTs, now)
+        ? kept.rows.asStale()
+        : null;
+    if (!_socket.isOnline) return offline();
+    if (kept != null && isFresh(kept.fetchedTs, kept.cacheSec, now)) {
+      return kept.rows;
+    }
+    try {
+      final data = await _socket.sdCall('form.options', {
+        'tstruct': form,
+        'scope': scope == 'user' ? 'user' : 'admin',
+        'field': field,
+        'values': values,
+        'limit': limit,
+        if (kept != null && kept.etag.isNotEmpty) 'ifNoneMatch': kept.etag,
+      }, timeout: const Duration(seconds: 30));
+      if (data['notModified'] == true) {
+        if (kept == null || org == null || user == null) return null;
+        await _db.update(
+          'UPDATE form_choice_cache SET fetched_ts = ?, cache_sec = ? '
+          'WHERE org_id = ? AND user_id = ? AND form = ? AND field = ? AND cache_key = ?',
+          [
+            DateTime.now().millisecondsSinceEpoch,
+            data['cacheSec'] == null ? kept.cacheSec : intOf(data['cacheSec']),
+            org,
+            user,
+            form,
+            field,
+            key,
+          ],
+        );
+        return kept.rows;
+      }
+      final rows = FieldRows.fromReply(data);
+      if (!rows.isWaiting && org != null && user != null) {
+        await keepChoices(
+          org,
+          user,
+          form,
+          field,
+          key,
+          {
+            'options': data['options'],
+            'rows': data['rows'],
+            'columns': data['columns'],
+            'truncated': data['truncated'],
+          },
+          etag: idText(data['etag']),
+          cacheSec: intOf(data['cacheSec']),
+          rev: rev,
+        );
+      }
+      return rows;
+    } on SocketCallError catch (e) {
+      return e.isConnectionGap ? offline() : null;
+    }
+  }
+
+  Future<void> keepChoices(
+    String org,
+    String user,
+    String form,
+    String field,
+    String key,
+    Map<String, dynamic> reply, {
+    String etag = '',
+    int cacheSec = 0,
+    String rev = '',
+    int? fetchedTs,
+  }) => _db.insert(
+    'INSERT OR REPLACE INTO form_choice_cache(org_id, user_id, form, field, cache_key, reply_json, etag, cache_sec, fetched_ts, rev) '
+    'VALUES(?,?,?,?,?,?,?,?,?,?)',
+    [
+      org,
+      user,
+      form,
+      field,
+      key,
+      jsonEncode(reply),
+      etag,
+      cacheSec,
+      fetchedTs ?? DateTime.now().millisecondsSinceEpoch,
+      rev,
+    ],
+  );
+
+  Future<KeptChoices?> keptFor(
+    String org,
+    String user,
+    String form,
+    String field,
+    String key,
+    String rev,
+  ) async {
+    final rows = await _db.query(
+      'SELECT reply_json, etag, cache_sec, fetched_ts, rev FROM form_choice_cache '
+      'WHERE org_id = ? AND user_id = ? AND form = ? AND field = ? AND cache_key = ?',
+      [org, user, form, field, key],
+    );
+    if (rows.isEmpty) return null;
+    final r = rows.first;
+    // Kept for another version of the form: gone.
+    if (idText(r['rev']) != rev) {
+      await _db.update(
+        'DELETE FROM form_choice_cache WHERE org_id = ? AND user_id = ? AND form = ? AND field = ? AND cache_key = ?',
+        [org, user, form, field, key],
+      );
+      return null;
+    }
+    try {
+      final reply = (jsonDecode(idText(r['reply_json'])) as Map)
+          .cast<String, dynamic>();
+      return KeptChoices(
+        reply: reply,
+        etag: idText(r['etag']),
+        cacheSec: intOf(r['cache_sec']),
+        fetchedTs: intOf(r['fetched_ts']),
+        rev: rev,
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  /// The server refused a choice of this field: every list kept for it goes.
+  Future<void> dropField(
+    String form,
+    String field, {
+    String? org,
+    String? user,
+  }) async {
+    final o = org ?? _org;
+    final u = user ?? _me;
+    if (o == null || u == null) return;
+    await _db.update(
+      'DELETE FROM form_choice_cache WHERE org_id = ? AND user_id = ? AND form = ? AND field = ?',
+      [o, u, form, field],
+    );
+  }
+
+  /// Everything kept for one form (its rev changed).
+  Future<void> dropForm(String form, {String? org, String? user}) async {
+    final o = org ?? _org;
+    final u = user ?? _me;
+    if (o == null || u == null) return;
+    await _db.update(
+      'DELETE FROM form_choice_cache WHERE org_id = ? AND user_id = ? AND form = ?',
+      [o, u, form],
+    );
+  }
+
+  /// `options_changed`: every kept list of the organisation.
+  Future<void> clearOrg({String? org}) async {
+    final o = org ?? _org;
+    _choices.clear();
+    if (o == null) return;
+    await _db.update('DELETE FROM form_choice_cache WHERE org_id = ?', [o]);
+  }
+
+  Future<void> clearScope(String org, String user) => _db.update(
+    'DELETE FROM form_choice_cache WHERE org_id = ? AND user_id = ?',
+    [org, user],
+  );
+
+  /// The days and times a person can be booked (`avail.slots`), or null when
+  /// they can't be had now.
+  Future<List<SlotDay>?> slots(String user) async {
+    if (SeedUi.isActive) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      return SeedSampleForms.slotDays();
+    }
+    if (!_socket.isOnline) return null;
+    try {
+      final data = await _socket.sdCall('avail.slots', {
+        'user': user,
+        'days': 14,
+      }, timeout: const Duration(seconds: 30));
+      final days = data['days'];
+      if (days is! List) return const [];
+      return [
+        for (final d in days)
+          if (d is Map && idText(d['date']).isNotEmpty)
+            SlotDay(idText(d['date']), [
+              for (final t in (d['slots'] as List? ?? const []))
+                if (t is Map && idText(t['time']).isNotEmpty)
+                  SlotTime(idText(t['time']), t['free'] == true),
+            ]),
+      ];
+    } on SocketCallError catch (_) {
+      return null;
+    }
   }
 }

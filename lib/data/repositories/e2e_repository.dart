@@ -1008,4 +1008,15 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     if (kDebugMode) debugPrint('e2e: cannot read (${reading.code})');
     return reading;
   }
+
+  // ---- attachments ------------------------------------------------------
+
+  /// A fresh key and iv for each file; the blob is `ciphertext || tag`.
+  Future<E2eEncryptedFile> encryptFile(List<int> bytes) =>
+      _crypto.encryptFile(bytes);
+
+  /// Throws [E2eException] `file_decrypt_failed` for a wrong key, a damaged
+  /// or a short blob.
+  Future<Uint8List> decryptFile(List<int> blob, String key, String iv) =>
+      _crypto.decryptFile(blob, key, iv);
 }

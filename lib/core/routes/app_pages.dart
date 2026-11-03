@@ -10,6 +10,10 @@ import '../../features/debug_assets/debug_assets_binding.dart';
 import '../../features/debug_assets/debug_assets_view.dart';
 import '../../features/debug_e2e/debug_e2e_binding.dart';
 import '../../features/debug_e2e/debug_e2e_view.dart';
+import '../../features/debug_forms/debug_forms_binding.dart';
+import '../../features/debug_forms/debug_forms_view.dart';
+import '../../features/debug_formlogic/debug_formlogic_binding.dart';
+import '../../features/debug_formlogic/debug_formlogic_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
 import '../../features/debug_socket/debug_socket_view.dart';
 import '../../features/enterprise_created/enterprise_created_binding.dart';
@@ -182,6 +186,20 @@ class AppPages {
         AppRoutes.debugE2e,
         () => const DebugE2eView(),
         DebugE2eBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugFormLogic,
+        () => const DebugFormLogicView(),
+        DebugFormLogicBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugForms,
+        () => const DebugFormsView(),
+        DebugFormsBinding(),
         AppTransitionKind.push,
       ),
   ];

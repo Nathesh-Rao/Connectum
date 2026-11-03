@@ -7,6 +7,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_list_row.dart';
+import '../../../core/utils/attachment_tag.dart';
 import '../../../data/models/message.dart';
 import '../conversation_controller.dart';
 import 'reaction_picker.dart';
@@ -40,7 +41,12 @@ class MessageActionsSheet extends StatelessWidget {
     final isSettled = !m.isLocalTemp && m.status != MessageStatus.failed;
     final isForm = m.kind == 'form';
     final isFailedForm = isForm && m.status == MessageStatus.failed;
-    final canCopy = !m.isDeleted && !m.isEncryptedUnsupported && !isForm;
+    // The text of a sealed file is its tag, which holds the key.
+    final canCopy =
+        !m.isDeleted &&
+        !m.isEncryptedUnsupported &&
+        !isForm &&
+        !(m.isEncrypted && AttachmentTag.parse(m.text) != null);
     final canReply =
         c.canReply && isSettled && !m.isDeleted && !m.isEncryptedUnsupported;
     // A form that reached the server stays: it is a record. Only one that

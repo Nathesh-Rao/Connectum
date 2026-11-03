@@ -1,0 +1,374 @@
+{
+  "about": "Every operator and function of the catalogue run on one sample. Load form-logic-host-shim.js and form-logic.bundle.js, then ConnectumFormLogic.runConformance(this object): `failures` must be empty.",
+  "sample": {
+    "fields": {
+      "name": "  Asha Rao ",
+      "phone": "9876543210",
+      "email": "asha@example.com",
+      "city": "Pune",
+      "code": "AB-12",
+      "note": "",
+      "age": 17,
+      "qty": 3,
+      "price": 250,
+      "amount": 1234567.5,
+      "joined": "2026-04-03",
+      "ends": "2026-04-30"
+    },
+    "rows": {
+      "lineitem": [
+        "Bolt",
+        "Nut",
+        "Bolt"
+      ],
+      "lineqty": [
+        2,
+        3,
+        1
+      ],
+      "linerate": [
+        10,
+        5,
+        40
+      ]
+    }
+  },
+  "cases": [
+    {
+      "expr": "qty*price",
+      "expect": "750"
+    },
+    {
+      "expr": "qty%2",
+      "expect": "1"
+    },
+    {
+      "expr": "2^3",
+      "expect": "8"
+    },
+    {
+      "expr": "city=\"Pune\"",
+      "expect": "true"
+    },
+    {
+      "expr": "city!=\"Goa\"",
+      "expect": "true"
+    },
+    {
+      "expr": "age>=18",
+      "expect": "false"
+    },
+    {
+      "expr": "age>=18 && qty>0",
+      "expect": "false"
+    },
+    {
+      "expr": "age>=18 || qty>0",
+      "expect": "true"
+    },
+    {
+      "expr": "(qty+1)*price",
+      "expect": "1000"
+    },
+    {
+      "expr": "IIF(age>=18,\"Adult\",\"Minor\")",
+      "expect": "Minor"
+    },
+    {
+      "expr": "IsEmpty(Trim(\"  \"))",
+      "expect": "T"
+    },
+    {
+      "expr": "CheckEmail(email)",
+      "expect": "true"
+    },
+    {
+      "expr": "ChkUniqChar(\"AABC\")",
+      "expect": "true"
+    },
+    {
+      "expr": "IsOperator(\"+\")",
+      "expect": "true"
+    },
+    {
+      "expr": "Length(phone)",
+      "expect": "10"
+    },
+    {
+      "expr": "SubStr(phone,1,2)",
+      "expect": "98"
+    },
+    {
+      "expr": "Upper(city)",
+      "expect": "PUNE"
+    },
+    {
+      "expr": "Lower(city)",
+      "expect": "pune"
+    },
+    {
+      "expr": "Length(Trim(name))",
+      "expect": "8"
+    },
+    {
+      "expr": "TrimInBetwnSpaces(name)",
+      "expect": "AshaRao"
+    },
+    {
+      "expr": "Str(qty)",
+      "expect": "3"
+    },
+    {
+      "expr": "Val(\"1,250.50\")",
+      "expect": "1250.5"
+    },
+    {
+      "expr": "ExtractNum(code)",
+      "expect": "12"
+    },
+    {
+      "expr": "RemoveCommas(\"1,250\")",
+      "expect": "1250"
+    },
+    {
+      "expr": "FindCharPos(email,\"@\")",
+      "expect": "4"
+    },
+    {
+      "expr": "FindAndReplace(code,\"-\",\"/\")",
+      "expect": "AB/12"
+    },
+    {
+      "expr": "GetNthString(code,3)",
+      "expect": "12"
+    },
+    {
+      "expr": "GetSeperatorCount(\"a,b,c\",\",\")",
+      "expect": "2"
+    },
+    {
+      "expr": "LeftPad(\"7\",3,\"0\")",
+      "expect": "007"
+    },
+    {
+      "expr": "RightPad(\"7\",3,\"0\")",
+      "expect": "700"
+    },
+    {
+      "expr": "Pad(\"7\",4,\"*\")",
+      "expect": "**7*"
+    },
+    {
+      "expr": "Stuff(\"ABCD\",\"-\",2)",
+      "expect": "AB-CD"
+    },
+    {
+      "expr": "StringPos(\"Pune\",\"Goa,Pune,Delhi\")",
+      "expect": "1"
+    },
+    {
+      "expr": "Abs(0-5)",
+      "expect": "5"
+    },
+    {
+      "expr": "Ceil(2.1)",
+      "expect": "3"
+    },
+    {
+      "expr": "Floor(2.9)",
+      "expect": "2"
+    },
+    {
+      "expr": "Round(2.5)",
+      "expect": "3"
+    },
+    {
+      "expr": "RoundOff(3.14159,2)",
+      "expect": "3.14"
+    },
+    {
+      "expr": "FormatVal(2.5,2)",
+      "expect": "2.5"
+    },
+    {
+      "expr": "Rnd(12.34,5)",
+      "expect": "12.35"
+    },
+    {
+      "expr": "EvaluatePower(2,10)",
+      "expect": "1024"
+    },
+    {
+      "expr": "GetInteger(\"42 items\")",
+      "expect": "42"
+    },
+    {
+      "expr": "Mods(17,5)",
+      "expect": "2"
+    },
+    {
+      "expr": "Length(Date())",
+      "expect": "10"
+    },
+    {
+      "expr": "Length(Time())",
+      "expect": "8"
+    },
+    {
+      "expr": "MakeDate(3,4,2026)",
+      "expect": "03/04/2026"
+    },
+    {
+      "expr": "ValidEncodeDate(2026,4,3)",
+      "expect": "03/04/2026"
+    },
+    {
+      "expr": "DayOfDate(joined)",
+      "expect": "3"
+    },
+    {
+      "expr": "MonthOfDate(joined)",
+      "expect": "4"
+    },
+    {
+      "expr": "YearOfDate(joined)",
+      "expect": "2026"
+    },
+    {
+      "expr": "CMonthYear(joined)",
+      "expect": "April 2026"
+    },
+    {
+      "expr": "Mandy(joined)",
+      "expect": "202604"
+    },
+    {
+      "expr": "LastDayOfMonth(joined)",
+      "expect": "30/04/2026"
+    },
+    {
+      "expr": "DaysInMonth(2026,2)",
+      "expect": "28"
+    },
+    {
+      "expr": "AddToDate(joined,10)",
+      "expect": "13/04/2026"
+    },
+    {
+      "expr": "AddToMonth(joined,1)",
+      "expect": "03/05/2026"
+    },
+    {
+      "expr": "DaysElapsed(joined,ends)",
+      "expect": "27"
+    },
+    {
+      "expr": "TimeElapsed(joined,ends)",
+      "expect": "27 days, 0 hours, 0 minutes, 0 seconds"
+    },
+    {
+      "expr": "NetworkDays(joined,ends)",
+      "expect": "20"
+    },
+    {
+      "expr": "Days360(joined,ends)",
+      "expect": "27"
+    },
+    {
+      "expr": "DToC(joined)",
+      "expect": "03/04/2026"
+    },
+    {
+      "expr": "Total(lineqty)",
+      "expect": "6"
+    },
+    {
+      "expr": "GetRowCount(\"lineqty\")",
+      "expect": "3"
+    },
+    {
+      "expr": "GetValue(\"lineitem\",2)",
+      "expect": "Nut"
+    },
+    {
+      "expr": "GetMin(\"lineqty\")",
+      "expect": "3"
+    },
+    {
+      "expr": "GetMax(\"lineqty\")",
+      "expect": "2"
+    },
+    {
+      "expr": "GetRow(\"lineitem\",\"Nut\")",
+      "expect": "2"
+    },
+    {
+      "expr": "Sum(\"lineitem\",\"Bolt\",\"lineqty\")",
+      "expect": "3"
+    },
+    {
+      "expr": "SumTill(\"lineitem\",\"Bolt\",\"lineqty\",1)",
+      "expect": "2"
+    },
+    {
+      "expr": "GetAllValues(\"lineitem\")",
+      "expect": "Bolt,Nut,Bolt"
+    },
+    {
+      "expr": "InsertCommas(amount)",
+      "expect": "12,34,567.50"
+    },
+    {
+      "expr": "FormatAmount(amount,2,\"T\")",
+      "expect": "12,34,567.50"
+    },
+    {
+      "expr": "FormatAccAmount(1250,2,\"T\")",
+      "expect": "1,250.00"
+    },
+    {
+      "expr": "AmtWord(1250)",
+      "expect": "Rupees One Thousand Two Hundred Fifty Only"
+    },
+    {
+      "expr": "CurrAmtWord(\"12.50\",\"Dollars \",\"cents\")",
+      "expect": "Dollars Twelve and cents Fifty only"
+    },
+    {
+      "expr": "Encode(\"hi\")",
+      "expect": "aGk="
+    },
+    {
+      "expr": "Decode(\"aGk=\")",
+      "expect": "hi"
+    },
+    {
+      "expr": "ConvertMD5(\"a\")",
+      "expect": "0cc175b9c0f1b6a831c399e269772661"
+    },
+    {
+      "expr": "InfixToPostfix(\"1+2*3\")",
+      "expect": "1 2 3 * +"
+    },
+    {
+      "expr": "PostfixToInfix(\"1 2 +\")",
+      "expect": "(1+2)"
+    },
+    {
+      "expr": "PostfixEval(\"1 2 3 * +\")",
+      "expect": "7"
+    },
+    {
+      "expr": "InputPrecedence(\"*\")",
+      "expect": "7"
+    },
+    {
+      "expr": "StackPrecedence(\"*\")",
+      "expect": "8"
+    },
+    {
+      "expr": "RegVar(\"x\",\"n\",5)",
+      "expect": ""
+    }
+  ]
+}

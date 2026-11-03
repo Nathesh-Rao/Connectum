@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../../data/form_logic/form_logic_service.dart';
+import '../../data/repositories/form_file_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/session_store.dart';
@@ -20,6 +22,8 @@ class FormBinding extends Bindings {
         options: Get.find<FormOptionsRepository>(),
         store: Get.find<SessionStore>(),
         connectivity: Get.find<ConnectivityService>(),
+        logic: Get.find<FormLogicService>(),
+        files: Get.find<FormFileRepository>(),
       ),
       tag: launch.tag,
     );

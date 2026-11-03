@@ -1,0 +1,48 @@
+{
+  "name": "connectum-form-logic",
+  "version": "1.1.0",
+  "sha256": "3fb93976c8cb62aa21412dd9ac559a1290de5e9d97b2136b7973c04aac077380",
+  "files": [
+    {
+      "path": "axExpParser.js",
+      "sha256": "32aba30f6a9e56da272ca1a40efba6fcd99e5aa94fb76732113460248e8e871f",
+      "size": 33506
+    },
+    {
+      "path": "axFunctions.js",
+      "sha256": "c13bb9de1102883452479bb6154c141d9cd4c5e70c1b60f7e5632c6278c0ea8d",
+      "size": 15444
+    },
+    {
+      "path": "fieldCalc.js",
+      "sha256": "2f18d6a05ee3bc9e20545ba2e4fb7dcdfceeed0a08dda541d036e7596fdd4848",
+      "size": 10388
+    },
+    {
+      "path": "fieldRule.js",
+      "sha256": "6a5ad39a252e4edffc4cb7c8d40488ef6df9b4601e8fe5e3cffcda4b287255ad",
+      "size": 5744
+    },
+    {
+      "path": "form-logic.bundle.js",
+      "sha256": "41f2d3d00ac55b578a6c955bc976f2c63a91d852af5bce560e3b6b495e5cc677",
+      "size": 47894
+    },
+    {
+      "path": "form-logic-host-shim.js",
+      "sha256": "c0cb3535960a39bde5260eab150635d4e4a4f3ee430fcdd0aab65e804b60ff6f",
+      "size": 9696
+    },
+    {
+      "path": "form-logic-conformance.json",
+      "sha256": "d130c1032ffd3a9cf066d6db9427a1f2ba8b3881eb87ae7fb5b6e140ba98e224",
+      "size": 7063
+    }
+  ],
+  "requires": [
+    "Either ECMAScript 2020 modules (the four .js modules) or any engine at ES2019 (form-logic.bundle.js, one script defining ConnectumFormLogic)",
+    "Date, in the person's own time zone (Date() is today where the person is, Time() the local time)",
+    "Intl.NumberFormat with en-IN and en-US, TextEncoder, TextDecoder, atob and btoa, and the English month name of Date.prototype.toLocaleString: form-logic-host-shim.js fills in whichever of these the engine lacks (load it first); it changes nothing where they exist",
+    "Check an engine with form-logic-conformance.json: ConnectumFormLogic.runConformance(...) must report no failures"
+  ]
+}

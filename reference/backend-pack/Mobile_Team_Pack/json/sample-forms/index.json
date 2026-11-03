@@ -1,0 +1,123 @@
+{
+  "about": "One sample form per feature, to build and test the mobile form logic against. Load them with: node tools/sample-forms/load.mjs --base http://HOST:PORT --token TOKEN (an administrator's session). See docs/sample-forms/README.md.",
+  "forms": [
+    {
+      "file": "sample_colour.json",
+      "features": [
+        "a small list the other samples read"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_calc.json",
+      "features": [
+        "calc",
+        "hidden calculated value",
+        "calc to a drop down"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_rule.json",
+      "features": [
+        "rule"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_condition.json",
+      "features": [
+        "condition",
+        "toggle"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_cascade.json",
+      "features": [
+        "cascading drop down (dependsOn)"
+      ],
+      "needs": [
+        "departments and people in the organisation"
+      ]
+    },
+    {
+      "file": "sample_fetch.json",
+      "features": [
+        "fetch"
+      ],
+      "needs": [
+        "sample_colour records"
+      ]
+    },
+    {
+      "file": "sample_selection.json",
+      "features": [
+        "selection (single and several)",
+        "fill"
+      ],
+      "needs": [
+        "sample_colour records"
+      ]
+    },
+    {
+      "file": "sample_toggle.json",
+      "features": [
+        "toggle"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_file.json",
+      "features": [
+        "file (one and several)"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_grid.json",
+      "features": [
+        "grid",
+        "calc in a grid row",
+        "total of a column"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_dates.json",
+      "features": [
+        "date",
+        "time",
+        "default today",
+        "calc on a date"
+      ],
+      "needs": []
+    },
+    {
+      "file": "sample_types.json",
+      "features": [
+        "every basic field kind and the value it is saved as",
+        "payment",
+        "location",
+        "Auto Generate number"
+      ],
+      "needs": []
+    }
+  ],
+  "records": {
+    "sample_colour": [
+      {
+        "colour": "Red",
+        "code": "R-01"
+      },
+      {
+        "colour": "Green",
+        "code": "G-02"
+      },
+      {
+        "colour": "Blue",
+        "code": "B-03"
+      }
+    ]
+  }
+}

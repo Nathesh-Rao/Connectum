@@ -29,6 +29,7 @@ class AppColors {
   static const muted = Color(0xFF716B66);
   static const line = Color(0xFFEEEBE8);
   static const inputBorder = Color(0xFFDED9D5);
+  static const readOnlyInk = Color(0xFF4A4541);
 
   static const cardLine = Color(0xFFECECEB);
   static const cardMuted = Color(0xFF7D7D7B);

@@ -95,10 +95,65 @@ class FormRecent {
   final String caption;
 }
 
-/// One choice of a list field: the stored value and the text shown.
+/// One choice of a list field: the stored value and the text shown. A choice
+/// read from a source also carries the row it came from (its other columns).
 class FormChoice {
-  const FormChoice(this.value, this.label);
+  const FormChoice(this.value, this.label, {this.raw});
 
   final String value;
   final String label;
+  final Map<String, dynamic>? raw;
+}
+
+/// What `form.options` answered for one field: the choices (with the rows
+/// they came from), or that it is still waiting for the fields it depends on.
+class FieldRows {
+  const FieldRows({
+    this.choices = const [],
+    this.isWaiting = false,
+    this.isTruncated = false,
+    this.isStale = false,
+  });
+
+  final List<FormChoice> choices;
+  final bool isWaiting;
+  final bool isTruncated;
+
+  /// A kept list shown because the server could not be asked.
+  final bool isStale;
+
+  FieldRows asStale() =>
+      FieldRows(choices: choices, isTruncated: isTruncated, isStale: true);
+
+  factory FieldRows.fromReply(Map data) {
+    if (data['waiting'] == true) return const FieldRows(isWaiting: true);
+    final byValue = <String, FormChoice>{};
+    final rows = data['rows'];
+    if (rows is List) {
+      for (final r in rows) {
+        if (r is! Map) continue;
+        final value = idText(r['value']);
+        if (value.isEmpty || byValue.containsKey(value)) continue;
+        final label = idText(r['label']);
+        byValue[value] = FormChoice(
+          value,
+          label.isEmpty ? value : label,
+          raw: r.cast<String, dynamic>(),
+        );
+      }
+    }
+    final options = data['options'];
+    if (byValue.isEmpty && options is List) {
+      for (final o in options) {
+        final value = o is Map ? idText(o['value']) : idText(o);
+        if (value.isEmpty || byValue.containsKey(value)) continue;
+        final label = o is Map ? idText(o['label']) : '';
+        byValue[value] = FormChoice(value, label.isEmpty ? value : label);
+      }
+    }
+    return FieldRows(
+      choices: byValue.values.toList(),
+      isTruncated: data['truncated'] == true,
+    );
+  }
 }

@@ -22,6 +22,7 @@ class Redact {
       };
     }
     if (v is List) return v.take(5).map(value).toList();
+    if (v is String && v.contains('/uploads/')) return '<upload url>';
     if (key == 'text' && v is String) return '<text ${v.length}ch>';
     if (v is String && v.length > 40) return '${v.substring(0, 40)}...';
     return v;

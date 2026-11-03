@@ -42,6 +42,17 @@ class OutboxEntry {
   /// Only sends answered with an ack take a client id; the global room does not.
   bool get usesCid => isSend && cid != null && convId != 'global';
 
+  /// The captions a draft waits to have filled (`waiting` of its payload).
+  static List<String> waitingOf(String payloadJson) {
+    try {
+      final p = jsonDecode(payloadJson);
+      final w = p is Map ? p['waiting'] : null;
+      return w is List ? [for (final e in w) idText(e)] : const [];
+    } on FormatException {
+      return const [];
+    }
+  }
+
   factory OutboxEntry.fromRow(Map<String, Object?> r) => OutboxEntry(
     id: intOf(r['id']),
     convId: idText(r['conv_id']),

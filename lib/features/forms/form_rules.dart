@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import '../../data/models/form_definition.dart';
 import '../../data/models/ids.dart';
+import 'form_formats.dart';
 
 /// The pure rules of a form: conditions, starting values, the checks made
 /// before sending and the `values` object that is sent. Values are held the
@@ -18,12 +21,59 @@ class FormRules {
     'number',
     'date',
     'time',
+    'toggle',
     'list',
     'location',
     'autogenerate',
+    'barcode',
+    'file',
+    'selection',
+    'fill',
+    'payment',
+    'slot',
   };
 
   static bool isSupported(FormFieldDef f) => supportedTypes.contains(f.type);
+
+  /// The single-value kinds that can fill themselves from a fetch.
+  static const fetchTypes = {
+    'text',
+    'email',
+    'url',
+    'mobile',
+    'wholenumber',
+    'number',
+    'date',
+    'time',
+  };
+
+  /// A field that asks the server for its value from other fields.
+  static bool hasFetch(FormFieldDef f) =>
+      fetchTypes.contains(f.type) &&
+      f.raw['fetch'] is Map &&
+      (f.raw['fetch']['type'] == 'query' || f.raw['fetch']['type'] == 'api');
+
+  /// The payment methods of a field, in the form's own spelling.
+  static List<String> methodsOf(FormFieldDef f) {
+    final listed = f.raw['methods'];
+    final methods = [
+      if (listed is List)
+        for (final m in listed)
+          if (idText(m).isNotEmpty) idText(m),
+    ];
+    return methods.isEmpty ? const ['Cash', 'Card', 'UPI'] : methods;
+  }
+
+  /// How many files a file field takes.
+  static int maxFiles(FormFieldDef f) => f.isMulti ? 10 : 1;
+
+  /// Made for the person (an auto value, a fetch, a fill, a number the
+  /// system makes): hiding one only keeps it off the screen, it is still sent.
+  static bool isMadeFor(FormFieldDef f) =>
+      f.hasCalc ||
+      f.raw['fetch'] != null ||
+      f.type == 'autogenerate' ||
+      f.type == 'fill';
 
   /// Never sent: the server makes it.
   static bool isSent(FormFieldDef f) => f.type != 'autogenerate';
@@ -38,68 +88,6 @@ class FormRules {
     return true;
   }
 
-  /// [valueOf] answers with the current value of a field by name (a row's
-  /// cell first, then the form's).
-  static bool matches(Object? condition, Object? Function(String) valueOf) {
-    if (condition is! Map) return true;
-    final all = condition['all'];
-    if (all is List) return all.every((c) => matches(c, valueOf));
-    final any = condition['any'];
-    if (any is List) return any.isEmpty || any.any((c) => matches(c, valueOf));
-    final field = idText(condition['field']);
-    if (field.isEmpty) return true;
-    final actual = valueOf(field);
-    final expected = condition['value'];
-    switch (idText(condition['op'])) {
-      case 'eq':
-        return _equals(actual, expected);
-      case 'ne':
-        return !_equals(actual, expected);
-      case 'gt':
-        return _compare(actual, expected, (c) => c > 0);
-      case 'lt':
-        return _compare(actual, expected, (c) => c < 0);
-      case 'gte':
-        return _compare(actual, expected, (c) => c >= 0);
-      case 'lte':
-        return _compare(actual, expected, (c) => c <= 0);
-      case 'in':
-        return expected is List && expected.any((e) => _equals(actual, e));
-      case 'between':
-        return expected is List &&
-            expected.length == 2 &&
-            _compare(actual, expected[0], (c) => c >= 0) &&
-            _compare(actual, expected[1], (c) => c <= 0);
-      case 'notempty':
-        return isFilled(actual);
-      default:
-        return true;
-    }
-  }
-
-  static bool _equals(Object? actual, Object? expected) {
-    if (actual is List) return actual.any((a) => _equals(a, expected));
-    final a = idText(actual).trim();
-    final e = idText(expected).trim();
-    final x = num.tryParse(a);
-    final y = num.tryParse(e);
-    if (x != null && y != null) return x == y;
-    return a.toLowerCase() == e.toLowerCase();
-  }
-
-  static bool _compare(
-    Object? actual,
-    Object? expected,
-    bool Function(int) test,
-  ) {
-    if (!isFilled(actual) || actual is List || actual is Map) return false;
-    final a = idText(actual).trim();
-    final e = idText(expected).trim();
-    final x = num.tryParse(a);
-    final y = num.tryParse(e);
-    return test(x != null && y != null ? x.compareTo(y) : a.compareTo(e));
-  }
-
   // ---- starting values ----------------------------------------------------------
 
   /// The value a new record starts with: the fixed default, else today for a
@@ -108,10 +96,16 @@ class FormRules {
   static Object? startingValue(FormFieldDef f, DateTime now) {
     final fixed = f.defaultValue;
     switch (f.type) {
+      case 'toggle':
+        return idText(fixed) == 'Yes' ? 'Yes' : 'No';
       case 'text' || 'email' || 'url' || 'mobile' || 'wholenumber' || 'number':
         return fixed == null ? null : idText(fixed);
       case 'list':
         return !f.isMulti && fixed != null ? idText(fixed) : null;
+      case 'payment':
+        return f.raw['amount'] == null
+            ? null
+            : {'amount': idText(f.raw['amount']), 'status': 'pending'};
       case 'date':
         var v = fixed != null
             ? idText(fixed)
@@ -143,6 +137,7 @@ class FormRules {
 
   /// A saved value as the editor holds it.
   static Object? fromSaved(FormFieldDef f, Object? saved) {
+    if (f.type == 'toggle') return idText(saved) == 'Yes' ? 'Yes' : 'No';
     if (saved == null) return null;
     switch (f.type) {
       case 'list':
@@ -154,6 +149,31 @@ class FormRules {
               : [idText(saved)];
         }
         return idText(saved);
+      case 'selection':
+        if (f.isMulti) {
+          return saved is List
+              ? [for (final e in saved) idText(e)]
+              : idText(saved).isEmpty
+              ? <String>[]
+              : [idText(saved)];
+        }
+        return idText(saved);
+      case 'file':
+        return saved is List
+            ? [for (final e in saved) idText(e)]
+            : idText(saved).isEmpty
+            ? null
+            : [idText(saved)];
+      case 'payment':
+        return saved is Map
+            ? {
+                'amount': idText(saved['amount']),
+                'method': idText(saved['method']),
+                'status': idText(saved['status']).isEmpty
+                    ? 'pending'
+                    : idText(saved['status']),
+              }
+            : null;
       case 'location':
         return saved is Map ? saved.cast<String, dynamic>() : idText(saved);
       case 'wholenumber' || 'number':
@@ -169,27 +189,32 @@ class FormRules {
   // ---- checking ----------------------------------------------------------------
 
   static final _email = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-  static final _url = RegExp(r'^https?://\S+$', caseSensitive: false);
+  static final _url = RegExp(r'^https?://\S+$');
+  static final _mobile = RegExp(r'^\+?[0-9]{7,15}$');
 
-  /// The first problem with one value, in plain words, or null.
+  /// The first problem with one value, in plain words (the server's own
+  /// words where it has them), or null.
   static String? check(FormFieldDef f, Object? value) {
     if (!isFilled(value)) {
-      return f.isRequired && isSent(f) ? 'This field is required.' : null;
+      return f.isRequired && isSent(f) && !f.hasCalc && f.type != 'toggle'
+          ? 'This field is required.'
+          : null;
     }
     final text = value is String ? value.trim() : '';
     switch (f.type) {
-      case 'text':
-        return text.length > 5000 ? 'Use at most 5000 characters.' : null;
+      case 'text' || 'barcode':
+        return utf8.encode(value as String).length > FormFormats.maxText
+            ? 'Too long (max ${FormFormats.maxText} characters).'
+            : null;
       case 'email':
         return _email.hasMatch(text) ? null : 'Enter a valid email address.';
       case 'url':
-        return _url.hasMatch(text)
-            ? null
-            : 'Enter a web address starting with http:// or https://.';
+        return _url.hasMatch(text) ? null : 'Enter a valid http(s) URL.';
       case 'mobile':
-        final digits = text.replaceAll(RegExp(r'\D'), '');
-        return digits.length < 6 || digits.length > 15
-            ? 'Enter a valid phone number.'
+        final clean = FormFormats.mobileClean(text);
+        if (!_mobile.hasMatch(clean)) return 'Enter a valid mobile number.';
+        return f.raw['withCountryCode'] == true && !clean.startsWith('+')
+            ? 'Include the country code, e.g. +91...'
             : null;
       case 'wholenumber':
         final n = int.tryParse(text);
@@ -214,20 +239,66 @@ class FormRules {
         }
         return null;
       case 'time':
-        return RegExp(r'^\d{2}:\d{2}(:\d{2})?$').hasMatch(text)
-            ? null
-            : 'Pick a time.';
+        if (!RegExp(r'^\d{2}:\d{2}(:\d{2})?$').hasMatch(text)) {
+          return 'Pick a time.';
+        }
+        if (f.minText.isNotEmpty && text.compareTo(f.minText) < 0) {
+          return 'Must be at ${f.minText} or later.';
+        }
+        if (f.maxText.isNotEmpty && text.compareTo(f.maxText) > 0) {
+          return 'Must be at ${f.maxText} or earlier.';
+        }
+        return null;
       case 'location':
         return locationOf(value) == null
             ? 'Enter latitude and longitude, like 12.97, 77.59.'
             : null;
+      case 'selection':
+        if (value is List && value.length > 50) {
+          return 'Choose at most 50 items.';
+        }
+        return null;
+      case 'file':
+        final max = maxFiles(f);
+        return value is List && value.length > max
+            ? 'Attach at most $max ${max == 1 ? 'file' : 'files'}.'
+            : null;
+      case 'slot':
+        return RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$').hasMatch(text)
+            ? null
+            : 'Choose a time from the list.';
+      case 'payment':
+        return _payment(f, value);
     }
     return null;
   }
 
+  static String? _payment(FormFieldDef f, Object? value) {
+    if (value is! Map) return 'Enter the payment details.';
+    final amount = num.tryParse(idText(value['amount']).trim());
+    if (amount == null) return 'Enter the amount.';
+    if (amount < 0) return 'The amount cannot be negative.';
+    final status = idText(value['status']).isEmpty
+        ? 'pending'
+        : idText(value['status']);
+    if (status != 'paid' && status != 'pending') {
+      return 'Choose paid or pay later.';
+    }
+    final method = idText(value['method']).trim();
+    if (method.isEmpty) {
+      return status == 'paid' ? 'Choose how it was paid.' : null;
+    }
+    final listed = [for (final m in methodsOf(f)) m.toLowerCase()];
+    return listed.contains(method.toLowerCase())
+        ? null
+        : 'Choose a payment method from the list.';
+  }
+
+  static String _n(num n) => n == n.truncate() ? '${n.truncate()}' : '$n';
+
   static String? _range(FormFieldDef f, num n) {
-    if (f.min != null && n < f.min!) return 'Must be at least ${f.min}.';
-    if (f.max != null && n > f.max!) return 'Must be at most ${f.max}.';
+    if (f.min != null && n < f.min!) return 'Must be at least ${_n(f.min!)}.';
+    if (f.max != null && n > f.max!) return 'Must be at most ${_n(f.max!)}.';
     return null;
   }
 
@@ -238,6 +309,7 @@ class FormRules {
       final lat = num.tryParse(idText(v['lat']));
       final lng = num.tryParse(idText(v['lng']));
       if (lat == null || lng == null) return null;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
       return {
         'lat': lat,
         'lng': lng,
@@ -261,12 +333,31 @@ class FormRules {
         return int.tryParse(idText(value).trim());
       case 'number':
         return num.tryParse(idText(value).trim());
+      case 'mobile':
+        return FormFormats.mobileClean(idText(value));
       case 'location':
         return locationOf(value);
-      case 'list':
+      case 'toggle':
+        return idText(value) == 'Yes' ? 'Yes' : 'No';
+      case 'list' || 'selection':
         return value is List
             ? [for (final e in value) idText(e)]
             : idText(value);
+      case 'file':
+        final ids = [for (final e in value as List) idText(e)];
+        return f.isMulti ? ids : ids.first;
+      case 'payment':
+        final m = value as Map;
+        final method = idText(m['method']).trim();
+        final listed = [
+          for (final x in methodsOf(f))
+            if (x.toLowerCase() == method.toLowerCase()) x,
+        ];
+        return {
+          'amount': num.tryParse(idText(m['amount']).trim()),
+          if (listed.isNotEmpty) 'method': listed.first,
+          'status': idText(m['status']).isEmpty ? 'pending' : m['status'],
+        };
       default:
         return idText(value).trim();
     }
@@ -298,5 +389,17 @@ class FormRules {
       return '${caption(parts[0])}, row $row, ${caption(parts[2])}: $message';
     }
     return '${caption(parts.first)}: $message';
+  }
+}
+
+/// Dates are held as `yyyy-mm-dd` and shown as `dd/mm/yyyy` (the format the
+/// logic reads them in); times are held and shown as `HH:MM`.
+class FormDates {
+  FormDates._();
+
+  static String show(String iso, {bool isMonthFirst = false}) {
+    final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(iso);
+    if (m == null) return iso;
+    return isMonthFirst ? '${m[2]}/${m[3]}/${m[1]}' : '${m[3]}/${m[2]}/${m[1]}';
   }
 }

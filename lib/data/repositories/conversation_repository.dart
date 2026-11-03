@@ -21,12 +21,24 @@ class ConversationRepository extends GetxService {
 
   final conversations = <Conversation>[].obs;
   final isLoaded = false.obs;
+
+  /// True once the server lists of this organisation and user have been
+  /// written to SQLite at least once since the session was set.
+  final isSynced = false.obs;
+
+  /// True when [requestLists] has neither finished nor failed within
+  /// [_syncGrace]: only lets the empty state replace the skeleton. It never
+  /// marks the lists as synced; a late finish still sets [isSynced] as usual.
+  final hasSyncStalled = false.obs;
   final loadError = RxnString();
+  String? _scope;
   Completer<void>? _listsReady;
+  Timer? _syncGraceTimer;
   final _readTimers = <String, Timer>{};
   final _deliveredTimers = <String, Timer>{};
   final _receipts = StreamController<String>.broadcast();
 
+  static const _syncGrace = Duration(seconds: 10);
   static const _readDelay = Duration(milliseconds: 600);
   static const _deliveredDelay = Duration(seconds: 1);
 
@@ -37,7 +49,17 @@ class ConversationRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.events.listen(_onEvent);
-    ever(_session.current, (_) => reload());
+    ever(_session.current, (_) {
+      final scope = '${_session.orgId}/${_session.userId}';
+      if (scope != _scope) {
+        _scope = scope;
+        conversations.clear();
+        isLoaded.value = false;
+        isSynced.value = false;
+        hasSyncStalled.value = false;
+      }
+      reload();
+    });
     reload();
   }
 
@@ -49,7 +71,6 @@ class ConversationRepository extends GetxService {
     final user = _session.userId;
     if (org == null || user == null) {
       conversations.clear();
-      isLoaded.value = true;
       return;
     }
     try {
@@ -62,11 +83,12 @@ class ConversationRepository extends GetxService {
         'WHERE c.org_id = ? AND c.user_id = ? ORDER BY c.last_ts DESC',
         [org, user],
       );
+      if (org != _session.orgId || user != _session.userId) return;
       conversations.assignAll(rows.map(Conversation.fromRow));
       loadError.value = null;
+      isLoaded.value = true;
     } catch (e) {
       loadError.value = 'Could not read your chats.';
-    } finally {
       isLoaded.value = true;
     }
   }
@@ -75,6 +97,10 @@ class ConversationRepository extends GetxService {
   /// last reply (`hosts`) has been written to SQLite.
   Future<void> requestLists() async {
     _listsReady = Completer<void>();
+    _syncGraceTimer?.cancel();
+    _syncGraceTimer = Timer(_syncGrace, () {
+      if (!isSynced.value) hasSyncStalled.value = true;
+    });
     await _socket.sendCommand('/conversations');
     await _socket.sendCommand('/groups');
     await _socket.sendCommand('/hosts');
@@ -85,6 +111,8 @@ class ConversationRepository extends GetxService {
     // Last, so its archive, pin, mute and unread win over the lists above.
     await syncInbox();
     await flushPositions();
+    _syncGraceTimer?.cancel();
+    isSynced.value = true;
   }
 
   // ---- server inbox state ----------------------------------------------------

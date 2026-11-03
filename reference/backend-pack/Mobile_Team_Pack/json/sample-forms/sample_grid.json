@@ -1,0 +1,65 @@
+{
+  "name": "sample_grid",
+  "caption": "Sample: a grid with a total",
+  "sections": [
+    {
+      "name": "items",
+      "caption": "Items",
+      "grid": true
+    },
+    {
+      "name": "summary",
+      "caption": "Summary"
+    }
+  ],
+  "fields": [
+    {
+      "name": "item",
+      "type": "text",
+      "caption": "Item",
+      "section": "items",
+      "required": true
+    },
+    {
+      "name": "qty",
+      "type": "wholenumber",
+      "caption": "Quantity",
+      "section": "items",
+      "required": true,
+      "min": 1
+    },
+    {
+      "name": "rate",
+      "type": "number",
+      "caption": "Rate",
+      "section": "items",
+      "required": true,
+      "min": 0
+    },
+    {
+      "name": "lineTotal",
+      "type": "number",
+      "caption": "Line total",
+      "section": "items",
+      "calc": {
+        "expr": "qty*rate"
+      }
+    },
+    {
+      "name": "customer",
+      "type": "text",
+      "caption": "Customer",
+      "section": "summary",
+      "required": true
+    },
+    {
+      "name": "grandTotal",
+      "type": "number",
+      "caption": "Grand total",
+      "section": "summary",
+      "calc": {
+        "expr": "Total(lineTotal)"
+      }
+    }
+  ]
+}

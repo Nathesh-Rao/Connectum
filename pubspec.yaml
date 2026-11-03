@@ -30,6 +30,12 @@ dependencies:
   lottie: ^3.3.3
   webcrypto: ^0.6.1
   mobile_scanner: 7.4.3
+  image_picker: ^1.2.3
+  mime: ^2.1.0
+  file_picker: ^13.3.1
+  open_filex: ^5.0.0
+  # Embedded JS engine for the shared form logic (QuickJS-NG over FFI)
+  quickjs_engine: ^0.1.6
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +62,13 @@ flutter:
     - assets/images/states/
     - assets/lottie/
     - mobile-handoff/e2e-vectors.json
+    - assets/debug/e2e-attachment-vectors.json
+    - assets/form_logic/form-logic-host-shim.js
+    - assets/form_logic/form-logic.bundle.js
+    - assets/form_logic/form-logic-conformance.json
+    - assets/form_logic/manifest.json
+    - assets/form_logic/parity_vectors.json
+    - assets/form_logic/sample_cases.json
   fonts:
     - family: PlusJakartaSans
       fonts:

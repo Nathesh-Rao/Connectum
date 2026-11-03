@@ -19,6 +19,7 @@ class FormLaunch {
     this.savedValues,
     this.errorDetails,
     this.isEncryptedChat = false,
+    this.isDraft = false,
   }) : tag = 'form-${newCid()}';
 
   /// An edit of a submission of mine, or its resubmit when it was declined
@@ -72,18 +73,22 @@ class FormLaunch {
   /// The server's complaint about a submission being fixed (`details`).
   final Object? errorDetails;
 
+  /// The save being finished was kept as a draft (it waited for values only a
+  /// connection can give).
+  final bool isDraft;
+
   /// The conversation is end-to-end encrypted: the form says its message is
   /// not.
   final bool isEncryptedChat;
 
   bool get isEdit => mode != FormMode.create;
 
-  String get title => isEdit ? 'Edit - $caption' : caption;
+  String get title => isEdit && !isDraft ? 'Edit - $caption' : caption;
 
   String get buttonLabel => switch (mode) {
     FormMode.create => 'Done',
     FormMode.edit => 'Save',
     FormMode.resubmit => 'Resubmit',
-    FormMode.resend => 'Resend',
+    FormMode.resend => isDraft ? 'Send' : 'Resend',
   };
 }

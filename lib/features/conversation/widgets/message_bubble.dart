@@ -5,6 +5,7 @@ import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/utils/attachment_tag.dart';
 import '../../../core/utils/chat_time.dart';
 import '../../../data/models/message.dart';
 import '../../../data/models/reaction.dart';
@@ -26,6 +27,7 @@ class MessageBubble extends StatelessWidget {
     required this.onRetry,
     required this.reactions,
     required this.onReact,
+    required this.attachmentOf,
   });
 
   static const _maxWidthFraction = 0.88;
@@ -39,6 +41,9 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback onRetry;
   final List<Reaction> reactions;
   final void Function(String emoji) onReact;
+
+  /// The picture or file row of an attachment message.
+  final Widget Function(AttachmentTag tag) attachmentOf;
 
   static Color _senderInk(String name) {
     var h = 0;
@@ -86,7 +91,7 @@ class MessageBubble extends StatelessWidget {
                 ),
               ),
             if (m.replyTo != null && !m.isDeleted) _Quote(original: original),
-            _Body(message: m),
+            _Body(message: m, attachmentOf: attachmentOf),
             const SizedBox(height: AppSpacing.xxs),
             if (failed)
               Padding(
@@ -155,9 +160,10 @@ class MessageBubble extends StatelessWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.message});
+  const _Body({required this.message, required this.attachmentOf});
 
   final Message message;
+  final Widget Function(AttachmentTag tag) attachmentOf;
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +193,20 @@ class _Body extends StatelessWidget {
         ],
       );
     }
-    return Text(message.text, style: AppText.message);
+    final tag = AttachmentTag.parse(message.text);
+    if (tag == null) return Text(message.text, style: AppText.message);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        attachmentOf(tag),
+        if (tag.caption.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xxs),
+            child: Text(tag.caption, style: AppText.message),
+          ),
+      ],
+    );
   }
 }
 
@@ -204,7 +223,7 @@ class _Quote extends StatelessWidget {
         ? 'Message deleted'
         : original!.isEncryptedUnsupported
         ? "Can't be read on this device"
-        : original!.text;
+        : AttachmentTag.preview(original!.text) ?? original!.text;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Container(

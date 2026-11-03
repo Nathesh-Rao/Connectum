@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/utils/attachment_tag.dart';
 import '../../../core/utils/relative_time.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_row_highlight.dart';
@@ -205,7 +206,7 @@ class _Preview extends StatelessWidget {
         : c.kind == 'group' && c.lastFrom.isNotEmpty
         ? '${c.lastFrom}: '
         : '';
-    return '$prefix${c.lastText}';
+    return '$prefix${AttachmentTag.preview(c.lastText) ?? c.lastText}';
   }
 }
 

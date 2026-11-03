@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
+import '../../core/utils/attachment_tag.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/db/app_database.dart';
@@ -81,8 +82,11 @@ class ChatsController extends GetxController
     ever(conversations.conversations, (_) => _apply());
     ever(conversations.isLoaded, (_) => _apply());
     ever(conversations.loadError, (_) => _apply());
+    ever(conversations.isSynced, (_) => _apply());
+    ever(conversations.hasSyncStalled, (_) => _apply());
     ever(connectivity.state, (_) => _apply());
     ever(SeedUi.chatsState, (_) => _apply());
+    SeedUi.releaseChatsDelay();
     _minuteTimer = Timer.periodic(
       const Duration(minutes: 1),
       (_) => minute.value = DateTime.now(),
@@ -155,7 +159,15 @@ class ChatsController extends GetxController
     }
     if (conversations.loadError.value != null) return AppViewState.error;
     if (!conversations.isLoaded.value) return AppViewState.loading;
-    if (isEmpty) return AppViewState.empty;
+    if (isEmpty) {
+      // Empty only once we know: the server lists arrived, we are offline, or
+      // the sync has taken too long (the skeleton never stays forever).
+      return conversations.isSynced.value ||
+              conversations.hasSyncStalled.value ||
+              isOffline
+          ? AppViewState.empty
+          : AppViewState.loading;
+    }
     return AppViewState.content;
   }
 
@@ -329,7 +341,9 @@ class ChatsController extends GetxController
         MessageHit(
           convId: idText(r['conv_id']),
           title: idText(r['title']),
-          snippet: _snippet(idText(r['text']), q),
+          snippet:
+              AttachmentTag.preview(idText(r['text'])) ??
+              _snippet(idText(r['text']), q),
           ts: intOf(r['ts']),
         ),
     ]);

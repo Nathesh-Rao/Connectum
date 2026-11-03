@@ -1,0 +1,23 @@
+{
+  "name": "sample_cascade",
+  "caption": "Sample: cascading drop downs (the second depends on the first)",
+  "fields": [
+    {
+      "name": "department",
+      "type": "list",
+      "caption": "Department",
+      "source": "departments",
+      "required": true
+    },
+    {
+      "name": "person",
+      "type": "list",
+      "caption": "Person (of that department)",
+      "source": "people",
+      "dependsOn": {
+        "field": "department",
+        "prop": "department"
+      }
+    }
+  ]
+}

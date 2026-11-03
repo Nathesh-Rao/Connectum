@@ -85,6 +85,7 @@ class WorkspaceController extends GetxController {
   Worker? _definitionsWorker;
   Worker? _loadedWorker;
   Worker? _failuresWorker;
+  Worker? _draftsWorker;
 
   String get me => store.userId ?? SeedMessages.me;
 
@@ -106,6 +107,7 @@ class WorkspaceController extends GetxController {
     _definitionsWorker = ever(submissions.definitions, (_) => _apply());
     _loadedWorker = ever(submissions.isLoaded, (_) => _apply());
     _failuresWorker = ever(submissions.failures, (_) => _apply());
+    _draftsWorker = ever(submissions.drafts, (_) => _apply());
     _noticeWorker = ever(submissions.notice, (message) {
       if (message == null) return;
       notice.value = message;
@@ -291,12 +293,31 @@ class WorkspaceController extends GetxController {
   bool isInvalidFailure(FormCardData d) =>
       submissions.failures[d.id] == SubmissionRepository.invalidReason;
 
+  bool isDraft(FormCardData d) => submissions.drafts.containsKey(d.id);
+
+  /// A refused record is kept and waits for the person.
+  String? stripLabelOf(FormCardData d) {
+    if (isDraft(d)) return 'Draft';
+    return isInvalidFailure(d) && stateOf(d) == AppFormCardState.failed
+        ? 'Needs your attention'
+        : null;
+  }
+
+  String? noteOf(FormCardData d) {
+    if (!isDraft(d)) return null;
+    return connectivity.state.value == AppConnectivity.online
+        ? 'Connection is back. Open to finish and send'
+        : 'Waiting for connection to finish';
+  }
+
   String problemOf(FormCardData d) => isInvalidFailure(d)
-      ? 'Not sent. Some answers need fixing. Tap to edit and resend'
+      ? 'Some answers need fixing. Tap to review and resend'
       : 'Not sent. Tap to retry';
 
-  /// A failed card is fixed or sent again; any other opens.
+  /// A draft is finished; a failed card is fixed or sent again; any other
+  /// opens.
   void tap(FormCardData d) {
+    if (isDraft(d)) return unawaited(editAndResend(d));
     if (stateOf(d) != AppFormCardState.failed) return open(d);
     if (isInvalidFailure(d)) {
       unawaited(editAndResend(d));
@@ -319,6 +340,7 @@ class WorkspaceController extends GetxController {
         submissionId: d.id,
         savedValues: pending.values,
         errorDetails: pending.errors,
+        isDraft: pending.isDraft,
       ),
     );
   }
@@ -345,6 +367,7 @@ class WorkspaceController extends GetxController {
     _definitionsWorker?.dispose();
     _loadedWorker?.dispose();
     _failuresWorker?.dispose();
+    _draftsWorker?.dispose();
     _noticeWorker?.dispose();
     _noticeTimer?.cancel();
     for (final w in _noteWorkers) {

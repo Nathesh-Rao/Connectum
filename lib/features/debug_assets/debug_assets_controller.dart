@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 
+import '../../core/debug/attachment_tag_vectors.dart';
 import '../../core/widgets/app_state_image.dart';
 
 class PngInfo {
@@ -46,6 +47,7 @@ class DebugAssetsController extends GetxController {
   final reduced = <String>{}.obs;
   final measures = <String, String>{}.obs;
   final seams = <String, String>{}.obs;
+  final tagResults = AttachmentTagVectors.run();
 
   /// The file being measured; everything else is hidden and stopped so the
   /// numbers are that animation's own.

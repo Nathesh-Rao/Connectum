@@ -16,6 +16,7 @@ import '../../data/models/message.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
+import 'seed_sample_forms.dart';
 
 /// Debug-only fixture for UI checks: run with --dart-define=SEED_UI=1 and the
 /// enterprises screen shows five sample enterprises. Ignored in release. The
@@ -124,7 +125,8 @@ class SeedUi {
     'long' => (
       name: 'Alexandria Montgomery-Featherstonehaugh',
       username: 'alexandria.montgomery.featherstonehaugh',
-      email: 'alexandria.montgomery-featherstonehaugh@very-long-company-domain.example.com',
+      email:
+          'alexandria.montgomery-featherstonehaugh@very-long-company-domain.example.com',
       connectumId: 'MN68-2CQ9',
       category: 'Regional distribution partner',
     ),
@@ -146,7 +148,18 @@ class SeedUi {
 
   /// Which state the Chats screen shows: content, loading, empty, error or
   /// offline. Switched by the debug chips on the screen.
-  static final chatsState = 'content'.obs;
+  static final chatsState = _chatsDelay > 0 ? 'loading'.obs : 'content'.obs;
+
+  /// SEED_CHATS_DELAY_MS=3000 holds the Chats skeleton for that long at start.
+  static const _chatsDelay = int.fromEnvironment('SEED_CHATS_DELAY_MS');
+
+  static void releaseChatsDelay() {
+    if (!isActive || _chatsDelay <= 0) return;
+    Future.delayed(
+      const Duration(milliseconds: _chatsDelay),
+      () => chatsState.value = 'content',
+    );
+  }
 
   /// SEED_ROWS=300 adds that many generated direct messages after the samples,
   /// for the scrolling check.
@@ -211,9 +224,7 @@ class SeedUi {
     sign: '',
     isLate: isLate,
     label: label,
-    ts: DateTime.now()
-        .subtract(Duration(days: daysAgo))
-        .millisecondsSinceEpoch,
+    ts: DateTime.now().subtract(Duration(days: daysAgo)).millisecondsSinceEpoch,
   );
 
   /// Puts a setup state into the E2E repository's in-memory fields. Nothing
@@ -621,6 +632,7 @@ class SeedUi {
         category: 'get_data',
         order: 5,
       ),
+      ...SeedSampleForms.options(),
       for (var i = 1; i <= 26; i++)
         FormOption(
           id: 'sample-$i',
@@ -789,6 +801,7 @@ class SeedUi {
         ],
       }),
       'all_types': FormDefinition.fromMap('all_types', 'user', _allTypes),
+      ...SeedSampleForms.definitions(),
     };
   }
 
@@ -1021,6 +1034,12 @@ class SeedUi {
         'from': '2026-10-20',
         'days': 1,
       }),
+      _local(refusedId, 'sample_selection', const Duration(minutes: 6), {
+        'pick': 'Purple',
+      }),
+      _local(draftId, 'sample_fetch', const Duration(minutes: 2), {
+        'colour': 'Green',
+      }),
       for (var i = 0; i < _extraRows ~/ 10; i++)
         s(
           900 - i,
@@ -1035,6 +1054,63 @@ class SeedUi {
         ),
     ];
   }
+
+  static const refusedId = 'temp-seed-refused';
+  static const draftId = 'temp-seed-draft';
+
+  static FormSubmission _local(
+    String id,
+    String form,
+    Duration ago,
+    Map<String, Object?> values,
+  ) => FormSubmission(
+    submissionId: id,
+    tstruct: form,
+    byUser: 'alex',
+    ts: DateTime.now().millisecondsSinceEpoch - ago.inMilliseconds,
+    valuesJson: jsonEncode(values),
+    syncState: 'pending_create',
+  );
+
+  /// A sample form the server refused (a stale choice) and a draft that waits
+  /// for a fetch, in the Work Space, to see both states.
+  static final formFailures = <String, String>{
+    refusedId: 'Some answers need fixing.',
+  };
+  static final formDrafts = <String, List<String>>{
+    draftId: ['Code of the colour (fetched)'],
+  };
+  static final formPending =
+      <
+        String,
+        ({
+          Map<String, dynamic> values,
+          Object? errors,
+          String name,
+          String scope,
+          String caption,
+          bool isDraft,
+        })
+      >{
+        refusedId: (
+          values: {'pick': 'Purple'},
+          errors: {
+            'fields': {'pick': 'That is not one of the choices on offer.'},
+          },
+          name: 'sample_selection',
+          scope: 'user',
+          caption: 'Sample: choices from another form, and a fill',
+          isDraft: false,
+        ),
+        draftId: (
+          values: {'colour': 'Green'},
+          errors: null,
+          name: 'sample_fetch',
+          scope: 'user',
+          caption: 'Sample: fetch (a field filled from another form)',
+          isDraft: true,
+        ),
+      };
 
   static List<Conversation> conversations() {
     if (!isActive) return const [];
@@ -1058,7 +1134,8 @@ class SeedUi {
         convId: 'group:Design Collective',
         kind: 'group',
         title: 'Design Collective',
-        lastText: 'Shared the updated components',
+        lastText:
+            '[ATTACHMENT:{"kind":"image","name":"components.jpg","size":"1.2 MB","url":"/uploads/seed-photo.jpg","type":"image/jpeg"}]',
         lastTs: ago(const Duration(minutes: 12)),
         lastFrom: 'alex',
         unread: 3,

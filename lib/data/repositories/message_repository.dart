@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
+import '../../core/utils/attachment_tag.dart';
 import '../db/app_database.dart';
 import '../models/ids.dart';
 import '../models/message.dart';
@@ -16,6 +17,9 @@ import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_models.dart';
 import 'e2e_repository.dart';
 import 'encryption_policy.dart';
+
+/// How a file for a chat is made: uploaded as it is, or sealed first.
+enum AttachMode { plain, encrypted }
 
 enum SendResult { queued, blocked, tooLong, invalid, noSession }
 
@@ -474,6 +478,60 @@ class MessageRepository extends GetxService {
     return SendResult.queued;
   }
 
+  static const encryptedAttachmentBlock =
+      "A file can't be sent unencrypted in an encrypted chat";
+  static const _unconfirmedEncryption =
+      "Couldn't confirm this chat's encryption. Try again";
+
+  /// How a file must travel into [convId], asked of the server right before
+  /// it is encrypted or uploaded. Null when the send is blocked or cannot be
+  /// told yet ([lastBlock] says why); never `plain` for an encrypted thread.
+  Future<AttachMode?> attachMode(String convId) async {
+    final facts = await _facts(convId);
+    final gate = await _policy.decideSend(convId, facts);
+    if (gate.isBlocked) {
+      lastBlock = gate.message;
+      return null;
+    }
+    if (gate.isEncrypt) return AttachMode.encrypted;
+    if (facts.isE2e || gate.verdict == E2eSendVerdict.unknown) {
+      lastBlock = _unconfirmedEncryption;
+      return null;
+    }
+    return AttachMode.plain;
+  }
+
+  /// Sends the attachment tag as an ordinary message through the same outbox
+  /// path as text. The policy decides first, and the tag must match it: a tag
+  /// with a key goes only into an encrypted send, one without never does (the
+  /// flush checks again, so a file or its key is never sent in plain text).
+  Future<SendResult> sendAttachment(
+    String convId,
+    AttachmentTag tag, {
+    String? replyTo,
+  }) async {
+    final String text;
+    try {
+      text = tag.build();
+    } on FormatException {
+      return SendResult.invalid;
+    }
+    final facts = await _facts(convId);
+    final gate = await _policy.decideSend(convId, facts, isLookup: false);
+    if (gate.isBlocked && !gate.isTransient) {
+      lastBlock = gate.message;
+      return SendResult.blocked;
+    }
+    final isSecure = gate.isEncrypt || facts.isE2e;
+    if (isSecure != tag.isEncrypted) {
+      lastBlock = tag.isEncrypted
+          ? _unconfirmedEncryption
+          : encryptedAttachmentBlock;
+      return SendResult.blocked;
+    }
+    return sendText(convId, text, replyTo: replyTo);
+  }
+
   /// What the policy says about [convId] right now, asking the server when
   /// it has to. Used before a raw `#` line may leave the phone.
   Future<EncryptionVerdict> verdictOf(String convId) async =>
@@ -670,6 +728,14 @@ class MessageRepository extends GetxService {
         break;
     }
     String? envelope;
+    // A file goes out the way it was made: sealed with its key inside an
+    // encrypted send, plain in a plain one. Any other pairing would put the
+    // file or its key where the server can read them.
+    final tag = AttachmentTag.parse('${entry.payload['text']}');
+    if (tag != null && tag.isEncrypted != decision.isEncrypt) {
+      await _fail(entry, '${E2eSendDecision.failTag}$encryptedAttachmentBlock');
+      return _Outcome.finished;
+    }
     if (decision.isEncrypt) {
       if (_isCommandLike('${entry.payload['text']}')) {
         await _fail(entry, '${E2eSendDecision.failTag}$_noCommands');

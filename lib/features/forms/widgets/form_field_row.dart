@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../data/models/form_option.dart';
 import '../../../data/models/ids.dart';
 import '../form_controller.dart';
+import '../form_rules.dart';
 import '../models/field_input.dart';
-import 'choice_sheet.dart';
+import '../form_formats.dart';
+import 'barcode_scanner_sheet.dart';
+import 'form_choice_menu.dart';
+import 'form_box.dart';
+import 'form_file_field.dart';
+import 'form_payment_field.dart';
+import 'form_slot_field.dart';
+import 'form_type_chip.dart';
 
 /// One field: its label (with a red-orange star when required), the control
 /// for its type, and its error under it. Shown only while its condition holds.
@@ -65,6 +70,17 @@ class FormFieldRow extends StatelessWidget {
             ),
           ),
           _control(context),
+          Obx(
+            () => input.isStaleChoices.value
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                    child: Text(
+                      'May be out of date',
+                      style: AppText.caption.copyWith(color: AppColors.muted),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -72,47 +88,53 @@ class FormFieldRow extends StatelessWidget {
 
   Widget _control(BuildContext context) {
     final f = input.def;
-    if (f.hasCalc || f.isReadOnly && f.type != 'autogenerate') {
-      return _Box(
+    if (!FormRules.isSupported(f) && !f.hasCalc) {
+      return FormBox(
         error: input.error,
-        child: Obx(() => _valueText(idText(input.value.value))),
+        trailing: const Icon(
+          Icons.lock_outline,
+          size: 16,
+          color: AppColors.muted,
+        ),
+        child: Text(
+          'Supported in the next update',
+          style: AppText.input.copyWith(color: AppColors.muted),
+        ),
+      );
+    }
+    if (f.hasCalc || f.isReadOnly && f.type != 'autogenerate') {
+      return FormBox(
+        error: input.error,
+        isReadOnly: true,
+        trailing: FormTypeChip(type: f.type),
+        child: Obx(() => _valueText(_shown(input.value.value))),
       );
     }
     return switch (f.type) {
-      'autogenerate' => const _Box(
-        child: Text('Assigned when it is saved', style: AppText.readable),
+      'autogenerate' => FormBox(
+        isReadOnly: true,
+        trailing: FormTypeChip(type: f.type),
+        child: Obx(() {
+          final saved = idText(input.value.value);
+          return Text(
+            saved.isEmpty ? 'Generated when saved' : saved,
+            style: _readOnlyStyle,
+          );
+        }),
       ),
-      'text' => _typed(
-        keyboard: f.isMultiline ? TextInputType.multiline : TextInputType.text,
-        lines: f.isMultiline ? 4 : 1,
+      'fill' => FormBox(
+        error: input.error,
+        isReadOnly: true,
+        trailing: FormTypeChip(type: f.type),
+        child: Obx(() {
+          final v = idText(input.value.value);
+          return Text(
+            v.isEmpty ? 'Filled in automatically' : v,
+            style: _readOnlyStyle,
+          );
+        }),
       ),
-      'email' => _typed(keyboard: TextInputType.emailAddress),
-      'url' => _typed(keyboard: TextInputType.url),
-      'mobile' => _typed(
-        keyboard: TextInputType.phone,
-        formatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s\-()]')),
-        ],
-      ),
-      'wholenumber' => _typed(
-        keyboard: const TextInputType.numberWithOptions(signed: true),
-        formatters: [FilteringTextInputFormatter.allow(RegExp(r'-?\d*'))],
-      ),
-      'number' => _typed(
-        keyboard: const TextInputType.numberWithOptions(
-          decimal: true,
-          signed: true,
-        ),
-        formatters: [FilteringTextInputFormatter.allow(RegExp(r'-?\d*\.?\d*'))],
-      ),
-      'location' => _typed(
-        keyboard: const TextInputType.numberWithOptions(
-          decimal: true,
-          signed: true,
-        ),
-        hint: 'Latitude, longitude (12.97, 77.59)',
-        helper: 'Type the place as two numbers.',
-      ),
+      'toggle' => _toggle(),
       'date' => _picker(
         icon: Icons.calendar_today_outlined,
         hint: 'Pick a date',
@@ -124,46 +146,155 @@ class FormFieldRow extends StatelessWidget {
         onTap: () => _pickTime(context),
       ),
       'list' => _list(context),
-      _ => _Box(
-        error: input.error,
-        child: const Text(
-          "Mobile can't fill this field yet",
-          style: AppText.readable,
+      'selection' =>
+        _hasSource ? _list(context) : _typed(helper: 'Type the value.'),
+      'barcode' => _typed(
+        suffix: IconButton(
+          tooltip: 'Scan a code',
+          onPressed: () => _scan(context),
+          icon: const Icon(
+            Icons.qr_code_scanner,
+            size: 20,
+            color: AppColors.muted,
+          ),
         ),
       ),
+      'location' => _typed(
+        hint: 'Latitude, longitude (12.97, 77.59)',
+        helper: 'Type the place as two numbers.',
+      ),
+      'payment' => FormPaymentField(
+        controller: controller,
+        input: input,
+        row: row,
+      ),
+      'file' => FormFileField(controller: controller, input: input),
+      'slot' => FormSlotField(controller: controller, input: input, row: row),
+      _ => _typed(),
     };
   }
 
-  Widget _valueText(String text) => Text(
-    text.isEmpty ? '-' : text,
-    style: AppText.input.copyWith(color: AppColors.muted),
+  bool get _hasSource => input.def.raw['source'] is Map;
+
+  /// The text shown for a held value that is not plain text.
+  String _mapShown(Map v) {
+    final f = input.def;
+    if (f.type == 'payment') {
+      final currency = idText(f.raw['currency']);
+      return [
+        if (idText(v['amount']).isNotEmpty)
+          '$currency ${idText(v['amount'])}'.trim(),
+        if (idText(v['status']) == 'paid') 'Paid' else 'Pay later',
+        if (idText(v['method']).isNotEmpty) idText(v['method']),
+      ].join(' · ');
+    }
+    final lat = idText(v['lat']);
+    final lng = idText(v['lng']);
+    return lat.isEmpty || lng.isEmpty ? '' : '$lat, $lng';
+  }
+
+  /// A held value as the person reads it: dates in the form's format, a
+  /// list's choice by its label.
+  String _shown(Object? v) {
+    final f = input.def;
+    if (v is Map) return _mapShown(v);
+    if (f.type == 'file' && v is List) {
+      return v.length == 1 ? '1 file' : '${v.length} files';
+    }
+    if (v is List) {
+      final labels = input.choices.value;
+      return v
+          .map(
+            (e) =>
+                labels?.where((c) => c.value == idText(e)).firstOrNull?.label ??
+                idText(e),
+          )
+          .join(', ');
+    }
+    final text = idText(v);
+    if (f.type == 'date') {
+      return FormDates.show(text, isMonthFirst: controller.isMonthFirst);
+    }
+    if (f.type == 'list' || f.type == 'selection') {
+      final hit = input.choices.value?.where((c) => c.value == text);
+      if (hit != null && hit.isNotEmpty) return hit.first.label;
+    }
+    return text;
+  }
+
+  Widget _toggle() => Obx(() {
+    final isOn = input.value.value == 'Yes';
+    return FormBox(
+      error: input.error,
+      onTap: () => controller.setValue(input, isOn ? 'No' : 'Yes', row: row),
+      trailing: IgnorePointer(
+        child: Switch(
+          value: isOn,
+          activeThumbColor: AppColors.accent,
+          onChanged: (_) {},
+        ),
+      ),
+      child: Text(isOn ? 'Yes' : 'No', style: AppText.input),
+    );
+  });
+
+  static final _readOnlyStyle = AppText.input.copyWith(
+    color: AppColors.readOnlyInk,
+    fontWeight: FontWeight.w600,
   );
 
-  Widget _typed({
-    required TextInputType keyboard,
-    int lines = 1,
-    List<TextInputFormatter>? formatters,
-    String? hint,
-    String? helper,
-  }) {
+  Widget _valueText(String text) =>
+      Text(text.isEmpty ? '-' : text, style: _readOnlyStyle);
+
+  Widget _typed({String? hint, String? helper, Widget? suffix}) {
     final c = controller;
-    return Obx(
-      () => AppTextField(
+    final f = input.def;
+    final isMultiline = f.type == 'text' && f.isMultiline;
+    final length = FormFormats.maxLength(f);
+    return Obx(() {
+      final typed = (input.value.value is String)
+          ? (input.value.value as String).length
+          : 0;
+      final waiting = input.waitingFor.toList();
+      final shownHelper =
+          input.note.value ??
+          (waiting.isNotEmpty
+              ? 'Fills in after you choose ${waiting.join(', ')}'
+              : length != null && typed >= FormFormats.counterFrom
+              ? '$typed / $length'
+              : helper);
+      return AppTextField(
         controller: input.text,
         focusNode: input.focus,
         hint: hint,
-        keyboardType: keyboard,
-        inputFormatters: formatters,
-        minLines: lines,
-        maxLines: lines == 1 ? 1 : 8,
+        keyboardType: FormFormats.keyboard(f),
+        inputFormatters: FormFormats.formatters(f),
+        maxLength: length,
+        textCapitalization: FormFormats.capitalization(f),
+        autocorrect: FormFormats.hasSuggestions(f),
+        minLines: isMultiline ? 4 : 1,
+        maxLines: isMultiline ? 8 : 1,
         errorText: input.error.value,
-        helperText: helper,
-        textInputAction: lines == 1
-            ? TextInputAction.next
-            : TextInputAction.newline,
-        onChanged: (v) => c.setValue(input, v),
-      ),
+        helperText: shownHelper,
+        suffix: suffix,
+        textInputAction: isMultiline
+            ? TextInputAction.newline
+            : identical(c.lastTyped, input)
+            ? TextInputAction.done
+            : TextInputAction.next,
+        onChanged: (v) => c.setValue(input, v, row: row),
+      );
+    });
+  }
+
+  Future<void> _scan(BuildContext context) async {
+    final code = await BarcodeScannerSheet.show(
+      context,
+      title: input.def.caption,
     );
+    if (code == null) return;
+    input.text.text = code;
+    controller.setValue(input, code, row: row);
   }
 
   Widget _picker({
@@ -172,8 +303,8 @@ class FormFieldRow extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Obx(() {
-      final text = idText(input.value.value);
-      return _Box(
+      final text = _shown(input.value.value);
+      return FormBox(
         error: input.error,
         onTap: onTap,
         trailing: Icon(icon, size: 18, color: AppColors.muted),
@@ -191,7 +322,7 @@ class FormFieldRow extends StatelessWidget {
     final c = controller;
     final f = input.def;
     return Obx(() {
-      final choices = input.choices.value;
+      final choices = c.shownChoices(input, row: row);
       final value = input.value.value;
       final labels = <String>[];
       final selected = value is List
@@ -212,40 +343,56 @@ class FormFieldRow extends StatelessWidget {
       }
       final isLoading = input.isLoadingChoices.value;
       final failed = input.hasChoicesFailed.value;
-      final hint = isLoading
+      final waiting = input.waitingFor.toList();
+      final hint = waiting.isNotEmpty
+          ? 'Choose ${waiting.join(', ')} first'
+          : isLoading
           ? 'Loading choices…'
           : failed
-          ? 'Needs a connection to load the choices'
+          ? (c.isConnectNeeded
+                ? 'Connect to choose'
+                : 'Needs a connection to load the choices')
+          : choices != null && choices.isEmpty
+          ? 'Nothing to choose from yet'
           : f.isMulti
           ? 'Pick one or more'
           : 'Select…';
       final text = labels.join(', ');
-      return _Box(
-        error: input.error,
-        onTap: choices == null
-            ? (failed ? () => c.retryChoices(input) : null)
-            : () => ChoiceSheet.show(
-                context,
-                title: f.caption,
-                choices: choices,
-                selected: selected,
-                isMulti: f.isMulti,
-                onDone: (picked) => c.setValue(
-                  input,
-                  f.isMulti ? picked : (picked.isEmpty ? null : picked.first),
-                ),
-              ),
-        trailing: Icon(
-          failed ? Icons.refresh : Icons.keyboard_arrow_down,
-          size: 20,
-          color: AppColors.muted,
+      final isUsable = choices != null && choices.isNotEmpty;
+      return FormChoiceMenu(
+        choices: choices ?? const [],
+        selected: selected,
+        isMulti: f.isMulti,
+        onDone: (picked) => c.setValue(
+          input,
+          f.isMulti ? picked : (picked.isEmpty ? null : picked.first),
+          row: row,
         ),
-        child: Text(
-          text.isEmpty ? hint : text,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppText.input.copyWith(
-            color: text.isEmpty ? AppColors.muted : AppColors.ink,
+        builder: (link, boxKey, open) => FormBox(
+          error: input.error,
+          link: link,
+          boxKey: boxKey,
+          onTap: isUsable
+              ? open
+              : (failed && !c.isConnectNeeded
+                    ? () => f.type == 'selection'
+                          ? c.retrySelection(input, row: row)
+                          : c.retryChoices(input)
+                    : null),
+          trailing: Icon(
+            failed && !c.isConnectNeeded
+                ? Icons.refresh
+                : Icons.keyboard_arrow_down,
+            size: 20,
+            color: AppColors.muted,
+          ),
+          child: Text(
+            text.isEmpty ? hint : text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.input.copyWith(
+              color: text.isEmpty ? AppColors.muted : AppColors.ink,
+            ),
           ),
         ),
       );
@@ -269,6 +416,7 @@ class FormFieldRow extends StatelessWidget {
     if (picked == null) return;
     controller.setValue(
       input,
+      row: row,
       '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}',
     );
   }
@@ -285,73 +433,8 @@ class FormFieldRow extends StatelessWidget {
     if (picked == null) return;
     controller.setValue(
       input,
+      row: row,
       '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
-    );
-  }
-}
-
-/// A tappable box in the look of a text field, for a value picked rather than
-/// typed.
-class _Box extends StatelessWidget {
-  const _Box({required this.child, this.onTap, this.trailing, this.error});
-
-  final Widget child;
-  final VoidCallback? onTap;
-  final Widget? trailing;
-  final RxnString? error;
-
-  Widget _box(bool hasError) => Container(
-    constraints: const BoxConstraints(minHeight: AppSpacing.controlHeight),
-    padding: const EdgeInsets.symmetric(
-      horizontal: AppSpacing.controlPaddingX,
-      vertical: AppSpacing.sm,
-    ),
-    decoration: BoxDecoration(
-      color: AppColors.background,
-      borderRadius: AppRadius.controlAll,
-      border: Border.all(
-        color: hasError ? AppColors.error : AppColors.inputBorder,
-      ),
-    ),
-    child: Row(
-      children: [
-        Expanded(child: child),
-        if (trailing != null) ...[
-          const SizedBox(width: AppSpacing.xs),
-          trailing!,
-        ],
-      ],
-    ),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final e = error;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: e == null
-              ? _box(false)
-              : Obx(() => _box(e.value != null && e.value!.isNotEmpty)),
-        ),
-        if (e != null)
-          Obx(
-            () => AnimatedSize(
-              duration: AppDurations.fast,
-              curve: AppCurves.out,
-              alignment: Alignment.topLeft,
-              child: e.value == null
-                  ? const SizedBox(width: double.infinity)
-                  : Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xs),
-                      child: Text(e.value!, style: AppText.error),
-                    ),
-            ),
-          ),
-      ],
     );
   }
 }

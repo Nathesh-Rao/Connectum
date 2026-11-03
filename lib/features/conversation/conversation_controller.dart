@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -9,6 +11,7 @@ import '../../core/debug/seed_messages.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
+import '../../core/utils/attachment_tag.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/chat_time.dart';
 import '../../data/models/conversation.dart';
@@ -22,9 +25,11 @@ import '../../data/models/form_submission.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 
+import '../../data/attachment_cache.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/models/message.dart';
 import '../../data/models/reaction.dart';
+import '../../data/repositories/attachment_repository.dart';
 import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
@@ -37,6 +42,8 @@ import '../../data/socket/socket_service.dart';
 import '../../core/widgets/app_avatar.dart';
 import 'models/chat_item.dart';
 import 'models/command_prompt.dart';
+import 'models/file_download.dart';
+import 'models/pending_upload.dart';
 
 /// One conversation. A controller exists per conversation id (the binding puts
 /// it under that id as its tag), so one route's disposal can never delete
@@ -58,6 +65,8 @@ class ConversationController extends GetxController
     required this.store,
     required this.e2e,
     required this.commands,
+    required this.attachments,
+    required this.attachmentCache,
   });
 
   static const maxLength = 2000;
@@ -79,6 +88,8 @@ class ConversationController extends GetxController
   final SessionStore store;
   final E2eRepository e2e;
   final CommandRepository commands;
+  final AttachmentRepository attachments;
+  final AttachmentCache attachmentCache;
 
   /// The "#" commands list of the composer.
   late final prompt = CommandPrompt(commands);
@@ -124,6 +135,36 @@ class ConversationController extends GetxController
   final newAway = 0.obs;
   final length = 0.obs;
   final reply = Rxn<Message>();
+
+  /// Photos being uploaded, newest last; shown after the last message.
+  final uploads = <PendingUpload>[].obs;
+
+  /// Bumped to make an image that failed to load try again.
+  final imageRetries = <String, int>{}.obs;
+
+  /// Images already in the attachment cache, by tag url.
+  final imageFiles = <String, File>{}.obs;
+
+  /// Images the cache could not get; they fall back to a plain network image.
+  final imageGaveUp = <String>{}.obs;
+  final _imageStarted = <String>{};
+
+  /// Decrypted pictures of encrypted attachments, by tag url. Memory only;
+  /// the oldest go once [_secureKeep] are held.
+  final secureImages = <String, Uint8List>{}.obs;
+  final _secureOrder = <String>[];
+  static const _secureKeep = 12;
+
+  /// Why an encrypted attachment could not be opened, by tag url.
+  final secureFailures = <String, String>{}.obs;
+  final _imageCancel = CancelToken();
+
+  /// Documents being downloaded (or that failed), by tag url.
+  final downloads = <String, FileDownload>{}.obs;
+  final _openingFiles = <String>{};
+  final _seedCached = <String>{};
+  int _uploadSeq = 0;
+  bool _hasSeedFailed = false;
   final notice = RxnString();
 
   final _notes = <({String id, String text, int ts})>[];
@@ -823,6 +864,443 @@ class ConversationController extends GetxController
 
   void tapPlaceholder() => _say('Coming soon');
 
+  // ---- attachments ---------------------------------------------------------
+
+  /// Why photos cannot be attached here, or null. An encrypted thread is not
+  /// a reason: its files are sealed first. A thread the policy blocks closes
+  /// the composer, with its own reason.
+  String? get attachBlock {
+    if (kind != 'dm' && kind != 'group') {
+      return 'Photos and documents can be sent in direct messages and groups.';
+    }
+    return null;
+  }
+
+  /// True when the attach sheet may open; otherwise says why in the notice.
+  bool tapAttach() {
+    final reason = attachBlock;
+    if (reason != null) {
+      _say(reason);
+      return false;
+    }
+    if (!SeedUi.isActive && !socket.isOnline) {
+      _say('Attachments need a connection');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> attach(AttachSource source) async {
+    final PickedAttachment? file;
+    try {
+      file = source == AttachSource.document
+          ? await attachments.pickDocument()
+          : await attachments.pick(source);
+    } on AttachmentException catch (e) {
+      _say(e.message);
+      return;
+    }
+    if (file == null) return;
+    final replied = reply.value;
+    reply.value = null;
+    final upload = PendingUpload(
+      id: 'u${_uploadSeq++}',
+      file: file,
+      replyTo: replied?.msgId,
+    );
+    uploads.add(upload);
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToLatest());
+    unawaited(_runUpload(upload));
+  }
+
+  /// Upload, then the ordinary send of the tag. No tag is built before the
+  /// server returned a url; a failure leaves the photo here with a retry.
+  /// In an encrypted thread the file is sealed with a fresh key first and only
+  /// the blob is uploaded; the key goes into the tag, which is sent sealed.
+  /// An upload that already succeeded is reused, with its key, by every retry.
+  Future<void> _runUpload(PendingUpload upload) async {
+    upload.isFailed.value = false;
+    upload.error.value = null;
+    upload.progress.value = 0;
+    upload.cancel = CancelToken();
+    try {
+      if (SeedUi.isActive) {
+        await _seedUpload(upload);
+      } else {
+        await _uploadFor(upload);
+      }
+      upload.progress.value = 1;
+      final tag = AttachmentTag(
+        kind: upload.file.kind,
+        name: upload.file.name,
+        size: AttachmentTag.sizeText(upload.file.bytes),
+        url: SeedUi.isActive
+            ? '/uploads/seed-upload.${upload.file.isImage ? 'jpg' : 'pdf'}'
+            : upload.uploaded!.url,
+        type: upload.file.mime,
+        e2eKey: upload.e2eKey,
+        e2eIv: upload.e2eIv,
+      );
+      if (SeedUi.isActive) {
+        SeedMessages.send(
+          conversationId,
+          tag.build(),
+          replyTo: upload.replyTo,
+          isEncrypted: isLocked.value,
+        );
+      } else {
+        final result = await messages.sendAttachment(
+          conversationId,
+          tag,
+          replyTo: upload.replyTo,
+        );
+        switch (result) {
+          case SendResult.queued:
+            break;
+          case SendResult.blocked:
+            await _refreshGate();
+            throw AttachmentException(messages.lastBlock);
+          case SendResult.tooLong:
+          case SendResult.invalid:
+          case SendResult.noSession:
+            throw AttachmentException(
+              "That ${upload.file.isImage ? 'photo' : 'file'} couldn't be sent.",
+            );
+        }
+      }
+      uploads.remove(upload);
+      WidgetsBinding.instance.addPostFrameCallback((_) => scrollToLatest());
+    } on AttachmentException catch (e) {
+      if (!uploads.contains(upload)) return;
+      upload.isFailed.value = true;
+      upload.error.value = e.message;
+      upload.canRetry.value = e.isRetryable;
+    } catch (_) {
+      if (!uploads.contains(upload)) return;
+      upload.isFailed.value = true;
+      upload.error.value =
+          "That ${upload.file.isImage ? 'photo' : 'file'} couldn't be sent. Try again.";
+      upload.canRetry.value = true;
+    }
+  }
+
+  /// Makes sure the server holds this file in the form the thread needs. The
+  /// thread is asked again every time: a blob made for another answer (plain
+  /// for an encrypted thread, or the reverse) is dropped, never sent.
+  Future<void> _uploadFor(PendingUpload upload) async {
+    final mode = await messages.attachMode(conversationId);
+    if (mode == null) throw AttachmentException(messages.lastBlock);
+    final isSealed = mode == AttachMode.encrypted;
+    if (upload.isEncrypted != isSealed) {
+      upload.uploaded = null;
+      upload.e2eKey = null;
+      upload.e2eIv = null;
+      upload.sealed = null;
+    }
+    if (upload.uploaded != null) return;
+    if (!isSealed) {
+      upload.uploaded = await attachments.upload(
+        upload.file,
+        onProgress: (p) => upload.progress.value = p,
+        cancel: upload.cancel,
+      );
+      return;
+    }
+    attachments.checkBlobSize(upload.file);
+    var sealed = upload.sealed;
+    if (sealed == null) {
+      final bytes = await attachments.readBytes(upload.file);
+      try {
+        sealed = await e2e.encryptFile(bytes);
+      } catch (_) {
+        throw const AttachmentException(
+          "That file couldn't be encrypted. Try again.",
+        );
+      }
+      upload.sealed = sealed;
+      upload.e2eKey = sealed.key;
+      upload.e2eIv = sealed.iv;
+    }
+    upload.uploaded = await attachments.uploadBlob(
+      Uint8List.fromList(sealed.ciphertext),
+      onProgress: (p) => upload.progress.value = p,
+      cancel: upload.cancel,
+      isImage: upload.file.isImage,
+    );
+    upload.sealed = null;
+  }
+
+  /// Debug only: walks the progress, and fails once so the retry shows.
+  Future<void> _seedUpload(PendingUpload upload) async {
+    for (var i = 1; i <= 10; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      if (upload.cancel.isCancelled) {
+        throw const AttachmentException('Cancelled.');
+      }
+      upload.progress.value = i / 10;
+      if (i == 6 && !_hasSeedFailed) {
+        _hasSeedFailed = true;
+        throw const AttachmentException('The upload failed. Tap retry.');
+      }
+    }
+  }
+
+  void retryUpload(PendingUpload upload) => unawaited(_runUpload(upload));
+
+  void cancelUpload(PendingUpload upload) {
+    upload.cancel.cancel();
+    uploads.remove(upload);
+  }
+
+  /// The picture of an image attachment: the cached file when there is one, a
+  /// network image when the cache could not get it. Null while the cache is
+  /// fetching it ([isImageLoading]) or when its address is not a chat upload
+  /// on this server (then it is not fetched). Asking starts the fetch once.
+  /// An encrypted picture is decrypted in memory and never written to disk;
+  /// it is never shown from the network.
+  ImageProvider? imageOf(AttachmentTag tag) {
+    if (SeedUi.isActive && tag.url.startsWith('/uploads/seed-')) {
+      return tag.url == '/uploads/seed-photo.jpg' ||
+              tag.url == '/uploads/seed-e2e-photo.e2e'
+          ? const AssetImage('assets/images/connectum_logo.png')
+          : null;
+    }
+    if (tag.isEncrypted || tag.isUnreadable) {
+      final bytes = secureImages[tag.url];
+      if (bytes != null) return MemoryImage(bytes);
+      if (!tag.isUnreadable && _imageStarted.add(tag.url)) {
+        scheduleMicrotask(() => _openSecureImage(tag));
+      }
+      return null;
+    }
+    final url = tag.resolvedUrl;
+    if (url == null) return null;
+    final file = imageFiles[tag.url];
+    if (file != null) return FileImage(file);
+    if (imageGaveUp.contains(tag.url)) return NetworkImage(url);
+    if (_imageStarted.add(tag.url)) scheduleMicrotask(() => _cacheImage(tag));
+    return null;
+  }
+
+  /// Reads Rx values: call it inside an Obx.
+  bool isImageLoading(AttachmentTag tag) {
+    if (SeedUi.isActive && tag.url.startsWith('/uploads/seed-')) return false;
+    if (tag.isEncrypted || tag.isUnreadable) {
+      return !tag.isUnreadable &&
+          !secureImages.containsKey(tag.url) &&
+          !secureFailures.containsKey(tag.url);
+    }
+    return tag.resolvedUrl != null &&
+        !imageFiles.containsKey(tag.url) &&
+        !imageGaveUp.contains(tag.url);
+  }
+
+  /// What the picture shows when it cannot be shown; reads Rx values.
+  String imageProblem(AttachmentTag tag) => tag.isEncrypted || tag.isUnreadable
+      ? secureFailures[tag.url] ?? undecryptable
+      : "Photo can't be shown";
+
+  /// A wrong key, a damaged or a short blob. The same words for each, and no
+  /// file name.
+  static const undecryptable = "This file can't be decrypted";
+
+  Future<void> _cacheImage(AttachmentTag tag) async {
+    try {
+      final file =
+          await attachmentCache.cached(tag) ??
+          await attachmentCache.fetch(
+            tag,
+            onProgress: (_) {},
+            cancel: _imageCancel,
+          );
+      if (!isClosed) imageFiles[tag.url] = file;
+    } on AttachmentException catch (_) {
+      if (!isClosed) imageGaveUp.add(tag.url);
+    }
+  }
+
+  /// The decrypted bytes of an encrypted blob: from the stored blob, or
+  /// downloaded into the cache first (the blob only, still encrypted). A blob
+  /// that does not open is deleted so the next try fetches it again.
+  Future<Uint8List> _decryptedBytes(
+    AttachmentTag tag, {
+    void Function(double progress)? onProgress,
+    CancelToken? cancel,
+  }) async {
+    if (tag.resolvedUrl == null) {
+      throw const AttachmentException(undecryptable, isRetryable: false);
+    }
+    var blob = await attachmentCache.readBlob(tag);
+    if (blob == null) {
+      await attachmentCache.forget(tag);
+      await attachmentCache.fetch(
+        tag,
+        onProgress: onProgress ?? (_) {},
+        cancel: cancel ?? _imageCancel,
+      );
+      blob = await attachmentCache.readBlob(tag);
+    }
+    if (blob == null) {
+      await attachmentCache.forget(tag);
+      throw const AttachmentException(undecryptable);
+    }
+    try {
+      return await e2e.decryptFile(blob, tag.e2eKey!, tag.e2eIv!);
+    } catch (_) {
+      await attachmentCache.forget(tag);
+      throw const AttachmentException(undecryptable);
+    }
+  }
+
+  Future<void> _openSecureImage(AttachmentTag tag) async {
+    try {
+      final bytes = await _decryptedBytes(tag);
+      if (isClosed) return;
+      _secureOrder.add(tag.url);
+      secureImages[tag.url] = bytes;
+      if (_secureOrder.length > _secureKeep) {
+        final oldest = _secureOrder.removeAt(0);
+        secureImages.remove(oldest);
+        _imageStarted.remove(oldest);
+      }
+    } on AttachmentException catch (e) {
+      if (!isClosed) secureFailures[tag.url] = e.message;
+    }
+  }
+
+  /// The viewer is about to open: counts as the file's latest use.
+  void viewedImage(AttachmentTag tag) {
+    final file = imageFiles[tag.url];
+    if (file != null) unawaited(attachmentCache.touch(file));
+  }
+
+  void retryImage(AttachmentTag tag) {
+    secureFailures.remove(tag.url);
+    unawaited(imageOf(tag)?.evict());
+    imageFiles.remove(tag.url);
+    imageGaveUp.remove(tag.url);
+    _imageStarted.remove(tag.url);
+    imageRetries[tag.url] = (imageRetries[tag.url] ?? 0) + 1;
+  }
+
+  // ---- opening documents ---------------------------------------------------
+
+  static const noAppNotice = 'No app on this phone can open this file type';
+
+  /// A tap on a document row: opens the cached file, or downloads it first
+  /// (progress and cancel on the row, the reason and a retry if it fails).
+  Future<void> openFile(AttachmentTag tag) async {
+    final running = downloads[tag.url];
+    if (running != null && !running.isFailed.value) return;
+    if (!_openingFiles.add(tag.url)) return;
+    final download = FileDownload();
+    try {
+      if (SeedUi.isActive) {
+        await _seedOpen(tag, download);
+        return;
+      }
+      if (tag.isEncrypted || tag.isUnreadable) {
+        await _openSecureFile(tag, download);
+        return;
+      }
+      if (tag.resolvedUrl == null) {
+        _say("This file can't be opened here.");
+        return;
+      }
+      var file = await attachmentCache.cached(tag);
+      if (file == null) {
+        downloads[tag.url] = download;
+        file = await attachmentCache.fetch(
+          tag,
+          onProgress: (p) => download.progress.value = p,
+          cancel: download.cancel,
+        );
+        downloads.remove(tag.url);
+      }
+      _report(await attachmentCache.open(file));
+    } on AttachmentException catch (e) {
+      if (download.cancel.isCancelled) return;
+      download.isFailed.value = true;
+      download.error.value = e.message;
+      downloads[tag.url] = download;
+    } finally {
+      _openingFiles.remove(tag.url);
+    }
+  }
+
+  /// An encrypted document: the stored blob (downloaded first if needed) is
+  /// decrypted in memory, written to `open-tmp` just before the viewer opens
+  /// it and removed at the next start, on sign out and on `session_replaced`.
+  Future<void> _openSecureFile(AttachmentTag tag, FileDownload download) async {
+    if (tag.isUnreadable) {
+      _say(undecryptable);
+      return;
+    }
+    try {
+      downloads[tag.url] = download;
+      final bytes = await _decryptedBytes(
+        tag,
+        onProgress: (p) => download.progress.value = p,
+        cancel: download.cancel,
+      );
+      downloads.remove(tag.url);
+      final file = await attachmentCache.writeForOpening(tag.name, bytes);
+      if (file == null) {
+        _say("This file can't be opened here.");
+        return;
+      }
+      _report(await attachmentCache.open(file));
+    } on AttachmentException {
+      downloads.remove(tag.url);
+      rethrow;
+    }
+  }
+
+  void _report(OpenOutcome outcome) {
+    switch (outcome) {
+      case OpenOutcome.opened:
+        break;
+      case OpenOutcome.noApp:
+        _say(noAppNotice);
+      case OpenOutcome.failed:
+        _say("This file couldn't be opened.");
+    }
+  }
+
+  void cancelDownload(AttachmentTag tag) {
+    downloads.remove(tag.url)?.cancel.cancel();
+  }
+
+  /// Debug only. `seed-slow` takes a few seconds, `seed-fail` stops half way
+  /// with "no longer on the server", a `.docx` ends with the no-app notice and
+  /// anything else with a note that it would have opened.
+  Future<void> _seedOpen(AttachmentTag tag, FileDownload download) async {
+    if (tag.url.contains('seed-e2e-bad')) {
+      throw const AttachmentException(undecryptable);
+    }
+    if (!_seedCached.contains(tag.url)) {
+      downloads[tag.url] = download;
+      final steps = tag.url.contains('seed-slow') ? 30 : 8;
+      for (var i = 1; i <= steps; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        if (download.cancel.isCancelled) return;
+        download.progress.value = i / steps;
+        if (tag.url.contains('seed-fail') && i == steps ~/ 2) {
+          throw const AttachmentException(
+            'This file is no longer on the server.',
+          );
+        }
+      }
+      _seedCached.add(tag.url);
+      downloads.remove(tag.url);
+    }
+    if (tag.url.endsWith('.docx')) {
+      _report(OpenOutcome.noApp);
+    } else {
+      _say('Opened ${tag.name} (sample)');
+    }
+  }
+
   void startReply(Message m) {
     reply.value = m;
     focus.requestFocus();
@@ -911,6 +1389,13 @@ class ConversationController extends GetxController
     _onlineWorker?.dispose();
     _setupWorker?.dispose();
     _noticeWorker?.dispose();
+    for (final upload in uploads) {
+      upload.cancel.cancel();
+    }
+    _imageCancel.cancel();
+    for (final download in downloads.values) {
+      download.cancel.cancel();
+    }
     picker.onClose();
     scroll.removeListener(_onScroll);
     scroll.dispose();

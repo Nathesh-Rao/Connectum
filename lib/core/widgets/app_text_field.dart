@@ -41,6 +41,8 @@ class AppTextField extends StatefulWidget {
     this.helperText,
     this.fillColor = AppColors.background,
     this.hasFocusRing = true,
+    this.textCapitalization = TextCapitalization.none,
+    this.autocorrect = true,
   });
 
   final TextEditingController? controller;
@@ -75,6 +77,9 @@ class AppTextField extends StatefulWidget {
 
   /// False when the field sits inside a container that shows the focus.
   final bool hasFocusRing;
+
+  final TextCapitalization textCapitalization;
+  final bool autocorrect;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -129,6 +134,9 @@ class _AppTextFieldState extends State<AppTextField> {
               obscureText: widget.obscureText,
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
+              textCapitalization: widget.textCapitalization,
+              autocorrect: widget.autocorrect,
+              enableSuggestions: widget.autocorrect,
               inputFormatters: widget.inputFormatters,
               autofillHints: widget.autofillHints,
               onChanged: widget.onChanged,

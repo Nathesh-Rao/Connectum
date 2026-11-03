@@ -31,6 +31,8 @@ class AppFormCard extends StatefulWidget {
     this.isFresh = false,
     this.state = AppFormCardState.sent,
     this.problem,
+    this.stripLabel,
+    this.note,
     this.isHighlighted = false,
     this.statusMark,
   });
@@ -51,6 +53,11 @@ class AppFormCard extends StatefulWidget {
   /// Waiting to be sent, failed, or settled; a failed card shows [problem].
   final AppFormCardState state;
   final String? problem;
+
+  /// Replaces the strip's text (a draft, a record that needs attention) and
+  /// adds a quiet line in the footer.
+  final String? stripLabel;
+  final String? note;
 
   /// Flashes the card once (it was just changed by an edit).
   final bool isHighlighted;
@@ -126,9 +133,11 @@ class _AppFormCardState extends State<AppFormCard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _Strip(
-                    label: widget.state == AppFormCardState.waiting
-                        ? 'Waiting to send'
-                        : d.label,
+                    label:
+                        widget.stripLabel ??
+                        (widget.state == AppFormCardState.waiting
+                            ? 'Waiting to send'
+                            : d.label),
                     isSent: widget.isSent,
                     onEdit: widget.onEdit,
                   ),
@@ -183,6 +192,7 @@ class _AppFormCardState extends State<AppFormCard> {
                     problem: widget.state == AppFormCardState.failed
                         ? widget.problem
                         : null,
+                    note: widget.note,
                   ),
                 ],
               ),
@@ -229,6 +239,7 @@ class _Footer extends StatelessWidget {
     required this.statusMark,
     required this.isAwaitingApproval,
     required this.problem,
+    required this.note,
   });
 
   final String time;
@@ -236,13 +247,19 @@ class _Footer extends StatelessWidget {
   final Widget? statusMark;
   final bool isAwaitingApproval;
   final String? problem;
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
-    final note = problem != null
+    final line = problem != null
         ? Text(
             problem!,
             style: AppText.caption.copyWith(color: AppColors.error),
+          )
+        : note != null
+        ? Text(
+            note!,
+            style: AppText.caption.copyWith(color: AppColors.cardMuted),
           )
         : isAwaitingApproval
         ? Text(
@@ -260,7 +277,7 @@ class _Footer extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: note ?? const SizedBox.shrink()),
+          Expanded(child: line ?? const SizedBox.shrink()),
           const SizedBox(width: AppSpacing.xs),
           if (isWaiting && statusMark == null) ...[
             const Icon(Icons.schedule, size: 12, color: AppColors.cardMuted),

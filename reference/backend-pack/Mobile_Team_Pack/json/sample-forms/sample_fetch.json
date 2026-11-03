@@ -1,0 +1,38 @@
+{
+  "name": "sample_fetch",
+  "caption": "Sample: fetch (a field filled from another form)",
+  "fields": [
+    {
+      "name": "colour",
+      "type": "list",
+      "caption": "Colour",
+      "options": [
+        "Red",
+        "Green",
+        "Blue"
+      ],
+      "required": true
+    },
+    {
+      "name": "colourCode",
+      "type": "text",
+      "caption": "Code of the colour (fetched)",
+      "fetch": {
+        "type": "query",
+        "form": "sample_colour",
+        "valueField": "code",
+        "labelField": "code",
+        "where": {
+          "field": "colour",
+          "op": "eq",
+          "param": "colourName"
+        },
+        "params": {
+          "colourName": {
+            "field": "colour"
+          }
+        }
+      }
+    }
+  ]
+}

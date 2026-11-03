@@ -288,11 +288,37 @@ class _Footer extends StatelessWidget {
       ),
       child: Obx(() {
         final isReady = c.viewState.value == AppViewState.content;
-        return AppButton.primary(
-          label: launch.buttonLabel,
-          isCentered: true,
-          isLoading: c.isSubmitting.value,
-          onPressed: isReady && !c.hasBlockingField.value ? c.done : null,
+        final waiting = c.waitingNames.toList();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (waiting.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Text(
+                  'Waiting for connection to fill ${waiting.join(', ')}',
+                  style: AppText.caption.copyWith(color: AppColors.muted),
+                ),
+              ),
+            AppButton.primary(
+              label: launch.buttonLabel,
+              isCentered: true,
+              isLoading: c.isSubmitting.value,
+              onPressed: isReady && !c.hasBlockingField.value && waiting.isEmpty
+                  ? c.done
+                  : null,
+            ),
+            if (c.canSaveDraft.value) ...[
+              const SizedBox(height: AppSpacing.xs),
+              AppButton.secondary(
+                label: 'Save as draft',
+                onPressed: isReady && !c.isSubmitting.value
+                    ? c.saveDraft
+                    : null,
+              ),
+            ],
+          ],
         );
       }),
     );
@@ -304,24 +330,28 @@ class _Skeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppSkeletonScope(
-    child: Padding(
-      padding: const EdgeInsets.all(AppSpacing.sheetPaddingX),
-      child: Column(
-        children: [
-          for (var i = 0; i < 5; i++)
-            const Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppSkeleton(width: 90, height: AppSpacing.sm),
-                  SizedBox(height: AppSpacing.xs),
-                  AppSkeleton(height: AppSpacing.controlHeight),
-                ],
-              ),
-            ),
-        ],
+    child: ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sheetPaddingX,
+        AppSpacing.xxs,
+        AppSpacing.sheetPaddingX,
+        AppSpacing.lg,
       ),
+      children: [
+        for (var i = 0; i < 5; i++)
+          const Padding(
+            padding: EdgeInsets.only(bottom: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeleton(width: 90, height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.xs),
+                AppSkeleton(height: AppSpacing.controlHeight),
+              ],
+            ),
+          ),
+      ],
     ),
   );
 }

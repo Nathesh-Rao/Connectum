@@ -23,6 +23,8 @@ class AppRoutes {
   static const debugSocket = '/debug/socket';
   static const debugAssets = '/debug/assets';
   static const debugE2e = '/debug/e2e';
+  static const debugFormLogic = '/debug/formlogic';
+  static const debugForms = '/debug/forms';
 
   /// A conversation id holds `:` and a group name may hold spaces or `/`.
   static String conversationOf(String id) =>

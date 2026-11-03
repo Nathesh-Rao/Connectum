@@ -1,0 +1,1184 @@
+{
+  "about": "Expected results for the sample forms, read by tests/frontend/sampleForms.test.mjs (what the shared form logic works out) and connectum-backend/test/connectum_sample_forms_test.mjs (what the server accepts and refuses). `calc`: values in, values the form works out (as text, as the parser gives them). `rules`: the field, the values, the message the person sees (null: the rule is met). `server`: a record sent to tstruct.submit and what comes back (the messages are the server's own words). The server does NOT run calculations or rules: it checks the shape of each value.",
+  "sample_calc": {
+    "calc": [
+      {
+        "values": {
+          "qty": 3,
+          "price": 2.5,
+          "age": 20
+        },
+        "expect": {
+          "total": "7.5",
+          "group": "Adult",
+          "stamp": "3020"
+        }
+      },
+      {
+        "values": {
+          "qty": 3,
+          "price": 2.5,
+          "age": 10
+        },
+        "expect": {
+          "total": "7.5",
+          "group": "Minor",
+          "stamp": "3010"
+        }
+      },
+      {
+        "values": {
+          "qty": 3,
+          "price": 2.5,
+          "age": 18
+        },
+        "expect": {
+          "group": "Minor"
+        },
+        "note": "exactly 18 is not over 18"
+      },
+      {
+        "values": {
+          "qty": 3,
+          "price": 2.5
+        },
+        "expect": {
+          "total": "7.5"
+        },
+        "absent": [
+          "group",
+          "stamp"
+        ],
+        "note": "a value that reads an empty field stays empty"
+      },
+      {
+        "values": {
+          "qty": 4,
+          "price": 0.1,
+          "age": 19
+        },
+        "expect": {
+          "total": "0.4"
+        }
+      }
+    ],
+    "server": [
+      {
+        "values": {
+          "qty": 3,
+          "price": 2.5,
+          "total": 7.5,
+          "age": 20,
+          "group": "Adult",
+          "stamp": 3020
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "total": 7.5,
+            "group": "Adult",
+            "stamp": 3020
+          }
+        }
+      },
+      {
+        "values": {
+          "qty": 3,
+          "price": 2.5,
+          "total": 999,
+          "age": 20,
+          "group": "Adult",
+          "stamp": 1
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "total": 999
+          }
+        },
+        "note": "the server stores the total it was sent: it does not work it out"
+      },
+      {
+        "values": {
+          "price": 2.5
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "qty": "This field is required."
+          }
+        }
+      },
+      {
+        "values": {
+          "qty": 0,
+          "price": 2.5
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "qty": "Must be at least 1."
+          }
+        }
+      },
+      {
+        "values": {
+          "qty": 1,
+          "price": -1
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "price": "Must be at least 0."
+          }
+        }
+      },
+      {
+        "values": {
+          "qty": 1,
+          "price": 1,
+          "group": "Teen"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "group": "Choose one of the listed options."
+          }
+        }
+      },
+      {
+        "values": {
+          "qty": 1.5,
+          "price": 1
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "qty": "Enter a whole number."
+          }
+        }
+      }
+    ]
+  },
+  "sample_rule": {
+    "rules": [
+      {
+        "field": "phone",
+        "values": {
+          "phone": "123"
+        },
+        "error": "The phone must have 10 digits"
+      },
+      {
+        "field": "phone",
+        "values": {
+          "phone": "9876543210"
+        },
+        "error": null
+      },
+      {
+        "field": "phone",
+        "values": {
+          "phone": ""
+        },
+        "error": null,
+        "note": "an empty field is not checked (use required)"
+      },
+      {
+        "field": "age",
+        "values": {
+          "age": 17
+        },
+        "error": "You must be 18 or older"
+      },
+      {
+        "field": "age",
+        "values": {
+          "age": 18
+        },
+        "error": null
+      },
+      {
+        "field": "email",
+        "values": {
+          "email": "nope"
+        },
+        "error": "That is not an email address"
+      },
+      {
+        "field": "email",
+        "values": {
+          "email": "a@b.co"
+        },
+        "error": null
+      },
+      {
+        "field": "finish",
+        "values": {
+          "start": "2026-11-05",
+          "finish": "2026-11-01"
+        },
+        "error": "The finish cannot be before the start"
+      },
+      {
+        "field": "finish",
+        "values": {
+          "start": "2026-11-01",
+          "finish": "2026-11-05"
+        },
+        "error": null
+      },
+      {
+        "field": "finish",
+        "values": {
+          "start": "2026-11-01",
+          "finish": "2026-11-01"
+        },
+        "error": null
+      }
+    ],
+    "server": [
+      {
+        "values": {
+          "phone": "123",
+          "age": 5,
+          "email": "nope"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "phone": "123",
+            "age": 5
+          }
+        },
+        "note": "the server keeps rules with the form and does not run them: only the app checks them"
+      }
+    ]
+  },
+  "sample_condition": {
+    "server": [
+      {
+        "values": {
+          "hasCar": "No",
+          "kind": "Casual"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "hasCar": "No"
+          }
+        }
+      },
+      {
+        "values": {
+          "hasCar": "Yes",
+          "kind": "Casual"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "carNumber": "This field is required."
+          }
+        }
+      },
+      {
+        "values": {
+          "hasCar": true,
+          "carNumber": "MH12",
+          "kind": "Other",
+          "reason": "x"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "hasCar": "Yes",
+            "carNumber": "MH12"
+          }
+        }
+      },
+      {
+        "values": {
+          "hasCar": "No",
+          "kind": "Other"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "reason": "This field is required."
+          }
+        }
+      },
+      {
+        "values": {
+          "hasCar": "No",
+          "kind": "Sick"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "reason": "This field is required."
+          }
+        },
+        "note": "either of the two conditions makes the reason required"
+      },
+      {
+        "values": {
+          "hasCar": "No",
+          "kind": "Casual",
+          "carNumber": "ignored",
+          "reason": "ignored"
+        },
+        "expect": {
+          "ok": true
+        },
+        "note": "a field that is not shown is not checked"
+      },
+      {
+        "values": {
+          "hasCar": " ON ",
+          "carNumber": "KA01",
+          "kind": "Casual"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "hasCar": "Yes",
+            "carNumber": "KA01"
+          }
+        },
+        "note": "any spelling of Yes counts for a condition on Yes (true, on, y, t)"
+      },
+      {
+        "values": {
+          "hasCar": false,
+          "kind": "Casual"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "hasCar": "No"
+          }
+        },
+        "note": "false is No"
+      }
+    ]
+  },
+  "sample_cascade": {
+    "server": [
+      {
+        "values": {
+          "department": "Ops"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "department": "Ops"
+          }
+        }
+      },
+      {
+        "values": {
+          "department": "Ops",
+          "person": "nobody"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "person": "Choose one from the organisation's list."
+          }
+        }
+      },
+      {
+        "values": {},
+        "expect": {
+          "ok": false,
+          "fields": {
+            "department": "This field is required."
+          }
+        }
+      }
+    ]
+  },
+  "sample_fetch": {
+    "server": [
+      {
+        "values": {
+          "colour": "Red",
+          "colourCode": "R-01"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "colourCode": "R-01"
+          }
+        },
+        "note": "the server never overrules a fetched or typed value"
+      },
+      {
+        "values": {
+          "colour": "Red"
+        },
+        "expect": {
+          "ok": true
+        }
+      },
+      {
+        "values": {
+          "colour": "Purple"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "colour": "Choose one of the listed options."
+          }
+        }
+      }
+    ]
+  },
+  "sample_selection": {
+    "server": [
+      {
+        "values": {
+          "pick": "Red",
+          "picks": [
+            "Red",
+            "Blue"
+          ],
+          "pickCode": "R-01"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "pick": "Red",
+            "picks": [
+              "Red",
+              "Blue"
+            ],
+            "pickCode": "R-01"
+          }
+        }
+      },
+      {
+        "values": {
+          "pick": "Red"
+        },
+        "expect": {
+          "ok": true
+        }
+      },
+      {
+        "values": {},
+        "expect": {
+          "ok": false,
+          "fields": {
+            "pick": "This field is required."
+          }
+        }
+      },
+      {
+        "values": {
+          "pick": "Red",
+          "picks": [
+            "Mauve"
+          ]
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "picks": "That is not one of the choices on offer."
+          }
+        }
+      }
+    ]
+  },
+  "sample_toggle": {
+    "server": [
+      {
+        "values": {
+          "agree": true
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "agree": "Yes"
+          }
+        },
+        "note": "a switch is saved as the text Yes or No"
+      },
+      {
+        "values": {
+          "agree": " YES ",
+          "newsletter": "off"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "agree": "Yes",
+            "newsletter": "No"
+          }
+        }
+      },
+      {
+        "values": {
+          "agree": false
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "agree": "No"
+          }
+        }
+      },
+      {
+        "values": {},
+        "expect": {
+          "ok": false,
+          "fields": {
+            "agree": "This field is required."
+          }
+        }
+      },
+      {
+        "values": {
+          "agree": "maybe"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "agree": "Choose Yes or No."
+          }
+        }
+      }
+    ]
+  },
+  "sample_grid": {
+    "calc": [
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 2,
+              "rate": 10
+            },
+            {
+              "item": "Nut",
+              "qty": 5,
+              "rate": 1.5
+            }
+          ],
+          "customer": "A"
+        },
+        "expect": {
+          "grandTotal": "27.5"
+        },
+        "rows": [
+          {
+            "lineTotal": "20"
+          },
+          {
+            "lineTotal": "7.5"
+          }
+        ],
+        "note": "each row works out its own total; the total outside reads the whole column"
+      },
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 2,
+              "rate": 10
+            }
+          ],
+          "customer": "A"
+        },
+        "expect": {
+          "grandTotal": "20"
+        },
+        "rows": [
+          {
+            "lineTotal": "20"
+          }
+        ]
+      },
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 2
+            }
+          ],
+          "customer": "A"
+        },
+        "expect": {
+          "grandTotal": "0"
+        },
+        "rows": [
+          {}
+        ],
+        "note": "a row whose rate is still empty has no line total, and counts as nothing in the total"
+      },
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 2,
+              "rate": 10
+            },
+            {
+              "item": "Nut",
+              "qty": 2
+            }
+          ],
+          "customer": "A"
+        },
+        "expect": {
+          "grandTotal": "20"
+        },
+        "rows": [
+          {
+            "lineTotal": "20"
+          },
+          {}
+        ]
+      },
+      {
+        "values": {
+          "items": [],
+          "customer": "A"
+        },
+        "expect": {
+          "grandTotal": "0"
+        },
+        "note": "no rows: the total is 0"
+      }
+    ],
+    "server": [
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 2,
+              "rate": 10,
+              "lineTotal": 20
+            },
+            {
+              "item": "Nut",
+              "qty": 5,
+              "rate": 1.5,
+              "lineTotal": 7.5
+            }
+          ],
+          "customer": "Asha",
+          "grandTotal": 27.5
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "grandTotal": 27.5
+          }
+        }
+      },
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 0,
+              "rate": 10
+            }
+          ],
+          "customer": "Asha"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "items.0.qty": "Must be at least 1."
+          }
+        },
+        "note": "a cell's problem is named by section, row (from 0) and field"
+      },
+      {
+        "values": {
+          "customer": "Asha"
+        },
+        "expect": {
+          "ok": true
+        },
+        "note": "no rows is allowed"
+      },
+      {
+        "values": {
+          "items": [
+            {
+              "item": "Bolt",
+              "qty": 2,
+              "rate": 10
+            },
+            {}
+          ],
+          "customer": "Asha"
+        },
+        "expect": {
+          "ok": true
+        },
+        "note": "a row with nothing in it is left out"
+      }
+    ]
+  },
+  "sample_dates": {
+    "calc": [
+      {
+        "values": {
+          "joined": "2026-11-02"
+        },
+        "expect": {
+          "nextWeek": "2026-11-09"
+        }
+      },
+      {
+        "values": {
+          "joined": "2026-12-28"
+        },
+        "expect": {
+          "nextWeek": "2027-01-04"
+        },
+        "note": "over a year end"
+      },
+      {
+        "values": {
+          "joined": "2028-02-26"
+        },
+        "expect": {
+          "nextWeek": "2028-03-04"
+        },
+        "note": "over a leap day"
+      }
+    ],
+    "server": [
+      {
+        "values": {
+          "joined": "2026-11-02",
+          "at": "09:30",
+          "nextWeek": "2026-11-09"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "joined": "2026-11-02",
+            "at": "09:30"
+          }
+        }
+      },
+      {
+        "values": {
+          "joined": "2026-02-30"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "joined": "That date doesn't exist."
+          }
+        }
+      },
+      {
+        "values": {
+          "joined": "1999-01-01"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "joined": "Must be on or after 2000-01-01"
+          }
+        }
+      },
+      {
+        "values": {
+          "joined": "02/11/2026"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "joined": "Use the format YYYY-MM-DD."
+          }
+        },
+        "note": "the server wants yyyy-mm-dd; the parser works in dd/mm/yyyy and the form converts"
+      },
+      {
+        "values": {
+          "at": "25:00"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "at": "Use the format HH:MM."
+          }
+        }
+      },
+      {
+        "values": {
+          "at": "09:30:15"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "at": "09:30:15"
+          }
+        },
+        "note": "seconds are accepted"
+      }
+    ]
+  },
+  "sample_types": {
+    "server": [
+      {
+        "values": {
+          "text": "  hello  "
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "text": "  hello  "
+          }
+        },
+        "note": "text is kept as it was typed (at most 5000 characters); the app trims what it sends if it wants"
+      },
+      {
+        "values": {
+          "email": "  Asha.RAO@Example.COM "
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "email": "asha.rao@example.com"
+          }
+        },
+        "note": "an email is trimmed and made lower case"
+      },
+      {
+        "values": {
+          "email": "asha@"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "email": "Enter a valid email address."
+          }
+        }
+      },
+      {
+        "values": {
+          "url": "https://example.com/a?b=1"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "url": "https://example.com/a?b=1"
+          }
+        }
+      },
+      {
+        "values": {
+          "url": "example.com"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "url": "Enter a valid http(s) URL."
+          }
+        },
+        "note": "http or https, and no spaces"
+      },
+      {
+        "values": {
+          "mobile": "98765 43210"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "mobile": "9876543210"
+          }
+        },
+        "note": "spaces and dashes are taken out"
+      },
+      {
+        "values": {
+          "mobile": "+91 98765 43210"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "mobile": "+919876543210"
+          }
+        }
+      },
+      {
+        "values": {
+          "mobile": "123"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "mobile": "Enter a valid mobile number."
+          }
+        }
+      },
+      {
+        "values": {
+          "mobileIntl": "9876543210"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "mobileIntl": "Include the country code, e.g. +91..."
+          }
+        }
+      },
+      {
+        "values": {
+          "mobileIntl": "+919876543210"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "mobileIntl": "+919876543210"
+          }
+        }
+      },
+      {
+        "values": {
+          "count": "42"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "count": 42
+          }
+        },
+        "note": "a number sent as text is saved as a number"
+      },
+      {
+        "values": {
+          "count": 7.0
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "count": 7
+          }
+        }
+      },
+      {
+        "values": {
+          "count": 7.5
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "count": "Enter a whole number."
+          }
+        }
+      },
+      {
+        "values": {
+          "count": 1001
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "count": "Must be at most 1000."
+          }
+        }
+      },
+      {
+        "values": {
+          "amount": "12.50"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "amount": 12.5
+          }
+        }
+      },
+      {
+        "values": {
+          "amount": "1,250.50"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "amount": "Enter a number."
+          }
+        },
+        "note": "send digits and a point only: no thousands separators"
+      },
+      {
+        "values": {
+          "amount": "abc"
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "amount": "Enter a number."
+          }
+        }
+      },
+      {
+        "values": {
+          "day": "2026-11-02"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "day": "2026-11-02"
+          }
+        }
+      },
+      {
+        "values": {
+          "clock": "09:30"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "clock": "09:30"
+          }
+        }
+      },
+      {
+        "values": {
+          "place": {
+            "lat": 18.5204,
+            "lng": 73.8567,
+            "address": "Pune"
+          }
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "place": {
+              "address": "Pune",
+              "lat": 18.5204,
+              "lng": 73.8567
+            }
+          }
+        },
+        "note": "a place is an object with lat, lng and (optionally) a street address"
+      },
+      {
+        "values": {
+          "place": "18.5204,73.8567"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "place": {
+              "lat": 18.5204,
+              "lng": 73.8567
+            }
+          }
+        },
+        "note": "text 'lat,lng' is accepted and saved as the object"
+      },
+      {
+        "values": {
+          "place": {
+            "lat": 100,
+            "lng": 0
+          }
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "place": "Enter coordinates as {lat,lng}."
+          }
+        }
+      },
+      {
+        "values": {
+          "code": "8901234567890"
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "code": "8901234567890"
+          }
+        },
+        "note": "a scanned barcode or QR is plain text"
+      },
+      {
+        "values": {
+          "pay": {
+            "amount": 250,
+            "method": "upi",
+            "status": "paid"
+          }
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "pay": {
+              "amount": 250,
+              "currency": "INR",
+              "method": "UPI",
+              "status": "paid"
+            }
+          }
+        },
+        "note": "a payment is an object: amount, method (one of the form's, any capitals), status paid or pending"
+      },
+      {
+        "values": {
+          "pay": {
+            "amount": "99.5"
+          }
+        },
+        "expect": {
+          "ok": true,
+          "stored": {
+            "pay": {
+              "amount": 99.5,
+              "currency": "INR",
+              "method": "",
+              "status": "pending"
+            }
+          }
+        },
+        "note": "pay later: no method, status pending"
+      },
+      {
+        "values": {
+          "pay": {
+            "amount": 10,
+            "status": "paid"
+          }
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "pay": "Choose how it was paid."
+          }
+        }
+      },
+      {
+        "values": {
+          "pay": {
+            "amount": 10,
+            "method": "Cheque"
+          }
+        },
+        "expect": {
+          "ok": false,
+          "fields": {
+            "pay": "Choose a payment method from the list."
+          }
+        }
+      }
+    ]
+  }
+}

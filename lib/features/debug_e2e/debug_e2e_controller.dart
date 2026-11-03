@@ -10,6 +10,7 @@ import '../../data/e2e/e2e_key_store.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_random.dart';
 import '../../core/config/app_config.dart';
+import '../../core/utils/attachment_tag.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
 import '../../data/session_store.dart';
@@ -32,6 +33,7 @@ class DebugE2eController extends GetxController {
   }) : _keyStore = keyStore;
 
   static const _vectorsAsset = 'mobile-handoff/e2e-vectors.json';
+  static const _attachmentAsset = 'assets/debug/e2e-attachment-vectors.json';
 
   final E2eKeyStore _keyStore;
   final E2eRepository e2e;
@@ -166,6 +168,7 @@ class DebugE2eController extends GetxController {
       await _lateBox(vectors);
       await _registration(vectors, devices);
       await _file(vectors);
+      await _attachmentVectors();
       await _safety(vectors, devices);
       _encodings(vectors);
       await _roundTrip();
@@ -605,6 +608,126 @@ class DebugE2eController extends GetxController {
         return e.code == 'file_decrypt_failed' ? null : 'got ${e.code}';
       }
     });
+    await _check('file: blob is the data plus 16 bytes', () async {
+      final enc = await _crypto.encryptFile(plain);
+      return enc.ciphertext.length == plain.length + 16
+          ? null
+          : '${enc.ciphertext.length} bytes';
+    });
+    await _check('file: our own round trip', () async {
+      final data = Uint8List.fromList([
+        for (var i = 0; i < 100000; i++) (i * 31 + 7) & 0xff,
+      ]);
+      final enc = await _crypto.encryptFile(data);
+      final out = await _crypto.decryptFile(enc.ciphertext, enc.key, enc.iv);
+      return _toHex(out) == _toHex(data) ? null : 'plaintext differs';
+    });
+    await _check('file: a fresh key and iv each time', () async {
+      final a = await _crypto.encryptFile(plain);
+      final b = await _crypto.encryptFile(plain);
+      return a.key != b.key && a.iv != b.iv ? null : 'reused';
+    });
+    Future<String?> refused(List<int> blob, String key, String iv) async {
+      try {
+        await _crypto.decryptFile(blob, key, iv);
+        return 'opened';
+      } on E2eException catch (e) {
+        return e.code == 'file_decrypt_failed' ? null : 'got ${e.code}';
+      }
+    }
+
+    await _check('file: a wrong key is refused', () async {
+      final other = await _crypto.encryptFile(plain);
+      return refused(cipher, other.key, f['ivB64u'] as String);
+    });
+    await _check('file: a wrong iv is refused', () async {
+      final other = await _crypto.encryptFile(plain);
+      return refused(cipher, f['keyB64u'] as String, other.iv);
+    });
+    await _check('file: a tampered tag is refused', () async {
+      final bad = Uint8List.fromList(cipher)..[cipher.length - 1] ^= 1;
+      return refused(bad, f['keyB64u'] as String, f['ivB64u'] as String);
+    });
+    await _check('file: a short or empty blob is refused', () async {
+      final key = f['keyB64u'] as String;
+      final iv = f['ivB64u'] as String;
+      return await refused(Uint8List(0), key, iv) ??
+          await refused(Uint8List(15), key, iv) ??
+          await refused(cipher.sublist(0, 10), key, iv);
+    });
+    await _check('file: a cut blob is refused', () async {
+      return refused(
+        cipher.sublist(0, cipher.length - 1),
+        f['keyB64u'] as String,
+        f['ivB64u'] as String,
+      );
+    });
+  }
+
+  // ---- attachment vectors (E2E_ATTACHMENTS.md) ---------------------------
+
+  Future<void> _attachmentVectors() async {
+    final Map<String, dynamic> v;
+    try {
+      v =
+          jsonDecode(await rootBundle.loadString(_attachmentAsset))
+              as Map<String, dynamic>;
+    } catch (_) {
+      _add('attachment vectors: file missing', false, _attachmentAsset);
+      return;
+    }
+    for (final raw in v['positive'] as List) {
+      final p = raw as Map<String, dynamic>;
+      final name = p['name'] as String;
+      final key = p['key'] as String;
+      final iv = p['iv'] as String;
+      final plain = base64.decode(p['plaintext'] as String);
+      final blob = base64.decode(p['blob'] as String);
+      await _check('attachment: decrypt, $name', () async {
+        final out = await _crypto.decryptFile(blob, key, iv);
+        return _toHex(out) == _toHex(plain) ? null : 'plaintext differs';
+      });
+      await _check(
+        'attachment: encrypt reproduces blob and tag, $name',
+        () async {
+          final enc = await E2eCrypto(
+            random: E2eRandom.fixed([
+              E2eCrypto.decode(key),
+              E2eCrypto.decode(iv),
+            ]),
+          ).encryptFile(plain);
+          if (_toHex(enc.ciphertext) != _toHex(blob)) return 'blob differs';
+          if (enc.ciphertext.length != p['blobBytes']) return 'blob size';
+          final want = AttachmentTag.parse(p['tag'] as String);
+          if (want == null) return 'vector tag not read';
+          final built = AttachmentTag(
+            kind: want.kind,
+            name: want.name,
+            size: want.size,
+            url: want.url,
+            type: want.type,
+            e2eKey: enc.key,
+            e2eIv: enc.iv,
+          ).build();
+          return built == p['tag'] ? null : 'tag differs';
+        },
+      );
+    }
+    for (final raw in v['negative'] as List) {
+      final n = raw as Map<String, dynamic>;
+      await _check('attachment: refused, ${n['name']}', () async {
+        try {
+          await _crypto.decryptFile(
+            base64.decode(n['blob'] as String),
+            n['key'] as String,
+            n['iv'] as String,
+          );
+          return 'opened';
+        } on E2eException catch (e) {
+          return e.code == 'file_decrypt_failed' ? null : 'got ${e.code}';
+        }
+      });
+    }
   }
 
   // ---- safety number, fingerprint --------------------------------------

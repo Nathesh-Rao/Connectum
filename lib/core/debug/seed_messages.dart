@@ -155,6 +155,55 @@ class SeedMessages {
           ),
           _m(c, 1009, 'priya', 'The new flow looks great. Let us ship it!', 3),
           _m(c, 1010, 'priya', 'Can you confirm by end of day?', 2),
+          _m(
+            c,
+            1011,
+            'priya',
+            '[ATTACHMENT:{"kind":"image","name":"IMG_0042.jpg","size":"1.2 MB","url":"/uploads/seed-photo.jpg","type":"image/jpeg"}]',
+            1,
+          ),
+          _m(
+            c,
+            1012,
+            me,
+            '[ATTACHMENT:{"kind":"image","name":"missing.jpg","size":"340 KB","url":"/uploads/seed-missing.jpg","type":"image/jpeg"}]',
+            1,
+          ),
+          _m(
+            c,
+            1013,
+            'priya',
+            '[ATTACHMENT:{"kind":"file","name":"Workflow review final.pdf","size":"2.4 MB","url":"/uploads/seed-doc.pdf","type":"application/pdf"}]',
+            1,
+          ),
+          _m(
+            c,
+            1015,
+            'priya',
+            '[ATTACHMENT:{"kind":"file","name":"Approval matrix.docx","size":"86 KB","url":"/uploads/seed-matrix.docx","type":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}]',
+            1,
+          ),
+          _m(
+            c,
+            1016,
+            me,
+            '[ATTACHMENT:{"kind":"file","name":"Slow download.pdf","size":"9.8 MB","url":"/uploads/seed-slow.pdf","type":"application/pdf"}]',
+            1,
+          ),
+          _m(
+            c,
+            1017,
+            'priya',
+            '[ATTACHMENT:{"kind":"file","name":"Gone from server.pdf","size":"1.1 MB","url":"/uploads/seed-fail.pdf","type":"application/pdf"}]',
+            1,
+          ),
+          _m(
+            c,
+            1014,
+            'priya',
+            '[ATTACHMENT:{"kind":"image","name":"broken","url":',
+            1,
+          ),
         ];
       case 'dm:arjun':
         return [
@@ -305,6 +354,39 @@ class SeedMessages {
             285,
             decryptState: 'ok',
           ),
+          _m(
+            c,
+            4007,
+            'ravi',
+            '[ATTACHMENT:{"kind":"image","name":"site-visit.jpg","size":"1.2 MB","url":"/uploads/seed-e2e-photo.e2e","type":"image/jpeg","e2e":{"key":"c2VlZC1rZXktbm90LXJlYWwtc2VlZC1rZXktbm90LXJlYWw","iv":"c2VlZC1pdi0xMjM"}}]',
+            280,
+            decryptState: 'ok',
+          ),
+          _m(
+            c,
+            4008,
+            'ravi',
+            '[ATTACHMENT:{"kind":"file","name":"Signed copy.pdf","size":"310 KB","url":"/uploads/seed-e2e-doc.e2e","type":"application/pdf","e2e":{"key":"c2VlZC1rZXktbm90LXJlYWwtc2VlZC1rZXktbm90LXJlYWw","iv":"c2VlZC1pdi0xMjM"}}]',
+            278,
+            decryptState: 'ok',
+          ),
+          _m(
+            c,
+            4009,
+            'ravi',
+            '[ATTACHMENT:{"kind":"image","name":"damaged.jpg","size":"2.0 MB","url":"/uploads/seed-e2e-bad.e2e","type":"image/jpeg","e2e":{"key":"c2VlZC1rZXktbm90LXJlYWwtc2VlZC1rZXktbm90LXJlYWw","iv":"c2VlZC1pdi0xMjM"}}]',
+            276,
+            decryptState: 'ok',
+          ),
+          _m(
+            c,
+            4010,
+            'ravi',
+            '[ATTACHMENT:{"kind":"file","name":"Damaged report.pdf","size":"90 KB","url":"/uploads/seed-e2e-bad.e2e","type":"application/pdf","e2e":{"key":"c2VlZC1rZXktbm90LXJlYWwtc2VlZC1rZXktbm90LXJlYWw","iv":"c2VlZC1pdi0xMjM"}}]',
+            275,
+            decryptState: 'ok',
+          ),
+          _m(c, 4011, 'ravi', 'e2e1:FFFF', 274, decryptState: 'cant_decrypt'),
         ];
       case 'dm:isha':
         return [
