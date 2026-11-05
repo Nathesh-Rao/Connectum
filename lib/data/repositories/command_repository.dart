@@ -96,7 +96,11 @@ class CommandRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.onOnline.listen((_) => _isFresh = false);
-    ever(_store.current, (_) => _isFresh = false);
+    ever(_store.current, (_) {
+      _isFresh = false;
+      _loadedOrg = null;
+      catalog.clear();
+    });
   }
 
   // ---- the catalog ---------------------------------------------------------

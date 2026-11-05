@@ -1,0 +1,54 @@
+{
+  "name": "sample_calc",
+  "caption": "Sample: calculations (auto values)",
+  "fields": [
+    {
+      "name": "qty",
+      "type": "wholenumber",
+      "caption": "Quantity",
+      "required": true,
+      "min": 1
+    },
+    {
+      "name": "price",
+      "type": "number",
+      "caption": "Price",
+      "required": true,
+      "min": 0
+    },
+    {
+      "name": "total",
+      "type": "number",
+      "caption": "Total",
+      "calc": {
+        "expr": "qty*price"
+      }
+    },
+    {
+      "name": "age",
+      "type": "wholenumber",
+      "caption": "Age"
+    },
+    {
+      "name": "group",
+      "type": "list",
+      "caption": "Group",
+      "options": [
+        "Adult",
+        "Minor"
+      ],
+      "calc": {
+        "expr": "IIF(age>18,\"Adult\",\"Minor\")"
+      }
+    },
+    {
+      "name": "stamp",
+      "type": "wholenumber",
+      "caption": "Reference number (hidden, worked out)",
+      "hidden": true,
+      "calc": {
+        "expr": "qty*1000+age"
+      }
+    }
+  ]
+}

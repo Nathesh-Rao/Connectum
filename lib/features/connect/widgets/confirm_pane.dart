@@ -7,6 +7,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_highlight_text.dart';
 import '../../../core/widgets/app_tag.dart';
 import '../../../data/models/connect_card.dart';
 import '../../../data/models/identity_info.dart';
@@ -36,7 +37,8 @@ class ConfirmPane extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           _Note(
             text:
-                "This QR belongs to a person. Join ${card.name} first; you can connect with them once you're in.",
+                "This QR belongs to a person. Join {name} first; you can connect with them once you're in.",
+            values: {'name': card.name},
           ),
         ],
         const SizedBox(height: AppSpacing.md),
@@ -91,9 +93,10 @@ class _Header extends StatelessWidget {
 }
 
 class _Note extends StatelessWidget {
-  const _Note({required this.text});
+  const _Note({required this.text, this.values = const {}});
 
   final String text;
+  final Map<String, String> values;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +106,7 @@ class _Note extends StatelessWidget {
         color: AppColors.accentSoft,
         borderRadius: AppRadius.mdAll,
       ),
-      child: Text(text, style: AppText.readable),
+      child: AppHighlightText(text, values: values),
     );
   }
 }
@@ -125,14 +128,18 @@ class _Member extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = membership;
     final text = m.isActive
-        ? "You're already in ${card.name}."
+        ? "{you}'re already in {name}."
         : m.status == 'pending'
-        ? 'Your request to join ${card.name} is waiting for approval. You can enter once an administrator approves it.'
-        : "Your earlier request to join ${card.name} wasn't approved. Contact the enterprise if you think that's a mistake.";
+        ? 'Your request to join {name} is waiting for approval. {you} can enter once an administrator approves it.'
+        : "Your earlier request to join {name} wasn't approved. Contact the enterprise if you think that's a mistake.";
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(text, style: AppText.body),
+        AppHighlightText(
+          text,
+          values: {'you': 'You', 'name': card.name},
+          style: AppText.body,
+        ),
         const SizedBox(height: AppSpacing.lg),
         if (m.isActive)
           AppButton.primary(

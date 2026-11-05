@@ -4,15 +4,19 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../data/db/app_database.dart';
 import '../../data/form_logic/form_logic_service.dart';
 import '../../data/form_logic/sample_forms.dart';
 import '../../data/models/form_option.dart';
 import '../../data/models/ids.dart';
+import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
+import '../../data/repositories/message_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
-import '../forms/temporary_condition_evaluator.dart';
 import 'cache_vectors.dart';
+import 'condition_vectors.dart';
+import 'scope_vectors.dart';
 
 /// Read-only look at the `sample_*` forms: the definition as the server sent
 /// it, plain typed values, and what the form logic works out from them live.
@@ -23,6 +27,9 @@ class DebugFormsController extends GetxController {
     required this.logic,
     required this.samples,
     required this.options,
+    required this.db,
+    required this.conversations,
+    required this.messages,
   });
 
   final SessionStore session;
@@ -30,6 +37,9 @@ class DebugFormsController extends GetxController {
   final FormLogicService logic;
   final SampleForms samples;
   final FormOptionsRepository options;
+  final AppDatabase db;
+  final ConversationRepository conversations;
+  final MessageRepository messages;
 
   /// The kept-lists checks; run on demand because they use the database.
   final cacheResults = <CacheVector>[].obs;
@@ -62,6 +72,7 @@ class DebugFormsController extends GetxController {
   @override
   void onReady() {
     super.onReady();
+    unawaited(checkConditions());
     if (isReady) load();
   }
 
@@ -74,8 +85,27 @@ class DebugFormsController extends GetxController {
     super.onClose();
   }
 
-  Future<void> runCacheVectors() async =>
-      cacheResults.assignAll(await CacheVectors.run(options));
+  final cleanupResult = RxnString();
+
+  /// Deletes the cached rows and outbox of the active organisation and person
+  /// only, then reads again and syncs from the server when online.
+  Future<void> clearActiveOrg() async {
+    final org = session.orgId;
+    final user = session.userId;
+    if (org == null || user == null) {
+      cleanupResult.value = 'Not signed in to an organisation.';
+      return;
+    }
+    await db.clearScopeRows(org, user);
+    await conversations.reload();
+    cleanupResult.value = 'Cleared the cached data of $org.';
+    if (socket.isOnline) unawaited(messages.syncNow());
+  }
+
+  Future<void> runCacheVectors() async {
+    cacheResults.assignAll(await CacheVectors.run(options));
+    cacheResults.addAll(await ScopeVectors.run(db, conversations, messages));
+  }
 
   TextEditingController inputFor(String key) =>
       _inputs.putIfAbsent(key, () => TextEditingController(text: typed[key]));
@@ -206,7 +236,9 @@ class DebugFormsController extends GetxController {
     }
     calculated.assignAll(done);
     ruleMessages.assignAll(messages);
-    visible.assignAll(_visibility(s, done));
+    final shown = await _visibility(s, done);
+    if (run != _generation) return;
+    visible.assignAll(shown);
   }
 
   Future<String?> _rule(
@@ -225,22 +257,49 @@ class DebugFormsController extends GetxController {
     return r.isOk ? r.value : 'engine: ${r.error}';
   }
 
-  Map<String, bool> _visibility(FormShape s, Map<String, dynamic> values) {
-    Object? valueOf(String n) => values[n];
-    final out = <String, bool>{};
+  Future<Map<String, bool>> _visibility(
+    FormShape s,
+    Map<String, dynamic> values,
+  ) async {
+    final sections = [
+      for (final x in s.tstruct['sections'] as List? ?? const [])
+        if (x is Map) x,
+    ];
+    Map? sectionOf(Object? name) =>
+        sections.where((x) => x['name'] == name).firstOrNull;
+    final items = <Map<String, dynamic>>[];
     for (final f in s.fields) {
-      final section = s.tstruct['sections'] is List
-          ? (s.tstruct['sections'] as List)
-                .whereType<Map>()
-                .where((x) => x['name'] == f['section'])
-                .firstOrNull
-          : null;
-      out[idText(f['name'])] =
-          f['hidden'] != true &&
-          TemporaryConditionEvaluator.matches(f['condition'], valueOf) &&
-          TemporaryConditionEvaluator.matches(section?['condition'], valueOf);
+      final name = idText(f['name']);
+      if (f['condition'] != null) {
+        items.add({'k': name, 'c': f['condition']});
+      }
+      final sc = sectionOf(f['section'])?['condition'];
+      if (sc != null) items.add({'k': '$name\u00a7', 'c': sc});
     }
-    return out;
+    final r = items.isEmpty
+        ? const FormLogicResult<Map<String, bool>>.ok({})
+        : await logic.evalConditions(values, items);
+    final met = r.value ?? const <String, bool>{};
+    return {
+      for (final f in s.fields)
+        idText(f['name']):
+            f['hidden'] != true &&
+            (met[idText(f['name'])] ?? true) &&
+            (met['${idText(f['name'])}\u00a7'] ?? true),
+    };
+  }
+
+  /// Each condition vector through the JS `evalCondition`: the answer it gave
+  /// (null when the engine could not answer).
+  final conditionResults = <bool?>[].obs;
+
+  Future<void> checkConditions() async {
+    final out = <bool?>[];
+    for (final v in conditionVectors) {
+      final r = await logic.evalCondition(v.condition, v.values);
+      out.add(r.isOk ? r.value : null);
+    }
+    conditionResults.assignAll(out);
   }
 
   Future<void> checkAll() async {

@@ -1,0 +1,17 @@
+{
+  "name": "sample_colour",
+  "caption": "Sample: colours (a small list the other samples read)",
+  "fields": [
+    {
+      "name": "colour",
+      "type": "text",
+      "caption": "Colour",
+      "required": true
+    },
+    {
+      "name": "code",
+      "type": "text",
+      "caption": "Code"
+    }
+  ]
+}

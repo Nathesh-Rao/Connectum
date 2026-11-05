@@ -28,8 +28,12 @@ class ChatTime {
     'Dec',
   ];
 
-  static String time(int ts) {
+  static String time(int ts, {bool is24Hour = false}) {
     final t = DateTime.fromMillisecondsSinceEpoch(ts);
+    if (is24Hour) {
+      return '${t.hour.toString().padLeft(2, '0')}:'
+          '${t.minute.toString().padLeft(2, '0')}';
+    }
     final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
     final minute = t.minute.toString().padLeft(2, '0');
     return '$hour:$minute ${t.hour < 12 ? 'AM' : 'PM'}';

@@ -12,6 +12,21 @@ class ConversationRoute {
 
   static final observer = _StackObserver();
 
+  static final _jumps = <String, String>{};
+
+  /// An open conversation's hook that scrolls to a waiting message.
+  static final jumpListeners = <String, void Function()>{};
+
+  /// Asks the conversation to scroll to [messageId] and flash it once it is
+  /// open (or at once, when it already is).
+  static void jumpTo(String conversationId, String messageId) {
+    _jumps[conversationId] = messageId;
+    jumpListeners[conversationId]?.call();
+  }
+
+  static String? takeJump(String conversationId) =>
+      _jumps.remove(conversationId);
+
   static void open(String conversationId) {
     final name = AppRoutes.conversationOf(conversationId);
     if (Get.currentRoute == name) return;

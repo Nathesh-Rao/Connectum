@@ -32,6 +32,10 @@ class ConversationRepository extends GetxService {
   final hasSyncStalled = false.obs;
   final loadError = RxnString();
   String? _scope;
+
+  /// The `<org>/<user>` the rows in [conversations] were read for. A list read
+  /// for any other scope is never shown.
+  String? listScope;
   Completer<void>? _listsReady;
   Timer? _syncGraceTimer;
   final _readTimers = <String, Timer>{};
@@ -49,14 +53,31 @@ class ConversationRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.events.listen(_onEvent);
+    _scope = '${_session.orgId}/${_session.userId}';
     ever(_session.current, (_) {
       final scope = '${_session.orgId}/${_session.userId}';
       if (scope != _scope) {
         _scope = scope;
+        listScope = null;
         conversations.clear();
+        loadError.value = null;
         isLoaded.value = false;
         isSynced.value = false;
         hasSyncStalled.value = false;
+        _syncGraceTimer?.cancel();
+        for (final timer in [
+          ..._readTimers.values,
+          ..._deliveredTimers.values,
+        ]) {
+          timer.cancel();
+        }
+        _readTimers.clear();
+        _deliveredTimers.clear();
+        if (_session.orgId != null) {
+          _syncGraceTimer = Timer(_syncGrace, () {
+            if (!isSynced.value) hasSyncStalled.value = true;
+          });
+        }
       }
       reload();
     });
@@ -70,21 +91,15 @@ class ConversationRepository extends GetxService {
     final org = _session.orgId;
     final user = _session.userId;
     if (org == null || user == null) {
+      listScope = null;
       conversations.clear();
       return;
     }
     try {
-      final rows = await _db.query(
-        'SELECT c.*, m.text AS lm_text, m.kind AS lm_kind, m.is_mine AS lm_mine, m.status AS lm_status, '
-        'm.is_encrypted_unsupported AS lm_e2e, m.plaintext AS lm_plain, m.decrypt_state AS lm_dstate, m.is_deleted AS lm_deleted, m.form_json AS lm_form '
-        'FROM conversations c LEFT JOIN messages m ON m.rowid = ('
-        'SELECT x.rowid FROM messages x WHERE x.org_id = c.org_id AND x.user_id = c.user_id AND x.conv_id = c.conv_id '
-        'ORDER BY x.ts DESC, x.local_seq DESC LIMIT 1) '
-        'WHERE c.org_id = ? AND c.user_id = ? ORDER BY c.last_ts DESC',
-        [org, user],
-      );
+      final list = await readFor(org, user);
       if (org != _session.orgId || user != _session.userId) return;
-      conversations.assignAll(rows.map(Conversation.fromRow));
+      listScope = '$org/$user';
+      conversations.assignAll(list);
       loadError.value = null;
       isLoaded.value = true;
     } catch (e) {
@@ -93,9 +108,24 @@ class ConversationRepository extends GetxService {
     }
   }
 
+  /// The list of one organisation and person, read from SQLite.
+  Future<List<Conversation>> readFor(String org, String user) async {
+    final rows = await _db.query(
+      'SELECT c.*, m.text AS lm_text, m.kind AS lm_kind, m.is_mine AS lm_mine, m.status AS lm_status, '
+      'm.is_encrypted_unsupported AS lm_e2e, m.plaintext AS lm_plain, m.decrypt_state AS lm_dstate, m.is_deleted AS lm_deleted, m.form_json AS lm_form '
+      'FROM conversations c LEFT JOIN messages m ON m.rowid = ('
+      'SELECT x.rowid FROM messages x WHERE x.org_id = c.org_id AND x.user_id = c.user_id AND x.conv_id = c.conv_id '
+      'ORDER BY x.ts DESC, x.local_seq DESC LIMIT 1) '
+      'WHERE c.org_id = ? AND c.user_id = ? ORDER BY c.last_ts DESC',
+      [org, user],
+    );
+    return rows.map(Conversation.fromRow).toList();
+  }
+
   /// Asks the server for DM threads, groups and hosts and waits until the
   /// last reply (`hosts`) has been written to SQLite.
   Future<void> requestLists() async {
+    final scope = _scope;
     _listsReady = Completer<void>();
     _syncGraceTimer?.cancel();
     _syncGraceTimer = Timer(_syncGrace, () {
@@ -111,6 +141,7 @@ class ConversationRepository extends GetxService {
     // Last, so its archive, pin, mute and unread win over the lists above.
     await syncInbox();
     await flushPositions();
+    if (scope != _scope) return;
     _syncGraceTimer?.cancel();
     isSynced.value = true;
   }
@@ -470,6 +501,7 @@ class ConversationRepository extends GetxService {
   }
 
   Future<void> _onEvent(Map<String, dynamic> e) async {
+    if (!_socket.isCurrent(e)) return;
     final org = _session.orgId;
     final user = _session.userId;
     if (org == null || user == null) return;
@@ -522,6 +554,10 @@ class ConversationRepository extends GetxService {
       case 'group_created':
       case 'added_to_group':
         await _db.transaction((sql) => _upsertGroup(sql, org, user, e));
+      case 'group_system':
+        // Not a stored message; the full member list comes from /groups.
+        unawaited(_socket.sendCommand('/groups'));
+        return;
       case 'left_group':
         await _db.update(
           'UPDATE conversations SET is_archived = 1 WHERE org_id = ? AND user_id = ? AND conv_id = ?',
@@ -549,12 +585,39 @@ class ConversationRepository extends GetxService {
     }
   }
 
+  /// Writes a `group_created` or `added_to_group` event at once, so the group
+  /// is in the list before the screen opens it.
+  Future<void> saveGroup(Map<String, dynamic> e) async {
+    final org = _session.orgId;
+    final user = _session.userId;
+    if (org == null || user == null) return;
+    await _db.transaction((sql) => _upsertGroup(sql, org, user, e));
+    await reload();
+  }
+
+  /// A group I just made or was added to has no message yet: it is stamped
+  /// with the time so it sits at the top of the list instead of the bottom.
   Future<void> _upsertGroup(Sql sql, String org, String user, Map g) async {
     final conv = 'group:${idText(g['name'])}';
+    final members = g['members'] is List ? g['members'] as List : const [];
+    final isNew =
+        g['type'] == 'added_to_group' ||
+        (g['type'] == 'group_created' && members.length <= 1);
     await ensure(sql, org, user, conv);
     await sql.update(
-      'UPDATE conversations SET is_archived = 0, members_json = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-      [jsonEncode(g['members'] ?? []), org, user, conv],
+      'UPDATE conversations SET is_archived = 0, members_json = ?, '
+      "owner = COALESCE(NULLIF(?, ''), owner), "
+      'last_ts = CASE WHEN ? = 1 AND last_ts = 0 THEN ? ELSE last_ts END '
+      'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [
+        jsonEncode(g['members'] ?? []),
+        idText(g['owner']),
+        isNew ? 1 : 0,
+        DateTime.now().millisecondsSinceEpoch,
+        org,
+        user,
+        conv,
+      ],
     );
   }
 }

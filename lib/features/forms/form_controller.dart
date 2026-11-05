@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
@@ -9,6 +10,7 @@ import 'package:dio/dio.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/form_logic/form_logic_service.dart';
+import '../../data/form_logic/form_logic_values.dart';
 import '../../data/form_logic/sample_forms.dart';
 import '../../data/models/form_definition.dart';
 import '../../data/models/form_option.dart';
@@ -20,7 +22,6 @@ import '../../data/repositories/submission_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import 'form_rules.dart';
-import 'temporary_condition_evaluator.dart';
 import 'models/field_input.dart';
 import 'models/form_launch.dart';
 
@@ -76,9 +77,14 @@ class FormController extends GetxController {
   bool _isClosing = false;
   bool _isDisposed = false;
   Worker? _onlineWorker;
+  Worker? _personWorker;
   FormShape? _shape;
   Timer? _calcTimer;
   int _calcRun = 0;
+  int _visibilityRun = 0;
+
+  /// Which conditions hold, by `_fieldKey` / `_sectionKey`.
+  final _met = <String, bool>{}.obs;
   bool _isMonthFirst = false;
 
   static const calcDelay = Duration(milliseconds: 150);
@@ -116,6 +122,7 @@ class FormController extends GetxController {
       if (viewState.value == AppViewState.offline) unawaited(_load());
       if (definition != null) _refreshSources();
     });
+    _personWorker = ever(logic.personVersion, (_) => _scheduleCalc());
     unawaited(_load());
   }
 
@@ -141,6 +148,7 @@ class FormController extends GetxController {
     _shape = FormShape(def.raw);
     _isMonthFirst = idText(def.raw['dateFormat']).toLowerCase() == 'mm/dd/yyyy';
     await logic.setDateFormat(_isMonthFirst ? 'mm/dd/yyyy' : 'dd/mm/yyyy');
+    await logic.ensurePerson();
     _build(def);
     _startSources();
     await _calc();
@@ -231,27 +239,72 @@ class FormController extends GetxController {
 
   /// A field is shown when it is not hidden and its own condition and its
   /// section's both hold. A grid field's condition looks at its own row
-  /// first. Reads the values it depends on, so an Obx around it rebuilds when
-  /// they change.
+  /// first. The conditions are answered by the form logic (`_updateVisibility`,
+  /// after the calculations); this reads the last answer, so an Obx around it
+  /// rebuilds when they change. A condition not answered yet counts as met.
   bool isVisible(FormFieldDef f, {RowInput? row}) =>
-      definition != null && f.raw['hidden'] != true && _isCounted(f, row: row);
+      definition != null && _isCounted(f, row: row) && f.raw['hidden'] != true;
 
   /// Does the field take part (conditions hold), shown or not?
   bool _isCounted(FormFieldDef f, {RowInput? row}) {
     final def = definition;
     if (def == null) return false;
     final section = def.sectionOf(f.section);
-    if (section != null &&
-        !TemporaryConditionEvaluator.matches(
-          section.condition,
-          (n) => _valueOf(n, null),
-        )) {
-      return false;
+    if (section != null && !isSectionVisible(section)) return false;
+    return f.condition == null || (_met[_fieldKey(f, row)] ?? true);
+  }
+
+  static String _fieldKey(FormFieldDef f, RowInput? row) =>
+      row == null ? f.name : '${f.name}@${row.id}';
+
+  static String _sectionKey(FormSectionDef s) => '\u00a7${s.name}';
+
+  /// The values a condition reads: the fields by name, a switch as `Yes` or
+  /// `No`, a list kept as a list.
+  static Map<String, dynamic> _conditionScope(Map<String, FieldInput> inputs) {
+    final out = <String, dynamic>{};
+    inputs.forEach((name, input) {
+      final v = input.value.value;
+      if (v == null) return;
+      out[name] = input.def.type == 'toggle'
+          ? FormLogicValues.value('toggle', v)
+          : v;
+    });
+    return out;
+  }
+
+  /// Asks the logic which conditions hold for the answers as they are now.
+  /// False when it could not answer.
+  Future<bool> _updateVisibility() async {
+    final def = definition;
+    if (def == null || _isDisposed) return false;
+    final run = ++_visibilityRun;
+    final items = <Map<String, dynamic>>[
+      for (final s in def.sections)
+        if (s.condition != null) {'k': _sectionKey(s), 'c': s.condition},
+      for (final f in def.fields)
+        if (f.condition != null && !def.isGridSection(f.section))
+          {'k': _fieldKey(f, null), 'c': f.condition},
+      for (final g in grids.values)
+        for (final row in g.rows)
+          for (final c in g.columns)
+            if (c.condition != null)
+              {
+                'k': _fieldKey(c, row),
+                'c': c.condition,
+                'r': _conditionScope(row.fields),
+              },
+    ];
+    if (items.isEmpty) {
+      if (_met.isNotEmpty) _met.clear();
+      return true;
     }
-    return TemporaryConditionEvaluator.matches(
-      f.condition,
-      (n) => _valueOf(n, row),
-    );
+    final r = await logic.evalConditions(_conditionScope(fields), items);
+    if (_isDisposed) return false;
+    if (run != _visibilityRun) return true;
+    if (!r.isOk) return false;
+    if (!mapEquals(r.value!, _met)) _met.assignAll(r.value!);
+    return true;
   }
 
   /// Does the value go into the record? What is shown does; so does a hidden
@@ -272,10 +325,7 @@ class FormController extends GetxController {
       definition?.sections.any((s) => s.condition != null) ?? false;
 
   bool isSectionVisible(FormSectionDef s) =>
-      TemporaryConditionEvaluator.matches(
-        s.condition,
-        (n) => _valueOf(n, null),
-      );
+      s.condition == null || (_met[_sectionKey(s)] ?? true);
 
   /// The sections to show, in order, with those whose condition fails left
   /// out. Reads the values the conditions depend on.
@@ -931,7 +981,7 @@ class FormController extends GetxController {
         });
       }
     }
-    return true;
+    return _updateVisibility();
   }
 
   Future<void> loadChoices(FieldInput f) async {
@@ -1308,6 +1358,7 @@ class FormController extends GetxController {
     _isDisposed = true;
     _calcTimer?.cancel();
     _onlineWorker?.dispose();
+    _personWorker?.dispose();
     scroll.dispose();
     for (final f in fields.values) {
       f.dispose();

@@ -44,7 +44,7 @@ class DebugFormsView extends GetView<DebugFormsController> {
             if (c.error.value != null) _Line(c.error.value!, isOk: false),
             if (s == null) ..._cache(c),
             if (s == null) ..._inputs(),
-            if (s == null) ..._conditions(),
+            if (s == null) ..._conditions(c),
             const SizedBox(height: AppSpacing.xl),
           ],
         );
@@ -61,15 +61,21 @@ class DebugFormsView extends GetView<DebugFormsController> {
       const SizedBox(height: AppSpacing.md),
       _Head(
         results.isEmpty
-            ? 'Kept lists (form.options)'
-            : 'Kept lists (form.options)  '
+            ? 'Kept lists (form.options) and org scope'
+            : 'Kept lists (form.options) and org scope  '
                   '(${results.length - failed} pass, $failed fail)',
       ),
       AppButton.secondary(
-        label: 'Run kept-lists checks',
+        label: 'Run kept-lists and org-scope checks',
         onPressed: c.runCacheVectors,
       ),
       for (final r in results) _Line(r.line, isOk: r.isOk),
+      AppButton.secondary(
+        label: 'Clear cached data of the active organisation',
+        onPressed: c.clearActiveOrg,
+      ),
+      if (c.cleanupResult.value != null)
+        _Line(c.cleanupResult.value!, isOk: true),
     ];
   }
 
@@ -88,21 +94,25 @@ class DebugFormsView extends GetView<DebugFormsController> {
     ];
   }
 
-  /// The temporary condition evaluator against the web's `evalCondition`.
-  /// A DIFF is a known difference, not a failure to fix in Dart.
-  List<Widget> _conditions() {
-    final differ = conditionVectors.where((v) => !v.isSame).toList();
+  /// The condition vectors through the JS `evalCondition`.
+  List<Widget> _conditions(DebugFormsController c) {
+    final got = c.conditionResults;
+    final isDone = got.length == conditionVectors.length;
+    final bad = [
+      for (var i = 0; i < got.length; i++)
+        if (got[i] != conditionVectors[i].web) i,
+    ];
     return [
       const SizedBox(height: AppSpacing.md),
       _Head(
-        'Conditions: temporary evaluator vs web evalCondition  '
-        '(${conditionVectors.length - differ.length} same, ${differ.length} differ)',
+        'Conditions through the JS evalCondition  '
+        '(${isDone ? '${conditionVectors.length - bad.length} pass, ${bad.length} fail' : 'running…'})',
       ),
-      for (final v in conditionVectors)
+      for (final i in bad)
         _Line(
-          '${v.isSame ? 'SAME' : 'DIFF'}  ${v.name}\n'
-          '  web ${v.web}${v.isDocumented ? ' (per doc)' : ''}, temporary ${v.temporary}',
-          isOk: v.isSame,
+          'FAIL  ${conditionVectors[i].name}\n'
+          '  expected ${conditionVectors[i].web}, got ${got[i]}',
+          isOk: false,
         ),
     ];
   }

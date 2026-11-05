@@ -7,6 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_flex_gap.dart';
+import '../../core/widgets/app_invite_card.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/onboarding_lottie.dart';
@@ -35,6 +36,7 @@ class OnboardingView extends GetView<OnboardingController> {
               AppButton.text(label: 'Skip', onPressed: c.finish),
             ],
           ),
+          AppInviteSlot(invite: c.invite),
           const AppFlexGap(flex: 32, min: 4, max: 40),
           Flexible(
             flex: 270,
@@ -86,7 +88,14 @@ class OnboardingView extends GetView<OnboardingController> {
                   AppButton.text(label: 'Back', onPressed: c.back)
                 else
                   const SizedBox(height: AppSpacing.minTapTarget),
-                const Spacer(),
+                Expanded(
+                  child: Center(
+                    child: AppButton.text(
+                      label: 'Have an invite code or link?',
+                      onPressed: c.openInviteSheet,
+                    ),
+                  ),
+                ),
                 Text(
                   '${(c.page.value + 1).toString().padLeft(2, '0')} / 0${slides.length}',
                   style: AppText.eyebrow,

@@ -8,6 +8,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/debug/seed_connect.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/deep_link_service.dart';
+import '../../core/theme/app_motion.dart';
 import '../../core/utils/app_settings.dart';
 import '../../core/utils/connect_code.dart';
 import '../../data/api/api_client.dart';
@@ -36,6 +38,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     required this.store,
     required this.session,
     required this.connectivity,
+    required this.links,
   });
 
   static const noticeHold = Duration(seconds: 2);
@@ -45,6 +48,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   final SessionStore store;
   final SessionRepository session;
   final ConnectivityService connectivity;
+  final DeepLinkService links;
 
   final mode = ConnectMode.scan.obs;
   final phase = ConnectPhase.entry.obs;
@@ -80,6 +84,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   final retryAfter = 0.obs;
   final outcome = ConnectOutcome.requestSent.obs;
   final welcome = RxnString();
+  final awaitingFrom = RxnString();
 
   /// A person's code from a person's QR, kept in memory only until the
   /// "connect with the person" step exists.
@@ -87,13 +92,17 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   ConnectCode? _link;
   bool _isOpen = false;
 
+  /// Opened on a link that is already chosen: it is joined, not confirmed.
+  bool _isJoinOnly = false;
+
   bool get isOffline =>
       !SeedUi.isActive && connectivity.state.value == AppConnectivity.offline;
 
   // ---- sheet ----------------------------------------------------------------------
 
-  void open() {
+  void open({ConnectCode? link}) {
     _isOpen = true;
+    _isJoinOnly = link != null;
     _cooldownUntil = null;
     scanNotice.value = null;
     isScanSuccess.value = false;
@@ -102,16 +111,36 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     searchMessage.value = null;
     card.value = null;
     membership.value = null;
+    awaitingFrom.value = null;
     keptPersonLink = null;
     _link = null;
     mode.value = ConnectMode.scan;
     phase.value = ConnectPhase.entry;
     WidgetsBinding.instance.addObserver(this);
-    unawaited(startCamera());
+    if (link != null) {
+      unawaited(resolve(link));
+    } else {
+      unawaited(startCamera());
+    }
   }
 
   void close() {
     _isOpen = false;
+    final pending = links.pending.value;
+    final status = membership.value?.status;
+    // A request that waits for approval keeps the link so the flow can carry
+    // on once it is approved; an organisation's own link is only kept when
+    // the person has no organisation session yet.
+    final isKept =
+        status == 'active' ||
+        (status == 'pending' &&
+            (!store.hasEnterpriseSession || (_link?.isPersonLink ?? false)));
+    if (_link != null &&
+        pending != null &&
+        _link!.linkText == pending.linkText &&
+        !isKept) {
+      unawaited(links.clear());
+    }
     WidgetsBinding.instance.removeObserver(this);
     _noticeTimer?.cancel();
     _debounce?.cancel();
@@ -150,6 +179,11 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
 
   /// Back to the entry step (scanner or manual) from a failure or the card.
   void backToEntry() {
+    if (keptPersonLink != null) {
+      keptPersonLink = null;
+      unawaited(links.clear());
+    }
+    _isJoinOnly = false;
     phase.value = ConnectPhase.entry;
     card.value = null;
     isScanSuccess.value = false;
@@ -251,6 +285,10 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     }
     HapticFeedback.lightImpact();
     isScanSuccess.value = true;
+    if (_shouldHandOff) {
+      _handOff(link);
+      return;
+    }
     resolve(link);
   }
 
@@ -305,6 +343,10 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     final link = ConnectLinkParser.parse(query.text).value;
     if (link != null) {
       queryFocus.unfocus();
+      if (_shouldHandOff) {
+        _handOff(link);
+        return;
+      }
       resolve(link);
     } else if (results.length == 1) {
       selectHit(results.first);
@@ -319,6 +361,17 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     }
     queryFocus.unfocus();
     resolve(link);
+  }
+
+  // ---- scanner hand-off ----------------------------------------------------------
+
+  /// Inside an organisation a scanned or typed code goes through the same
+  /// confirm sheet as a link from the phone's camera.
+  bool get _shouldHandOff => store.hasEnterpriseSession && !_isJoinOnly;
+
+  void _handOff(ConnectCode link) {
+    Get.back<void>();
+    Future<void>.delayed(AppDurations.slow, () => links.receiveCode(link));
   }
 
   // ---- resolve ----------------------------------------------------------------------
@@ -340,6 +393,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
       card.value = found;
       membership.value = _membershipOf(found);
       keptPersonLink = link.isPersonLink ? link : null;
+      if (link.isPersonLink) links.keep(link);
       selectedCategory.value = found.categories.length == 1
           ? found.categories.first
           : null;
@@ -476,6 +530,9 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   ) async {
     final isPending =
         data['status'] == 'pending' || data['nextStep'] == 'approval';
+    awaitingFrom.value = isPending
+        ? _approvers(data['awaitingApprovalFrom'])
+        : null;
     if (SeedUi.isActive) {
       _seedAdd(found, category, isPending ? 'pending' : 'active');
     } else {
@@ -489,6 +546,15 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
         ? ConnectOutcome.requestSent
         : ConnectOutcome.joined;
     phase.value = ConnectPhase.done;
+  }
+
+  /// `awaitingApprovalFrom` is a count of approvers.
+  static String? _approvers(Object? value) {
+    if (value is int && value > 0) {
+      return value == 1 ? '1 approver' : '$value approvers';
+    }
+    final text = idText(value);
+    return text.isEmpty || text == '0' ? null : text;
   }
 
   Future<void> _refreshMe() async {

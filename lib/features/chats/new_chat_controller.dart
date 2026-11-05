@@ -36,6 +36,9 @@ class NewChatController extends GetxController {
   final isSearching = false.obs;
   final explanation = RxnString();
 
+  /// The names in [explanation] (`{name}`).
+  Map<String, String> explanationValues = const {};
+
   /// `strict` or `open`, from `GET /session`. Null when not known.
   String? _mode;
   Timer? _debounce;
@@ -70,14 +73,20 @@ class NewChatController extends GetxController {
     return list;
   }
 
-  Iterable<Conversation> get _source =>
-      SeedUi.isActive ? SeedUi.conversations() : conversations.conversations;
+  Iterable<Conversation> get _source {
+    if (SeedUi.isActive) return SeedUi.conversations();
+    if (conversations.listScope != '${store.orgId}/${store.userId}') {
+      return const [];
+    }
+    return conversations.conversations;
+  }
 
   /// Called when the sheet opens.
   Future<void> prepare() async {
     queryField.clear();
     query.value = '';
     hits.clear();
+    connections.clear();
     explanation.value = null;
     if (isOffline || !socket.isOnline) return;
     try {
@@ -157,13 +166,15 @@ class NewChatController extends GetxController {
     explanation.value = null;
     if (!person.isKnown) {
       if (person.canInteract == false) {
+        explanationValues = {'name': person.name};
         explanation.value =
-            "This organisation's rules don't allow you to message ${person.name}.";
+            "This organisation's rules don't allow you to message {name}.";
         return;
       }
       if (_mode == 'strict') {
+        explanationValues = {'name': person.name};
         explanation.value =
-            "${person.name} isn't one of your connections yet. In this enterprise you can message your host, administrators and people you're connected with. Connecting with someone isn't available in the app yet.";
+            "{name} isn't one of your connections yet. In this enterprise you can message your host, administrators and people you're connected with. Connecting with someone isn't available in the app yet.";
         return;
       }
     }
@@ -171,6 +182,11 @@ class NewChatController extends GetxController {
     Get.toNamed(
       AppRoutes.conversationOf('dm:${person.username.toLowerCase()}'),
     );
+  }
+
+  void openNewGroup() {
+    Get.back<void>();
+    Get.toNamed<void>(AppRoutes.newGroup);
   }
 
   @override

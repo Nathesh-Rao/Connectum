@@ -6,10 +6,12 @@ import 'core/config/app_config.dart';
 import 'core/debug/seed_ui.dart';
 import 'core/routes/app_pages.dart';
 import 'core/routes/conversation_route.dart';
+import 'core/routes/home_reload.dart';
 import 'core/routes/initial_binding.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_config_error.dart';
 import 'core/widgets/app_connectivity_scope.dart';
+import 'core/widgets/app_notices.dart';
 import 'data/socket/connectivity_service.dart';
 
 Future<void> main() async {
@@ -38,11 +40,11 @@ class ConnectumApp extends StatelessWidget {
       initialBinding: InitialBinding(connectivity),
       initialRoute: AppPages.initial,
       getPages: AppPages.pages,
-      navigatorObservers: [ConversationRoute.observer],
+      navigatorObservers: [ConversationRoute.observer, HomeReload.observer],
       builder: (context, child) {
         final app = AppConnectivityScope(
           state: connectivity.state,
-          child: child ?? const SizedBox.shrink(),
+          child: AppNoticeHost(child: child ?? const SizedBox.shrink()),
         );
         // Sample data (SEED_UI, never in release) is marked on every screen.
         return SeedUi.isActive ? SeedUi.withRibbon(app) : app;

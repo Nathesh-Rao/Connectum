@@ -16,6 +16,7 @@ import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'submissions_controller.dart';
 import 'widgets/submission_tile.dart';
+import '../../core/widgets/app_refresh.dart';
 
 class SubmissionsView extends GetView<SubmissionsController> {
   const SubmissionsView({super.key});
@@ -162,30 +163,30 @@ class _List extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    return RefreshIndicator(
-      color: AppColors.accent,
-      backgroundColor: AppColors.background,
+    return AppRefresh(
       onRefresh: c.refreshList,
-      child: Obx(() {
-        final rows = c.rows.toList();
-        return ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.page,
-            AppSpacing.sm,
-            AppSpacing.page,
-            AppSpacing.xl,
-          ),
-          itemCount: rows.length,
-          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-          itemBuilder: (context, i) => SubmissionTile(
-            key: ValueKey(rows[i].card.id),
-            row: rows[i],
-            onTap: () => c.open(rows[i].card),
-          ),
-        );
-      }),
+      slivers: [
+        Obx(() {
+          final rows = c.rows.toList();
+          return SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.page,
+              AppSpacing.sm,
+              AppSpacing.page,
+              AppSpacing.xl,
+            ),
+            sliver: SliverList.separated(
+              itemCount: rows.length,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, i) => SubmissionTile(
+                key: ValueKey(rows[i].card.id),
+                row: rows[i],
+                onTap: () => c.open(rows[i].card),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

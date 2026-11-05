@@ -230,6 +230,20 @@ class AuthRepository extends GetxService {
     return next;
   }
 
+  /// The person's status in the organisation a person's link names, after a
+  /// best-effort refresh of the account's memberships. Null when not a member.
+  Future<String?> membershipStatus(ConnectCode target) async {
+    try {
+      await refreshMe();
+    } on ApiException catch (_) {}
+    String plain(String id) => id.replaceAll('-', '').toUpperCase();
+    final org = plain(target.org ?? target.code);
+    for (final m in _store.identity.value?.enterprises ?? const []) {
+      if (plain(m.enterprise) == org) return m.status;
+    }
+    return null;
+  }
+
   Future<List<EnterpriseHit>> search(String query) async {
     final data = await _api.get('/enterprises', query: {'q': query});
     return ((data['enterprises'] as List?) ?? []).whereType<Map>().map((e) {
@@ -266,6 +280,32 @@ class AuthRepository extends GetxService {
       query: {'org': ?link.org, 'branch': ?link.branch},
     );
     return ConnectCard.fromJson(data);
+  }
+
+  /// Exchanges a referrer claim token for its invite (no session; used once,
+  /// good for 24 hours). Null when the token is used or expired.
+  Future<ConnectCode?> claimInvite(String token) async {
+    try {
+      final data = await _api.get(
+        '/connect/claim/${Uri.encodeComponent(token)}',
+      );
+      final org = idText(data['org']);
+      final branch = idText(data['branch']);
+      return ConnectLinkParser.parse(
+        Uri(
+          scheme: 'https',
+          host: ConnectLinkParser.publicHost,
+          pathSegments: ['connect', idText(data['code'])],
+          queryParameters: {
+            if (org.isNotEmpty) 'org': org,
+            if (branch.isNotEmpty) 'branch': branch,
+          },
+        ).toString(),
+      ).value;
+    } on ApiException catch (e) {
+      if (e.status == 404 || e.code == 'not_found') return null;
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> joinCheck(String enterprise, String category) =>
@@ -338,6 +378,7 @@ class AuthRepository extends GetxService {
         await _api.post('/logout', bearer: token);
       } catch (_) {}
     }
+    await _session.clearConnectTarget();
     await _store.clearIdentity();
   }
 }

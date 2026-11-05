@@ -14,6 +14,7 @@ class AppListRow extends StatefulWidget {
     this.leading,
     this.trailing,
     this.onTap,
+    this.isSelected = false,
     this.minHeight = AppSpacing.rowHeight,
     this.titleStyle = AppText.rowTitle,
   });
@@ -23,6 +24,7 @@ class AppListRow extends StatefulWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool isSelected;
   final double minHeight;
   final TextStyle titleStyle;
 
@@ -53,7 +55,11 @@ class _AppListRowState extends State<AppListRow> {
           constraints: BoxConstraints(minHeight: widget.minHeight),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           decoration: BoxDecoration(
-            color: _isPressed ? AppColors.accentTint : Colors.transparent,
+            color: _isPressed
+                ? AppColors.accentTint
+                : widget.isSelected
+                ? AppColors.accentSoft
+                : Colors.transparent,
             border: const Border(bottom: BorderSide(color: AppColors.line)),
           ),
           child: Row(

@@ -10,7 +10,7 @@ import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../data/repositories/e2e_repository.dart';
 import 'security_controller.dart';
-import 'widgets/device_row.dart';
+import 'widgets/device_card.dart';
 import 'widgets/late_notice.dart';
 import 'widgets/security_sheets.dart';
 
@@ -78,7 +78,11 @@ class SecurityView extends GetView<SecurityController> {
                     ),
                     if (c.lateTitle != null) ...[
                       const SizedBox(height: AppSpacing.md),
-                      LateNotice(title: c.lateTitle!, detail: c.lateDetail),
+                      LateNotice(
+                        title: c.lateTitle!,
+                        detail: c.lateDetail,
+                        values: c.lateValues,
+                      ),
                     ],
                     const SizedBox(height: AppSpacing.lg),
                     const Text('My devices', style: AppText.subtitle),
@@ -90,20 +94,15 @@ class SecurityView extends GetView<SecurityController> {
                             : 'No devices to show yet.',
                         style: AppText.readable,
                       ),
-                    for (var i = 0; i < devices.length; i++)
-                      DeviceRow(
-                        device: devices[i],
-                        isThisPhone: c.isThisPhone(devices[i]),
-                        hasDivider: i > 0,
-                        isBusy: c.busyId.value == devices[i].id,
-                        onRemove: c.isOffline || c.isBusy.value
-                            ? null
-                            : () => SecuritySheets.confirmRemove(
-                                context,
-                                c,
-                                devices[i],
-                              ),
-                      ),
+                    DeviceCardList(
+                      devices: devices,
+                      isThisPhone: c.isThisPhone,
+                      busyId: c.busyId.value,
+                      canRemoveThisPhone: true,
+                      onRemove: c.isOffline || c.isBusy.value
+                          ? null
+                          : (d) => SecuritySheets.confirmRemove(context, c, d),
+                    ),
                     if (c.isOffline)
                       const Padding(
                         padding: EdgeInsets.only(top: AppSpacing.xs),
@@ -126,7 +125,11 @@ class SecurityView extends GetView<SecurityController> {
                         isCentered: true,
                         isLoading: c.isBusy.value,
                         onPressed: phase == E2eSetupPhase.limit
-                            ? () => SecuritySheets.openIssue(context, c)
+                            ? () => SecuritySheets.openLimit(
+                                context,
+                                c,
+                                isRequested: true,
+                              )
                             : c.setUp,
                       ),
                     ],

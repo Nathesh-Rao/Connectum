@@ -1,9 +1,6 @@
-import '../forms/temporary_condition_evaluator.dart';
-
-/// One condition against some values, with the answer of the web's
-/// `evalCondition` (`chat-app/features/connectumChat/utils/formEngine.js:27`,
-/// origin/main) worked out by reading it. [isDocumented] marks an answer taken
-/// from `FORM_LOGIC_FOR_MOBILE.md` section 6 rather than from that function.
+/// One condition against some values, with the answer the web's
+/// `evalCondition` gives. [isDocumented] marks an answer taken from
+/// `FORM_LOGIC_FOR_MOBILE.md` section 3b rather than from reading the function.
 class ConditionVector {
   const ConditionVector(
     this.name,
@@ -18,15 +15,10 @@ class ConditionVector {
   final Map<String, Object?> values;
   final bool web;
   final bool isDocumented;
-
-  bool get temporary =>
-      TemporaryConditionEvaluator.matches(condition, (n) => values[n]);
-
-  bool get isSame => temporary == web;
 }
 
-/// Where `TemporaryConditionEvaluator` agrees with the web and where it does
-/// not. The differences are NOT fixed in Dart: the JS bundle will replace it.
+/// Run through `FormLogicService.evalCondition` (the JS bundle) on
+/// `/debug/forms`; each must answer [ConditionVector.web].
 const conditionVectors = <ConditionVector>[
   ConditionVector(
     'eq: same text',
@@ -71,24 +63,24 @@ const conditionVectors = <ConditionVector>[
     true,
   ),
   ConditionVector(
-    'toggle: saved text Yes, condition true (doc: counts as Yes)',
+    'toggle: "true" is not Yes (the app passes Yes/No, doc 3b)',
     {'field': 'a', 'op': 'eq', 'value': 'Yes'},
     {'a': 'true'},
-    true,
+    false,
     isDocumented: true,
   ),
   ConditionVector(
-    'toggle: " ON " counts as Yes (doc)',
+    'toggle: " ON " is not Yes (the app passes Yes/No, doc 3b)',
     {'field': 'a', 'op': 'eq', 'value': 'Yes'},
     {'a': ' ON '},
-    true,
+    false,
     isDocumented: true,
   ),
   ConditionVector(
-    'toggle: condition value "on", saved Yes (doc)',
+    'toggle: condition value "on" is not Yes (doc 3b)',
     {'field': 'a', 'op': 'eq', 'value': 'on'},
     {'a': 'Yes'},
-    true,
+    false,
     isDocumented: true,
   ),
   ConditionVector(

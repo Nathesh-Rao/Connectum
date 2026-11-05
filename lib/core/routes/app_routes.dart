@@ -17,6 +17,10 @@ class AppRoutes {
   static const profile = '/profile';
   static const notifications = '/notifications';
   static const security = '/security';
+  static const newGroup = '/new-group';
+  static const tasks = '/tasks';
+  static const approvals = '/approvals';
+  static const ticket = '/tickets/:id';
 
   static const gallery = '/gallery';
   static const galleryAuth = '/gallery/auth';
@@ -25,6 +29,14 @@ class AppRoutes {
   static const debugE2e = '/debug/e2e';
   static const debugFormLogic = '/debug/formlogic';
   static const debugForms = '/debug/forms';
+  static const debugConnect = '/debug/connect';
+  static const debugQr = '/debug/qr';
+  static const debugChat = '/debug/chat';
+  static const debugNotifications = '/debug/notifications';
+  static const debugTasks = '/debug/tasks';
+  static const debugTickets = '/debug/tickets';
+
+  static String ticketOf(int id) => '/tickets/$id';
 
   /// A conversation id holds `:` and a group name may hold spaces or `/`.
   static String conversationOf(String id) =>

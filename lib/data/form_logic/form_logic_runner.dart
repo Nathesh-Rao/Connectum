@@ -18,6 +18,10 @@ class FormLogicReport {
   Map<String, dynamic> get probe => raw['probe'] as Map<String, dynamic>;
   List<Map<String, dynamic>> get parity =>
       (raw['parity'] as List).cast<Map<String, dynamic>>();
+  int get expressionTotal => raw['expressionTotal'] as int;
+  int get conditionTotal => raw['conditionTotal'] as int;
+  List<Map<String, dynamic>> get zone =>
+      (raw['zone'] as List).cast<Map<String, dynamic>>();
   String get dartNow => raw['dartNow'] as String;
   int get dartOffsetMinutes => raw['dartOffsetMinutes'] as int;
 }
@@ -36,6 +40,17 @@ class FormLogicRunner {
     return FormLogicReport(jsonDecode(json) as Map<String, dynamic>);
   }
 
+  /// Instants around midnight in India (UTC+05:30) and around UTC midnight,
+  /// where a wrong zone shows as another day: 23:59, 00:00 and 00:01 IST on
+  /// 3/4 Nov 2026, and 05:29 / 05:30 IST (UTC midnight).
+  static const zoneInstants = [
+    ('2026-11-03T18:29:00Z', '03/11/2026 23:59'),
+    ('2026-11-03T18:30:00Z', '04/11/2026 00:00'),
+    ('2026-11-03T18:31:00Z', '04/11/2026 00:01'),
+    ('2026-11-03T23:59:00Z', '04/11/2026 05:29'),
+    ('2026-11-04T00:00:00Z', '04/11/2026 05:30'),
+  ];
+
   static String _literal(String json) => 'JSON.parse(${jsonEncode(json)})';
 
   static const _probe = r'''
@@ -43,6 +58,11 @@ class FormLogicRunner {
   var L = ConnectumFormLogic, r = {};
   var ev = function (e) { return String(L.evaluateExpression(e, {})); };
   r.jsOffsetMinutes = -new Date().getTimezoneOffset();
+  var two = function (n) { return (n < 10 ? '0' : '') + n; };
+  r.zone = __instants.map(function (iso) {
+    var d = new Date(iso);
+    return { iso: iso, local: two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()) };
+  });
   r.jsDate = ev('Date()');
   r.jsTime = ev('Time()');
   L.SetDateFormat('dd/mm/yyyy');
@@ -93,6 +113,11 @@ class FormLogicRunner {
 })
 ''';
 
+  static String _dmyHm(DateTime t) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(t.day)}/${two(t.month)}/${t.year} ${two(t.hour)}:${two(t.minute)}';
+  }
+
   static String _work(
     ({String shim, String bundle, String conformance, String parity}) job,
   ) {
@@ -116,7 +141,8 @@ class FormLogicRunner {
       );
 
       final dartNow = DateTime.now();
-      final probe = run(rt, _probe);
+      final instants = jsonEncode([for (final i in zoneInstants) i.$1]);
+      final probe = run(rt, 'var __instants = $instants;\n$_probe');
 
       final parityInput = _literal(job.parity);
       final parity = run(rt, '($_parity)($parityInput)');
@@ -137,7 +163,23 @@ class FormLogicRunner {
       }
       times.sort();
 
+      final zone = [
+        for (final (iso, inIndia) in zoneInstants)
+          {
+            'iso': iso,
+            'inIndia': inIndia,
+            'dart': _dmyHm(DateTime.parse(iso).toLocal()),
+            'js': [
+              for (final z in (jsonDecode(probe) as Map)['zone'] as List)
+                if (z['iso'] == iso) z['local'],
+            ].first,
+          },
+      ];
+      final spec = jsonDecode(job.conformance) as Map<String, dynamic>;
       return jsonEncode({
+        'zone': zone,
+        'expressionTotal': (spec['cases'] as List).length,
+        'conditionTotal': (spec['conditions'] as List? ?? const []).length,
         'loadMicros': load.elapsedMicroseconds,
         'evalMedianMicros': (times[99] + times[100]) ~/ 2,
         'conformance': jsonDecode(conformance),

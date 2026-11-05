@@ -59,6 +59,7 @@ class ChatsController extends GetxController
   final viewState = AppViewState.loading.obs;
   final visibleIds = <String>[].obs;
   final unreadChats = 0.obs;
+  final isDirectTab = false.obs;
   final query = ''.obs;
   final searchConversations = <Conversation>[].obs;
   final searchMessages = <MessageHit>[].obs;
@@ -85,6 +86,13 @@ class ChatsController extends GetxController
     ever(conversations.isSynced, (_) => _apply());
     ever(conversations.hasSyncStalled, (_) => _apply());
     ever(connectivity.state, (_) => _apply());
+    ever(store.current, (_) {
+      clearSearch();
+      _rows.clear();
+      _all.clear();
+      visibleIds.clear();
+      _apply();
+    });
     ever(SeedUi.chatsState, (_) => _apply());
     SeedUi.releaseChatsDelay();
     _minuteTimer = Timer.periodic(
@@ -96,9 +104,15 @@ class ChatsController extends GetxController
 
   Rx<Conversation> rowOf(String id) => _rows[id]!;
 
-  List<Conversation> get _source => SeedUi.isActive
-      ? SeedUi.conversations()
-      : conversations.conversations.toList();
+  /// Rows read for another organisation or person are never built into the
+  /// list, whatever the repository still holds.
+  List<Conversation> get _source {
+    if (SeedUi.isActive) return SeedUi.conversations();
+    if (conversations.listScope != '${store.orgId}/${store.userId}') {
+      return const [];
+    }
+    return conversations.conversations.toList();
+  }
 
   /// What the All list may hold: not archived, and the global room only once
   /// it has had a message.
@@ -118,8 +132,9 @@ class ChatsController extends GetxController
     // dot and the All badge.
     unreadChats.value = source.where((c) => c.unread > 0 && !c.isMuted).length;
     final onlyDirect = filterTabs.index == 1;
+    isDirectTab.value = onlyDirect;
     final shown = onlyDirect
-        ? source.where((c) => c.kind != 'global').toList()
+        ? source.where((c) => c.kind != 'global' && c.kind != 'host').toList()
         : source;
     final ids = <String>[];
     for (final c in shown) {

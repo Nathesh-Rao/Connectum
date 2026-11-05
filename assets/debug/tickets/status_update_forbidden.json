@@ -1,0 +1,7 @@
+{
+ "ok": false,
+ "error": {
+  "code": "forbidden",
+  "message": "You cannot do this on this ticket."
+ }
+}

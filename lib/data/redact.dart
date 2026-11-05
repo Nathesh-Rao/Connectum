@@ -5,12 +5,17 @@ class Redact {
 
   static const _hidden = {
     'token',
+    'code',
     'otp',
     'password',
     'trust',
     'proof',
     'ecdh',
     'sign',
+    'claim',
+    'referrer',
+    'connect_code',
+    'connect_claim',
   };
 
   static dynamic value(dynamic v, [String? key]) {

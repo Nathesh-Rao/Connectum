@@ -16,6 +16,7 @@ class Message {
     this.replyTo,
     this.isEncrypted = false,
     this.decryptState,
+    this.unreadableCode,
     this.editedTs,
     this.isDeleted = false,
     this.reactionsJson,
@@ -41,6 +42,10 @@ class Message {
 
   /// `ok`, `cant_decrypt` or `pending`; null for a plain message.
   final String? decryptState;
+
+  /// Why an envelope could not be opened (the code kept in `plaintext` of a
+  /// `cant_decrypt` row); null when unknown, e.g. a row from before it was kept.
+  final String? unreadableCode;
   final int? editedTs;
   final bool isDeleted;
   final String? reactionsJson;
@@ -82,6 +87,7 @@ class Message {
     replyTo: replyTo,
     isEncrypted: isEncrypted,
     decryptState: decryptState,
+    unreadableCode: unreadableCode,
     editedTs: editedTs,
     isDeleted: isDeleted ?? this.isDeleted,
     reactionsJson: reactionsJson ?? this.reactionsJson,
@@ -108,6 +114,10 @@ class Message {
     ),
     isEncrypted: intOf(r['is_encrypted_unsupported']) == 1,
     decryptState: r['decrypt_state'] as String?,
+    unreadableCode:
+        r['decrypt_state'] == 'cant_decrypt' && r['plaintext'] != null
+        ? idText(r['plaintext'])
+        : null,
     editedTs: r['edited_ts'] == null ? null : intOf(r['edited_ts']),
     isDeleted: intOf(r['is_deleted']) == 1,
     reactionsJson: r['reactions_json'] as String?,

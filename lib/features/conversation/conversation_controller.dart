@@ -10,12 +10,16 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_messages.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/conversation_route.dart';
 import '../../core/routes/home_reload.dart';
 import '../../core/utils/attachment_tag.dart';
+import '../../core/utils/forwarded_text.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/chat_time.dart';
+import '../../core/utils/mention_text.dart';
 import '../../data/models/conversation.dart';
 import '../../data/models/hash_command.dart';
+import '../../data/models/ids.dart';
 import '../../data/models/form_card.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../forms/forms_picker_controller.dart';
@@ -27,6 +31,7 @@ import '../../data/socket/connectivity_service.dart';
 
 import '../../data/attachment_cache.dart';
 import '../../data/e2e/e2e_models.dart';
+import '../../data/e2e/e2e_texts.dart';
 import '../../data/models/message.dart';
 import '../../data/models/reaction.dart';
 import '../../data/repositories/attachment_repository.dart';
@@ -40,9 +45,13 @@ import '../../data/repositories/typing_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
 import '../../core/widgets/app_avatar.dart';
+import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
+import '../../core/widgets/app_notices.dart';
 import 'models/chat_item.dart';
 import 'models/command_prompt.dart';
 import 'models/file_download.dart';
+import 'models/forward.dart';
+import 'models/mention_picker.dart';
 import 'models/pending_upload.dart';
 
 /// One conversation. A controller exists per conversation id (the binding puts
@@ -74,6 +83,7 @@ class ConversationController extends GetxController
   static const _typingEvery = Duration(seconds: 3);
   static const _readDelay = Duration(milliseconds: 400);
   static const _runGap = Duration(minutes: 5);
+  static const _flashFor = Duration(milliseconds: 1600);
 
   final String conversationId;
   final MessageRepository messages;
@@ -125,6 +135,12 @@ class ConversationController extends GetxController
   final isBlocked = false.obs;
   final blockReason = RxnString();
 
+  /// The block is the full device list: the banner and the composer offer the
+  /// device list again.
+  final isDeviceLimit = false.obs;
+
+  void openDeviceLimit() => shell?.openDeviceLimit();
+
   /// The blocked reason is a changed security key the person can review.
   final isKeyChange = false.obs;
 
@@ -163,6 +179,10 @@ class ConversationController extends GetxController
   final downloads = <String, FileDownload>{}.obs;
   final _openingFiles = <String>{};
   final _seedCached = <String>{};
+
+  /// Urls of documents already on this phone (the blob, for an encrypted one).
+  final savedFiles = <String>{}.obs;
+  final _savedChecked = <String>{};
   int _uploadSeq = 0;
   bool _hasSeedFailed = false;
   final notice = RxnString();
@@ -232,8 +252,83 @@ class ConversationController extends GetxController
     return kind == 'group' && count > 0 ? '$count members' : null;
   }
 
+  /// True for a group I own: the only one who may add people.
+  bool get isOwner =>
+      kind == 'group' &&
+      (conversation?.owner ?? '').toLowerCase() == me &&
+      store.userId != null;
+
   /// A group's members from the stored list, empty when not known.
   List<String> get members => conversation?.members ?? const [];
+
+  /// Whose @tags are drawn as a name: me, the people of this conversation and
+  /// everyone online. Only a direct chat's peer has a display name stored (the
+  /// title); the others show their username. Read when a row is built.
+  MentionPeople get mentionPeople => MentionPeople(
+    me: me,
+    names: {
+      for (final u in presence.online) u: u,
+      if (kind == 'group')
+        for (final m in members) m.toLowerCase(): m
+      else if (isDirect)
+        target.toLowerCase(): title,
+    },
+  );
+
+  // ---- the "@" list --------------------------------------------------------
+
+  /// The rows of the "@" list; empty while it is closed.
+  final mentionRows = <MentionPerson>[].obs;
+
+  /// Only a group whose members are loaded offers it.
+  bool get canMention =>
+      kind == 'group' && members.isNotEmpty && !isBlocked.value;
+
+  void _updateMentions() {
+    final next = _mentionMatches();
+    final same =
+        next.length == mentionRows.length &&
+        [
+          for (var i = 0; i < next.length; i++)
+            next[i].username == mentionRows[i].username,
+        ].every((e) => e);
+    if (!same) mentionRows.assignAll(next);
+  }
+
+  List<MentionPerson> _mentionMatches() {
+    final sel = text.selection;
+    if (!canMention || !sel.isValid || !sel.isCollapsed) return const [];
+    final at = MentionPicker.detect(text.text, sel.baseOffset);
+    if (at == null) return const [];
+    return MentionPicker.filter(
+      [for (final m in members) MentionPerson(username: m.toLowerCase())],
+      at.query,
+      me: me,
+    );
+  }
+
+  void closeMentions() => mentionRows.clear();
+
+  /// Replaces the typed `@query` with `@username `; the keyboard stays open.
+  void pickMention(MentionPerson person) {
+    final sel = text.selection;
+    final at = sel.isValid && sel.isCollapsed
+        ? MentionPicker.detect(text.text, sel.baseOffset)
+        : null;
+    if (at == null) return;
+    final out = MentionPicker.insert(
+      text.text,
+      at,
+      sel.baseOffset,
+      person.username,
+    );
+    text.value = TextEditingValue(
+      text: out.text,
+      selection: TextSelection.collapsed(offset: out.caret),
+    );
+    length.value = out.text.characters.length;
+    focus.requestFocus();
+  }
 
   AppPresenceDot get presenceDot {
     if (!isDirect) return AppPresenceDot.none;
@@ -370,6 +465,11 @@ class ConversationController extends GetxController
   }
 
   void openForm(Message m, FormCardData d) {
+    final ticketId = d.isTicket ? idNumber(d.id) : null;
+    if (ticketId != null) {
+      Get.toNamed(AppRoutes.ticketOf(ticketId));
+      return;
+    }
     Get.toNamed(
       AppRoutes.submissionDetailOf(
         d.id,
@@ -401,6 +501,7 @@ class ConversationController extends GetxController
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     scroll.addListener(_onScroll);
+    text.addListener(_updateMentions);
     _noticeWorker = ever(submissions.notice, (message) {
       if (message == null) return;
       _say(message);
@@ -419,7 +520,21 @@ class ConversationController extends GetxController
         unawaited(_refreshGate());
       }
     });
+    ConversationRoute.jumpListeners[conversationId] = _runJump;
     _load();
+  }
+
+  /// A notification asked for a message: waits for the thread, then scrolls
+  /// to it with the usual flash.
+  Future<void> _runJump() async {
+    final msgId = ConversationRoute.takeJump(conversationId);
+    if (msgId == null) return;
+    for (var tries = 0; tries < 40 && !isLoaded.value; tries++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await openOriginal(msgId);
   }
 
   Future<void> _load() async {
@@ -439,6 +554,7 @@ class ConversationController extends GetxController
     _firstUnreadId = _firstUnread(list.toList());
     _rebuild(isFirst: true);
     isLoaded.value = true;
+    unawaited(_runJump());
     _listWorker = ever(list, (_) => _rebuild());
     WidgetsBinding.instance.addPostFrameCallback((_) => _initialScroll());
     if (!SeedUi.isActive) {
@@ -458,8 +574,17 @@ class ConversationController extends GetxController
     final gate = await messages.sendGate(conversationId, isLookup: isLookup);
     final hasHistory = await messages.hasEncryptedHistory(conversationId);
     final isClosed = gate.isBlocked && !gate.isTransient;
+    final isLimit =
+        isClosed &&
+        e2e.phase.value == E2eSetupPhase.limit &&
+        gate.reason == E2eSendDecision.notSetUpReason;
+    isDeviceLimit.value = isLimit;
     isBlocked.value = isClosed;
-    blockReason.value = isClosed ? gate.message : null;
+    blockReason.value = isLimit
+        ? E2eTexts.limitComposer
+        : isClosed
+        ? gate.message
+        : null;
     isKeyChange.value = isClosed && gate.isKeyChange;
     keyChangeMember = gate.keyChangeUser;
     isLocked.value = gate.isEncrypt || hasHistory;
@@ -504,6 +629,7 @@ class ConversationController extends GetxController
       return;
     }
     await e2e.trust(review);
+    await messages.reopenKeyChanged(conversationId);
     await _refreshGate(isLookup: true);
   }
 
@@ -559,7 +685,9 @@ class ConversationController extends GetxController
   void _rebuild({bool isFirst = false}) {
     final list = _list;
     if (list == null) return;
-    final asc = list.toList();
+    // A deleted message is gone from the thread: no placeholder, and a reply
+    // to it falls back to "Replied message".
+    final asc = list.where((m) => !m.isDeleted).toList();
     final now = DateTime.now();
     _byId
       ..clear()
@@ -627,6 +755,34 @@ class ConversationController extends GetxController
     }
     items.assignAll(reversed);
     _scheduleRead();
+  }
+
+  /// Scrolls to the message a reply quotes and flashes it for 1.6 s. Does
+  /// nothing when that message is not in the thread.
+  Future<void> openOriginal(String msgId) async {
+    final target = items.firstWhereOrNull((i) => i.message?.msgId == msgId);
+    if (target == null) return;
+    for (var tries = 0; tries < 60; tries++) {
+      final ctx = keyFor(target).currentContext;
+      if (ctx != null && ctx.mounted) {
+        await Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.4,
+          duration: AppDurations.base,
+          curve: AppCurves.out,
+        );
+        highlighted.add(msgId);
+        Timer(_flashFor, () => highlighted.remove(msgId));
+        return;
+      }
+      if (!scroll.hasClients) return;
+      final p = scroll.position;
+      if (p.pixels >= p.maxScrollExtent) return;
+      scroll.jumpTo(
+        math.min(p.maxScrollExtent, p.pixels + p.viewportDimension * 0.8),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
   }
 
   /// A card that an edit just rewrote flashes once.
@@ -1189,18 +1345,18 @@ class ConversationController extends GetxController
 
   /// A tap on a document row: opens the cached file, or downloads it first
   /// (progress and cancel on the row, the reason and a retry if it fails).
-  Future<void> openFile(AttachmentTag tag) async {
+  Future<void> openFile(AttachmentTag tag, {bool shouldOpen = true}) async {
     final running = downloads[tag.url];
     if (running != null && !running.isFailed.value) return;
     if (!_openingFiles.add(tag.url)) return;
     final download = FileDownload();
     try {
       if (SeedUi.isActive) {
-        await _seedOpen(tag, download);
+        await _seedOpen(tag, download, shouldOpen: shouldOpen);
         return;
       }
       if (tag.isEncrypted || tag.isUnreadable) {
-        await _openSecureFile(tag, download);
+        await _openSecureFile(tag, download, shouldOpen: shouldOpen);
         return;
       }
       if (tag.resolvedUrl == null) {
@@ -1217,7 +1373,8 @@ class ConversationController extends GetxController
         );
         downloads.remove(tag.url);
       }
-      _report(await attachmentCache.open(file));
+      savedFiles.add(tag.url);
+      if (shouldOpen) _report(await attachmentCache.open(file));
     } on AttachmentException catch (e) {
       if (download.cancel.isCancelled) return;
       download.isFailed.value = true;
@@ -1231,7 +1388,11 @@ class ConversationController extends GetxController
   /// An encrypted document: the stored blob (downloaded first if needed) is
   /// decrypted in memory, written to `open-tmp` just before the viewer opens
   /// it and removed at the next start, on sign out and on `session_replaced`.
-  Future<void> _openSecureFile(AttachmentTag tag, FileDownload download) async {
+  Future<void> _openSecureFile(
+    AttachmentTag tag,
+    FileDownload download, {
+    required bool shouldOpen,
+  }) async {
     if (tag.isUnreadable) {
       _say(undecryptable);
       return;
@@ -1244,6 +1405,8 @@ class ConversationController extends GetxController
         cancel: download.cancel,
       );
       downloads.remove(tag.url);
+      savedFiles.add(tag.url);
+      if (!shouldOpen) return;
       final file = await attachmentCache.writeForOpening(tag.name, bytes);
       if (file == null) {
         _say("This file can't be opened here.");
@@ -1267,6 +1430,59 @@ class ConversationController extends GetxController
     }
   }
 
+  /// The card's download button: fetches (and for an encrypted file decrypts,
+  /// to prove the key opens it) without opening. The decrypted copy is made
+  /// only when the file is opened or shared.
+  Future<void> downloadFile(AttachmentTag tag) =>
+      openFile(tag, shouldOpen: false);
+
+  /// Whether the document is on this phone; the first read looks at the cache.
+  bool isSaved(AttachmentTag tag) {
+    final isSaved = savedFiles.contains(tag.url);
+    if (!isSaved && _savedChecked.add(tag.url)) {
+      unawaited(_checkSaved(tag));
+    }
+    return isSaved;
+  }
+
+  Future<void> _checkSaved(AttachmentTag tag) async {
+    if (SeedUi.isActive || tag.isUnreadable) return;
+    if (await attachmentCache.cached(tag) != null && !isClosed) {
+      savedFiles.add(tag.url);
+    }
+  }
+
+  /// Long press on a card: the system share sheet (also the way to save). An
+  /// encrypted file is decrypted into the private `open-tmp` folder first.
+  Future<void> shareFile(AttachmentTag tag) async {
+    if (!isSaved(tag)) {
+      _say('Download the file first');
+      return;
+    }
+    if (SeedUi.isActive) {
+      _say('Shared ${tag.name} (sample)');
+      return;
+    }
+    try {
+      final File? file;
+      if (tag.isEncrypted) {
+        file = await attachmentCache.writeForOpening(
+          tag.name,
+          await _decryptedBytes(tag),
+        );
+      } else {
+        file = await attachmentCache.cached(tag);
+      }
+      if (file == null) {
+        _say("This file can't be shared here.");
+        return;
+      }
+      await attachmentCache.share(file, tag.name);
+    } on AttachmentException catch (e) {
+      _say(e.message);
+    }
+  }
+
   void cancelDownload(AttachmentTag tag) {
     downloads.remove(tag.url)?.cancel.cancel();
   }
@@ -1274,7 +1490,11 @@ class ConversationController extends GetxController
   /// Debug only. `seed-slow` takes a few seconds, `seed-fail` stops half way
   /// with "no longer on the server", a `.docx` ends with the no-app notice and
   /// anything else with a note that it would have opened.
-  Future<void> _seedOpen(AttachmentTag tag, FileDownload download) async {
+  Future<void> _seedOpen(
+    AttachmentTag tag,
+    FileDownload download, {
+    bool shouldOpen = true,
+  }) async {
     if (tag.url.contains('seed-e2e-bad')) {
       throw const AttachmentException(undecryptable);
     }
@@ -1292,8 +1512,10 @@ class ConversationController extends GetxController
         }
       }
       _seedCached.add(tag.url);
+      savedFiles.add(tag.url);
       downloads.remove(tag.url);
     }
+    if (!shouldOpen) return;
     if (tag.url.endsWith('.docx')) {
       _report(OpenOutcome.noApp);
     } else {
@@ -1353,8 +1575,69 @@ class ConversationController extends GetxController
     if (problem != null) _say(problem);
   }
 
+  // ---- forward -------------------------------------------------------------
+
+  bool canForward(Message m) => Forward.canForward(m);
+
+  /// Direct chats, groups and the general room; a plain file only to plain
+  /// chats and a sealed one only to encrypted chats (`Forward.canGoTo`).
+  List<Conversation> forwardTargets(Message m) {
+    final rows = SeedUi.isActive
+        ? SeedUi.conversations()
+        : conversations.conversations;
+    return [
+      for (final c in rows)
+        if (Forward.canGoTo(m, c)) c,
+    ];
+  }
+
+  String get _myName {
+    final name = store.identity.value?.name ?? '';
+    return name.isNotEmpty ? name : (store.userId ?? me);
+  }
+
+  String _authorOf(Message m) => m.isMine
+      ? _myName
+      : (isDirect && m.sender.toLowerCase() == target.toLowerCase()
+            ? title
+            : m.sender);
+
+  /// Sends [m] to each of [chosen] as an ordinary message, so encryption, the
+  /// outbox, ticks and retry work as for a typed one. A refusal is told by
+  /// name, with Retry for those that failed.
+  Future<void> forward(Message m, List<Conversation> chosen) async {
+    final line = Forward.text(m, forwarder: _myName, author: _authorOf(m));
+    final tag = Forward.tagOf(m);
+    final failed = <Conversation>[];
+    for (final c in chosen) {
+      final result = SeedUi.isActive
+          ? SendResult.queued
+          : tag == null
+          ? await messages.sendText(c.convId, line)
+          : await messages.sendForwardedAttachment(c.convId, line, tag);
+      if (SeedUi.isActive) {
+        SeedMessages.send(c.convId, line, isEncrypted: false);
+      }
+      if (result != SendResult.queued) failed.add(c);
+    }
+    final done = chosen.length - failed.length;
+    if (failed.isEmpty) {
+      AppNotices.success(
+        'Message forwarded to $done recipient${done == 1 ? '' : 's'}',
+      );
+      return;
+    }
+    AppNotices.show(
+      "Couldn't forward to ${failed.map((c) => c.title).join(', ')}",
+      variant: AppNoticeVariant.error,
+      actionLabel: 'Retry',
+      isPersistent: true,
+      onAction: () => forward(m, failed),
+    );
+  }
+
   Future<void> copy(Message m) =>
-      Clipboard.setData(ClipboardData(text: m.text));
+      Clipboard.setData(ClipboardData(text: ForwardedText.parse(m.text).text));
 
   /// Deletes one of my messages. Returns a plain-words problem, or null.
   Future<String?> delete(Message m) async {
@@ -1381,6 +1664,7 @@ class ConversationController extends GetxController
   @override
   void onClose() {
     HomeReload.overlays.remove(conversationId);
+    ConversationRoute.jumpListeners.remove(conversationId);
     WidgetsBinding.instance.removeObserver(this);
     _readTimer?.cancel();
     _noticeTimer?.cancel();
@@ -1399,6 +1683,7 @@ class ConversationController extends GetxController
     picker.onClose();
     scroll.removeListener(_onScroll);
     scroll.dispose();
+    text.removeListener(_updateMentions);
     text.dispose();
     focus.dispose();
     super.onClose();

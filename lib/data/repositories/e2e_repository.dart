@@ -10,6 +10,7 @@ import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_device_label.dart';
 import '../e2e/e2e_key_store.dart';
 import '../e2e/e2e_models.dart';
+import '../e2e/e2e_texts.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
@@ -38,9 +39,20 @@ enum E2eSetupPhase {
 }
 
 class E2eRepository extends GetxService with WidgetsBindingObserver {
-  E2eRepository(this._keyStore, this._socket, this._session, this._db);
+  E2eRepository(
+    this._keyStore,
+    this._socket,
+    this._session,
+    this._db, {
+    Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)? call,
+  }) : _call = call ?? _socket.sdCall;
 
   static const _directoryTtl = Duration(minutes: 5);
+
+  /// How long a person's device list may serve a send. Short on purpose: a
+  /// device added since is caught by the `e2e_devices_changed` event or by the
+  /// server's `e2e_stale_devices` refusal, which drops the entry.
+  static const sendListTtl = Duration(seconds: 10);
   static const _labelMax = 60;
   static const _pollEvery = Duration(seconds: 60);
   static const _eventDebounce = Duration(seconds: 2);
@@ -50,6 +62,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   final SocketService _socket;
   final SessionStore _session;
   final AppDatabase _db;
+  final Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)
+  _call;
   final _crypto = E2eCrypto();
 
   final mode = ''.obs;
@@ -81,6 +95,13 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   /// fetched again.
   Stream<void> get unlockRequests => _unlockRequests.stream;
 
+  /// Fires when this phone has just been registered with the server, so
+  /// messages that could not be opened for lack of a device are read again.
+  Stream<void> get registrations => _registrations.stream;
+
+  /// A key changed on a message being read, or a known contact added a device.
+  Stream<E2eNotice> get notices => _notices.stream;
+
   /// The one-time notice text, empty once dismissed.
   final notice = ''.obs;
 
@@ -96,6 +117,9 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   static const _backoffCap = Duration(minutes: 30);
 
   final _unlockRequests = StreamController<void>.broadcast();
+  final _registrations = StreamController<void>.broadcast();
+  final _notices = StreamController<E2eNotice>.broadcast();
+  final _toldKeyChanged = <String>{};
   Timer? _retryTimer;
   Timer? _pollTimer;
   Timer? _eventTimer;
@@ -106,6 +130,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   bool _isSetupRunning = false;
 
   final _directory = <String, ({List<E2eDevicePublic> devices, DateTime at})>{};
+  final _lookups = <String, Future<Map<String, dynamic>>>{};
   final _groups =
       <String, ({Map<String, List<E2eDevicePublic>> members, DateTime at})>{};
   E2eDeviceKeys? _keys;
@@ -143,6 +168,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     _pollTimer?.cancel();
     _eventTimer?.cancel();
     _unlockRequests.close();
+    _registrations.close();
+    _notices.close();
     super.onClose();
   }
 
@@ -156,8 +183,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     _keys = null;
     _keysScope = null;
     _isKeysLoaded = false;
-    _directory.clear();
-    _groups.clear();
+    clearDirectory();
     mode.value = '';
     maxDevices.value = 0;
     myDevices.clear();
@@ -185,9 +211,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     final user = data is Map ? idText(data['user']).toLowerCase() : '';
     if (user.isEmpty) {
       _directory.clear();
+      _lookups.clear();
       return;
     }
-    _directory.remove(user);
+    invalidate([user]);
     if (user != _me) return;
     if (phase.value != E2eSetupPhase.ready) {
       unawaited(ensureSetup());
@@ -219,12 +246,30 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
 
   // ---- server, read only -------------------------------------------------
 
+  /// The `e2e.status` arguments: this device's id when there is one, so the
+  /// server records "last seen" for it.
+  static Map<String, dynamic> statusArgs(String? deviceId) => {
+    if (deviceId != null && deviceId.isNotEmpty) 'id': deviceId,
+  };
+
+  /// The `e2e.status` arguments for this phone.
+  Future<Map<String, dynamic>> currentStatusArgs() async =>
+      statusArgs((await keys())?.id);
+
+  /// Drops every cached and in-flight device list (sign-out, organisation
+  /// switch, `session_replaced`).
+  void clearDirectory() {
+    _directory.clear();
+    _groups.clear();
+    _lookups.clear();
+  }
+
   /// `e2e.status`: the organisation mode, the limit and my registered devices.
   Future<bool> refreshStatus() async {
     await keys();
     if (!_socket.isOnline) return false;
     try {
-      final data = await _socket.sdCall('e2e.status', {});
+      final data = await _call('e2e.status', statusArgs(_keys?.id));
       mode.value = idText(data['mode']);
       maxDevices.value = intOf(data['maxDevices']);
       final all = _devices(data['devices']);
@@ -253,7 +298,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       'max': maxDevices.value,
       'recovery': isRecoveryOn.value,
       'devices': [
-        for (final d in myDevices) {'id': d.id, 'label': d.label, 'ts': d.ts},
+        for (final d in myDevices)
+          {'id': d.id, 'label': d.label, 'ts': d.ts, 'seen': d.seen},
       ],
     }),
   );
@@ -279,6 +325,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
               sign: '',
               label: idText(d['label']),
               ts: intOf(d['ts']),
+              seen: intOf(d['seen']),
             ),
         ],
       );
@@ -295,6 +342,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
         sign: idText(d['sign']),
         label: idText(d['label']),
         ts: intOf(d['ts']),
+        seen: intOf(d['seen']),
         isRecovery: d['recovery'] == true,
         isLate: d['late'] == true,
       ),
@@ -397,40 +445,84 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       if (!d.isRecovery) d,
   ];
 
-  /// `e2e.devices` for people, through the 5-minute cache (display and reading
-  /// only: a send passes [isForced]). A user missing from the result is absent
-  /// from the map. Throws [SocketCallError] when the
+  /// `e2e.devices` for people, through the cache: an entry younger than
+  /// [maxAge] (default 5 minutes) is reused, [isForced] always asks. Lookups
+  /// for the same person that overlap share one request. A user missing from
+  /// the result is absent from the map. Throws [SocketCallError] when the
   /// lookup fails.
   Future<Map<String, List<E2eDevicePublic>>> devicesOf(
     List<String> users, {
     bool isForced = false,
+    Duration maxAge = _directoryTtl,
   }) async {
     final names = {for (final u in users) u.trim().toLowerCase()};
     final out = <String, List<E2eDevicePublic>>{};
+    final waits = <Future<Map<String, dynamic>>>[];
     final missing = <String>[];
     for (final name in names) {
       final hit = _directory[name];
-      final isFresh =
-          hit != null && DateTime.now().difference(hit.at) < _directoryTtl;
-      if (isFresh && !isForced) {
+      if (!isForced &&
+          hit != null &&
+          DateTime.now().difference(hit.at) < maxAge) {
         out[name] = hit.devices;
+      } else if (!isForced && _lookups[name] != null) {
+        waits.add(_lookups[name]!);
       } else {
         missing.add(name);
       }
     }
-    if (missing.isEmpty) return out;
-    final data = await _socket.sdCall('e2e.devices', {'users': missing});
-    final listed = (data['users'] as Map?) ?? {};
-    for (final name in missing) {
-      Object? raw;
-      for (final e in listed.entries) {
-        if (e.key.toString().toLowerCase() == name) raw = e.value;
+    if (missing.isNotEmpty) {
+      final done = Completer<Map<String, dynamic>>();
+      done.future.ignore();
+      for (final name in missing) {
+        _lookups[name] = done.future;
       }
-      final devices = _devices(raw);
-      _directory[name] = (devices: devices, at: DateTime.now());
-      out[name] = devices;
+      waits.add(done.future);
+      unawaited(_fetchDevices(missing, done));
+    }
+    for (final wait in waits) {
+      await wait;
+    }
+    final dropped = <String>[];
+    for (final name in names) {
+      if (out.containsKey(name)) continue;
+      final hit = _directory[name];
+      if (hit == null) {
+        dropped.add(name);
+      } else {
+        out[name] = hit.devices;
+      }
+    }
+    // A list dropped while its request was in flight is asked for again.
+    if (dropped.isNotEmpty) {
+      out.addAll(await devicesOf(dropped, isForced: true));
     }
     return out;
+  }
+
+  Future<void> _fetchDevices(
+    List<String> names,
+    Completer<Map<String, dynamic>> done,
+  ) async {
+    try {
+      final data = await _call('e2e.devices', {'users': names});
+      final listed = (data['users'] as Map?) ?? {};
+      for (final name in names) {
+        if (!identical(_lookups[name], done.future)) continue;
+        Object? raw;
+        for (final e in listed.entries) {
+          if (e.key.toString().toLowerCase() == name) raw = e.value;
+        }
+        _directory[name] = (devices: _devices(raw), at: DateTime.now());
+      }
+      done.complete(data);
+    } catch (e, st) {
+      done.completeError(e, st);
+    } finally {
+      for (final name in names) {
+        if (identical(_lookups[name], done.future)) _lookups.remove(name);
+      }
+    }
   }
 
   /// The directory entries when every one of [users] is still fresh, else
@@ -449,7 +541,9 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
 
   void invalidate(Iterable<String> users) {
     for (final u in users) {
-      _directory.remove(u.trim().toLowerCase());
+      final name = u.trim().toLowerCase();
+      _directory.remove(name);
+      _lookups.remove(name);
     }
   }
 
@@ -496,7 +590,20 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
         changes.add(E2ePinChange(user: entry.key, device: d));
       }
       if (!isRecord) continue;
-      for (final d in entry.value.where((d) => !known.containsKey(d.id))) {
+      final fresh = entry.value.where((d) => !known.containsKey(d.id)).toList();
+      // Told once: a person this phone already knew gets a device it has not
+      // seen. Never the first time somebody is seen, never my own devices,
+      // never a recovery key.
+      final added = fresh.where((d) => !d.isRecovery).toList();
+      if (known.isNotEmpty && added.isNotEmpty && entry.key != _me) {
+        _notices.add(
+          E2eNotice.newDevice(entry.key, [
+            for (final d in added)
+              if (d.label.isNotEmpty) d.label,
+          ]),
+        );
+      }
+      for (final d in fresh) {
         await _db.insert(
           'INSERT OR IGNORE INTO e2e_pins(org_id, user_id, device_user, device_id, ecdh, sign, first_ts) '
           'VALUES(?,?,?,?,?,?,?)',
@@ -623,7 +730,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   // ---- automatic setup -----------------------------------------------------
 
   String get _stateKey => 'e2e.state.$_org.$_me';
-  String get _noticeKey => 'e2e.notice.$_org.$_me';
+  String get _noticeKey => noticeKeyFor(_org, _me);
+
+  static String noticeKeyFor(String? org, String? user) =>
+      'e2e.notice.$org.${user?.toLowerCase()}';
 
   /// Local mark per organisation and user: `on` (set up), `pending` (a
   /// registration was started with the stored keys), `out` (the person removed
@@ -765,7 +875,11 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       }
       _raise(
         E2eSetupPhase.refused,
-        reason: e.message.isEmpty ? e.code : '${e.code}: ${e.message}',
+        reason: E2eTexts.registrationFailure(
+          e.code,
+          e.message,
+          maxDevices.value,
+        ),
       );
       return;
     }
@@ -786,6 +900,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       await _session.writeValue(_noticeKey, text);
       await _loadNotice();
     }
+    if (!_registrations.isClosed) _registrations.add(null);
     _settle();
   }
 
@@ -943,7 +1058,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       return E2eCrypto.dmLabel(me, convId.substring(3));
     }
     if (convId.startsWith('group:')) {
-      return E2eCrypto.groupLabel(convId.substring(6).trim());
+      return E2eCrypto.groupLabel(convId.substring(6));
     }
     return null;
   }
@@ -960,6 +1075,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     String? expectConv,
     E2eDeviceKeys? keys,
     Future<String?> Function(String user, String deviceId)? signKeyFor,
+    Future<E2eDevicePublic?> Function(String user, String deviceId)? deviceFor,
+    Map<String, ({String ecdh, String sign})>? testPins,
   }) async {
     final own = keys ?? await this.keys();
     if (own == null) return _logged(const E2eReading.cannot('no_device'));
@@ -967,6 +1084,12 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     final group = convId.startsWith('group:') ? convId.substring(6) : null;
     Future<String?> lookup(String user, String dev) async {
       if (signKeyFor != null) return signKeyFor(user, dev);
+      if (deviceFor != null) {
+        final d = await deviceFor(user, dev);
+        if (d == null) return null;
+        await _requireUnchangedKey(user, d, testPins: testPins);
+        return d.sign;
+      }
       try {
         for (final isForced in [false, true]) {
           // A group sender is looked up through the group list.
@@ -976,7 +1099,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
                     : cachedDevices([user]) ?? const {})
               : await devicesOf([user], isForced: isForced);
           for (final d in all[user.toLowerCase()] ?? <E2eDevicePublic>[]) {
-            if (d.id == dev) return d.sign;
+            if (d.id == dev) {
+              await _requireUnchangedKey(user, d);
+              return d.sign;
+            }
           }
         }
       } on SocketCallError catch (e) {
@@ -1002,6 +1128,33 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     } catch (_) {
       return _logged(const E2eReading.cannot('decrypt_failed'));
     }
+  }
+
+  /// The web's rule on reading (`#signKeyFor`): the sender device's keys must
+  /// equal its pin. A device seen for the first time is pinned; a changed key
+  /// refuses the message (`key_changed`) and leaves the pin as it is. With
+  /// [testPins] the pins are that map and nothing is stored.
+  Future<void> _requireUnchangedKey(
+    String user,
+    E2eDevicePublic d, {
+    Map<String, ({String ecdh, String sign})>? testPins,
+  }) async {
+    final name = user.trim().toLowerCase();
+    final List<E2ePinChange> changed;
+    if (testPins != null) {
+      final bad = pinMismatches(testPins, [d]);
+      testPins.putIfAbsent(d.id, () => (ecdh: d.ecdh, sign: d.sign));
+      changed = [for (final x in bad) E2ePinChange(user: name, device: x)];
+    } else {
+      changed = await checkPins({
+        name: [d],
+      }, isRecord: true);
+    }
+    if (changed.isEmpty) return;
+    if (_toldKeyChanged.add('$name|${d.id}')) {
+      _notices.add(E2eNotice.keyChanged(name));
+    }
+    throw const E2eException('key_changed', "the sender's key changed");
   }
 
   E2eReading _logged(E2eReading reading) {

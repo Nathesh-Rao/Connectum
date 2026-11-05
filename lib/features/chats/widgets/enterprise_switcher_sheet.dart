@@ -4,10 +4,12 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/app_highlight_text.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_list_row.dart';
 import '../../enterprises/widgets/enterprise_tile.dart';
 import '../enterprise_switcher_controller.dart';
+import '../../../core/widgets/app_spinner.dart';
 
 class EnterpriseSwitcherSheet extends StatelessWidget {
   const EnterpriseSwitcherSheet({super.key, required this.controller});
@@ -37,14 +39,7 @@ class EnterpriseSwitcherSheet extends StatelessWidget {
                   ? 'Waiting for approval · ${list[i].enterprise}'
                   : 'Not approved · ${list[i].enterprise}',
               trailing: c.enteringId.value == list[i].enterprise
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.accent,
-                      ),
-                    )
+                  ? const AppSpinner()
                   : list[i].enterprise == c.currentOrgId
                   ? const EnterpriseCurrentCheck()
                   : list[i].isActive
@@ -59,7 +54,8 @@ class EnterpriseSwitcherSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           if (c.waiting.value > 0)
             _Note(
-              '${c.waiting.value} ${c.waiting.value == 1 ? 'message' : 'messages'} waiting to send will go out when you return to ${c.currentName}.',
+              '${c.waiting.value} ${c.waiting.value == 1 ? 'message' : 'messages'} waiting to send will go out when you return to {org}.',
+              values: {'org': c.currentName},
               color: AppColors.accentInk,
             ),
           if (c.message.value != null)
@@ -83,14 +79,23 @@ class EnterpriseSwitcherSheet extends StatelessWidget {
 }
 
 class _Note extends StatelessWidget {
-  const _Note(this.text, {this.color = AppColors.muted});
+  const _Note(
+    this.text, {
+    this.color = AppColors.muted,
+    this.values = const {},
+  });
 
   final String text;
   final Color color;
+  final Map<String, String> values;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-    child: Text(text, style: AppText.caption.copyWith(color: color)),
+    child: AppHighlightText(
+      text,
+      values: values,
+      style: AppText.caption.copyWith(color: color),
+    ),
   );
 }

@@ -34,49 +34,52 @@ class AppFilterChips extends StatelessWidget {
       ),
       child: SizedBox(
         height: AppSpacing.filterTabHeight,
-        child: ListView.separated(
+        child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          itemCount: chips.length,
-          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xl),
-          itemBuilder: (context, i) {
-            final isSelected = i == selected;
-            return Semantics(
-              button: true,
-              selected: isSelected,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onSelected(i),
-                child: AnimatedContainer(
-                  duration: AppDurations.fast,
-                  curve: AppCurves.out,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isSelected
-                            ? AppColors.accent
-                            : Colors.transparent,
-                        width: 2,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < chips.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.xl),
+                Semantics(
+                  button: true,
+                  selected: i == selected,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onSelected(i),
+                    child: AnimatedContainer(
+                      duration: AppDurations.fast,
+                      curve: AppCurves.out,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: i == selected
+                                ? AppColors.accent
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: AnimatedDefaultTextStyle(
+                        duration: AppDurations.fast,
+                        style: i == selected
+                            ? AppText.segmentSelected.copyWith(
+                                color: AppColors.accentInk,
+                              )
+                            : AppText.segment,
+                        child: Text(
+                          chips[i].count > 0
+                              ? '${chips[i].label} ${chips[i].count}'
+                              : chips[i].label,
+                        ),
                       ),
                     ),
                   ),
-                  child: AnimatedDefaultTextStyle(
-                    duration: AppDurations.fast,
-                    style: isSelected
-                        ? AppText.segmentSelected.copyWith(
-                            color: AppColors.accentInk,
-                          )
-                        : AppText.segment,
-                    child: Text(
-                      chips[i].count > 0
-                          ? '${chips[i].label} ${chips[i].count}'
-                          : chips[i].label,
-                    ),
-                  ),
                 ),
-              ),
-            );
-          },
+              ],
+            ],
+          ),
         ),
       ),
     );

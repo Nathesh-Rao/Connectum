@@ -14,9 +14,10 @@ import '../../core/widgets/app_filter_tabs.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_row_highlight.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_unread_badge.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'chats_controller.dart';
 import 'widgets/conversation_actions_sheet.dart';
@@ -25,6 +26,7 @@ import 'widgets/enterprise_switcher_sheet.dart';
 import 'widgets/new_chat_sheet.dart';
 import 'widgets/search_results.dart';
 import 'widgets/skeleton_rows.dart';
+import '../../core/widgets/app_refresh.dart';
 
 class ChatsView extends GetView<ChatsController> {
   const ChatsView({super.key});
@@ -147,20 +149,14 @@ class _Header extends StatelessWidget {
                 onPressed: c.openNotifications,
               ),
               Positioned(
-                top: AppSpacing.sm,
-                right: AppSpacing.sm,
-                child: Obx(
-                  () => c.feed.unread.value > 0
-                      ? Container(
-                          width: AppSpacing.navDot,
-                          height: AppSpacing.navDot,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
+                top: AppSpacing.xxs,
+                right: AppSpacing.xxs,
+                child: Obx(() {
+                  final n = c.feed.unread.value;
+                  return n > 0
+                      ? AppUnreadBadge(label: n > 99 ? '99+' : '$n')
+                      : const SizedBox.shrink();
+                }),
               ),
             ],
           ),
@@ -288,7 +284,7 @@ class _Body extends StatelessWidget {
           ? SearchResults(key: const ValueKey('search'), controller: c)
           : _Refreshable(
               isEnabled: state == AppViewState.empty,
-              onRefresh: () => _refresh(context, c),
+              onRefresh: () => _refresh(c),
               child: AppStateView(
                 key: ValueKey(state),
                 state: state,
@@ -312,7 +308,7 @@ class _Body extends StatelessWidget {
             );
       return Column(
         children: [
-          if (!isSearching)
+          if (!isSearching && !c.isDirectTab.value)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
               child: _WorkspaceRow(onTap: c.openWorkspace),
@@ -330,8 +326,8 @@ class _Body extends StatelessWidget {
   }
 }
 
-Future<void> _refresh(BuildContext context, ChatsController c) async {
-  if (c.isOffline) AppToast.show(context, "You're offline");
+Future<void> _refresh(ChatsController c) async {
+  if (c.isOffline) AppNotices.info("You're offline");
   await c.refreshList();
 }
 
@@ -350,19 +346,9 @@ class _Refreshable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!isEnabled) return child;
-    return RefreshIndicator(
-      color: AppColors.accent,
-      backgroundColor: AppColors.background,
+    return AppRefresh(
       onRefresh: onRefresh,
-      child: LayoutBuilder(
-        builder: (context, box) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: box.maxHeight),
-            child: child,
-          ),
-        ),
-      ),
+      slivers: [SliverFillRemaining(hasScrollBody: false, child: child)],
     );
   }
 }
@@ -375,42 +361,42 @@ class _List extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    return RefreshIndicator(
-      color: AppColors.accent,
-      backgroundColor: AppColors.background,
-      onRefresh: () => _refresh(context, c),
-      child: Obx(() {
-        final ids = c.visibleIds.toList();
-        return ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-          itemCount: ids.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return const Padding(
-                padding: EdgeInsets.only(
-                  top: AppSpacing.lg,
-                  bottom: AppSpacing.xs,
-                ),
-                child: Text('Direct & Teams', style: AppText.eyebrow),
-              );
-            }
-            final id = ids[index - 1];
-            final row = c.rowOf(id);
-            return Obx(
-              () => ConversationTile(
-                key: ValueKey(id),
-                conversation: row.value,
-                controller: c,
-                onTap: () => c.open(id),
-                onLongPress: () =>
-                    ConversationActionsSheet.show(context, c, row.value),
-              ),
-            );
-          },
-        );
-      }),
+    return AppRefresh(
+      onRefresh: () => _refresh(c),
+      slivers: [
+        Obx(() {
+          final ids = c.visibleIds.toList();
+          return SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+            sliver: SliverList.builder(
+              itemCount: ids.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return const Padding(
+                    padding: EdgeInsets.only(
+                      top: AppSpacing.lg,
+                      bottom: AppSpacing.xs,
+                    ),
+                    child: Text('Direct & Teams', style: AppText.eyebrow),
+                  );
+                }
+                final id = ids[index - 1];
+                final row = c.rowOf(id);
+                return Obx(
+                  () => ConversationTile(
+                    key: ValueKey(id),
+                    conversation: row.value,
+                    controller: c,
+                    onTap: () => c.open(id),
+                    onLongPress: () =>
+                        ConversationActionsSheet.show(context, c, row.value),
+                  ),
+                );
+              },
+            ),
+          );
+        }),
+      ],
     );
   }
 }

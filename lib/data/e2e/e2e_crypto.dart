@@ -49,13 +49,13 @@ class E2eCrypto {
     }
   }
 
-  /// `dm:` plus both lower-cased names sorted, or `group:` plus the name.
+  /// `dm:` plus both lower-cased names sorted, or `group:` plus the lower-cased name, not trimmed (as the web).
   static String dmLabel(String a, String b) {
     final names = [a, b].map((n) => n.toLowerCase()).toList()..sort();
     return 'dm:${names.join('|')}';
   }
 
-  static String groupLabel(String name) => 'group:${name.trim().toLowerCase()}';
+  static String groupLabel(String name) => 'group:${name.toLowerCase()}';
 
   String newDeviceId() =>
       _random.bytes(16).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
@@ -483,6 +483,99 @@ class E2eCrypto {
       conv: e.conv,
     );
   }
+
+  // ---- handing the past on (older device) --------------------------------
+
+  /// Opens this device's own box of [e] and returns the 32-byte message key.
+  /// The sender's signature is not checked: this only re-locks a key the
+  /// device could already open (a reading rule, not a hand-on rule).
+  Future<Uint8List> unwrapOwnBox({
+    required E2eEnvelope e,
+    required String deviceId,
+    required EcdhPrivateKey ecdhPrivate,
+  }) async {
+    final mine = e.keys[deviceId];
+    if (mine == null) {
+      throw const E2eException(
+        'not_for_this_device',
+        'this device was not among the recipients',
+      );
+    }
+    try {
+      final shared = await ecdhPrivate.deriveBits(
+        256,
+        await _importEcdhPublic(mine['ek'] ?? e.ek),
+      );
+      final wrapKey = await _wrapKey(shared, e.mid, deviceId, e.dev);
+      final raw = await wrapKey.decryptBytes(
+        decode(mine['w']!),
+        decode(mine['iv']!),
+        additionalData: _wrapAad(e.mid, deviceId),
+      );
+      if (raw.length != 32) throw const E2eException('decrypt_failed', 'key');
+      return Uint8List.fromList(raw);
+    } on E2eException {
+      rethrow;
+    } catch (_) {
+      throw const E2eException(
+        'decrypt_failed',
+        'the message key could not be opened',
+      );
+    }
+  }
+
+  /// Locks [messageKey] for [target] with a new one-time key: the box
+  /// `{mid, iv, w, ek}` that `e2e.sync.put` takes. The HKDF info names the
+  /// ORIGINAL sender's device ([senderDev]), the additional data names the
+  /// target.
+  Future<Map<String, String>> lockFor({
+    required Uint8List messageKey,
+    required String mid,
+    required String senderDev,
+    required E2eDevicePublic target,
+  }) async {
+    final targetKey = await _importEcdhPublic(target.ecdh);
+    final fixed = _random.takeEphemeral();
+    final EcdhPrivateKey ephemeral;
+    final String ek;
+    if (fixed != null) {
+      ephemeral = await EcdhPrivateKey.importJsonWebKey(
+        _jwk(fixed.scalar, fixed.publicPoint),
+        EllipticCurve.p256,
+      );
+      ek = encode(fixed.publicPoint);
+    } else {
+      final pair = await EcdhPrivateKey.generateKey(EllipticCurve.p256);
+      ephemeral = pair.privateKey;
+      ek = encode(await pair.publicKey.exportRawKey());
+    }
+    final shared = await ephemeral.deriveBits(256, targetKey);
+    final wrapKey = await _wrapKey(shared, mid, target.id, senderDev);
+    final iv = _random.bytes(12);
+    final w = await wrapKey.encryptBytes(
+      messageKey,
+      iv,
+      additionalData: _wrapAad(mid, target.id),
+    );
+    return {'mid': mid, 'iv': encode(iv), 'w': encode(w), 'ek': ek};
+  }
+
+  /// The box for [target] made from one envelope this device can open.
+  Future<Map<String, String>> rewrap({
+    required E2eEnvelope e,
+    required String deviceId,
+    required EcdhPrivateKey ecdhPrivate,
+    required E2eDevicePublic target,
+  }) async => lockFor(
+    messageKey: await unwrapOwnBox(
+      e: e,
+      deviceId: deviceId,
+      ecdhPrivate: ecdhPrivate,
+    ),
+    mid: e.mid,
+    senderDev: e.dev,
+    target: target,
+  );
 
   // ---- attachments ------------------------------------------------------
 

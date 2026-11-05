@@ -69,7 +69,15 @@ class SubmissionRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.onOnline.listen((_) => _onOnline());
-    ever(_session.current, (_) => reload());
+    ever(_session.current, (_) {
+      // The other organisation's forms go before the new one's first read.
+      submissions.clear();
+      definitions.clear();
+      failures.clear();
+      drafts.clear();
+      isLoaded.value = false;
+      reload();
+    });
     reload();
   }
 

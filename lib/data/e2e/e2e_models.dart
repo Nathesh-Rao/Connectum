@@ -18,6 +18,7 @@ class E2eDevicePublic {
     required this.sign,
     this.label = '',
     this.ts = 0,
+    this.seen = 0,
     this.isRecovery = false,
     this.isLate = false,
   });
@@ -27,6 +28,10 @@ class E2eDevicePublic {
   final String sign;
   final String label;
   final int ts;
+
+  /// When the server last saw this device (`seen`, recorded at most hourly),
+  /// 0 when not reported.
+  final int seen;
 
   /// The recovery key, listed by the server as a device (`recovery: true`). It
   /// is wrapped for like any device but is not one of a person's devices.
@@ -210,6 +215,7 @@ class E2eSendDecision {
   /// No tag: the bubble then reads "Not sent. Tap to retry".
   static const staleFailure = 'stale devices';
   static const settingUp = 'Setting up secure messaging';
+  static const notSetUpReason = "secure messaging isn't set up on this phone";
 
   final E2eSendVerdict verdict;
   final String? headline;
@@ -251,4 +257,17 @@ class E2eKeyReview {
   /// The directory as the sheet saw it; trusting pins exactly these.
   final Map<String, List<E2eDevicePublic>> devices;
   final List<E2ePinChange> changed;
+}
+
+/// Something to tell the person that the web tells with a toast.
+class E2eNotice {
+  const E2eNotice.keyChanged(this.user)
+    : labels = const [],
+      isNewDevice = false;
+
+  const E2eNotice.newDevice(this.user, this.labels) : isNewDevice = true;
+
+  final String user;
+  final List<String> labels;
+  final bool isNewDevice;
 }

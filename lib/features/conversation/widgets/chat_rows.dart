@@ -5,6 +5,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_spinner.dart';
 
 /// "Today", "Yesterday", a weekday or a date, centred between messages.
 class DayDivider extends StatelessWidget {
@@ -50,16 +51,7 @@ class LoadingOlderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Padding(
     padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-    child: Center(
-      child: SizedBox(
-        width: 18,
-        height: 18,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: AppColors.accent,
-        ),
-      ),
-    ),
+    child: Center(child: AppSpinner()),
   );
 }
 

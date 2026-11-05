@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:webcrypto/webcrypto.dart';
 
+import '../../data/db/app_database.dart';
 import '../../data/e2e/e2e_crypto.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/e2e/e2e_models.dart';
@@ -12,6 +14,11 @@ import '../../data/e2e/e2e_random.dart';
 import '../../core/config/app_config.dart';
 import '../../core/utils/attachment_tag.dart';
 import '../../data/repositories/e2e_repository.dart';
+import '../security/device_limit_controller.dart';
+import 'hand_on_vectors.dart';
+import 'highlight_vectors.dart';
+import 'limit_sheet_vectors.dart';
+import 'read_vectors.dart';
 import '../../data/repositories/encryption_policy.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
@@ -30,15 +37,19 @@ class DebugE2eController extends GetxController {
     required this.e2e,
     required this.session,
     required this.socket,
-  }) : _keyStore = keyStore;
+    required AppDatabase db,
+  }) : _keyStore = keyStore,
+       _db = db;
 
   static const _vectorsAsset = 'mobile-handoff/e2e-vectors.json';
   static const _attachmentAsset = 'assets/debug/e2e-attachment-vectors.json';
+  static const _rewrapAsset = 'assets/debug/e2e-rewrap-vectors.json';
 
   final E2eKeyStore _keyStore;
   final E2eRepository e2e;
   final SessionStore session;
   final SocketService socket;
+  final AppDatabase _db;
   final _crypto = E2eCrypto();
 
   final label = TextEditingController(text: 'Connectum mobile (moto g32)');
@@ -169,17 +180,58 @@ class DebugE2eController extends GetxController {
       await _registration(vectors, devices);
       await _file(vectors);
       await _attachmentVectors();
+      await _handOnVectors();
+      await ReadVectors(_check, e2e).run();
+      await LimitSheetVectors(_check).run();
+      await HighlightVectors(_check).run();
       await _safety(vectors, devices);
       _encodings(vectors);
       await _roundTrip();
       await _repositoryOpen();
       await _sendChecks();
+      await _statusLabelCacheChecks();
       await _keyStoreRoundTrip();
     } catch (e) {
       _add('self-test aborted', false, e.runtimeType.toString());
     } finally {
       isRunning.value = false;
     }
+  }
+
+  /// Sample data for the device-limit sheet: a stand-in removal and a
+  /// stand-in registration. Nothing reaches the server.
+  DeviceLimitController sampleLimit() => LimitSheetVectors.sample(
+    remove: (_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      return true;
+    },
+    retry: () async {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      return null;
+    },
+  );
+
+  /// The older-device hand-on: the backend's `rewrap` vectors, batching,
+  /// pacing, error mapping and the job against a stand-in server.
+  Future<void> _handOnVectors() async {
+    final vectors =
+        jsonDecode(await rootBundle.loadString(_rewrapAsset))
+            as Map<String, dynamic>;
+    await HandOnVectors(_check).run(vectors);
+  }
+
+  /// Time for one page of 400 messages on the main isolate and on a worker.
+  Future<void> benchmarkHandOn() async {
+    if (isBusy.value) return;
+    isBusy.value = true;
+    message.value =
+        'Measuring 400 messages on the main isolate and a worker...';
+    try {
+      message.value = await HandOnBenchmark.run();
+    } catch (e) {
+      message.value = 'Benchmark failed: ${e.runtimeType}';
+    }
+    isBusy.value = false;
   }
 
   void _add(String name, bool isPassed, [String detail = '']) =>
@@ -1308,6 +1360,122 @@ class DebugE2eController extends GetxController {
               ).length ==
               1,
     );
+  }
+
+  Future<void> _statusLabelCacheChecks() async {
+    await _check('e2e.status carries the device id', () async {
+      final args = E2eRepository.statusArgs('abc123');
+      if (args['id'] != 'abc123' || args.length != 1) return 'got $args';
+      if (E2eRepository.statusArgs(null).isNotEmpty ||
+          E2eRepository.statusArgs('').isNotEmpty) {
+        return 'an id was sent without a device';
+      }
+      return null;
+    });
+    await _check('group label: lower case only, no trimming', () async {
+      const cases = {
+        'Team': 'group:team',
+        ' Team ': 'group: team ',
+        'TEAM\tOps': 'group:team\tops',
+        'ÉQUIPE Ünï': 'group:équipe ünï',
+        '': 'group:',
+      };
+      for (final e in cases.entries) {
+        final got = E2eCrypto.groupLabel(e.key);
+        if (got != e.value) return '"${e.key}" gave "$got"';
+      }
+      return null;
+    });
+    await _check(
+      'group label with spaces matches the envelope check',
+      () async {
+        final keys = await _crypto.generateDeviceKeys();
+        final conv = E2eCrypto.groupLabel(' Team ');
+        final envelope = await _crypto.buildEnvelope(
+          user: 'alice',
+          keys: keys,
+          conv: conv,
+          recipients: [keys.asPublic],
+          text: 'hi',
+        );
+        Future<String?> signKey(String u, String d) async => keys.signPub;
+        final opened = await _crypto.openEnvelope(
+          text: envelope,
+          keys: keys,
+          signKeyFor: signKey,
+          expectConv: conv,
+        );
+        if (opened.text != 'hi') return 'did not open';
+        try {
+          await _crypto.openEnvelope(
+            text: envelope,
+            keys: keys,
+            signKeyFor: signKey,
+            expectConv: conv.trim(),
+          );
+          return 'a trimmed label was accepted';
+        } on E2eException catch (_) {
+          return null;
+        }
+      },
+    );
+    await _check('device list cache: reuse, coalesce, scope', () async {
+      var calls = 0;
+      final asked = <List<String>>[];
+      final release = Completer<void>();
+      var isHeld = false;
+      Map<String, dynamic> reply(List<String> users) => {
+        'users': {
+          for (final u in users)
+            u: [
+              {'id': 'd-$u', 'ecdh': 'e', 'sign': 's', 'label': 'x', 'ts': 1},
+            ],
+        },
+      };
+      final repo = E2eRepository(
+        _keyStore,
+        socket,
+        session,
+        _db,
+        call: (action, args) async {
+          if (action != 'e2e.devices') return {};
+          calls++;
+          final users = [for (final u in args['users'] as List) '$u'];
+          asked.add(users);
+          if (isHeld) await release.future;
+          return reply(users);
+        },
+      );
+      const ttl = E2eRepository.sendListTtl;
+      await repo.devicesOf(['Bob', 'me'], maxAge: ttl);
+      if (calls != 1) return 'first lookup made $calls calls';
+      await repo.devicesOf(['bob', 'me'], maxAge: ttl);
+      if (calls != 1) return 'a second lookup within the lifetime asked again';
+      await repo.devicesOf(['carol', 'me'], maxAge: ttl);
+      if (calls != 2 || asked.last.join() != 'carol') {
+        return 'a different person asked for ${asked.last}';
+      }
+      repo.invalidate(['bob']);
+      await repo.devicesOf(['bob'], maxAge: ttl);
+      if (calls != 3) return 'a dropped entry was not asked again';
+      await repo.devicesOf(['bob'], isForced: true);
+      if (calls != 4) return 'a forced lookup used the cache';
+      isHeld = true;
+      repo.invalidate(['dave']);
+      final a = repo.devicesOf(['dave'], maxAge: ttl);
+      final b = repo.devicesOf(['dave'], maxAge: ttl);
+      await Future<void>.delayed(Duration.zero);
+      release.complete();
+      final both = await Future.wait([a, b]);
+      if (calls != 5) return 'simultaneous lookups made ${calls - 4} calls';
+      if (both.any((m) => m['dave']?.single.id != 'd-dave')) {
+        return 'a waiter got the wrong list';
+      }
+      repo.clearDirectory();
+      await repo.devicesOf(['bob'], maxAge: ttl);
+      if (calls != 6) return 'a lookup after sign-out used the cache';
+      return null;
+    });
   }
 
   Future<void> _keyStoreRoundTrip() async {

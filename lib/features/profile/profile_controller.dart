@@ -9,10 +9,12 @@ import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/app_settings.dart';
+import '../../data/repositories/qr_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../chats/enterprise_switcher_controller.dart';
+import '../qr/qr_sheet.dart';
 
 class ProfileController extends GetxController {
   ProfileController({
@@ -20,12 +22,14 @@ class ProfileController extends GetxController {
     required this.session,
     required this.connectivity,
     required this.switcher,
+    required this.qr,
   });
 
   final SessionStore store;
   final SessionRepository session;
   final ConnectivityService connectivity;
   final EnterpriseSwitcherController switcher;
+  final QrRepository qr;
 
   final isCopied = false.obs;
   final isLoggingOut = false.obs;
@@ -79,6 +83,9 @@ class ProfileController extends GetxController {
   }
 
   void prepareSwitcher() => switcher.prepare();
+
+  Future<void> openQr(BuildContext context) =>
+      QrSheet.show(context, repository: qr);
 
   void openSecurity() => Get.toNamed(AppRoutes.security);
 

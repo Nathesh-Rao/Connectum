@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
@@ -17,10 +18,13 @@ import 'widgets/chat_rows.dart';
 import 'widgets/conversation_composer.dart';
 import 'widgets/conversation_header.dart';
 import 'widgets/message_actions_sheet.dart';
+import 'widgets/device_limit_banner.dart';
+import 'widgets/key_change_sheet.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/members_sheet.dart';
 import 'widgets/message_status_mark.dart';
 import 'widgets/reaction_chips.dart';
+import '../tickets/tickets_texts.dart';
 import 'widgets/scroll_to_latest_button.dart';
 import 'widgets/typing_dots.dart';
 import 'widgets/upload_bubble.dart';
@@ -67,12 +71,26 @@ class ConversationView extends GetView<ConversationController> {
                         title: c.title,
                         members: c.members,
                         me: c.me,
+                        onAddPeople: c.isOwner
+                            ? () {
+                                Get.back<void>();
+                                Get.toNamed<void>(
+                                  AppRoutes.newGroup,
+                                  arguments: c.target,
+                                );
+                              }
+                            : null,
                       )
                     : null,
                 onBack: Get.back,
               );
             }),
             const AppOfflineBar(),
+            Obx(
+              () => c.isDeviceLimit.value
+                  ? DeviceLimitBanner(onTap: c.openDeviceLimit)
+                  : const SizedBox.shrink(),
+            ),
             Expanded(child: _MessageArea(controller: c)),
             Obx(() {
               final label = c.typingLabel;
@@ -203,6 +221,9 @@ Widget _message(BuildContext context, ConversationController c, ChatItem item) {
                 ? c.formProblemOf(m)
                 : null,
             isHighlighted: c.highlighted.contains(m.msgId),
+            stripLabel: card.isTicket && !card.isPending
+                ? '${TicketsTexts.ticketMarker} #${card.id}'
+                : null,
             statusMark: m.isMine
                 ? MessageStatusMark(status: m.status, isDirect: c.isDirect)
                 : null,
@@ -222,7 +243,22 @@ Widget _message(BuildContext context, ConversationController c, ChatItem item) {
 
 Widget _bubble(BuildContext context, ConversationController c, ChatItem item) {
   final m = item.message!;
+  // Reads the highlight, so the bubble flashes when opened from a quote.
+  return Obx(
+    () => _bubbleOf(context, c, item, c.highlighted.contains(m.msgId)),
+  );
+}
+
+Widget _bubbleOf(
+  BuildContext context,
+  ConversationController c,
+  ChatItem item,
+  bool isHighlighted,
+) {
+  final m = item.message!;
   return MessageBubble(
+    isHighlighted: isHighlighted,
+    onOpenOriginal: m.replyTo == null ? null : () => c.openOriginal(m.replyTo!),
     item: item,
     isDirect: c.isDirect,
     original: c.originalOf(m),
@@ -231,6 +267,11 @@ Widget _bubble(BuildContext context, ConversationController c, ChatItem item) {
     reactions: c.reactionsOf(m),
     onReact: (emoji) => c.toggleReaction(m, emoji),
     attachmentOf: (tag) => AttachmentView(tag: tag, controller: c),
+    people: c.mentionPeople,
+    onReviewKey: () {
+      c.keyChangeMember = m.sender.toLowerCase();
+      KeyChangeSheet.open(context, c);
+    },
   );
 }
 

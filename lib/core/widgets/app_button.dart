@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import './app_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
@@ -291,13 +292,9 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
           ),
           child: Center(
             child: widget.isLoading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: foreground,
-                    ),
+                ? AppSpinner(
+                    size: AppSpinnerSize.medium,
+                    color: isPrimary ? AppColors.background : AppColors.accent,
                   )
                 : Row(
                     mainAxisSize: isSpaced

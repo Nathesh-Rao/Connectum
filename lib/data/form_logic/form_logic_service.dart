@@ -5,6 +5,9 @@ import 'dart:isolate';
 import 'package:get/get.dart';
 import 'package:quickjs_engine/quickjs_engine.dart';
 
+import '../../core/debug/seed_ui.dart';
+import '../session_store.dart';
+import '../socket/socket_service.dart';
 import 'form_logic_assets.dart';
 
 /// What a call to the logic gives back: a value, or the reason there is none.
@@ -23,8 +26,25 @@ class FormLogicResult<T> {
 /// lives in a background isolate for as long as the app does. Plain JSON goes
 /// in and out; the UI thread only waits on a port. A call that takes longer
 /// than [timeout] ends with an error and the engine is started again.
+///
+/// One engine per signed-in person: when the organisation or the user behind
+/// the session changes (sign out, switching organisation, `session_replaced`,
+/// a new sign-in) the engine is stopped and the person's details dropped; the
+/// next call starts a clean engine and loads the new person's details.
 class FormLogicService extends GetxService {
+  FormLogicService(this._store, this._socket);
+
   static const timeout = Duration(seconds: 4);
+
+  final SessionStore _store;
+  final SocketService _socket;
+
+  /// Counts up when more of the person's details arrive after a form opened.
+  final personVersion = 0.obs;
+  String? _personKey;
+  Map<String, dynamic>? _globals;
+  Future<void>? _loadingPerson;
+  Worker? _sessionWorker;
 
   Future<void>? _starting;
   Isolate? _isolate;
@@ -34,6 +54,99 @@ class FormLogicService extends GetxService {
   int _seq = 0;
   String _dateFormat = 'dd/mm/yyyy';
   FormLogicAssets? _assets;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _personKey = _currentKey;
+    _sessionWorker = ever(_store.current, (_) {
+      if (_currentKey == _personKey) return;
+      _personKey = _currentKey;
+      _globals = null;
+      _loadingPerson = null;
+      _stop('signed-in person changed');
+    });
+  }
+
+  String? get _currentKey {
+    final info = _store.current.value;
+    return info == null ? null : '${info.orgId}/${info.userId}';
+  }
+
+  /// Loads the signed-in person's own details (`globals.list`, then the slower
+  /// `globals.resolve`) and gives them to the logic as `login_<name>` (the
+  /// logic also reads the plain and `global_` names). Does nothing without a
+  /// connection; the form then reads those names as empty.
+  Future<void> ensurePerson() {
+    if (_globals != null || _currentKey == null) return Future.value();
+    return _loadingPerson ??= _loadPerson(_currentKey!).whenComplete(() {
+      if (_globals == null) _loadingPerson = null;
+    });
+  }
+
+  Future<void> _loadPerson(String key) async {
+    if (SeedUi.isActive || !_socket.isOnline) return;
+    try {
+      final listed = await _socket.sdCall('globals.list', {});
+      final values = listed['values'];
+      if (key != _personKey || values is! Map) return;
+      await _setGlobals(key, values.cast<String, dynamic>());
+    } on Object {
+      return;
+    }
+    unawaited(_resolvePerson(key));
+  }
+
+  Future<void> _resolvePerson(String key) async {
+    try {
+      final resolved = await _socket.sdCall('globals.resolve', {});
+      final values = resolved['values'];
+      if (key != _personKey || values is! Map) return;
+      await _setGlobals(key, {...?_globals, ...values.cast<String, dynamic>()});
+      personVersion.value++;
+    } on Object {
+      return;
+    }
+  }
+
+  Future<void> _setGlobals(String key, Map<String, dynamic> values) async {
+    _globals = values;
+    final r = await _call('setGlobals', [values]);
+    if (!r.isOk && key == _personKey) _globals = null;
+  }
+
+  /// Whether a condition (`{field, op, value}`, `{all}`, `{any}`) holds for
+  /// [values]: the web's `evalCondition`, not a copy of it.
+  Future<FormLogicResult<bool>> evalCondition(
+    Object? condition,
+    Map<String, dynamic> values,
+  ) async {
+    final r = await _call('evalCondition', [condition, values]);
+    return r.isOk
+        ? FormLogicResult.ok(r.value == true)
+        : FormLogicResult.failed(r.error!);
+  }
+
+  Future<FormLogicResult<bool>> isEmpty(Object? value) async {
+    final r = await _call('isEmpty', [value]);
+    return r.isOk
+        ? FormLogicResult.ok(r.value == true)
+        : FormLogicResult.failed(r.error!);
+  }
+
+  /// Many conditions in one call. Each item is `{k, c}` (key, condition) with
+  /// an optional `r`, a grid row's cells, which are laid over [values] so the
+  /// cell's own row is looked at first. Answers key -> met.
+  Future<FormLogicResult<Map<String, bool>>> evalConditions(
+    Map<String, dynamic> values,
+    List<Map<String, dynamic>> items,
+  ) async {
+    final r = await _map('evalConditions', [values, items]);
+    if (!r.isOk) return FormLogicResult.failed(r.error!);
+    return FormLogicResult.ok({
+      for (final e in r.value!.entries) e.key: e.value == true,
+    });
+  }
 
   Future<FormLogicResult<Map<String, dynamic>>> applyFormCalcs(
     List<Map<String, dynamic>> fields,
@@ -173,6 +286,14 @@ class FormLogicService extends GetxService {
     }
     _isolate = isolate;
     _replies = replies;
+    final globals = _globals;
+    if (globals != null) {
+      _port!.send([
+        0,
+        'setGlobals',
+        jsonEncode([globals]),
+      ]);
+    }
     if (_dateFormat != 'dd/mm/yyyy') {
       _port!.send([
         0,
@@ -198,6 +319,7 @@ class FormLogicService extends GetxService {
 
   @override
   void onClose() {
+    _sessionWorker?.dispose();
     _stop('closed');
     super.onClose();
   }
@@ -215,6 +337,17 @@ var __call = function (op, argsJson) {
     case 'hasCalc': r = L.hasCalc(a[0]); break;
     case 'canCalc': r = L.canCalc(a[0]); break;
     case 'setDateFormat': L.SetDateFormat(a[0]); r = null; break;
+    case 'setGlobals': L.setRuleGlobals(a[0]); r = null; break;
+    case 'evalCondition': r = L.evalCondition(a[0], a[1]); break;
+    case 'isEmpty': r = L.isEmpty(a[0]); break;
+    case 'evalConditions':
+      r = {};
+      a[1].forEach(function (it) {
+        var v = a[0];
+        if (it.r) { v = {}; for (var k in a[0]) v[k] = a[0][k]; for (var j in it.r) v[j] = it.r[j]; }
+        r[it.k] = L.evalCondition(it.c, v);
+      });
+      break;
     default: throw new Error('unknown op ' + op);
   }
   return JSON.stringify({ v: r === undefined ? null : r });

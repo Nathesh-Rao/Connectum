@@ -5,13 +5,16 @@ import 'package:get/get.dart';
 import '../../core/data/app_countries.dart';
 import '../../core/data/country_lookup.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/invite_service.dart';
 import '../../core/theme/app_motion.dart';
+import '../../core/widgets/app_notices.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
 import '../../data/models/auth_flow.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/socket/connectivity_service.dart';
+import '../invite_code/invite_code_sheet.dart';
 import 'auth_validators.dart';
 
 class AuthenticationController extends GetxController
@@ -20,13 +23,16 @@ class AuthenticationController extends GetxController
     required this.auth,
     required this.session,
     required this.connectivity,
+    required this.invite,
   });
 
+  static const _loginNoticeKey = 'login-notice';
   static const tabLabels = ['Sign in', 'Set up', 'Self register'];
 
   final AuthRepository auth;
   final SessionRepository session;
   final ConnectivityService connectivity;
+  final InviteService invite;
 
   // One email for all three modes; every other field belongs to one mode and
   // keeps its value while the person switches tabs.
@@ -81,6 +87,7 @@ class AuthenticationController extends GetxController
   @override
   void onInit() {
     super.onInit();
+    invite.attach();
     final prefill = session.loginEmail.value;
     if (prefill != null) {
       email.text = prefill;
@@ -107,7 +114,29 @@ class AuthenticationController extends GetxController
     serverErrors.clear();
   }
 
-  void dismissNotice() => session.loginNotice.value = null;
+  @override
+  void onReady() {
+    super.onReady();
+    _showLoginNotice(session.loginNotice.value);
+    ever(session.loginNotice, _showLoginNotice);
+  }
+
+  void _showLoginNotice(String? text) {
+    if (text == null) {
+      AppNotices.hide(_loginNoticeKey);
+      return;
+    }
+    AppNotices.show(
+      text,
+      key: _loginNoticeKey,
+      onDismiss: () => session.loginNotice.value = null,
+    );
+  }
+
+  void openInviteSheet() {
+    final context = Get.context;
+    if (context != null) InviteCodeSheet.show(context);
+  }
 
   void touch(String key) {
     if (touched.add(key)) revision.value++;
@@ -209,6 +238,11 @@ class AuthenticationController extends GetxController
     } else if (e.code == 'invalid_mobile') {
       serverErrors[mode.value == 1 ? 'setupMobile' : 'regMobile'] =
           AuthValidators.mobileError;
+    } else if (e.code == 'no_account' && mode.value == 0 && invite.hasInvite) {
+      // An invited person with a new email goes on to create the account.
+      tabController.animateTo(2);
+      formError.value =
+          'No account for that email yet. Create one to join ${invite.organisationName ?? 'this enterprise'}.';
     } else if (e.code == 'exists' || e.code == 'no_account') {
       serverErrors['email'] = ApiMessages.of(e);
     } else {
@@ -318,6 +352,8 @@ class AuthenticationController extends GetxController
 
   @override
   void onClose() {
+    AppNotices.hide(_loginNoticeKey);
+    invite.detach();
     tabController.dispose();
     for (final c in [
       email,

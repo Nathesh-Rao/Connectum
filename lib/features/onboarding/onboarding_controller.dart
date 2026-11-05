@@ -2,8 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/invite_service.dart';
 import '../../core/theme/app_motion.dart';
 import '../../data/session_store.dart';
+import '../invite_code/invite_code_sheet.dart';
 import '../splash/splash_controller.dart';
 
 class OnboardingSlide {
@@ -15,7 +17,11 @@ class OnboardingSlide {
 }
 
 class OnboardingController extends GetxController {
-  OnboardingController({required this.store, required this.isReplay});
+  OnboardingController({
+    required this.store,
+    required this.isReplay,
+    required this.invite,
+  });
 
   static const slides = [
     OnboardingSlide(
@@ -37,6 +43,7 @@ class OnboardingController extends GetxController {
 
   final SessionStore store;
   final bool isReplay;
+  final InviteService invite;
 
   final pageController = PageController();
   final copyController = PageController();
@@ -45,12 +52,18 @@ class OnboardingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    invite.attach();
     // The copy follows the illustration, so both slide together.
     pageController.addListener(() {
       if (pageController.hasClients && copyController.hasClients) {
         copyController.position.jumpTo(pageController.position.pixels);
       }
     });
+  }
+
+  void openInviteSheet() {
+    final context = Get.context;
+    if (context != null) InviteCodeSheet.show(context);
   }
 
   bool get isLast => page.value == slides.length - 1;
@@ -80,6 +93,7 @@ class OnboardingController extends GetxController {
 
   @override
   void onClose() {
+    invite.detach();
     pageController.dispose();
     copyController.dispose();
     super.onClose();

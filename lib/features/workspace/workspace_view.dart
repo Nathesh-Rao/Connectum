@@ -5,6 +5,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../../core/widgets/app_list_row.dart';
 import '../../core/widgets/app_offline_bar.dart';
@@ -34,6 +35,18 @@ class WorkspaceView extends GetView<WorkspaceController> {
             status: null,
             isSquareAvatar: true,
             onBack: Get.back,
+            trailing: [
+              AppButton.icon(
+                icon: Icons.task_alt,
+                semanticLabel: 'Tasks',
+                onPressed: c.openTasks,
+              ),
+              AppButton.icon(
+                icon: Icons.fact_check_outlined,
+                semanticLabel: 'Approvals',
+                onPressed: c.openApprovals,
+              ),
+            ],
           ),
           const AppOfflineBar(),
           Expanded(

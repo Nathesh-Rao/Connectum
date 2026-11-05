@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../core/routes/invite_service.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/socket/connectivity_service.dart';
@@ -13,6 +14,7 @@ class AuthenticationBinding extends Bindings {
         auth: Get.find<AuthRepository>(),
         session: Get.find<SessionRepository>(),
         connectivity: Get.find<ConnectivityService>(),
+        invite: Get.find<InviteService>(),
       ),
     );
   }

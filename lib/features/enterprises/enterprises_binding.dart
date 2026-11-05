@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../core/routes/deep_link_service.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
@@ -19,6 +20,7 @@ class EnterprisesBinding extends Bindings {
         session: Get.find<SessionRepository>(),
         connectivity: Get.find<ConnectivityService>(),
         connect: Get.find<ConnectController>(),
+        links: Get.find<DeepLinkService>(),
       ),
     );
   }

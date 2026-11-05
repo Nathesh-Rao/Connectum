@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
-import 'app_animation_placeholder.dart';
 import 'app_button.dart';
+import 'app_loading.dart';
 import 'app_state_image.dart';
 
 enum AppViewState {
@@ -54,7 +54,7 @@ class AppStateView extends StatelessWidget {
     return switch (state) {
       AppViewState.content => child,
       AppViewState.loading =>
-        loadingChild ?? const _Message(placeholder: 'loading'),
+        loadingChild ?? const _Message(),
       AppViewState.empty => _Message(
         image: image ?? emptyImage,
         title: emptyTitle,
@@ -96,7 +96,6 @@ class AppStateView extends StatelessWidget {
 class _Message extends StatelessWidget {
   const _Message({
     this.image,
-    this.placeholder,
     this.title,
     this.message,
     this.onRetry,
@@ -105,7 +104,6 @@ class _Message extends StatelessWidget {
   });
 
   final AppStateImageKind? image;
-  final String? placeholder;
   final String? title;
   final String? message;
   final VoidCallback? onRetry;
@@ -123,7 +121,7 @@ class _Message extends StatelessWidget {
             if (image != null)
               AppStateImage(kind: image!)
             else
-              AppAnimationPlaceholder(name: placeholder ?? 'loading'),
+              const AppLoading.large(),
             if (title != null) ...[
               const SizedBox(height: AppSpacing.lg),
               Text(

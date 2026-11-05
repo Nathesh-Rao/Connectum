@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_list_row.dart';
 import '../../../core/widgets/app_state_image.dart';
+import '../../../core/widgets/app_highlight_text.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../new_chat_controller.dart';
 
@@ -43,7 +44,10 @@ class NewChatSheet extends StatelessWidget {
               if (c.explanation.value != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(c.explanation.value!, style: AppText.readable),
+                  child: AppHighlightText(
+                    c.explanation.value!,
+                    values: c.explanationValues,
+                  ),
                 ),
               for (final p in people)
                 AppListRow(
@@ -91,16 +95,19 @@ class NewChatSheet extends StatelessWidget {
                 ),
               AppListRow(
                 title: 'New group',
-                subtitle: 'Not available yet',
-                leading: const AppStateImage(
-                  kind: AppStateImageKind.comingSoon,
-                  size: AppSpacing.stateImageRow,
-                  isAnimated: false,
+                subtitle: 'Create a group and add people',
+                leading: const Icon(
+                  Icons.group_add_outlined,
+                  size: 22,
+                  color: AppColors.accent,
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.rowChevron,
                 ),
                 minHeight: AppSpacing.settingRowHeight,
-                titleStyle: AppText.rowTitle.copyWith(
-                  color: AppColors.cardMuted,
-                ),
+                onTap: c.openNewGroup,
               ),
             ],
           );

@@ -7,15 +7,20 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/attachment_tag.dart';
+import '../../../core/utils/forwarded_text.dart';
+import '../../../core/utils/mention_text.dart';
+import '../../../core/widgets/app_mention_text.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../../../data/e2e/e2e_texts.dart';
 import '../../../data/models/message.dart';
 import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
 import 'attach_sheet.dart';
 import 'commands_panel.dart';
 import 'key_change_sheet.dart';
+import 'mention_panel.dart';
 
 /// The composer: a field that grows to five lines, a send button that wakes
 /// as text appears, an attach button for photos and the forms button. In an
@@ -77,7 +82,18 @@ class ConversationComposer extends StatelessWidget {
             onPick: c.pickCommand,
             isOnline: () => c.commands.isOnline,
           ),
-          Obx(() => _ReplyBar(message: c.reply.value, onClose: c.clearReply)),
+          MentionPanel(
+            rows: c.mentionRows,
+            onPick: c.pickMention,
+            onClose: c.closeMentions,
+          ),
+          Obx(
+            () => _ReplyBar(
+              message: c.reply.value,
+              people: c.mentionPeople,
+              onClose: c.clearReply,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.sm,
@@ -234,9 +250,14 @@ class ComposerSendButton extends StatelessWidget {
 }
 
 class _ReplyBar extends StatelessWidget {
-  const _ReplyBar({required this.message, required this.onClose});
+  const _ReplyBar({
+    required this.message,
+    required this.people,
+    required this.onClose,
+  });
 
   final Message? message;
+  final MentionPeople people;
   final VoidCallback onClose;
 
   @override
@@ -282,11 +303,16 @@ class _ReplyBar extends StatelessWidget {
                             color: AppColors.accentInk,
                           ),
                         ),
-                        Text(
-                          AttachmentTag.preview(m.text) ?? m.text,
+                        AppMentionText(
+                          text:
+                              AttachmentTag.preview(
+                                ForwardedText.parse(m.text).text,
+                              ) ??
+                              ForwardedText.parse(m.text).text,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.caption,
+                          people: people,
                         ),
                       ],
                     ),
@@ -369,6 +395,15 @@ class _Blocked extends StatelessWidget {
               style: AppText.readable,
             ),
           ),
+        ),
+        Obx(
+          () => controller.isDeviceLimit.value
+              ? AppButton.text(
+                  label: E2eTexts.limitSeeDevices,
+                  tone: AppTextButtonTone.accent,
+                  onPressed: controller.openDeviceLimit,
+                )
+              : const SizedBox.shrink(),
         ),
         Obx(
           () => controller.isKeyChange.value

@@ -29,11 +29,13 @@ var ConnectumFormLogic = (() => {
     applyFormCalcs: () => applyFormCalcs,
     applyRowCalcs: () => applyRowCalcs,
     canCalc: () => canCalc,
+    evalCondition: () => evalCondition,
     evaluateExpression: () => evaluateExpression,
     evaluateRule: () => evaluateRule,
     fieldRuleError: () => fieldRuleError,
     fitCalc: () => fitCalc,
     hasCalc: () => hasCalc,
+    isEmpty: () => isEmpty,
     ruleResult: () => ruleResult,
     runConformance: () => runConformance,
     setRuleGlobals: () => setRuleGlobals,
@@ -923,7 +925,9 @@ var ConnectumFormLogic = (() => {
   }
 
   // form-studio/src/core/fieldRule.js
-  var GLOBAL_PREFIX = "global_";
+  var GLOBAL_PREFIX = "login_";
+  var LEGACY_GLOBAL_PREFIX = "global_";
+  var bareGlobalName = (w) => w.startsWith(GLOBAL_PREFIX) ? w.slice(GLOBAL_PREFIX.length) : w.startsWith(LEGACY_GLOBAL_PREFIX) ? w.slice(LEGACY_GLOBAL_PREFIX.length) : w;
   var GLOBALS = {};
   var GLOBALS_VERSION = 0;
   var setRuleGlobals = (values) => {
@@ -970,6 +974,7 @@ var ConnectumFormLogic = (() => {
     for (const [n, v] of Object.entries(GLOBALS)) {
       put(n, v, 1);
       put(`${GLOBAL_PREFIX}${n}`, v, 1);
+      put(`${LEGACY_GLOBAL_PREFIX}${n}`, v, 1);
     }
     for (const [n, v] of Object.entries(values || {})) {
       if (Array.isArray(v) && v.length && v.every((r) => r && typeof r === "object" && !Array.isArray(r))) {
@@ -998,6 +1003,51 @@ var ConnectumFormLogic = (() => {
     return String((_c = rule.message) != null ? _c : "").trim() || `${field.label || field.caption || id} is not valid`;
   }
 
+  // form-studio/src/core/condition.js
+  var isEmpty = (v) => v === void 0 || v === null || v === "" || Array.isArray(v) && v.length === 0;
+  var toNum = (v) => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
+    return null;
+  };
+  function cmp(a, b) {
+    const x = toNum(a);
+    const y = toNum(b);
+    if (x !== null && y !== null) return x < y ? -1 : x > y ? 1 : 0;
+    const sa = String(a != null ? a : "");
+    const sb = String(b != null ? b : "");
+    return sa < sb ? -1 : sa > sb ? 1 : 0;
+  }
+  function evalCondition(cond, values) {
+    if (!cond) return true;
+    if (Array.isArray(cond.all)) return cond.all.every((c) => evalCondition(c, values));
+    if (Array.isArray(cond.any)) return cond.any.some((c) => evalCondition(c, values));
+    const v = values[cond.field];
+    switch (cond.op) {
+      case "eq":
+        return Array.isArray(v) ? v.includes(cond.value) : cmp(v, cond.value) === 0 && !isEmpty(v);
+      case "ne":
+        return Array.isArray(v) ? !v.includes(cond.value) : cmp(v, cond.value) !== 0;
+      case "gt":
+        return !isEmpty(v) && cmp(v, cond.value) > 0;
+      case "lt":
+        return !isEmpty(v) && cmp(v, cond.value) < 0;
+      case "gte":
+        return !isEmpty(v) && cmp(v, cond.value) >= 0;
+      case "lte":
+        return !isEmpty(v) && cmp(v, cond.value) <= 0;
+      case "in":
+        return Array.isArray(cond.value) && (Array.isArray(v) ? v.some((x) => cond.value.includes(x)) : cond.value.includes(v));
+      case "between":
+        return Array.isArray(cond.value) && cond.value.length === 2 && !isEmpty(v) && cmp(v, cond.value[0]) >= 0 && cmp(v, cond.value[1]) <= 0;
+      // from .. to, both ends included
+      case "notempty":
+        return !isEmpty(v);
+      default:
+        return true;
+    }
+  }
+
   // form-studio/src/core/fieldCalc.js
   var CALC_TYPES = ["text", "wholeNumber", "number", "date", "list"];
   var kindOf = (f) => {
@@ -1010,7 +1060,7 @@ var ConnectumFormLogic = (() => {
     return !!(f && f.calc && String((_a = f.calc.expr) != null ? _a : "").trim());
   };
   var canCalc = (f) => !!f && CALC_KINDS.includes(kindOf(f)) && !f.multi;
-  var isEmpty = (v) => v === void 0 || v === null || v === "" || Array.isArray(v) && v.length === 0;
+  var isEmpty2 = (v) => v === void 0 || v === null || v === "" || Array.isArray(v) && v.length === 0;
   var same = (a, b) => String(a != null ? a : "") === String(b != null ? b : "");
   var LITERAL = /"[^"]*"|'[^']*'/g;
   var WORD = /[A-Za-z_]\w*/g;
@@ -1083,7 +1133,7 @@ var ConnectumFormLogic = (() => {
       return Array.isArray(v) || v && typeof v === "object" ? void 0 : part(v);
     }
     const g = getRuleGlobals();
-    const bare = w.startsWith("global_") ? w.slice(7) : w;
+    const bare = bareGlobalName(w);
     for (const key in g) if (key.toLowerCase() === bare) return part(g[key]);
     return void 0;
   }
@@ -1100,7 +1150,7 @@ var ConnectumFormLogic = (() => {
         return Array.isArray(rows) ? rows.map((r) => part(r && r[col[1]])).join("") : "";
       }
       const g = getRuleGlobals();
-      const bare = w.startsWith("global_") ? w.slice(7) : w;
+      const bare = bareGlobalName(w);
       for (const k2 in g) if (k2.toLowerCase() === bare) return part(g[k2]);
       return "";
     }).join("")}`;
@@ -1131,7 +1181,7 @@ var ConnectumFormLogic = (() => {
         const { [id]: _own, ...view } = cur;
         const others = new Map(names);
         others.delete(String(id).toLowerCase());
-        const next = reads.some((x) => isEmpty(cur[x])) ? "" : fitCalc(f, answer(id, f.calc.expr, view, others, columns));
+        const next = reads.some((x) => isEmpty2(cur[x])) ? "" : fitCalc(f, answer(id, f.calc.expr, view, others, columns));
         if (!same(cur[id], next)) {
           cur = { ...cur, [id]: next };
           changed = true;
@@ -1191,7 +1241,18 @@ var ConnectumFormLogic = (() => {
       }
       if (got !== c.expect) failures.push({ expr: c.expr, expected: c.expect, got });
     }
-    return { total: conformance.cases.length, passed: conformance.cases.length - failures.length, failures };
+    const conditions = conformance.conditions || [];
+    for (const c of conditions) {
+      let got;
+      try {
+        got = evalCondition(c.cond, c.values);
+      } catch (e) {
+        got = `ERROR: ${e && e.message}`;
+      }
+      if (got !== c.expect) failures.push({ condition: c.cond, values: c.values, expected: c.expect, got });
+    }
+    const total = conformance.cases.length + conditions.length;
+    return { total, passed: total - failures.length, failures };
   }
   return __toCommonJS(formLogicEntry_exports);
 })();

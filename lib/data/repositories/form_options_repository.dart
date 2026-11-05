@@ -67,6 +67,11 @@ class FormOptionsRepository extends GetxService {
     super.onInit();
     ever(_session.current, (info) {
       _choices.clear();
+      options.clear();
+      categories.clear();
+      recents.clear();
+      isLoaded.value = false;
+      hasError.value = false;
       final scope = info == null ? null : (info.orgId, info.userId);
       final last = _lastScope;
       // A different organisation or person: what was kept for the last one goes.

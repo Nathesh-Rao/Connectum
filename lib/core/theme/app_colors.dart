@@ -9,6 +9,7 @@ class AppColors {
   static const accentSoft = Color(0xFFFFF7F1);
   static const accentInk = Color(0xFF9B3B00);
   static const accentDisabled = Color(0xFFF8B58C);
+  static const accentDeep = Color(0xFF6E2900);
 
   static const ivory = Color(0xFFFFF8F1);
   static const peach = Color(0xFFFFE5D2);
@@ -24,6 +25,11 @@ class AppColors {
   static const searchFill = Color(0xFFF7F6F5);
   static const avatarBg = Color(0xFFF1EEEB);
   static const avatarText = Color(0xFF675E56);
+
+  /// A mention in message text; [mentionMe] is a tag of the signed-in person.
+  /// Both are at least 4.5:1 on the bubbles (incoming, outgoing, highlighted).
+  static const mention = Color(0xFF1A5FB4);
+  static const mentionMe = Color(0xFF124A91);
 
   static const ink = Color(0xFF282522);
   static const muted = Color(0xFF716B66);
@@ -46,6 +52,7 @@ class AppColors {
 
   static const sphereHighlight = Color(0xFFFFDBB9);
   static const sphereMid = Color(0xFFFFA363);
+
   static const ambientDiscCenter = Color(0x1CF66510);
   static const ambientDiscEdge = Color(0x05F66510);
   static const ambientOrbitOuter = Color(0x17F66510);
@@ -60,15 +67,52 @@ class AppColors {
     AppTilePalette(Color(0xFFF7F2ED), Color(0xFFEAE1D8), Color(0xFF967552)),
   ];
 
+  /// File-type tiles on document cards: background, border, label.
+  static const docPdf = AppTilePalette(
+    Color(0xFFFBE6E2),
+    Color(0xFFF2C9C1),
+    Color(0xFFA32A1A),
+  );
+  static const docWord = AppTilePalette(
+    Color(0xFFE4EDF9),
+    Color(0xFFC4D6EF),
+    Color(0xFF1F4E96),
+  );
+  static const docExcel = AppTilePalette(
+    Color(0xFFE3F3E8),
+    Color(0xFFC1E0CB),
+    Color(0xFF1B6B3A),
+  );
+  static const docSlides = AppTilePalette(
+    Color(0xFFFFE9D6),
+    Color(0xFFF8C8AA),
+    Color(0xFF9B3B00),
+  );
+  static const docText = AppTilePalette(
+    Color(0xFFEDEBE8),
+    Color(0xFFDAD6D1),
+    Color(0xFF4A4541),
+  );
+  static const docArchive = AppTilePalette(
+    Color(0xFFF6EBD0),
+    Color(0xFFE8D6A8),
+    Color(0xFF6B4E00),
+  );
+  static const docOther = AppTilePalette(
+    Color(0xFFE9ECEF),
+    Color(0xFFD3D8DD),
+    Color(0xFF3F4A54),
+  );
+
   /// Name colours for the senders in a group, picked by a stable hash of the
-  /// username. All read on [bubbleIn].
+  /// username. All read on [bubbleIn]. No blue hues: blue is for mentions.
   static const senderInks = [
     accentInk,
     Color(0xFF5F6B47),
     Color(0xFF7A5C2E),
     Color(0xFF8A4B5F),
-    Color(0xFF3F6B73),
-    Color(0xFF5B5A8F),
+    Color(0xFF2F6B4F),
+    Color(0xFFA33B3B),
   ];
 
   static const scrim = Color(0xFF28211D);

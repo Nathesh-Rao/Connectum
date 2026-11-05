@@ -67,7 +67,19 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   DateTime _nextSlot = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _pausedUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
-  Stream<Map<String, dynamic>> get events => _events.stream;
+  /// Only events of the organisation and person that are active now: an event
+  /// that was read from the previous organisation's connection and is still on
+  /// its way when the person switches is dropped.
+  Stream<Map<String, dynamic>> get events => _events.stream.where(isCurrent);
+
+  /// `<org>/<user>` of the connection the events are read from.
+  String? _connScope;
+
+  String get _scopeKey => '${_session.orgId}/${_session.userId}';
+
+  bool isCurrent(Map<String, dynamic> event) => event[scopeField] == _scopeKey;
+
+  static const scopeField = '_scope';
 
   /// Fires after every successful handshake (`welcome`).
   Stream<void> get onOnline => _onlineSignal.stream;
@@ -142,6 +154,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     _retryTimer?.cancel();
     connection.value = SocketState.connecting;
     _hasWelcome = false;
+    _connScope = _scopeKey;
     try {
       final client = HttpClient();
       if (kDebugMode) {
@@ -240,6 +253,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
           }
       }
     }
+    event[scopeField] = _connScope;
     _events.add(event);
   }
 
@@ -366,6 +380,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   }
 
   void _log(String line) {
+    if (!kDebugMode) return;
     eventLog.insert(0, line);
     if (eventLog.length > 20) eventLog.removeRange(20, eventLog.length);
   }

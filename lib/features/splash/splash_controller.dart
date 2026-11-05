@@ -34,6 +34,10 @@ class SplashController extends GetxController {
     final seen = await store
         .readValue(onboardingSeenKey)
         .timeout(const Duration(seconds: 2), onTimeout: () => null);
+    await deepLinks.runFirstStart().timeout(
+      const Duration(seconds: 6),
+      onTimeout: () {},
+    );
     final route = store.hasEnterpriseSession
         ? AppRoutes.chats
         : store.hasIdentity
@@ -46,7 +50,7 @@ class SplashController extends GetxController {
     if (!remaining.isNegative) await Future<void>.delayed(remaining);
     Get.offNamed(route);
     if (route != AppRoutes.authentication && route != AppRoutes.onboarding) {
-      deepLinks.openPending();
+      deepLinks.resume();
     }
   }
 }

@@ -28,6 +28,10 @@ class AppSpacing {
   static const double stateImageSmall = 96;
   static const double stateImageRow = 40;
   static const double successAnimation = 120;
+  static const double spinnerSmall = 9;
+  static const double spinnerMedium = 14;
+  static const double loadingMedium = 64;
+  static const double loadingLarge = 120;
   static const double slideTitleMaxWidth = 300;
   static const double slideCopyMaxWidth = 290;
   static const double slideCopyHeight = 136;
@@ -39,6 +43,8 @@ class AppSpacing {
   static const double buttonPaddingX = 18;
   static const double compactButtonPaddingX = 14;
   static const double sheetFieldHeight = 49;
+  static const double pickerListHeight = 320;
+  static const double segmentHeight = 44;
   static const double connectResultsMaxHeight = 220;
   static const double connectDebugExtra = 56;
   static const double scannerMinSize = 240;
@@ -87,9 +93,19 @@ class AppSpacing {
   static const double fileIcon = 28;
   static const double attachmentWidth = 240;
   static const double attachmentHeight = 180;
+  static const double documentTile = 44;
+  static const double documentAction = 48;
+  static const double documentButton = 40;
   static const double progressHeight = 3;
   static const double menuRowHeight = 42;
   static const double menuMaxRows = 6;
   static const double menuGap = 4;
   static const double menuEdge = 8;
+  static const double qrCardMinWidth = 260;
+  static const double qrCardWidth = 312;
+  static const double qrShareWidth = 360;
+  static const double qrShareScale = 3;
+  static const double qrFooterLogo = 16;
+  static const double qrLoading = 140;
+  static const double fixedSheetFraction = 0.88;
 }

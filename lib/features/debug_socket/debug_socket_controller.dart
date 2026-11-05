@@ -85,7 +85,8 @@ class DebugSocketController extends GetxController {
 
   Future<void> _refreshOutbox() async {
     final rows = await _db.query(
-      'SELECT kind, status, COUNT(*) AS n FROM outbox GROUP BY kind, status',
+      'SELECT kind, status, COUNT(*) AS n FROM outbox WHERE org_id = ? AND user_id = ? GROUP BY kind, status',
+      [session.store.orgId, session.store.userId],
     );
     outbox.value = rows.isEmpty
         ? 'empty'

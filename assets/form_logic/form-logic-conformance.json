@@ -1,5 +1,5 @@
 {
-  "about": "Every operator and function of the catalogue run on one sample. Load form-logic-host-shim.js and form-logic.bundle.js, then ConnectumFormLogic.runConformance(this object): `failures` must be empty.",
+  "about": "Every operator and function of the catalogue run on one sample, and the conditions (evalCondition) with the answer each must give. Load form-logic-host-shim.js and form-logic.bundle.js, then ConnectumFormLogic.runConformance(this object): `failures` must be empty.",
   "sample": {
     "fields": {
       "name": "  Asha Rao ",
@@ -369,6 +369,818 @@
     {
       "expr": "RegVar(\"x\",\"n\",5)",
       "expect": ""
+    }
+  ],
+  "conditions": [
+    {
+      "cond": null,
+      "values": {},
+      "expect": true,
+      "why": "no condition"
+    },
+    {
+      "cond": {},
+      "values": {},
+      "expect": true,
+      "why": "an empty condition has no operator: met"
+    },
+    {
+      "cond": {
+        "field": "f"
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": true,
+      "why": "a field but no operator: met"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "unknown",
+        "value": 1
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": true,
+      "why": "an operator this version does not know: met"
+    },
+    {
+      "cond": {
+        "op": "eq",
+        "value": "x"
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": false,
+      "why": "an operator but no field: the value is missing, eq is never true on a missing value"
+    },
+    {
+      "cond": {
+        "op": "notempty"
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": false,
+      "why": "notempty with no field: nothing there"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "Yes"
+      },
+      "values": {
+        "f": "Yes"
+      },
+      "expect": true,
+      "why": "same text"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "Yes"
+      },
+      "values": {
+        "f": "yes"
+      },
+      "expect": false,
+      "why": "capitals count"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "Yes"
+      },
+      "values": {
+        "f": " Yes"
+      },
+      "expect": false,
+      "why": "spaces count (nothing is trimmed)"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "Yes"
+      },
+      "values": {
+        "f": "Yes "
+      },
+      "expect": false,
+      "why": "spaces count (nothing is trimmed)"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "ne",
+        "value": "Yes"
+      },
+      "values": {
+        "f": "yes"
+      },
+      "expect": true,
+      "why": "ne is the opposite of eq: \"yes\" is not \"Yes\""
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "Yes"
+      },
+      "values": {
+        "f": true
+      },
+      "expect": false,
+      "why": "the boolean true is not the text Yes"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "Yes"
+      },
+      "values": {
+        "f": "on"
+      },
+      "expect": false,
+      "why": "on is not Yes: send Yes"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": ""
+      },
+      "values": {
+        "f": ""
+      },
+      "expect": false,
+      "why": "eq of \"\" against \"\" is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": ""
+      },
+      "values": {},
+      "expect": false,
+      "why": "eq against \"\" on a field that is not set is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "x"
+      },
+      "values": {
+        "f": null
+      },
+      "expect": false,
+      "why": "eq on null is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "ne",
+        "value": "x"
+      },
+      "values": {},
+      "expect": true,
+      "why": "ne on a missing value is true"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "ne",
+        "value": ""
+      },
+      "values": {
+        "f": ""
+      },
+      "expect": false,
+      "why": "ne of \"\" against \"\" is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": 5
+      },
+      "values": {
+        "f": "5"
+      },
+      "expect": true,
+      "why": "the text 5 equals the number 5"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "5.0"
+      },
+      "values": {
+        "f": 5
+      },
+      "expect": true,
+      "why": "5.0 equals 5 as numbers"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "05"
+      },
+      "values": {
+        "f": "5"
+      },
+      "expect": true,
+      "why": "05 equals 5 as numbers"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "gt",
+        "value": 9
+      },
+      "values": {
+        "f": "10"
+      },
+      "expect": true,
+      "why": "10 is more than 9 as numbers (as text \"10\" < \"9\")"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "gt",
+        "value": "b"
+      },
+      "values": {
+        "f": "c"
+      },
+      "expect": true,
+      "why": "text compares as text"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "gt",
+        "value": "b"
+      },
+      "values": {
+        "f": "B"
+      },
+      "expect": false,
+      "why": "capitals sort before small letters"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "gt",
+        "value": 0
+      },
+      "values": {
+        "f": ""
+      },
+      "expect": false,
+      "why": "gt on an empty value is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "lt",
+        "value": 5
+      },
+      "values": {},
+      "expect": false,
+      "why": "lt on a missing value is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "gte",
+        "value": 5
+      },
+      "values": {
+        "f": 5
+      },
+      "expect": true,
+      "why": "gte includes the value"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "lte",
+        "value": 5
+      },
+      "values": {
+        "f": 5.5
+      },
+      "expect": false,
+      "why": "lte"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "lt",
+        "value": 5
+      },
+      "values": {
+        "f": 4
+      },
+      "expect": true,
+      "why": "lt"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "between",
+        "value": [
+          1,
+          10
+        ]
+      },
+      "values": {
+        "f": 1
+      },
+      "expect": true,
+      "why": "the first end is included"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "between",
+        "value": [
+          1,
+          10
+        ]
+      },
+      "values": {
+        "f": "10"
+      },
+      "expect": true,
+      "why": "the last end is included"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "between",
+        "value": [
+          1,
+          10
+        ]
+      },
+      "values": {
+        "f": 11
+      },
+      "expect": false,
+      "why": "outside"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "between",
+        "value": [
+          1,
+          10
+        ]
+      },
+      "values": {
+        "f": ""
+      },
+      "expect": false,
+      "why": "between on an empty value is false"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "between",
+        "value": [
+          1,
+          2,
+          3
+        ]
+      },
+      "values": {
+        "f": 2
+      },
+      "expect": false,
+      "why": "between needs exactly two values"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "between",
+        "value": 5
+      },
+      "values": {
+        "f": 5
+      },
+      "expect": false,
+      "why": "between needs a list"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      "values": {
+        "f": "a"
+      },
+      "expect": true,
+      "why": "in the list"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      "values": {
+        "f": "A"
+      },
+      "expect": false,
+      "why": "capitals count"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": [
+          5
+        ]
+      },
+      "values": {
+        "f": "5"
+      },
+      "expect": false,
+      "why": "in is strict: the text 5 is not the number 5"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": [
+          "5"
+        ]
+      },
+      "values": {
+        "f": 5
+      },
+      "expect": false,
+      "why": "in is strict: the number 5 is not the text 5"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      "values": {
+        "f": [
+          "x",
+          "b"
+        ]
+      },
+      "expect": true,
+      "why": "a list value: any of its items"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": "a"
+      },
+      "values": {
+        "f": "a"
+      },
+      "expect": false,
+      "why": "in needs a list"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "in",
+        "value": [
+          ""
+        ]
+      },
+      "values": {
+        "f": ""
+      },
+      "expect": true,
+      "why": "in has no empty-value rule: \"\" is in [\"\"]"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "a"
+      },
+      "values": {
+        "f": [
+          "a",
+          "b"
+        ]
+      },
+      "expect": true,
+      "why": "eq on a list: it holds the item"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "eq",
+        "value": "c"
+      },
+      "values": {
+        "f": [
+          "a",
+          "b"
+        ]
+      },
+      "expect": false,
+      "why": "eq on a list: it does not hold the item"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "ne",
+        "value": "a"
+      },
+      "values": {
+        "f": [
+          "a",
+          "b"
+        ]
+      },
+      "expect": false,
+      "why": "ne on a list: it holds the item"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "ne",
+        "value": "c"
+      },
+      "values": {
+        "f": [
+          "a",
+          "b"
+        ]
+      },
+      "expect": true,
+      "why": "ne on a list: it does not hold it"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": true,
+      "why": "something there"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": "  "
+      },
+      "expect": true,
+      "why": "spaces count as a value"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": 0
+      },
+      "expect": true,
+      "why": "zero is a value"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": false
+      },
+      "expect": true,
+      "why": "false is a value"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": ""
+      },
+      "expect": false,
+      "why": "empty text"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": null
+      },
+      "expect": false,
+      "why": "null"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {},
+      "expect": false,
+      "why": "not set"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": []
+      },
+      "expect": false,
+      "why": "an empty list"
+    },
+    {
+      "cond": {
+        "field": "f",
+        "op": "notempty"
+      },
+      "values": {
+        "f": [
+          ""
+        ]
+      },
+      "expect": true,
+      "why": "a list with an item"
+    },
+    {
+      "cond": {
+        "all": []
+      },
+      "values": {},
+      "expect": true,
+      "why": "all of nothing is met"
+    },
+    {
+      "cond": {
+        "any": []
+      },
+      "values": {},
+      "expect": false,
+      "why": "any of nothing is not met"
+    },
+    {
+      "cond": {
+        "all": [
+          {
+            "field": "f",
+            "op": "eq",
+            "value": "x"
+          },
+          {
+            "field": "g",
+            "op": "notempty"
+          }
+        ]
+      },
+      "values": {
+        "f": "x",
+        "g": 1
+      },
+      "expect": true,
+      "why": "all met"
+    },
+    {
+      "cond": {
+        "all": [
+          {
+            "field": "f",
+            "op": "eq",
+            "value": "x"
+          },
+          {
+            "field": "g",
+            "op": "notempty"
+          }
+        ]
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": false,
+      "why": "one of all not met"
+    },
+    {
+      "cond": {
+        "any": [
+          {
+            "field": "f",
+            "op": "eq",
+            "value": "x"
+          },
+          {
+            "field": "f",
+            "op": "eq",
+            "value": "y"
+          }
+        ]
+      },
+      "values": {
+        "f": "y"
+      },
+      "expect": true,
+      "why": "one of any met"
+    },
+    {
+      "cond": {
+        "any": [
+          {
+            "field": "f",
+            "op": "eq",
+            "value": "x"
+          },
+          {
+            "field": "f",
+            "op": "eq",
+            "value": "y"
+          }
+        ]
+      },
+      "values": {
+        "f": "z"
+      },
+      "expect": false,
+      "why": "none of any met"
+    },
+    {
+      "cond": {
+        "any": [
+          {
+            "all": [
+              {
+                "field": "f",
+                "op": "eq",
+                "value": "x"
+              }
+            ]
+          },
+          {
+            "any": []
+          }
+        ]
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": true,
+      "why": "nested"
+    },
+    {
+      "cond": {
+        "all": [
+          {
+            "any": []
+          }
+        ]
+      },
+      "values": {
+        "f": "x"
+      },
+      "expect": false,
+      "why": "nested: an any of nothing inside an all"
     }
   ]
 }

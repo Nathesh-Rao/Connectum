@@ -4,10 +4,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_highlight_text.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_success_animation.dart';
 import '../../../data/models/identity_info.dart';
 import '../connect_controller.dart';
+import '../../../core/widgets/app_loading.dart';
 
 class ResolvingPane extends StatelessWidget {
   const ResolvingPane({super.key});
@@ -19,14 +21,7 @@ class ResolvingPane extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
-            width: AppSpacing.xl,
-            height: AppSpacing.xl,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: AppColors.accent,
-            ),
-          ),
+          AppLoading(),
           SizedBox(height: AppSpacing.md),
           Text('Looking up the enterprise…', style: AppText.readable),
         ],
@@ -101,6 +96,8 @@ class DonePane extends StatelessWidget {
     final welcome = c.welcome.value;
     final m = c.membership.value;
     final hasPerson = c.keptPersonLink != null;
+    final from = c.awaitingFrom.value;
+    final values = {'you': 'You', 'name': name, 'from': from ?? ''};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -122,19 +119,24 @@ class DonePane extends StatelessWidget {
               : const AppSuccessAnimation(),
         ),
         const SizedBox(height: AppSpacing.md),
-        Text(
-          isSent ? 'Request sent, waiting for approval' : 'You joined $name',
+        AppHighlightText(
+          isSent ? 'Request sent, waiting for approval' : '{you} joined {name}',
+          values: values,
           style: AppText.title,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text(
-          isSent
-              ? '$name needs to approve your request. It now shows on your list as Waiting for approval. When you open the app again we check, and you can enter once it is approved.'
-              : (welcome ?? 'You can enter it now.'),
-          style: AppText.body,
-          textAlign: TextAlign.center,
-        ),
+        if (isSent || welcome == null)
+          AppHighlightText(
+            isSent
+                ? '${from == null ? '' : 'Waiting for approval from {from}. '}{name} needs to approve your request. It now shows on your list as Waiting for approval. When you open the app again we check, and {you} can enter once it is approved.'
+                : '{you} can enter it now.',
+            values: values,
+            style: AppText.body,
+            textAlign: TextAlign.center,
+          )
+        else
+          Text(welcome, style: AppText.body, textAlign: TextAlign.center),
         if (isSent && welcome != null) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(welcome, style: AppText.readable, textAlign: TextAlign.center),
@@ -144,7 +146,7 @@ class DonePane extends StatelessWidget {
           Text(
             isSent
                 ? 'Once you are in, you can connect with the person whose QR you scanned.'
-                : 'You can connect with the person whose QR you scanned from inside $name.',
+                : '{you} can connect with the person whose QR you scanned from inside {name}.',
             style: AppText.readable,
             textAlign: TextAlign.center,
           ),

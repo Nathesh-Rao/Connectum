@@ -1,0 +1,224 @@
+{
+ "ok": true,
+ "data": {
+  "hasMore": true,
+  "structures": {
+   "help_ticket": {
+    "caption": "Ticket",
+    "fields": {
+     "also_tell": "Also tell",
+     "assignee": "Assigned to",
+     "attachments": "Attachments",
+     "category": "Category",
+     "description": "Description",
+     "done": "Completion",
+     "expected_completion": "Expected completion",
+     "labels": "Labels",
+     "need_by": "Need by",
+     "priority": "Priority",
+     "state": "Status",
+     "subtype": "Subtype",
+     "suggested": "Suggested handler",
+     "support_group": "Support group (anyone in it may take it)",
+     "ticket_no": "Ticket no",
+     "title": "Title"
+    },
+    "recordThread": true,
+    "status": {
+     "actions": [
+      {
+       "assign": "pick",
+       "from": [
+        "Open",
+        "Forwarded",
+        "In progress",
+        "Returned"
+       ],
+       "name": "Send",
+       "percent": "none",
+       "push": true,
+       "reason": "none",
+       "reasons": [],
+       "remarks": "required",
+       "to": "Forwarded",
+       "who": [
+        "admin",
+        "assignee"
+       ]
+      },
+      {
+       "assign": "keep",
+       "from": [
+        "Open",
+        "Forwarded",
+        "In progress",
+        "Returned"
+       ],
+       "name": "Status update",
+       "percent": "set",
+       "push": false,
+       "reason": "none",
+       "reasons": [],
+       "remarks": "optional",
+       "to": "In progress",
+       "who": [
+        "admin",
+        "assignee"
+       ]
+      },
+      {
+       "assign": "raiser",
+       "from": [
+        "Open",
+        "Forwarded",
+        "In progress",
+        "Returned"
+       ],
+       "name": "Complete",
+       "percent": "hundred",
+       "push": true,
+       "reason": "none",
+       "reasons": [],
+       "remarks": "optional",
+       "to": "Completed",
+       "who": [
+        "admin",
+        "assignee"
+       ]
+      },
+      {
+       "assign": "keep",
+       "from": [
+        "Completed"
+       ],
+       "name": "Close",
+       "percent": "none",
+       "push": false,
+       "reason": "none",
+       "reasons": [],
+       "remarks": "optional",
+       "to": "Closed",
+       "who": [
+        "admin",
+        "raiser"
+       ]
+      },
+      {
+       "assign": "previous",
+       "from": [
+        "Open",
+        "Forwarded",
+        "In progress",
+        "Completed",
+        "Returned"
+       ],
+       "name": "Return",
+       "percent": "none",
+       "push": false,
+       "reason": "required",
+       "reasons": [],
+       "remarks": "required",
+       "to": "Returned",
+       "who": [
+        "admin",
+        "assignee"
+       ]
+      },
+      {
+       "assign": "keep",
+       "from": [
+        "Open",
+        "Forwarded",
+        "In progress",
+        "Returned"
+       ],
+       "name": "Drop",
+       "percent": "none",
+       "push": false,
+       "reason": "required",
+       "reasons": [],
+       "remarks": "required",
+       "to": "Dropped",
+       "who": [
+        "admin",
+        "assignee"
+       ]
+      },
+      {
+       "assign": "self",
+       "from": [
+        "Open"
+       ],
+       "name": "Take it",
+       "percent": "none",
+       "push": false,
+       "reason": "none",
+       "reasons": [],
+       "remarks": "none",
+       "to": "In progress",
+       "who": [
+        "pool"
+       ]
+      }
+     ],
+     "assignee": "assignee",
+     "completion": "done",
+     "field": "state",
+     "pool": "support_group",
+     "statuses": [
+      {
+       "final": false,
+       "name": "Open"
+      },
+      {
+       "final": false,
+       "name": "Forwarded"
+      },
+      {
+       "final": false,
+       "name": "In progress"
+      },
+      {
+       "final": false,
+       "name": "Completed"
+      },
+      {
+       "final": true,
+       "name": "Closed"
+      },
+      {
+       "final": false,
+       "name": "Returned"
+      },
+      {
+       "final": true,
+       "name": "Dropped"
+      }
+     ],
+     "subject": "title"
+    }
+   }
+  },
+  "submissions": [
+   {
+    "branch": "HQ",
+    "by": "rhea",
+    "host": null,
+    "id": 38,
+    "scope": "user",
+    "ts": 1793665090505,
+    "tstruct": "help_ticket",
+    "values": {
+     "assignee": "ana",
+     "description": "People inside",
+     "done": 0,
+     "priority": "High",
+     "state": "Open",
+     "ticket_no": "TKT-0005",
+     "title": "Lift 2 is stuck on floor 3"
+    }
+   }
+  ],
+  "total": 4
+ }
+}

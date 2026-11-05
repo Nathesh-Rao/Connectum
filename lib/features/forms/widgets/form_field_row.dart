@@ -14,6 +14,7 @@ import '../form_formats.dart';
 import 'barcode_scanner_sheet.dart';
 import 'form_choice_menu.dart';
 import 'form_box.dart';
+import 'form_field_boundary.dart';
 import 'form_file_field.dart';
 import 'form_payment_field.dart';
 import 'form_slot_field.dart';
@@ -38,10 +39,16 @@ class FormFieldRow extends StatelessWidget {
     final c = controller;
     final f = input.def;
     // A field with no condition always shows and watches nothing.
-    if (!c.hasCondition(f)) return _field(context);
-    return Obx(
-      () =>
-          c.isVisible(f, row: row) ? _field(context) : const SizedBox.shrink(),
+    return FormFieldBoundary(
+      id: f.name,
+      type: f.type,
+      child: !c.hasCondition(f)
+          ? _field(context)
+          : Obx(
+              () => c.isVisible(f, row: row)
+                  ? _field(context)
+                  : const SizedBox.shrink(),
+            ),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+
 import '../e2e/e2e_models.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
@@ -14,7 +16,14 @@ class ThreadFacts {
 }
 
 class EncryptionPolicy {
-  EncryptionPolicy(this._socket, this._store, this._e2e);
+  EncryptionPolicy(this._socket, this._store, this._e2e) {
+    // What was learned about threads and the mode belongs to one organisation.
+    ever(_store.current, (_) {
+      _mode = null;
+      _isModeFresh = false;
+      _peers.clear();
+    });
+  }
 
   static const _peerTtl = Duration(minutes: 5);
 
@@ -105,7 +114,7 @@ class EncryptionPolicy {
           ? const E2eSendDecision.setupPending()
           : const E2eSendDecision.blocked(
               E2eSendDecision.cantSend,
-              reason: "secure messaging isn't set up on this phone",
+              reason: E2eSendDecision.notSetUpReason,
             );
     }
     if (!hasPeerReader) {
@@ -174,7 +183,7 @@ class EncryptionPolicy {
           ? const E2eSendDecision.setupPending()
           : const E2eSendDecision.blocked(
               E2eSendDecision.cantSend,
-              reason: "secure messaging isn't set up on this phone",
+              reason: E2eSendDecision.notSetUpReason,
             );
     }
     if (without.isNotEmpty) {
@@ -212,7 +221,10 @@ class EncryptionPolicy {
         reason: 'this group has too many devices to encrypt for',
       );
     }
-    return E2eSendDecision.encrypt(recipients: byId.values.toList(), keys: keys);
+    return E2eSendDecision.encrypt(
+      recipients: byId.values.toList(),
+      keys: keys,
+    );
   }
 
   /// The most boxes one envelope may carry.
@@ -247,13 +259,16 @@ class EncryptionPolicy {
         isSettingUp: _e2e.isSettingUp,
       );
     }
-    // A send asks the server for the lists right before it seals; the cache
-    // serves only the composer.
+    // A send reuses a list younger than `sendListTtl`; the composer only
+    // reads the cache. A stale refusal or a devices event drops the entry.
     var dirs = isLookup ? null : _e2e.cachedDevices([peer, me]);
     if (dirs == null) {
       if (!isLookup) return const E2eSendDecision.unknown();
       try {
-        dirs = await _e2e.devicesOf([peer, me], isForced: true);
+        dirs = await _e2e.devicesOf([
+          peer,
+          me,
+        ], maxAge: E2eRepository.sendListTtl);
       } on SocketCallError catch (_) {
         if (!_socket.isOnline) return const E2eSendDecision.unknown();
         return E2eSendDecision.blocked(
@@ -332,7 +347,10 @@ class EncryptionPolicy {
     _mode ??= await _store.readValue(key);
     if (!isOnlineRead || _isModeFresh || !_socket.isOnline) return;
     try {
-      final data = await _socket.sdCall('e2e.status', {});
+      final data = await _socket.sdCall(
+        'e2e.status',
+        await _e2e.currentStatusArgs(),
+      );
       final mode = idText(data['mode']);
       if (mode.isNotEmpty) {
         _mode = mode;

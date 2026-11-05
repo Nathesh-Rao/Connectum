@@ -1,0 +1,33 @@
+{
+  "name": "sample_dates",
+  "caption": "Sample: dates and times",
+  "fields": [
+    {
+      "name": "joined",
+      "type": "date",
+      "caption": "Date joined (not in the future)",
+      "max": "2099-12-31",
+      "min": "2000-01-01"
+    },
+    {
+      "name": "today",
+      "type": "date",
+      "caption": "Today (filled in)",
+      "defaultNow": true,
+      "readOnly": true
+    },
+    {
+      "name": "at",
+      "type": "time",
+      "caption": "Time"
+    },
+    {
+      "name": "nextWeek",
+      "type": "date",
+      "caption": "A week after the date joined",
+      "calc": {
+        "expr": "AddToDate(joined,7)"
+      }
+    }
+  ]
+}

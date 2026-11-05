@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/utils/attachment_tag.dart';
 import 'repositories/attachment_repository.dart';
@@ -186,6 +187,18 @@ class AttachmentCache {
       };
     } catch (_) {
       return OpenOutcome.failed;
+    }
+  }
+
+  /// Hands [file] to the system share sheet (share or save), under the
+  /// sender's file name.
+  Future<void> share(File file, String name) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], fileNameOverrides: [name]),
+      );
+    } catch (_) {
+      return;
     }
   }
 

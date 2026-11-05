@@ -89,6 +89,10 @@ class WorkspaceController extends GetxController {
 
   String get me => store.userId ?? SeedMessages.me;
 
+  void openTasks() => Get.toNamed(AppRoutes.tasks);
+
+  void openApprovals() => Get.toNamed(AppRoutes.approvals);
+
   /// The workspace's greeting, word for word as the web app builds it.
   String get welcome {
     final name = store.identity.value?.name ?? '';

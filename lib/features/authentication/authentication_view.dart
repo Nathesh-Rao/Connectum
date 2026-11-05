@@ -10,8 +10,8 @@ import '../../core/widgets/app_ambient_backdrop.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_flex_gap.dart';
+import '../../core/widgets/app_invite_card.dart';
 import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_tab_bar.dart';
@@ -57,18 +57,7 @@ class _Form extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Obx(() {
-                final notice = c.session.loginNotice.value;
-                return Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.md),
-                  child: notice == null
-                      ? null
-                      : AppNoticeBanner(
-                          message: notice,
-                          onDismiss: c.dismissNotice,
-                        ),
-                );
-              }),
+              AppInviteSlot(invite: c.invite),
               const SizedBox(height: AppSpacing.lg),
               const Align(
                 alignment: Alignment.centerRight,
@@ -79,6 +68,12 @@ class _Form extends StatelessWidget {
               const AppFlexGap(flex: 77, min: 24, max: 96),
               _Fields(controller: c),
             ],
+          ),
+        ),
+        Center(
+          child: AppButton.text(
+            label: 'Have an invite code or link?',
+            onPressed: c.openInviteSheet,
           ),
         ),
         const _AccessFooter(),

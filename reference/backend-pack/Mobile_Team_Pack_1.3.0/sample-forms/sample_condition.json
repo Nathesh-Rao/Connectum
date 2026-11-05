@@ -1,0 +1,53 @@
+{
+  "name": "sample_condition",
+  "caption": "Sample: conditions (show a field only when)",
+  "fields": [
+    {
+      "name": "hasCar",
+      "type": "toggle",
+      "caption": "Do you have a car?"
+    },
+    {
+      "name": "carNumber",
+      "type": "text",
+      "caption": "Car number",
+      "required": true,
+      "condition": {
+        "field": "hasCar",
+        "op": "eq",
+        "value": "Yes"
+      }
+    },
+    {
+      "name": "kind",
+      "type": "list",
+      "caption": "Kind of leave",
+      "options": [
+        "Sick",
+        "Casual",
+        "Other"
+      ],
+      "required": true
+    },
+    {
+      "name": "reason",
+      "type": "text",
+      "caption": "Please say why",
+      "required": true,
+      "condition": {
+        "any": [
+          {
+            "field": "kind",
+            "op": "eq",
+            "value": "Other"
+          },
+          {
+            "field": "kind",
+            "op": "eq",
+            "value": "Sick"
+          }
+        ]
+      }
+    }
+  ]
+}

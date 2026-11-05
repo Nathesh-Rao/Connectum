@@ -8,6 +8,7 @@ import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_text_field.dart';
+import '../security/widgets/device_limit_sheet.dart';
 import 'debug_e2e_controller.dart';
 
 class DebugE2eView extends GetView<DebugE2eController> {
@@ -75,6 +76,18 @@ class DebugE2eView extends GetView<DebugE2eController> {
             () => AppButton.secondary(
               label: 'Run again',
               onPressed: c.isRunning.value ? null : c.run,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.secondary(
+            label: 'Show device limit sheet (sample devices)',
+            onPressed: () => DeviceLimitSheet.show(context, c.sampleLimit()),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Obx(
+            () => AppButton.secondary(
+              label: 'Measure hand-on crypto (400 messages)',
+              onPressed: c.isBusy.value ? null : c.benchmarkHandOn,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

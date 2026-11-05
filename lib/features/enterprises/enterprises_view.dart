@@ -8,17 +8,17 @@ import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_flex_gap.dart';
 import '../../core/widgets/app_id_copy_strip.dart';
+import '../../core/widgets/app_invite_card.dart';
 import '../../core/widgets/app_list_row.dart';
 import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_tag.dart';
 import '../../data/models/identity_info.dart';
-import '../connect/connect_view.dart';
 import 'enterprises_controller.dart';
 import 'widgets/enterprise_tile.dart';
+import '../../core/widgets/app_spinner.dart';
 
 class EnterprisesView extends GetView<EnterprisesController> {
   const EnterprisesView({super.key});
@@ -87,7 +87,7 @@ class EnterprisesView extends GetView<EnterprisesController> {
                     style: AppText.readable,
                   ),
                   const AppFlexGap(flex: 23, min: 8, max: 32),
-                  _Message(controller: c),
+                  _InvitePanel(controller: c),
                   _IdentityStrip(controller: c),
                   const SizedBox(height: AppSpacing.sm),
                   _List(controller: c),
@@ -97,14 +97,7 @@ class EnterprisesView extends GetView<EnterprisesController> {
                     leadingIcon: Icons.add,
                     icon: Icons.chevron_right,
                     isCompact: true,
-                    onPressed: () {
-                      c.connect.open();
-                      AppBottomSheet.show<void>(
-                        context,
-                        title: 'Join another enterprise',
-                        child: ConnectView(onEnter: c.enter),
-                      ).whenComplete(c.connect.close);
-                    },
+                    onPressed: c.openJoinSheet,
                   ),
                 ],
               ),
@@ -145,22 +138,55 @@ class _Chevron extends StatelessWidget {
       const Icon(Icons.chevron_right, size: 20, color: AppColors.rowChevron);
 }
 
-class _Message extends StatelessWidget {
-  const _Message({required this.controller});
+class _InvitePanel extends StatelessWidget {
+  const _InvitePanel({required this.controller});
 
   final EnterprisesController controller;
 
   @override
   Widget build(BuildContext context) {
+    final c = controller;
     return Obx(() {
-      final text = controller.message.value;
-      if (text == null) return const SizedBox.shrink();
+      final step = c.inviteStep.value;
+      final org = c.inviteOrg.value ?? 'the enterprise';
+      if (step == InviteStep.none) return const SizedBox.shrink();
+      final waitingFor = c.connect.awaitingFrom.value ?? org;
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: AppNoticeBanner(
-          message: text,
-          onDismiss: () => controller.message.value = null,
-        ),
+        child: switch (step) {
+          InviteStep.checking || InviteStep.entering => AppInviteCard(
+            title: step == InviteStep.entering
+                ? 'Entering {org}…'
+                : 'Checking your invite…',
+            values: {'org': org},
+            isLoading: true,
+          ),
+          InviteStep.waiting => AppInviteCard(
+            title: 'Waiting for approval',
+            message: 'Waiting for approval from {from}.',
+            values: {'from': waitingFor},
+            icon: Icons.hourglass_top,
+            actionLabel: 'Check again',
+            onAction: c.continueInvite,
+            onDismiss: c.dismissInvite,
+          ),
+          InviteStep.rejected => AppInviteCard(
+            title: "Your request wasn't approved",
+            message: "{org} didn't approve your request to join.",
+            values: {'org': org},
+            icon: Icons.block,
+            onDismiss: c.dismissInvite,
+          ),
+          _ => AppInviteCard(
+            title: "Couldn't carry on with your invite",
+            message: c.inviteNote.value,
+            values: c.inviteValues,
+            icon: Icons.error_outline,
+            actionLabel: 'Try again',
+            onAction: c.retryInvite,
+            onDismiss: c.dismissInvite,
+          ),
+        },
       );
     });
   }
@@ -230,14 +256,7 @@ class _List extends StatelessWidget {
                   ? 'Member · ${list[i].enterprise}'
                   : list[i].enterprise,
               trailing: c.enteringId.value == list[i].enterprise
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.accent,
-                      ),
-                    )
+                  ? const AppSpinner()
                   : list[i].enterprise == c.currentOrgId
                   ? const EnterpriseCurrentCheck()
                   : list[i].isActive

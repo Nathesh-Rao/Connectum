@@ -10,10 +10,12 @@ import '../../data/models/conversation.dart';
 import '../../data/models/form_definition.dart';
 import '../../data/models/form_option.dart';
 import '../../data/models/form_submission.dart';
+import '../../data/models/group_add.dart';
 import '../../data/models/hash_command.dart';
 import '../../data/models/identity_info.dart';
 import '../../data/models/message.dart';
 import '../../data/repositories/e2e_repository.dart';
+import '../../features/chats/models/chat_person.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 import 'seed_sample_forms.dart';
@@ -1112,6 +1114,63 @@ class SeedUi {
         ),
       };
 
+  // ---- create group ------------------------------------------------------
+
+  static final newGroupOffline = false.obs;
+  static const _groupPeople = [
+    ('priya', 'Priya Sharma', 'Designer', 'connection'),
+    ('meera', 'Meera Iyer', 'Product Manager', 'connection'),
+    ('arjun', 'Arjun Mehta', 'Engineer', 'colleague'),
+    ('kavitha', 'Kavitha Rao', 'Nurse', 'colleague'),
+    ('nina', 'Nina Patel', 'Finance', 'colleague'),
+    ('ravi', 'Ravi Kumar', 'Operations', 'colleague'),
+    ('sana', 'Sana Khan', 'Support', 'colleague'),
+    ('dev', 'Dev Anand', 'Sales', 'colleague'),
+  ];
+  static final _groupRetried = <String>{};
+
+  static List<ChatPerson> groupPeopleAll() => [
+    for (final (user, name, detail, source) in _groupPeople)
+      ChatPerson(username: user, name: name, source: source, detail: detail),
+  ];
+
+  static GroupPeoplePage groupPeople(String query) {
+    final q = query.toLowerCase();
+    return GroupPeoplePage([
+      for (final p in groupPeopleAll())
+        if (q.isEmpty ||
+            p.name.toLowerCase().contains(q) ||
+            p.username.contains(q))
+          p,
+    ]);
+  }
+
+  static Future<GroupCreateResult> createGroup(String name) async {
+    _groupRetried.clear();
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return const GroupCreateResult(GroupCreateStatus.created);
+  }
+
+  /// arjun and kavitha are refused the first time and added on a retry; ravi
+  /// and nina are only invited.
+  static Future<GroupAddResult> addMember(ChatPerson person) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final user = person.username;
+    if ((user == 'arjun' || user == 'kavitha') && _groupRetried.add(user)) {
+      return GroupAddResult(
+        person,
+        GroupAddStatus.failed,
+        user == 'arjun'
+            ? "arjun isn't online right now"
+            : 'No such user: $user',
+      );
+    }
+    if (user == 'ravi' || user == 'nina') {
+      return GroupAddResult(person, GroupAddStatus.invited);
+    }
+    return GroupAddResult(person, GroupAddStatus.added);
+  }
+
   static List<Conversation> conversations() {
     if (!isActive) return const [];
     return _conversations ??= _buildConversations();
@@ -1152,6 +1211,7 @@ class SeedUi {
         lastTs: ago(const Duration(minutes: 3)),
         lastFrom: 'kavitha',
         isEncrypted: true,
+        owner: 'alex',
         memberCount: 6,
         members: _careMembers,
       ),

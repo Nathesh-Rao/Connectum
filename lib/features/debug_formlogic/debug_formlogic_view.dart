@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -61,6 +63,14 @@ class DebugFormLogicView extends GetView<DebugFormLogicController> {
   List<Widget> _report(FormLogicReport r) {
     final conf = r.conformance;
     final failures = (conf['failures'] as List).cast<Map<String, dynamic>>();
+    final exprFailures = [
+      for (final f in failures)
+        if (!f.containsKey('condition')) f,
+    ];
+    final condFailures = [
+      for (final f in failures)
+        if (f.containsKey('condition')) f,
+    ];
     final p = r.probe;
     final now = DateTime.parse(r.dartNow);
     String two(int n) => n.toString().padLeft(2, '0');
@@ -72,14 +82,27 @@ class DebugFormLogicView extends GetView<DebugFormLogicController> {
     final parityFailed = r.parity.where((x) => (x['diffs'] as List).isNotEmpty);
 
     return [
-      const _Head('Conformance'),
-      _Line(
-        'total ${conf['total']}, passed ${conf['passed']}, failed ${failures.length}',
-        isOk: failures.isEmpty,
+      _Head(
+        'Conformance (runConformance): total ${conf['total']}, '
+        'passed ${conf['passed']}, failures ${failures.length}',
       ),
-      for (final f in failures)
+      _Line(
+        'expressions  total ${r.expressionTotal}, passed ${r.expressionTotal - exprFailures.length}, failures ${exprFailures.length}',
+        isOk: exprFailures.isEmpty,
+      ),
+      _Line(
+        'conditions   total ${r.conditionTotal}, passed ${r.conditionTotal - condFailures.length}, failures ${condFailures.length}',
+        isOk: condFailures.isEmpty,
+      ),
+      for (final f in exprFailures)
         _Line(
-          '#${failures.indexOf(f)} ${f['expr']}\n  expected ${f['expected']}\n  got ${f['got']}',
+          '${f['expr']}\n  expected ${f['expected']}\n  got ${f['got']}',
+          isOk: false,
+        ),
+      for (final f in condFailures)
+        _Line(
+          '${jsonEncode(f['condition'])} with ${jsonEncode(f['values'])}\n'
+          '  expected ${f['expected']}\n  got ${f['got']}',
           isOk: false,
         ),
       const _Head('Date() / Time() in this time zone'),
@@ -99,6 +122,20 @@ class DebugFormLogicView extends GetView<DebugFormLogicController> {
         '${p['jsOffsetMinutes'] == r.dartOffsetMinutes ? 'match' : 'MISMATCH'}',
         isOk: p['jsOffsetMinutes'] == r.dartOffsetMinutes,
       ),
+      _Head(
+        'Local date and time of fixed instants (engine vs Dart; '
+        'this phone is UTC${_offset(r.dartOffsetMinutes)})',
+      ),
+      for (final z in r.zone)
+        _Line(
+          '${z['iso']}\n  JS ${z['js']}   Dart ${z['dart']}   '
+          '${z['js'] == z['dart'] ? 'match' : 'MISMATCH'}'
+          '${r.dartOffsetMinutes == 330 ? '   India expects ${z['inIndia']}  '
+                    '${z['js'] == z['inIndia'] ? 'ok' : 'WRONG'}' : ''}',
+          isOk:
+              z['js'] == z['dart'] &&
+              (r.dartOffsetMinutes != 330 || z['js'] == z['inIndia']),
+        ),
       const _Head('SetDateFormat on LastDayOfMonth("03/04/2026")'),
       _Line('dd/mm/yyyy   Date() ${p['dmyDate']}   last day ${p['dmyLast']}'),
       _Line('mm/dd/yyyy   Date() ${p['mdyDate']}   last day ${p['mdyLast']}'),

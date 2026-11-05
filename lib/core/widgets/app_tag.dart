@@ -5,7 +5,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 
-enum AppTagTone { accent, neutral }
+enum AppTagTone { accent, neutral, done }
 
 /// A small rounded label: "Waiting for approval", a branch.
 class AppTag extends StatelessWidget {
@@ -22,13 +22,21 @@ class AppTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAccent = tone == AppTagTone.accent;
-    final ink = isAccent ? AppColors.accentInk : AppColors.noText;
+    final ink = switch (tone) {
+      AppTagTone.accent => AppColors.accentInk,
+      AppTagTone.done => AppColors.yesText,
+      AppTagTone.neutral => AppColors.noText,
+    };
+    final fill = switch (tone) {
+      AppTagTone.accent => AppColors.accentTint,
+      AppTagTone.done => AppColors.yesFill,
+      AppTagTone.neutral => AppColors.noFill,
+    };
     return Container(
       height: AppSpacing.tagHeight,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: isAccent ? AppColors.accentTint : AppColors.noFill,
+        color: fill,
         borderRadius: AppRadius.pillAll,
       ),
       child: Row(
@@ -38,7 +46,14 @@ class AppTag extends StatelessWidget {
             Icon(icon, size: 13, color: ink),
             const SizedBox(width: AppSpacing.xxs),
           ],
-          Text(label, style: AppText.readableStrong.copyWith(color: ink)),
+          Flexible(
+            child: Text(
+              label,
+              style: AppText.readableStrong.copyWith(color: ink),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

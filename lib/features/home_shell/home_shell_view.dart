@@ -5,9 +5,8 @@ import 'package:get/get.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_notice_banner.dart';
 import '../../core/widgets/app_bottom_nav.dart';
+import '../../core/widgets/app_state_view.dart';
 import '../ai_agents/ai_agents_view.dart';
 import '../chats/chats_view.dart';
 import '../profile/profile_view.dart';
@@ -33,100 +32,71 @@ class HomeShellView extends GetView<HomeShellController> {
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
       body: Obx(() {
-        if (c.isRetired.value) return const SizedBox.shrink();
-        return Column(
+        if (c.isRetired.value) {
+          return const AppStateView(
+            state: AppViewState.loading,
+            child: SizedBox.shrink(),
+          );
+        }
+        return Stack(
           children: [
-            Obx(() {
-              final text = c.security.e2e.notice.value;
-              if (text.isEmpty) return const SizedBox.shrink();
-              return SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.page,
-                    AppSpacing.xs,
-                    AppSpacing.page,
-                    0,
-                  ),
-                  child: AppNoticeBanner(
-                    message: text,
-                    onDismiss: c.security.dismissNotice,
-                  ),
-                ),
-              );
-            }),
-            Obx(() {
-              final e2e = c.security.e2e;
-              final text = c.index.value == 0 && e2e.notice.value.isEmpty
-                  ? e2e.lateHint.value
-                  : '';
-              if (text.isEmpty) return const SizedBox.shrink();
-              return SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.page,
-                    AppSpacing.xs,
-                    AppSpacing.page,
-                    0,
-                  ),
-                  child: AppNoticeBanner(
-                    message: text,
-                    onDismiss: c.security.dismissLateHint,
+            Column(
+              children: [
+                Expanded(
+                  // The bar stays put under the keyboard, so a tab only gives up the
+                  // part of the keyboard that rises above the bar.
+                  child: MediaQuery(
+                    data: media.copyWith(
+                      viewInsets: media.viewInsets.copyWith(
+                        bottom: math.max(
+                          0,
+                          media.viewInsets.bottom - navHeight,
+                        ),
+                      ),
+                    ),
+                    child: Obx(() {
+                      final active = c.index.value;
+                      return Stack(
+                        children: [
+                          for (var i = 0; i < _screens.length; i++)
+                            if (c.isBuilt[i])
+                              _TabLayer(
+                                animation: c.crossfade,
+                                isActive: i == active,
+                                isLeaving: i == c.previous,
+                                child: _screens[i],
+                              ),
+                        ],
+                      );
+                    }),
                   ),
                 ),
-              );
-            }),
-            Expanded(
-              // The bar stays put under the keyboard, so a tab only gives up the
-              // part of the keyboard that rises above the bar.
-              child: MediaQuery(
-                data: media.copyWith(
-                  viewInsets: media.viewInsets.copyWith(
-                    bottom: math.max(0, media.viewInsets.bottom - navHeight),
-                  ),
-                ),
-                child: Obx(() {
-                  final active = c.index.value;
-                  return Stack(
-                    children: [
-                      for (var i = 0; i < _screens.length; i++)
-                        if (c.isBuilt[i])
-                          _TabLayer(
-                            animation: c.crossfade,
-                            isActive: i == active,
-                            isLeaving: i == c.previous,
-                            child: _screens[i],
-                          ),
+                Obx(
+                  () => AppBottomNav(
+                    index: c.index.value,
+                    onSelected: c.select,
+                    items: [
+                      AppNavItem(
+                        label: 'Chats',
+                        icon: Icons.chat_bubble_outline,
+                        showDot: c.hasUnread.value,
+                      ),
+                      const AppNavItem(
+                        label: 'AI Agents',
+                        icon: Icons.auto_awesome_outlined,
+                      ),
+                      const AppNavItem(
+                        label: 'Submissions',
+                        icon: Icons.description_outlined,
+                      ),
+                      const AppNavItem(
+                        label: 'Profile',
+                        icon: Icons.person_outline,
+                      ),
                     ],
-                  );
-                }),
-              ),
-            ),
-            Obx(
-              () => AppBottomNav(
-                index: c.index.value,
-                onSelected: c.select,
-                items: [
-                  AppNavItem(
-                    label: 'Chats',
-                    icon: Icons.chat_bubble_outline,
-                    showDot: c.hasUnread.value,
                   ),
-                  const AppNavItem(
-                    label: 'AI Agents',
-                    icon: Icons.auto_awesome_outlined,
-                  ),
-                  const AppNavItem(
-                    label: 'Submissions',
-                    icon: Icons.description_outlined,
-                  ),
-                  const AppNavItem(
-                    label: 'Profile',
-                    icon: Icons.person_outline,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         );

@@ -101,6 +101,7 @@ class MessageRepository extends GetxService {
   /// The client id of the last [sendText] that was queued.
   String lastCid = '';
   String? _openConversation;
+  String? _syncScope;
 
   String? get _org => _session.orgId;
   String? get _me => _session.userId;
@@ -109,15 +110,26 @@ class MessageRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.events.listen((e) {
-      _queue = _queue.then((_) => _handle(e)).catchError((Object _) {});
+      _queue = _queue
+          .then((_) => _socket.isCurrent(e) ? _handle(e) : null)
+          .catchError((Object _) {});
     });
     _socket.onOnline.listen((_) => _onOnline());
     _e2e.unlockRequests.listen((_) => unawaited(_unlockLocked()));
+    _e2e.registrations.listen((_) => unawaited(reopenNoDevice()));
     _conversations.receiptsChanged.listen(applyReceipts);
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _onDropped();
     });
     ever(_session.current, (_) {
+      // The other organisation's messages go before the new one's first read.
+      for (final list in _lists.values) {
+        list.clear();
+      }
+      for (final waiter in _historyWaiters.values) {
+        if (!waiter.isCompleted) waiter.completeError(StateError('switched'));
+      }
+      _historyWaiters.clear();
       _lists.keys.toList().forEach(_reload);
       _scheduleDecrypt();
     });
@@ -128,6 +140,37 @@ class MessageRepository extends GetxService {
     _decrypting = _decrypting
         .then((_) => _decryptPending())
         .catchError((Object _) {});
+  }
+
+  /// After "Trust new key": messages of [convId] that were hidden because the
+  /// sender's key had changed are opened again against the pins as they are
+  /// now. Nothing is shown unless the check passes this time.
+  Future<void> reopenKeyChanged(String convId) async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return;
+    await _db.update(
+      "UPDATE messages SET decrypt_state = 'pending', plaintext = NULL "
+      "WHERE org_id = ? AND user_id = ? AND conv_id = ? AND decrypt_state = 'cant_decrypt' "
+      "AND plaintext = 'key_changed'",
+      [org, user, convId],
+    );
+    _scheduleDecrypt();
+  }
+
+  /// After this phone was registered: messages that showed "Encryption is not
+  /// ready on this device yet" are opened again.
+  Future<void> reopenNoDevice() async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return;
+    await _db.update(
+      "UPDATE messages SET decrypt_state = 'pending', plaintext = NULL "
+      "WHERE org_id = ? AND user_id = ? AND decrypt_state = 'cant_decrypt' "
+      "AND plaintext = 'no_device'",
+      [org, user],
+    );
+    _scheduleDecrypt();
   }
 
   /// After this device stopped being late: the server now serves the earlier
@@ -224,7 +267,7 @@ class MessageRepository extends GetxService {
         'UPDATE messages SET plaintext = ?, decrypt_state = ? WHERE org_id = ? AND user_id = ? '
         'AND msg_id = ? AND text = ?',
         [
-          isOk ? reading.text : null,
+          isOk ? reading.text : reading.code,
           isOk ? 'ok' : 'cant_decrypt',
           org,
           user,
@@ -361,12 +404,19 @@ class MessageRepository extends GetxService {
       list.clear();
       return;
     }
+    final rows = await readFor(org, user, convId);
+    if (org != _org || user != _me) return;
+    list.assignAll(rows);
+  }
+
+  /// The messages of one thread of one organisation and person, from SQLite.
+  Future<List<Message>> readFor(String org, String user, String convId) async {
     final rows = await _db.query(
       'SELECT * FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? '
       "ORDER BY CASE WHEN msg_id LIKE 'temp-%' THEN 1 ELSE 0 END, ts, local_seq",
       [org, user, convId],
     );
-    list.assignAll(rows.map(Message.fromRow));
+    return rows.map(Message.fromRow).toList();
   }
 
   String _tempId() {
@@ -392,11 +442,12 @@ class MessageRepository extends GetxService {
   // ---- composing ----------------------------------------------------------
 
   static const _noCommands =
-      "Lines starting with # or @ can't be sent in encrypted chats yet";
+      'Messages that start with # are reserved for commands';
 
-  /// A `#command` or a leading `@name`: blocked in encrypted threads.
-  static bool _isCommandLike(String text) =>
-      RegExp(r'^(#[A-Za-z]|@)').hasMatch(text);
+  /// A `#command`: blocked in encrypted threads. A leading `@name` is an
+  /// ordinary mention and is allowed.
+  static bool isCommandLike(String text) =>
+      RegExp(r'^#[A-Za-z]').hasMatch(text);
 
   Future<SendResult> sendText(
     String convId,
@@ -422,7 +473,7 @@ class MessageRepository extends GetxService {
       lastBlock = gate.message;
       return SendResult.blocked;
     }
-    if ((gate.isEncrypt || facts.isE2e) && _isCommandLike(body)) {
+    if ((gate.isEncrypt || facts.isE2e) && isCommandLike(body)) {
       lastBlock = _noCommands;
       return SendResult.blocked;
     }
@@ -516,6 +567,24 @@ class MessageRepository extends GetxService {
     } on FormatException {
       return SendResult.invalid;
     }
+    return _sendTagged(convId, text, tag, replyTo: replyTo);
+  }
+
+  /// A forward of an attachment: [text] is the forward line and the tag as it
+  /// was received, kept byte for byte (the key and iv are in it). The same
+  /// policy match as [sendAttachment] applies to the target conversation.
+  Future<SendResult> sendForwardedAttachment(
+    String convId,
+    String text,
+    AttachmentTag tag,
+  ) => _sendTagged(convId, text, tag);
+
+  Future<SendResult> _sendTagged(
+    String convId,
+    String text,
+    AttachmentTag tag, {
+    String? replyTo,
+  }) async {
     final facts = await _facts(convId);
     final gate = await _policy.decideSend(convId, facts, isLookup: false);
     if (gate.isBlocked && !gate.isTransient) {
@@ -737,7 +806,7 @@ class MessageRepository extends GetxService {
       return _Outcome.finished;
     }
     if (decision.isEncrypt) {
-      if (_isCommandLike('${entry.payload['text']}')) {
+      if (isCommandLike('${entry.payload['text']}')) {
         await _fail(entry, '${E2eSendDecision.failTag}$_noCommands');
         return _Outcome.finished;
       }
@@ -976,8 +1045,10 @@ class MessageRepository extends GetxService {
   Future<void> _onOnline() async {
     _policy.onReconnected();
     _scheduleDecrypt();
-    if (_isSyncing) return;
+    final scope = '$_org/$_me';
+    if (_isSyncing && _syncScope == scope) return;
     _isSyncing = true;
+    _syncScope = scope;
     try {
       final stale = await _db.query(
         "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'sending' AND kind IN ('message','reply','edit') ORDER BY id",
@@ -990,7 +1061,7 @@ class MessageRepository extends GetxService {
       await _syncAll();
       await flush();
     } finally {
-      _isSyncing = false;
+      if (_syncScope == scope) _isSyncing = false;
     }
   }
 
@@ -1018,6 +1089,7 @@ class MessageRepository extends GetxService {
     final user = _me;
     if (org == null || user == null || !_socket.isOnline) return;
     await _conversations.requestLists();
+    if (_org != org || _me != user) return;
     await _db.transaction(
       (sql) => ConversationRepository.ensure(sql, org, user, 'global'),
     );
@@ -1026,7 +1098,7 @@ class MessageRepository extends GetxService {
       [org, user],
     );
     for (final row in rows) {
-      if (!_socket.isOnline) return;
+      if (!_socket.isOnline || _org != org || _me != user) return;
       await _syncConversation(idText(row['conv_id']));
     }
     await _conversations.reload();
@@ -1037,12 +1109,16 @@ class MessageRepository extends GetxService {
   /// of pages is reached (then the conversation is flagged as having a gap).
   /// The id is looked for in the page; ids are never compared as numbers.
   Future<void> _syncConversation(String convId) async {
+    final org = _org;
+    final user = _me;
     final lastKnown = await _cursor(convId);
     final latest = await _fetchHistory(convId);
+    if (_org != org || _me != user) return;
     if (latest == null || lastKnown == null || latest.items.isEmpty) return;
     if (_holds(latest, lastKnown)) return;
     var before = idText(latest.items.first['id']);
     for (var page = 0; page < _maxGapPages; page++) {
+      if (_org != org || _me != user) return;
       if (!_socket.isOnline) break;
       final older = await _fetchHistory(convId, before: before);
       if (older == null) break;
@@ -1082,7 +1158,7 @@ class MessageRepository extends GetxService {
     } catch (_) {
       return null;
     } finally {
-      _historyWaiters.remove(key);
+      if (identical(_historyWaiters[key], waiter)) _historyWaiters.remove(key);
     }
   }
 

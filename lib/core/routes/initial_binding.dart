@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
@@ -10,23 +11,37 @@ import '../../data/db/app_database.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/form_logic/form_logic_service.dart';
 import '../../data/repositories/attachment_repository.dart';
+import '../../data/repositories/approval_repository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/command_repository.dart';
+import '../../data/repositories/connect_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
+import '../../data/repositories/group_repository.dart';
+import '../../data/repositories/hand_on_repository.dart';
 import '../../data/repositories/encryption_policy.dart';
+import '../../data/notifications/local_notification_service.dart';
+import '../../data/notifications/push/noop_push_service.dart';
+import '../../data/notifications/push/push_token_registry.dart';
 import '../../data/repositories/feed_repository.dart';
+import '../../features/notifications/notification_router.dart';
 import '../../data/repositories/form_file_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
+import '../../data/repositories/qr_repository.dart';
 import '../../data/repositories/typing_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
+import '../../data/repositories/task_repository.dart';
+import '../../data/repositories/ticket_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
+import '../../features/connect_target/connect_target_controller.dart';
+import '../utils/install_referrer.dart';
 import 'deep_link_service.dart';
+import 'invite_service.dart';
 
 class InitialBinding extends Bindings {
   InitialBinding(this.connectivity);
@@ -37,7 +52,17 @@ class InitialBinding extends Bindings {
   void dependencies() {
     final store = Get.put(SessionStore(), permanent: true);
     store.identity.value = SeedUi.identity();
-    Get.put(DeepLinkService(AppLinks(), store), permanent: true);
+    final links = Get.put(
+      DeepLinkService(
+        AppLinks(),
+        store,
+        connectivity,
+        Platform.isAndroid
+            ? const PlayInstallReferrerSource()
+            : const NoInstallReferrerSource(),
+      ),
+      permanent: true,
+    );
     final db = Get.put(AppDatabase(), permanent: true);
     final api = Get.put(ApiClient(store), permanent: true);
     Get.put(connectivity, permanent: true);
@@ -50,6 +75,7 @@ class InitialBinding extends Bindings {
       E2eRepository(E2eKeyStore(), socket, store, db),
       permanent: true,
     );
+    Get.put(HandOnRepository(e2e, socket, store), permanent: true);
     final policy = Get.put(
       EncryptionPolicy(socket, store, e2e),
       permanent: true,
@@ -58,6 +84,9 @@ class InitialBinding extends Bindings {
       ConversationRepository(db, store, socket, e2e),
       permanent: true,
     );
+    Get.put(GroupRepository(socket, store, conversations), permanent: true);
+    final connect = Get.put(ConnectRepository(socket), permanent: true);
+    Get.put(QrRepository(socket), permanent: true);
     final messages = Get.put(
       MessageRepository(db, store, socket, conversations, policy, e2e),
       permanent: true,
@@ -74,10 +103,35 @@ class InitialBinding extends Bindings {
       SubmissionRepository(db, store, socket, messages, formOptions),
       permanent: true,
     );
-    Get.put(FormLogicService(), permanent: true);
+    Get.put(FormLogicService(store, socket), permanent: true);
     Get.put(PresenceRepository(socket), permanent: true);
     Get.put(TypingRepository(socket), permanent: true);
-    Get.put(FeedRepository(socket), permanent: true);
+    final feed = Get.put(FeedRepository(socket, store, e2e), permanent: true);
+    final tasks = Get.put(TaskRepository(socket, store), permanent: true);
+    Get.put(ApprovalRepository(socket, store, feed), permanent: true);
+    final tickets = Get.put(
+      TicketRepository(socket, store, conversations),
+      permanent: true,
+    );
+    final notificationRouter = Get.put(
+      NotificationRouter(store, feed, tasks, tickets),
+      permanent: true,
+    );
+    final pushRegistry = Get.put(
+      PushTokenRegistry(store, NoopPushService()),
+      permanent: true,
+    );
+    final localNotifications = Get.put(
+      LocalNotificationService(
+        feed,
+        conversations,
+        store,
+        notificationRouter,
+        pushRegistry,
+      ),
+      permanent: true,
+    );
+    unawaited(localNotifications.start());
     final attachments = Get.put(AttachmentRepository(store), permanent: true);
     Get.put(FormFileRepository(attachments, store), permanent: true);
     final attachmentCache = Get.put(
@@ -87,9 +141,14 @@ class InitialBinding extends Bindings {
     // Decrypted documents made for the viewer last run do not outlive it.
     unawaited(attachmentCache.clearOpenTmp());
     final session = Get.put(
-      SessionRepository(store, db, api, socket, attachmentCache),
+      SessionRepository(store, db, api, socket, attachmentCache, links),
       permanent: true,
     );
-    Get.put(AuthRepository(api, store, session), permanent: true);
+    final auth = Get.put(AuthRepository(api, store, session), permanent: true);
+    links.claimResolver = auth.claimInvite;
+    links.membershipStatus = auth.membershipStatus;
+    links.scanner = (target) =>
+        ConnectTargetController.scanOutcome(connect, target);
+    Get.put(InviteService(auth, store, links), permanent: true);
   }
 }

@@ -31,6 +31,12 @@ class AppTheme {
       labelLarge: AppText.button,
       labelSmall: AppText.caption,
     ),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: AppColors.background,
+      contentTextStyle: AppText.readable,
+      behavior: SnackBarBehavior.floating,
+      elevation: 0,
+    ),
     splashFactory: NoSplash.splashFactory,
     highlightColor: Colors.transparent,
     dividerColor: AppColors.line,

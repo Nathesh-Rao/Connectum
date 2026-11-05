@@ -1,7 +1,7 @@
 name: connectum
 description: "A new Flutter project."
-publish_to: 'none'
-version: 0.1.0+1
+publish_to: "none"
+version: 0.1.1+6
 
 environment:
   sdk: ^3.10.3
@@ -36,6 +36,9 @@ dependencies:
   open_filex: ^5.0.0
   # Embedded JS engine for the shared form logic (QuickJS-NG over FFI)
   quickjs_engine: ^0.1.6
+  qr_flutter: ^4.1.0
+  share_plus: ^13.3.1
+  flutter_local_notifications: ^22.3.3
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +66,8 @@ flutter:
     - assets/lottie/
     - mobile-handoff/e2e-vectors.json
     - assets/debug/e2e-attachment-vectors.json
+    - assets/debug/e2e-rewrap-vectors.json
+    - assets/debug/tickets/
     - assets/form_logic/form-logic-host-shim.js
     - assets/form_logic/form-logic.bundle.js
     - assets/form_logic/form-logic-conformance.json

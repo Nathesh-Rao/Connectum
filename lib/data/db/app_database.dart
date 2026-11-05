@@ -24,7 +24,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 8;
+  static const _version = 9;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -133,6 +133,8 @@ class AppDatabase {
         rev TEXT,
         PRIMARY KEY(org_id, user_id, form, field, cache_key))''',
     ],
+    // A group's owner is the only person who may add members.
+    9: ['ALTER TABLE conversations ADD COLUMN owner TEXT'],
   };
 
   static const _scopedTables = [
@@ -253,6 +255,19 @@ class AppDatabase {
       await sql.update('DELETE FROM $table');
     }
   });
+
+  /// The cached rows and outbox of one organisation and person; the
+  /// organisation entry, the encryption keys and the pins stay.
+  Future<void> clearScopeRows(String orgId, String userId) =>
+      transaction((sql) async {
+        for (final table in _scopedTables) {
+          if (table == 'organisations') continue;
+          await sql.update(
+            'DELETE FROM $table WHERE org_id = ? AND user_id = ?',
+            [orgId, userId],
+          );
+        }
+      });
 
   Future<void> wipeScope(String orgId, String userId) =>
       transaction((sql) async {

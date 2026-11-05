@@ -105,6 +105,12 @@ class ProfileView extends GetView<ProfileController> {
                           ProfileInfoRow(label: 'Email', value: email),
                         if (category.isNotEmpty)
                           ProfileInfoRow(label: 'Category', value: category),
+                        ProfileActionRow(
+                          icon: Icons.qr_code_2_rounded,
+                          title: 'My QR code',
+                          subtitle: 'Let people connect with you',
+                          onTap: () => c.openQr(context),
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xl),
@@ -210,7 +216,10 @@ class _SeedChips extends StatelessWidget {
               label: Text(v),
               onPressed: () => SeedUi.profileVariant.value = v,
             ),
-          ActionChip(label: const Text('sheet'), onPressed: () => show(context, 0)),
+          ActionChip(
+            label: const Text('sheet'),
+            onPressed: () => show(context, 0),
+          ),
           ActionChip(
             label: const Text('sheet · 3 unsent'),
             onPressed: () => show(context, 3),

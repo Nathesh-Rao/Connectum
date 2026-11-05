@@ -1,7 +1,7 @@
 {
   "name": "connectum-form-logic",
-  "version": "1.1.0",
-  "sha256": "3fb93976c8cb62aa21412dd9ac559a1290de5e9d97b2136b7973c04aac077380",
+  "version": "1.3.0",
+  "sha256": "bd36551466e20766061560b293d7303f7eff179e28de5f1ca11921461c37c65d",
   "files": [
     {
       "path": "axExpParser.js",
@@ -15,18 +15,23 @@
     },
     {
       "path": "fieldCalc.js",
-      "sha256": "2f18d6a05ee3bc9e20545ba2e4fb7dcdfceeed0a08dda541d036e7596fdd4848",
-      "size": 10388
+      "sha256": "fcc46f041a230a9d9b0072710738b19119c683d2213a6661ee5c0e0f729571e3",
+      "size": 10357
     },
     {
       "path": "fieldRule.js",
-      "sha256": "6a5ad39a252e4edffc4cb7c8d40488ef6df9b4601e8fe5e3cffcda4b287255ad",
-      "size": 5744
+      "sha256": "694ded1a9a717c7a3459a28adc0ee6898323dae58b6dc67eeb3da4153ec6874c",
+      "size": 6303
+    },
+    {
+      "path": "condition.js",
+      "sha256": "1478a23c892ce4ef665c4003edccfeed057d4fb7dae70bbe6be80b8adaec1c66",
+      "size": 2698
     },
     {
       "path": "form-logic.bundle.js",
-      "sha256": "41f2d3d00ac55b578a6c955bc976f2c63a91d852af5bce560e3b6b495e5cc677",
-      "size": 47894
+      "sha256": "199230bc148ff96ca94b39a23a5b6d491813c92a886ac7c0b4735a8fc0cde1c3",
+      "size": 50397
     },
     {
       "path": "form-logic-host-shim.js",
@@ -35,12 +40,12 @@
     },
     {
       "path": "form-logic-conformance.json",
-      "sha256": "d130c1032ffd3a9cf066d6db9427a1f2ba8b3881eb87ae7fb5b6e140ba98e224",
-      "size": 7063
+      "sha256": "9958afecf58f149f0c2aa2cb36fce2f9c0c307c644f851aaccf6fedf103928dd",
+      "size": 21083
     }
   ],
   "requires": [
-    "Either ECMAScript 2020 modules (the four .js modules) or any engine at ES2019 (form-logic.bundle.js, one script defining ConnectumFormLogic)",
+    "Either ECMAScript 2020 modules (the five .js modules) or any engine at ES2019 (form-logic.bundle.js, one script defining ConnectumFormLogic)",
     "Date, in the person's own time zone (Date() is today where the person is, Time() the local time)",
     "Intl.NumberFormat with en-IN and en-US, TextEncoder, TextDecoder, atob and btoa, and the English month name of Date.prototype.toLocaleString: form-logic-host-shim.js fills in whichever of these the engine lacks (load it first); it changes nothing where they exist",
     "Check an engine with form-logic-conformance.json: ConnectumFormLogic.runConformance(...) must report no failures"

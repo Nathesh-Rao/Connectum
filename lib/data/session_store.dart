@@ -117,4 +117,6 @@ class SessionStore {
 
   Future<void> writeValue(String key, String value) =>
       _storage.write(key: key, value: value);
+
+  Future<void> deleteValue(String key) => _storage.delete(key: key);
 }

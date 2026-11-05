@@ -22,6 +22,7 @@ class FormCardData {
     this.hasResult = false,
     this.status,
     this.canResubmit = false,
+    this.isTicket = false,
   });
 
   final String id;
@@ -41,6 +42,10 @@ class FormCardData {
 
   /// A declined submission the approver allowed to be fixed and sent again.
   final bool canResubmit;
+
+  /// The form has a status field (the message says `ticket: true`): the card
+  /// opens the ticket.
+  final bool isTicket;
 
   bool get isPending => id.startsWith('temp-');
 
@@ -140,6 +145,7 @@ class FormCardData {
       hasResult: form['result'] != null,
       status: status,
       canResubmit: canResubmit,
+      isTicket: form['ticket'] == true,
     );
   }
 

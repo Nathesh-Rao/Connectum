@@ -23,6 +23,16 @@ class ConnectCode {
 
   String get display => '${code.substring(0, 4)}-${code.substring(4)}';
 
+  /// The whole link in the one form the server reads for sure; what the
+  /// server calls and the stored pending target use. Parsing it again gives
+  /// the same code, org and branch.
+  String get linkText => Uri(
+    scheme: 'https',
+    host: ConnectLinkParser.publicHost,
+    pathSegments: ['connect', code],
+    queryParameters: {'org': ?org, 'branch': ?branch},
+  ).toString();
+
   @override
   String toString() => 'ConnectCode(…)';
 }

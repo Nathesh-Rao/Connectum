@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/deep_link_service.dart';
 import '../api/api_client.dart';
 import '../attachment_cache.dart';
 import '../db/app_database.dart';
 import '../models/ids.dart';
 import '../models/session_info.dart';
 import '../redact.dart';
+import 'e2e_repository.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 
@@ -19,6 +21,7 @@ class SessionRepository extends GetxService {
     this._api,
     this._socket,
     this._attachmentCache,
+    this._links,
   );
 
   static const replacedNotice =
@@ -30,6 +33,7 @@ class SessionRepository extends GetxService {
 
   final SessionStore _store;
   final AttachmentCache _attachmentCache;
+  final DeepLinkService _links;
   final AppDatabase _db;
   final ApiClient _api;
   final SocketService _socket;
@@ -135,7 +139,11 @@ class SessionRepository extends GetxService {
     _isHandling = true;
     await _socket.stop();
     await _db.wipeScope(info.orgId, info.userId);
+    await _store.deleteValue(
+      E2eRepository.noticeKeyFor(info.orgId, info.userId),
+    );
     await _attachmentCache.clear();
+    await _links.clear();
     await _store.clear();
     _goToLogin(replacedNotice);
   }
@@ -159,10 +167,17 @@ class SessionRepository extends GetxService {
     } catch (_) {}
     await _socket.stop();
     await _db.wipeScope(info.orgId, info.userId);
+    await _store.deleteValue(
+      E2eRepository.noticeKeyFor(info.orgId, info.userId),
+    );
     await _attachmentCache.clear();
+    await _links.clear();
     await _store.clear();
     _goToLogin(null);
   }
+
+  /// Drops a link waiting to be confirmed (an account sign out).
+  Future<void> clearConnectTarget() => _links.clear();
 
   Future<int> unsentCount() => _db.unsentCount();
 
@@ -175,6 +190,12 @@ class SessionRepository extends GetxService {
   Future<void> logOut({required String notice}) async {
     _isHandling = true;
     final email = _store.identity.value?.email;
+    final info = _store.current.value;
+    if (info != null) {
+      await _store.deleteValue(
+        E2eRepository.noticeKeyFor(info.orgId, info.userId),
+      );
+    }
     final orgToken = _store.token;
     final identityToken = _store.identity.value?.token;
     await Future.wait([
@@ -188,6 +209,7 @@ class SessionRepository extends GetxService {
     await _socket.stop();
     await _db.wipeAll();
     await _attachmentCache.clear();
+    await _links.clear();
     await _store.clear();
     await _store.clearIdentity();
     loginEmail.value = email;

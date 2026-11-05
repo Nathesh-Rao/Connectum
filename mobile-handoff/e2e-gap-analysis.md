@@ -1,131 +1,330 @@
-# E2E gap analysis: backend docs vs this app
+# E2E gap analysis: backend docs of 4 Nov 2026 vs this app
 
-Read-only analysis, 2 Nov 2026. Backend source: `origin/main` of `~/Development/Axi-apps/connectum` (fetched, nothing checked out). App: working tree of `connectum_mobile` at `master`, which has **21 uncommitted modified files** (late-device and Security-screen work); "today" below means that working tree. Nothing was sent to any server. No keys or secrets are reproduced.
+Read-only analysis, 4 Nov 2026. This file **replaces** the 2 Nov version (still in git history, commit 161e5e0); that one predates `E2E_WEB_COMPLETE.md` and `E2E_NEW_DEVICE_AND_HISTORY.md` and is stale in places.
 
-## 1. The docs and what is newest
+Read: `reference/backend-e2e/` (`E2E_NEW_DEVICE_AND_HISTORY.md`, `E2E_WEB_COMPLETE.md`, `E2E_FRESH_DEVICES_CHANGE.md`, `e2e-test-vectors.json`), `mobile-handoff/history-sync-older-device.md`, and the app's E2E code. To settle two points the docs leave open, I also read `sd_auth.erl`, `sd_ident.erl` and `sd_e2e.erl` on `origin/main` of the backend (commit f813bd5b, nothing checked out). No Dart was changed, nothing was run on a device, nothing was sent to a server. I did **not** run `/debug/e2e`, so "runs there" below means "the code is wired to it", not "I saw it pass".
 
-Repo layout note: the backend lives under `connectum/` inside the repo (`connectum/docs/...`, `connectum/tools/...`).
+App state is the `master` working tree, which has uncommitted E2E changes (`e2e_repository.dart`, `encryption_policy.dart`, `message_repository.dart`, `session_repository.dart`, `auth_repository.dart`, `socket_service.dart`). `reference/backend-e2e/` itself is untracked.
 
-Files on origin/main that mention e2e / encryption / recovery / backup / restore / history sync / passphrase / bucket / oracle (git grep -il): the five E2E pages, `e2e-test-vectors.json`, `tools/e2e-kit/*`, both Postman collections (platform and `Connectum_Mobile_QR`), `tools/postman/mobile-changes.mjs` (source of the mobile collection's "what changed" folder), plus incidental mentions in `CONNECTUM_API.md`, `CHAT_PROTOCOL.md`, `FILE_STORAGE.md` (S3 uploads), `BACKUPS.md` (server DB backups, unrelated), `KEY_ROTATION.md` (server at-rest keys, unrelated) and ~30 other docs.
+Status words: **done** (matches the docs), **partial**, **missing**, **different** (works, but not as the docs/web do; says whether that is safe).
 
-Last 7 days, E2E-relevant commits on origin/main (newest first):
+Short names: `crypto` = `lib/data/e2e/e2e_crypto.dart`, `repo` = `lib/data/repositories/e2e_repository.dart`, `policy` = `lib/data/repositories/encryption_policy.dart`, `msgrepo` = `lib/data/repositories/message_repository.dart`, `sess` = `lib/data/repositories/session_repository.dart`.
 
-| Date | Commit | What |
+---
+
+## 0. The short version
+
+1. **Crypto and the send/read path are solid.** Every bound string, the envelope, padding, the box `ek`, the all-devices rule and the `e2e_stale_devices` retry match the docs. Groups can already be sent and read.
+2. **The phone never says `"client":"mobile"` at sign-in.** So it sits in the *web* session slot. Signing in on the web today signs the phone out, and the phone then **wipes its cached rows and its unsent outbox**. This is the most urgent finding (section 1) and a one-line-per-endpoint fix.
+3. **History sync is only half built.** The new-device (waiting) side works. The older-device side (offer, approve, rewrap, `put`, `done`) does not exist, and neither does any rewrap function in `crypto`.
+4. **Recovery code does not exist** (no generate, seal, open, `e2e.recovery.*`, backup or restore). The Security screen says so honestly, but `security_controller.dart:66` still points the person at a recovery code the phone cannot use.
+5. **Smaller gaps:** `e2e.status` is sent without the device id; the read path never checks key pins; one generic placeholder instead of nine; `/debug/e2e` runs none of the backend's `rewrap`, `recovery` or `envelope` vectors; a send-heavy phone can hit the 600/10 min limit of `e2e.devices`.
+
+---
+
+## 1. Does sign-in send `"client":"mobile"`?
+
+**No: missing.**
+
+| Where | What the app sends | File:line |
 |---|---|---|
-| 2 Nov | 8e348dd0 / 28afb8e7 / eb359379 | Not E2E: save/pin/unread, message options + message links, message formatting (mobile collection changes 11 and 12) |
-| 1 Nov | f8b4584a (#607) | **Backup and restore for the recovery code** |
-| 1 Nov | 9d43a0f6 (#606) | **A new device is shown earlier messages by an older device** (`e2e.sync.*`) |
-| 1 Nov | 8a03c555 (#601) | New-device alert in the notification feed; report-only CSP |
-| 1 Nov | fef06879 (#599) | **Every device gets a box; `e2e_stale_devices`** |
-| 1 Nov | b142d3f7 (#598) | `E2E_SIMPLE_GUIDE.md`, `E2E_MOBILE_KIT.md`, `tools/e2e-kit`, vectors |
-| 1 Nov | 83bcd90a / 173442fe | Presigned download links for files (attachments, change 6) |
-| 31 Oct | 020bcd73 (#581) | **Recovery** (one-time code, recovery key kept sealed on the server) |
-| 30 Oct | 6b5bb376 (#530) | Wrap for devices that exist now, device replacement at the limit |
+| `POST /login/verify` (identity session) | `{email, otp, deviceId}` | `auth_repository.dart:101-105` |
+| `POST /enter` (the enterprise session, the one that has a slot) | `{enterprise, deviceId}` | `lib/data/api/api_client.dart:139-147` |
+| `POST /setup/verify` | `{email, otp, deviceId}` | `auth_repository.dart:134-137` |
+| `grep "client"` over `lib/` | no hit that is a sign-in field | |
 
-### The "cloud backup" doc does not exist
+The backend reads `client` only where it creates an enterprise session: `sd_ident.erl:361` (`enter_as`) and `:649` (setup), via `client(Body)` at `:273`. `sd_auth.erl:148-154`: `mobile` / `android` / `ios` give the mobile slot, **anything else or nothing gives `web`**. `mobile-handoff/sessions.md` does not mention the field at all.
 
-I looked for a backup "the company and the cloud cannot read, protected by a password or key the person keeps, stored in an Oracle bucket, like WhatsApp". **It is not on origin/main and not on any of the ~35 remote branches** (`git ls-tree` of every `origin/*` for names with cloud/backup/restore/recovery/E2E_; `git grep` for oracle, bucket, presigned, passphrase, argon, scrypt in docs/tools). "Oracle" appears only as a SQL dialect for the .NET queue consumer. What exists is:
+**What happens today when one person signs in on the web and on the phone** (verified in `sd_auth.erl:117-182`):
 
-- **`E2E_HISTORY_SYNC_MOBILE.md`, section "Backup and restore" (+ `E2E_ENCRYPTION.md` section 6a, `E2E_SIMPLE_GUIDE.md`, mobile Postman change 10)**: "WhatsApp's encrypted backup, **without a file in a cloud**". The backup is a *box per message*, stored by the server next to the message (Redis key `sd:e2e:xw:<mid>`), locked to a **recovery key**, whose private half is sealed by a 130-bit random **recovery code** and stored on the server. No file, no bucket, no password-derived key.
-- Files go to an S3-compatible store (`FILE_STORAGE.md`, change 6) but only for attachments, not backups.
+1. Both sessions land in the one `web` slot (`slot_key/2`, `sd:usersess:<user>`).
+2. The second sign-in deletes the first session. Its live socket gets `sd_event session_replaced` (`replaced_kind` is `web`).
+3. If the phone is the one replaced: `socket_service.dart:242` → `SocketState.sessionReplaced` → `sess:58` → `handleSessionReplaced` (`sess:136-149`) → `_db.wipeScope` (`app_database.dart:273`), which deletes every cached row **and the outbox**, then goes to login with "You were signed out because this account signed in on another tab or device." Unsent messages are lost.
+4. Signing in on the phone again kicks the web out the same way (the web forces a sign-out, `E2E_WEB_COMPLETE.md` H). Each device keeps ending the other's session.
+5. The server also writes a `session_replaced` feed item each time, and never the `session_added` item (that one only fires for two different kinds).
+6. It breaks the history-sync design: an older phone cannot stay signed in while the person signs in on the web to be the new device. This is exactly the "signing in there signs you out here" story of `E2E_NEW_DEVICE_AND_HISTORY.md` D3, but it applies to phone + laptop only because of this bug.
 
-So either the Oracle-bucket backup is a planned/unwritten feature, or someone described #607 differently. Section 4 describes what #607 does and what a file-in-a-bucket design would additionally need. **Question 1 for the backend developer.**
+Needed: add `"client":"mobile"` to the body of `/enter` and `/setup/verify` (the two session-creating calls). A phone that is already signed in keeps its web-slot session until its next sign-in.
 
-## 2. What was read
+---
 
-`E2E_MOBILE_REVIEW.md` (all, incl. last two sections), `E2E_HISTORY_SYNC_MOBILE.md`, `E2E_FRESH_DEVICES_CHANGE.md`, `E2E_ENCRYPTION.md` (all, incl. 6a, 8, "For every client", "History for a new device", "Alerts"), `E2E_MOBILE_KIT.md`, `E2E_SIMPLE_GUIDE.md` (grep only for backup/code lines), `e2e-test-vectors.json` (structure), `e2e-check.mjs` (structure), `chat-app/.../e2eCrypto.js` (recovery section, for the KDF), `mobile-changes.mjs` (changes 7 to 12), and the folder/request list of the mobile Postman collection (folder 5 has 16 e2e requests/examples; I did not read their JSON bodies, see questions).
+## 2. How `session_replaced` is handled, given per-client slots
 
-Vectors: `docs/e2e-test-vectors.json` has `recipient`, `sender`, `registration`, `envelope`, `expected`, `lateBox`, `intermediates`. **The only part newer than the app's `mobile-handoff/e2e-vectors.json` is `lateBox`, and the app's file already has its own `lateBox`** (uncommitted edit adds it, +36 lines). **There is no vector for: rewrap/hand-on box creation, recovery code sealing/opening, `e2e.sync.*` replies, or the recovery key's box.** `tools/e2e-kit/e2e-check.mjs` has modes `envelope`, `proof`, `reference` (opens `lateBox` with the box's own `ek` and names a bad `ek`); it has no recovery or rewrap mode.
-
-## 3. Change table
-
-Legend: Gap = done / partly / not started. Size S/M/L. "Demo" = needed for a demo.
-
-| # | Change | Doc and section | Calls / events | Crypto | Limits | Doc says app must show/do | Edge cases | Vectors | App today | Gap, size, demo |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | **Box for every device that exists now** + `e2e_stale_devices` | FRESH_DEVICES whole; MOBILE_REVIEW "What the app should change" 1-2; ENCRYPTION "For every client" | `e2e.devices {users:[peer,me]}` right before each seal; error event `{type:"error",code:"e2e_stale_devices",text,mid,conv,users}` | none new | `e2e.devices` 600/600 s per user (debounce ~10 s if wanted), up to 50 users per call; box cap 250 per envelope, 200 members x 10 devices | refresh before sealing; on the error forget `users`, rebuild NEW envelope (new mid), same `cid`, silently, max 2 tries, match by `mid`; sender's own other devices included, sending device may omit itself | refused send is not remembered by cid; no device = `e2e_peer_not_ready`; box for removed device is also stale; switch `CONNECTUM_E2E_REQUIRE_ALL_DEVICES=0` | none | `EncryptionPolicy` forces `devicesOf([peer, me], isForced: true)` at send (`encryption_policy.dart:256`); `MessageRepository._onStaleDevices` matches by mid, invalidates, back to pending without counting, new envelope under same cid, `_maxStaleRetries`; groups invalidated too | **Done (uncommitted?)**, S to verify on real server; demo: yes |
-| 2 | **Recovery-key device in the lists** | ENCRYPTION 6a; HISTORY_SYNC "backup" | `e2e.devices` / `e2e.group_devices` / `e2e.status` return a device with `recovery:true` | none new | does not count in the 10-device limit; `e2e.remove` refuses it | wrap for it like any device (the all-devices rule demands it); exclude from "readers" and from safety-number/new-device notices | | none | `E2eDevicePublic.isRecovery`; `E2eRepository.readers()` skips it for "has a reader" decisions only; `seal` wraps for `decision.recipients` (includes it); `myDevices` hides it; `isRecoveryOn` shown on Security | **Done for sending/reading**; verify against a real recovery-on account (needs web account with recovery on), S |
-| 3 | **Per-box `ek`** | HISTORY_SYNC "Reading a box..."; ENCRYPTION "History for a new device" | none (field in `keys[dev].ek`) | `ek = box.ek ?? envelope.ek`; ECDH P-256 X coord; HKDF-SHA-256 salt = decoded `mid`, info `connectum-e2e-wrap|<my dev>|<ORIGINAL sender dev>`; AES-256-GCM aad `e2e1-wrap|<mid>|<my dev>`; `ek` 65-byte uncompressed point | | use box ek when present | `envelope.dev` stays the original sender, not the helper; signature never covers `keys`; chains work | `lateBox` | `E2eCrypto.openEnvelope` reads box `ek` (`e2e_models` has `b.ek`); `/debug/e2e` runs `lateBox` plus 4 tamper cases | **Done**, S; demo: yes |
-| 4 | **Late device (receiving side)** | HISTORY_SYNC "What the phone shows while it waits", "Edge cases" | `e2e.status` (`late`), `e2e.sync.pending` -> `helpers`, event `e2e_devices_changed {user}` (own sockets only) | none | poll ~30 s while waiting; `pending` lists only devices used in last 30 days | waiting card naming helpers, or "none active, enter recovery code"; grey line stays for old messages; when `late` ends, drop saved copy and re-read once, remember "was waiting" across restarts; hide when `mode:off`; do not delete device keys when a session ends | session_replaced during the dance; app killed while waiting | none | `E2eRepository`: `isLate`, `helpers`, slow poll (`_pollOnce`, rate-limit skip), persisted late mark (`1` waiting, `2` unlock), `unlockRequests` -> `MessageRepository._unlockLocked`, `LateNotice` widget, Security screen. Need to **verify**: does `handleSessionReplaced` keep the key store? It calls `_db.wipeScope` and `_store.clear()`; keys are in `E2eKeyStore` (secure storage), probably untouched, but unconfirmed | **Mostly done**; verify keys survive `session_replaced` and the "sign in again" wording, S; demo: yes (this is the "new phone" story) |
-| 5 | **Older device hands on (second half of history sync)** | HISTORY_SYNC "Handing on", "Rules", acceptance 2-7 | `e2e.sync.pending` (`waiting`), optional `e2e.sync.page {cursor}`, `e2e.sync.put {device, items:[{mid,iv,w,ek}]}`, `e2e.sync.done {device}`, `e2e.remove` ("not me"), event `e2e_devices_changed` | per message: unwrap own box; fresh P-256 pair; ECDH(eph.priv, waiting.ecdh); same HKDF/info/aad as any box but with the waiting device id; 12-byte iv; AES-GCM over the 32-byte message key (48 bytes); `ek` = eph public | put: 1-500 items per call (doc also says "batches of up to 400"), 400 calls/10 min; page: 600/10 min, page ends after ~400 messages (`CONNECTUM_E2E_SYNC_PAGE`); ~200 B stored per message per device | offer card "Show your earlier messages on <device>?" Approve / That is not me (ask twice then remove) / Later; progress "N messages done, keep open", Stop; only after approval on this device; skip not fail; look up target key fresh and refuse recovery key; never on push | stop half way = no `done`, rerun safe; `not_found` = target removed -> stop; `rate_limited` -> back off; empty history -> still call `done`; mode `off` -> no card; may use own SQLite `messages.text` envelopes instead of `sync.page` (but cleared/deleted rules then are the app's) | none for rewrap | `e2e.sync.pending` is called only for `helpers` (late side); no `waiting` offer, no `put`/`done`/`page`, no rewrap function in `E2eCrypto` (it has `buildEnvelope`/`openEnvelope` but unwrap-then-rewrap would need the raw message key exposed) | **Not started**, L (crypto M, job + background keep-awake M, UI S-M); demo: only if the demo has a second phone and web as the new device (web-as-new-device with phone as helper is the likeliest demo). Can wait otherwise |
-| 6 | **Recovery: turn on / change / turn off** | ENCRYPTION 6a; Postman folder 5 | `e2e.recovery.set {id,ecdh,sign,proof,blob:{v,salt,iv,ct},replace?}`, `e2e.recovery.delete`, `e2e.status.recovery`, `e2e.remove` refuses recovery key | recovery key = 2 extra P-256 pairs (ECDH+ECDSA), **extractable**; registration proof as a device; code = 26 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (130 bits, CSPRNG, shown once, never sent); seal: plain = JSON `{e:b64u(pkcs8 ecdh priv), s:b64u(pkcs8 sign priv)}`, key = **HKDF-SHA-256** (ikm = 26-char normalized code, salt = 16 random bytes, info `connectum-e2e-recovery|<user lower>|<recovery id>`), AES-256-GCM 12-byte iv, aad `e2e1-recovery|<user lower>|<recovery id>`; blob `{v:1,salt,iv,ct}` base64url | a second recovery key needs `replace:true`; code entry rate-limited on `get` | show code once, write it down; suggest recovery once after a day of use (optional) | new code = nothing backed up for new key; off deletes key and its boxes (inert) | none | **Nothing**: no `e2e.recovery.*` call anywhere in `lib/`; only reads `recovery` flag | **Not started**, M; demo: optional (only to show "if you lose every phone") |
-| 7 | **Recovery: backup of the past** | HISTORY_SYNC "Backing up" | `e2e.devices` (recovery device), `e2e.sync.page`, `e2e.sync.put {device: recoveryId}`, `e2e.sync.done {device: recoveryId}`, `e2e.sync.pending.recovery {id, backedUp}` | same rewrap as row 5 with the recovery key as target; skip envelope when `keys[recoveryId]` already present | same as row 5 | "Back them up now" while `backedUp:false`; progress and "backed up" texts; recovery turned on before this feature also reads as not backed up | | none | none | **Not started**, M on top of row 5; demo: optional |
-| 8 | **Recovery: restore on a new phone** | HISTORY_SYNC "Restoring" | `e2e.recovery.get` -> `{recovery:true,id,ecdh,sign,blob}`, then `sync.page`/`sync.put {device: thisDevice}`/`sync.done` | open blob (inverse of seal); hold keys non-extractable; then rewrap with **source = recovery key (its id and private ECDH)**, **target = this device**; skip messages that already have a box for this device | `recovery.get` rate-limited | wrong code message in words; if messages exist but recovery key opens none, do not call `done`: "does not open any earlier message: not backed up for it"; afterwards drop cached conversations and re-read | the dev must be signed in (a session is needed) | none | none | **Not started**, M on top of rows 5-6; demo: optional |
-| 9 | **New-device alert in security feed** | ENCRYPTION "Alerts when a device is added"; MOBILE_REVIEW last section; Postman change 8 | `feed.list` item `category:"security"`, `severity:"medium"`, title "A new device was added to your encrypted messages"; live `feed_item` | none | | optional but "good to show"; optional once-only contact notice when `checkPins` pins a new device id for a user who already has pinned devices (skip own and `recovery:true`) | not sent for first device, same device re-registering, or recovery key | none | `FeedRepository` only counts unread (`feed.summary`); no feed list screen found; `checkPins` pins but only raises *changed* keys, not "new device for known user" | **Not started**, S (contact notice) / depends on whether a feed screen exists; demo: no |
-| 10 | **One active session per person** | HISTORY_SYNC "One active session" | `session_replaced` | | | do not delete device keys on session end; texts "sign in on your other device and approve; signing in there signs you out here" | sequence new -> old -> new | none | `handleSessionReplaced` wipes DB rows + outbox + token (per CLAUDE.md that is intended); late hint text exists; key store separate | **Partly**; confirm keys survive; the offer/approve flow depends on row 5. S |
-| 11 | **Groups** | FRESH_DEVICES "Group chats and the mobile app"; ENCRYPTION limits | `e2e.group_devices {group}` | same envelope, up to 250 boxes | 200 members x 10 devices | web users' encrypted group messages are wrapped for a registered phone; phone shows "can't be read" until it supports groups | | none | `encryption_policy._decideGroupSend` exists and group stale-retry is handled, but `CLAUDE.md` says "encrypted groups stay read-only" | **Unclear / drift between CLAUDE.md and code**, ask user which is true. Not in the demo path unless groups are |
-| 12 | **Device-added lookups for contacts** (`e2e_devices_changed` only to the owner) | MOBILE_REVIEW corrections | event | | | do not rely on event for peers | | none | event only re-runs setup / late logic; peer cache TTL 5 min plus forced lookup at send | **Done** |
-| 13 | **Format strictness** (DER signature accepted by server, unreadable by web) | FRESH_DEVICES last bullet | | raw 64-byte r||s | server checks only max sizes | | | `e2e-check.mjs` | app uses raw r||s (matches) | **Done** |
-| 14 | **Presigned download links (files)** and **message formatting / options / links** | Postman changes 6, 11, 12 | not E2E | | | | | `message-format-vectors.json` | not in scope here | outside this analysis |
-
-## 4. Cloud backup in detail (what actually exists, #607)
-
-- **What is backed up:** *messages*, not just keys. A "box" per message (message key locked for the recovery key's public ECDH key with a fresh one-time key), stored on the Connectum server next to the message (`sd:e2e:xw:<mid>` in Redis). Ciphertext stays where it already was (the stored envelope). Only the person's own encrypted DMs and groups they are in; cleared conversations and deleted messages excluded; a message no device of theirs could open is not included. Attachments are encrypted separately and the key is inside the message, so they come back too (if still in storage).
-- **Sealing key derivation:** *not* from a password. The person never chooses anything: a 26-char random code (130 bits). Key = HKDF-SHA-256 with a **random 16-byte salt**, info `connectum-e2e-recovery|user|id`, no stretching (no PBKDF2/scrypt/Argon2) because the code has 130 bits. The server **never sees the code**; it stores `{v:1,salt,iv,ct}` (AES-256-GCM sealing both recovery private keys as PKCS#8 in JSON). A user-chosen password would need a memory-hard KDF; none is specified.
-- **Where it lives / transport:** server-side Redis via WebSocket `sd` calls (`e2e.recovery.set/get/delete`, `e2e.sync.put`). No endpoints for files, no presigned links, no bucket. No file size: batches of up to 500 boxes (about 200 B each).
-- **When a backup is made:** (a) when recovery is turned on, the app runs the job on the person's device (needs the app awake, "keep this window open"); (b) "Back them up now" any time `backedUp:false`; (c) **every new message is backed up automatically** because the recovery key is a normal device that senders must wrap for (the all-devices rule). No scheduling needed.
-- **Restore on a new phone:** sign in (a session is required), `e2e.recovery.get`, type code, open blob, read via recovery key, run the rewrap job source = recovery, target = this phone, `e2e.sync.done`; then the phone no longer needs the code.
-- **Wrong code:** AES-GCM tag fails: "That code does not open the recovery key" (client-side only). A thief with a session can fetch the blob (rate-limited); the doc gives no numeric limit for `recovery.get` and no lockout. 130 bits makes offline guessing infeasible.
-- **Replace / delete / list:** new code with `replace:true` replaces the key (old code opens nothing new; new key has nothing backed up). `e2e.recovery.delete` removes key and blob; its boxes stay inert in the store. No listing of backups (it is a single recovery key per person) and no versions or timestamps.
-- **Security assumptions:** server cannot read; anyone with **sealed blob + code** reads everything wrapped for the recovery key; if every device and the code are lost nothing is recoverable; the recovery key is in safety numbers; not audited (doc says so).
-- **If the real intent is an Oracle bucket + user password:** that is a *different* design and would need answers (see Q1-Q5): file format, KDF (Argon2id/scrypt params), upload endpoint, retention, rotation.
-
-### Cryptographic primitives needed (all of #581/#606/#607)
-
-| Primitive | Needed for | `webcrypto ^0.6.1` | Notes |
+| Aspect | Docs | App | Status |
 |---|---|---|---|
-| ECDH P-256 | wrap/unwrap, rewrap | yes (already used) | |
-| ECDSA P-256 / SHA-256, raw r||s | sign, registration proof | yes (already) | |
-| HKDF-SHA-256 | wrap key, **recovery sealing key** | yes (already for wraps) | recovery uses the same primitive with a different `info` |
-| AES-256-GCM | message, wraps, **recovery blob** | yes (already) | |
-| Extractable key generation + PKCS#8 export of P-256 private keys | recovery key creation and sealing | yes (`generateKey(extractable)`, `exportPkcs8`); the app today builds keys via JWK import (`importDeviceKeys`) | PKCS#8 export format must match what web wrote for import on restore (web `exportKey('pkcs8')`); confirm interop with a web-created blob |
-| CSPRNG | code, salt, iv, ephemeral keys | already via `E2eRandom` / webcrypto | |
-| JSON + base64url | blob plaintext `{e,s}` | dart:convert | |
-| Argon2/scrypt/PBKDF2 | **not required by the docs** | webcrypto has PBKDF2 only | Only needed if the Oracle-bucket-with-password design is real; Argon2 would be a **new package** (not added) |
-| Platform channels | none required | | storing recovery keys on the phone after restore uses the existing non-extractable path |
+| Event handled | `sd_event session_replaced`, then close `signed_in_elsewhere` | `socket_service.dart:242-243` → `sess:57-58` | done |
+| Device keys survive | "Do not delete device keys when a session ends" (`E2E_NEW_DEVICE_AND_HISTORY.md` §9.1) | `handleSessionReplaced` never touches `E2eKeyStore`; pins and the late mark survive (`app_database.dart:273`, `session_store.dart:61-67`, `e2e_repository.dart:312-315`) | done |
+| Rows and outbox | web keeps its local state; the docs say nothing about a phone cache | wiped for that org and user (`sess:141`), per `CLAUDE.md` | different, deliberate. Safe for secrets (the `plaintext` column goes), but unsent messages are lost |
+| Offline client | "finds out on its next request" (`sd_auth.erl:156`) | a 401 or handshake failure goes to `handleAuthFailed` (`sess:153-159`): token cleared, rows and outbox **kept** | done |
+| Takeover by the same session | `connection_superseded` is a different event | `sess:61` → `supersededNotice` | done |
+| Fires only for the same kind | yes, once `client` is sent | today it fires for any other device (section 1) | **broken until `client:"mobile"` is sent** |
 
-**No new package is required for what the docs specify.**
+After the fix, `session_replaced` happens for a second **phone**, or when the server runs `CONNECTUM_SESSION_SLOTS=1`. The `replacedNotice` text ("another tab or device") then still reads fine.
 
-## 5. Proposed stage order
+---
 
-| Stage | Content | Size | Backend answers needed? | Real-server testing |
+## 3. `e2e.sync.put`: who may write, and does our flow match
+
+Server rule (`sd_e2e.erl:566-590`, `E2E_NEW_DEVICE_AND_HISTORY.md` D1): `put` is accepted only for a target that is `waiting` (late and not yet `done`), or the person's **only** non-recovery device, or a recovery key that is not backed up yet. Anything else is `not_waiting`.
+
+| Flow | What the app does | Match |
+|---|---|---|
+| New device waiting | Reads `late` from `e2e.status` (`repo:332-354`), keeps a local mark across restarts (`repo:305-317`), polls `e2e.status` + `e2e.sync.pending` every 60 s in the foreground (`repo:45`, `:363-392`), shows who can help (`repo:386`, `security_controller.dart:59-71`). It never calls `put`, which is correct: the *older* device writes. | done (web polls every 30 s; free to differ) |
+| After the older device finishes | `late` turns false → `unlockRequests` → `_unlockLocked` refetches the locked conversations once, newest first (`msgrepo:144-215`, `repo:358`) | done |
+| Older-device hand-on | No `pending.waiting` read, no offer, no `page`/`put`/`done`, no rewrap in `crypto` (the only caller of `e2e.sync.*` is `refreshPending`, `repo:385`) | **missing** |
+| Only device after loss (restore by recovery code) | not built | missing |
+
+What the future hand-on must respect, from the server rules:
+
+- Only put for a device listed in `pending.waiting`, and look the target's key up fresh (`e2e.devices {users:[me]}`) right before the first `put`.
+- `not_waiting` on a `put` is not an error: another device finished. Stop quietly.
+- Recovery key as a target is allowed only while `backedUp` is false.
+- A retry after `done` is refused (`not_waiting`) unless the target is the only device. A restore must therefore call `done` **last** (question B5).
+- `waiting` and `helpers` list only devices seen or added in the last 30 days, and "seen" is only recorded when `e2e.status` carries the device id (`sd_e2e.erl:558-563`). See the gap in section 6.
+
+---
+
+## 4. `e2e.sync.approved`
+
+Server (`sd_e2e.erl:374-379`, `:642-656`): writes `approvedTs` on the target and an audit event `e2e.history_approved`; `not_waiting` if the target is not waiting; 60 per 10 min. It is a record, not a lock: any signed-in device could do the job without it. The web never calls it (`E2E_NEW_DEVICE_AND_HISTORY.md` D4, Q6, which recommends both clients call it).
+
+- **Do we call it?** No. We have no approve step yet.
+- **Should we?** Yes, when the approve step is built: one call right after the person taps Approve and before the first `put`. Treat any error as non-fatal (log, continue). It costs nothing and gives the owner an audit trail the web does not give. Confirm with the backend that nothing else reads `approvedTs` (question B6).
+
+---
+
+## 5. What the app deletes, and is it safe
+
+| Event | Local rows + outbox | Device keys (`E2eKeyStore`) | Pins | Late mark / status | Server registry | Web does | Verdict |
+|---|---|---|---|---|---|---|---|
+| Explicit sign out (`sess:161-177`) | wiped for that org+user | **kept** (`e2e_key_store.dart:10-11`) | kept | kept | device stays | keys kept (`ConnectumAuthScreen.jsx:234-237`) | same as web; safe |
+| Log out of the account (`sess:190-217`) | wiped, every org (`app_database.dart:252`) | kept | kept | kept | stays | n/a | safe. The logout sheet tells the person (`logout_sheet.dart:22`) |
+| `session_replaced` (`sess:136`) | wiped for that org+user | kept | kept | kept | stays | forced sign-out, keys kept | keys safe; unsent messages lost (section 2) |
+| Handshake error / expired token (`sess:153`) | **kept** | kept | kept | kept | stays | n/a | per `CLAUDE.md` |
+| "Remove this device" (`repo:916-938`, `:821-834`) | unchanged | **deleted** after `e2e.remove` succeeds (a failure other than `not_found` keeps them) | kept | state set to `out` so nothing re-registers | device deleted | same (`Client:131-136`) | same as web; safe. Pins stay, harmless |
+| This phone found removed from another device (`repo:672-675`) | unchanged | **kept**, asks the person (`removed` phase) | kept | | already gone | deletes its keys and registers anew (`Client:58-61`) | different. The old keys are inert (the server no longer lists them, so nobody wraps for them); asking first is safe and arguably kinder |
+| App uninstall | gone | **Android: gone** with app data (backups excluded). **iOS: Keychain survives** a reinstall (`first_unlock_this_device`) | gone (SQLite) | | stays as a dead device for 30 days | same as "clear site data" | functionally fine; on Android an orphan device occupies one of the 10 slots and senders keep wrapping for it |
+
+Findings:
+
+- **Safe:** nothing deletes a key except an explicit remove, as the docs require ("do not delete device keys when a session ends").
+- **Residual risk, shared with the web:** a signed-out phone still holds working device keys (D5, §8 of the new-device doc). The decrypted `plaintext` column is wiped with the rows on sign out; the keys are not.
+- **Not handled:** no UI for the Android orphan-device case, and no "remove this device" prompt at sign out. Same gap as the web (L2 #7).
+
+---
+
+## 6. Checklist: "What mobile must implement" (`E2E_NEW_DEVICE_AND_HISTORY.md` §9)
+
+| # | Item | Status | Evidence | What is needed |
 |---|---|---|---|---|
-| 0 | Commit/review current uncommitted E2E work; verify rows 1-4, 10 (keys survive `session_replaced`); add the `lateBox` vector to the debug page (done) | S | no | one phone + one web account that adds a device: the exact scenarios in FRESH_DEVICES "After the mobile release" 1-2 (needs a second device/account) |
-| 1 | Hand-on crypto: `rewrap` function (unwrap with box `ek`, fresh pair, new box) + a vector made by running the web `rewrapEnvelope` on the sample | M | no (algorithm is fully specified); ask Q8 for a vector | none (offline vector); then a web account opening a phone-made box |
-| 2 | Older-device job: `waiting` offer card, Approve / Not me / Later, batch loop over local `messages.text` envelopes (or `sync.page`), `put`/`done`, Stop, progress, keep-awake | L | Q6, Q7 (page vs own envelopes), Q12 | needs **two devices**: web (new, waiting) + phone (older), same account; plus the session_replaced hop |
-| 3 | Recovery on (`generateRecoveryKeys`, code, seal, `recovery.set`, backup job = stage 2 with recovery target), "Back up now", turn off, replace | M | Q2, Q3, Q9 | one account on phone + web to confirm web can restore a phone-made blob and the reverse (needs web account with recovery) |
-| 4 | Restore on a new phone: `recovery.get`, open, rewrap source = recovery, target = this device, wrong-code and "opens none" paths | M | Q3 | needs a second install (clean phone/emulator) of the same account, ideally after wiping the first |
-| 5 | Optional: security-feed list + contact "new device" notice | S | Q10 | one account adding a device |
+| 1 | Keys, 32-hex device id, secure store, keep them when a session ends | **done** | `crypto:67-77`, `:60-61`; `e2e_key_store.dart:15-59` (Keystore/Keychain, PKCS#8) | nothing. Private keys are exportable inside the app process (web: non-extractable); allowed ("where keys live may differ") |
+| 2 | Register with proof; handle `limit`, `rate_limited`, `conflict`, `invalid`; send `e2e.status {id}` at every start | **partial** | register: `repo:701-793`; `limit` → `limit` phase `:764`; `rate_limited` → backoff 1→30 min `:756-762`; any other code → `refused` with reason `:769`. **`e2e.status` is sent with `{}`** (`repo:227`, `policy:347`) | send `{id: <own id>}` at every start. Without it the server never records "last seen" (`sd_e2e.erl:89-106`), so this phone leaves `helpers` and `waiting` 30 days after it registered. Show `conflict` and `invalid` in words |
+| 3 | Read an envelope, including a box with its own `ek` | **done** | `crypto:394-485`, box `ek` at `:449`; wired to `lateBox` on `/debug/e2e` (`debug_e2e_controller.dart:411`) | see the pin gap below |
+| 4 | Send wrapped for every device that exists now; resend on `e2e_stale_devices` by `mid`, at most twice | **done** | forced lookup per send `policy:268`, `:314`; retry `msgrepo:1441-1480` (`_maxStaleRetries = 2` at `:63`), match by `mid`, new envelope, same `cid`, silent | verify on a real second device (`E2E_FRESH_DEVICES_CHANGE.md` "After the mobile release" steps 1-2). Rate-limit risk: `e2e.devices` is 600 per 10 min and the outbox allows 30 sends per 10 s (question B3) |
+| 5a | New-device waiting card, helper names, poll, "enter recovery code" if recovery is on | **partial** | `LateNotice` + `security_controller.dart:53-71`; home notice `home_shell_controller.dart:84-96` | the recovery-code action is missing, and the copy at `:66` promises a code the phone cannot use |
+| 5b | Approve card on an older device (Approve / That is not me / Later) | **missing** | no read of `pending.waiting` | build |
+| 5c | Sync progress, Stop, failed + Try again, empty history still ends with `done` | **missing** | | build with the job |
+| 5d | Placeholders for unreadable messages in the phone's own words | **partial** | one text for every failure: "This message can't be read on this device" (`message_bubble.dart:189`); the failure code is kept in the repo (`repo:1010-1013`) but not shown | per-code texts (section 10) |
+| 6 | Hand-on job: pending → (approved) → devices → page → rewrap → put ≤400 → done | **missing** | | rewrap in `crypto` + job + UI |
+| 7 | After the older device finishes: refetch once, remember "was waiting" across restart | **done** | `repo:305-361`, `msgrepo:144-215` | verify against a real hand-on once item 6 exists |
+| 8 | Send `"client":"mobile"` at sign-in | **missing** | section 1 | add |
+| 9 | Recovery (generate, seal, `recovery.set`, show once, backup, restore, new code, turn off) | **missing** | section 7 | build |
+| 10 | Alerts: "added a new device" notice for contacts; key-changed warning | **partial** | key-changed is shown, but only when a **send** finds a pinned key changed (`policy:132-141`, `key_change_sheet.dart`). No notice for a known contact's new device. `FeedRepository` only counts unread (`feed.summary`); no feed list shows the "A new device was added" item | see "pins" below |
 
-Can start without backend answers: stages 0, 1, 3's crypto, the card UIs. Order recommendation for a demo: 0, then 1+2 only if the demo shows "new phone sees history"; otherwise 0 is enough for the demo and 3-4 are "later".
+**The pin gap (also item 11 of the "must match" list).** The web checks the sender's keys on **read**: an unknown or changed sender device is refused with a placeholder and an `e2e_key_changed` toast (`Client:362-371`). The app pins and compares only when it **sends** (`checkPins` is called at `policy:290` and `:330`, and by the key-review sheet `repo:529`). On read, `E2eRepository.open` takes the sender's signing key from the directory with no pin check (`repo:971-990`). A server that swapped a sender device's signing key would be accepted on read. The signature stops forgery by anyone *without* that key, not by the server, which holds the directory. Needed: pin on read, refuse a mismatch with a "key changed" placeholder.
 
-## 6. Questions for the backend developer
+---
 
-1. **Is there a cloud/Oracle-bucket backup (file, password-protected) planned or written anywhere?** I found only #607 (server-side boxes, "no file in a cloud"). Which design does the company want the app to implement? Changes the whole of section 4.
-2. **Blob plaintext format** for `e2e.recovery.set`: is `{e,s}` = base64url PKCS#8 of the ECDH and ECDSA private keys the contract, and is `id` in the HKDF info the recovery key's device id (not the user's)? The docs only give it in `e2eCrypto.js`. Please add a recovery vector (code, salt, iv, expected blob) to `e2e-test-vectors.json`.
-3. **Does `recovery.get` have a lockout or only the rate limit?** What are the numbers (the doc says "rate limited" without numbers)? What is the error code for wrong/absent recovery?
-4. **What happens to the recovery key's boxes** for messages sent while recovery is on but the phone does not wrap for the recovery key (e.g. an old app)? With the all-devices rule the send is refused: confirm.
-5. Does `e2e.recovery.set` with `replace:true` keep the old key until the new one is accepted (no window with no recovery)?
-6. **`e2e.sync.page` vs the app's own envelopes:** the doc allows our SQLite envelopes. Our rows may be missing messages we never fetched (older pages not loaded). Which do you recommend for a complete backup? Does `sync.page` include messages in conversations the phone never opened?
-7. **Batch size:** `sync.put` allows 1-500 per call; the text also says "batches of up to 400". Which is it? Same for ~400 calls per 10 min: is the budget shared between backup and hand-on?
-8. Can you add vectors for a **made box** (older device -> waiting device, with the ephemeral key fixed) and the `sync.put` item, so we can test the rewrap offline?
-9. `e2e.sync.pending.recovery`: what does `recovery.id` look like when the key was made before this feature (backedUp false) and is `late:true` on the recovery device in `e2e.status` also set for recovery keys made before #607?
-10. Which feed screens does the mobile app need for the security item? Is `feed.list` shaped like `feed_item` events in the mobile collection (we only handle `feed.summary`)?
-11. `session_replaced` flow: when the person approves on the older device the phone is signed out. Is there any plan for concurrent sessions (the doc says "company decision, not built")? It drives the wording and the effort for the "approve" flow.
-12. **Group sends from mobile:** web users' group messages are wrapped for a registered phone and unreadable until mobile supports groups. Do you want the phone to stay out of e2e until group read is built, or be read-only for groups? (Our CLAUDE.md says read-only; the code already has the group send decision.)
-13. Max WebSocket frame: still untested for envelopes near the 120,000-character cap; do you want a load test result from us?
-14. Mode `off`: confirm `e2e.status` returns `mode:"off"` and `devices:[]`, so the app can hide all cards.
+## 7. Recovery code
 
-### Disagreements
+| Part | In the app | Missing | Vector |
+|---|---|---|---|
+| Recovery key shown in lists | `E2eDevicePublic.isRecovery` (`e2e_models.dart:21`); `repo:298` | | |
+| Wrapped for on every send | yes: recipients are every device in the list, recovery key included (`policy:143`, `:215`); `readers()` excludes it from "has a reader" (`repo:395`) | | `/debug/e2e` "send: a recovery key in the list is wrapped for" (`debug_e2e_controller.dart:950`) |
+| Shown in Security | read-only "Recovery key: On/Off" (`security_view.dart:76`, `repo:232`) and an honest line that the phone cannot use it (`security_view.dart:140`) | | |
+| Code: 26 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, 130 bits, groups of five, normalise (capitals, strip dashes and spaces), `bad_code` | | all of it | `recovery.normalizedCode`, `normalizing`, `mustRefuse` (too short, letters 0/1/I/O) |
+| Seal / open: HKDF-SHA-256 (ikm = 26 chars, random 16-byte salt, info `connectum-e2e-recovery|<user lower>|<id>`), AES-256-GCM 12-byte iv, AAD `e2e1-recovery|<user>|<id>`, blob `{v:1,salt,iv,ct}`, plaintext `{e,s}` = base64url PKCS#8 of the ECDH and ECDSA private keys | | all of it | `recovery.blob`, `info`, `aad`, `plaintext`, `mustRefuse` (wrong code, other user, other id, changed ct, other salt → `wrong_code`) |
+| Recovery key pair (extractable ECDH + ECDSA), registration-style proof, random id | | all | none (random). Check the proof with the `registration` vector shape |
+| `e2e.recovery.set {id,ecdh,sign,proof,blob,replace?}` (10/h), `.get` (30/h), `.delete` | none; no `e2e.recovery.*` call in `lib/` | all | `/sd` reply shapes in the backend's `e2e-sync-replies.json` (not in `reference/backend-e2e/`) |
+| Backup of the past (rewrap with the recovery key as target, `done` marks `backedUp`) | | all, on top of the rewrap | `rewrap` |
+| Restore on a new phone: `recovery.get` → open → rewrap with source = recovery key, target = this device → `done`; `nothing_restored` if messages exist but none opens | | all | `rewrap` and `recovery` |
+| UI: show once + copy + "I have saved it"; verify step (web has none, Q5); turn off; replace; suggestion after a day | | all | none |
+| `pending.recovery {id, backedUp}` | ignored (`repo:385-387` reads only `helpers`) | read it | |
 
-Between docs:
-- `E2E_ENCRYPTION.md` section 6, bullet "Recovery ... only covers what comes after you switch it on" **vs** section 6a and `E2E_HISTORY_SYNC_MOBILE.md`: since #607 recovery backs up the earlier messages too. Section 6 is stale.
-- `E2E_HISTORY_SYNC_MOBILE.md` edge-case table: "A first device lost, no other device ... or a backup if one is built later" **vs** the same file's Backup section (built). Stale row.
-- `E2E_ENCRYPTION.md` section 3 step 2 and section 10 ("directory cache ... refreshed when the server says someone's devices changed") **vs** `E2E_MOBILE_REVIEW.md` ("the event goes only to the user whose devices changed, peers are never told"). The review is the correct one per its code references.
-- `E2E_ENCRYPTION.md` section 3 (cached 5 minutes) **vs** "For every client" (do not reuse a list kept for minutes): the latter supersedes.
-- `E2E_HISTORY_SYNC_MOBILE.md`: `put` "1 to 500 per call" vs "batches of up to 400" (Q7).
-- `E2E_MOBILE_REVIEW.md` says group send "is blocked on mobile. Fine" **vs** our code having a group send decision; and the review says nothing about whether the group *reading* is done.
+Vectors needed, in order: `recovery` (open direction, deterministic), then `rewrap` (positive and negative). Sealing uses a random salt and iv, so it can only be tested as seal-then-open plus "the backend checker accepts what the phone made". No vector exists for restore with the recovery key as the *source* of a rewrap; the `rewrap` vector has an older device as source only (question B8).
 
-Docs vs Postman: I only read the Postman *names* and the `mobile-changes.mjs` change text (which is the collection's source); changes 7 to 10 agree with the docs on actions, fields and limits. I **did not diff the example JSON bodies** (153 KB) against the docs; recommend a one-time check of `e2e.sync.pending`, `e2e.recovery.get` and `e2e_stale_devices` examples before stage 1.
+---
 
-Docs vs app notes (not disagreements between sources): app's `CLAUDE.md` says encrypted groups stay read-only; app code in `encryption_policy.dart` already decides group sends.
+## 8. Constants: AAD, HKDF, envelope, sizes, rate limits
+
+| Item | Docs | App | Status |
+|---|---|---|---|
+| Prefix, `v` | `e2e1:`, `v:1` (`Crypto:18`) | `crypto:14-15` | done |
+| Message AAD | `e2e1-msg\|mid\|conv\|from\|dev` | `crypto:209-210` | done |
+| Wrap AAD | `e2e1-wrap\|mid\|recipientDev` | `crypto:212-213` | done |
+| File AAD | `e2e1-file` | `crypto:215` | done |
+| Wrap key | HKDF-SHA-256, salt = decoded `mid`, info `connectum-e2e-wrap\|recipientDev\|senderDev` | `crypto:228-242` (info uses the ORIGINAL sender `e.dev` when reading: `:451`) | done |
+| Signature text | `e2e1\|mid\|from\|dev\|conv\|ts\|ek\|iv\|ct`, ECDSA P-256/SHA-256, raw r‖s (64 bytes) | `crypto:217-226`, `:305-321`; verify `:152-163` | done |
+| Registration proof | `connectum-e2e-register\|user\|id\|ecdh\|sign` | `crypto:129-149` | done |
+| Padding | 4-byte big-endian length + bytes, zero-padded to a multiple of 64; payload `{"v":1,"t":text}` | `crypto:16`, `:186-207`, `:263` | done |
+| Reader order | conv check → own box → sender key → verify signature → derive | `crypto:400-436` | done |
+| Box `ek` | use the box's own when present | `crypto:449` | done |
+| Encodings | base64url, no padding, strict decode; 65-byte uncompressed points; 32-hex device id; 16-byte `mid` (22 chars) | `crypto:23-35`, `:111-125`, `:60-63` | done |
+| DM label | `dm:` + both names lower-cased, sorted, `\|` | `crypto:53-56` | done |
+| Group label | `group:` + lower-case name | `crypto:58` and `repo:949` also `.trim()` | **different (small).** Web only lower-cases. A group name with leading or trailing space would label differently (question B7) |
+| Boxes per envelope | ≤ 250 | `policy:231`, `:218` (blocked, never plain) | done |
+| Envelope length | ≤ 120,000 chars, else `too_long` | server code handled `msgrepo:1412`, `:1433`; length checked only in `/debug/e2e` (`debug_e2e_controller.dart:923`) | partial; fine |
+| `e2e.devices` | 1-50 names, 600 calls / 10 min | forced per send, no throttle | **risk** (B3) |
+| `e2e.register` | 30 / hour | backoff 1 → 30 min on `rate_limited` | done |
+| Max devices | 10, server count excludes the recovery key | `repo:714` uses `myDevices` (recovery key excluded) | done (the web counts it by mistake, Q3 of the new-device doc; we do not) |
+| Label | cleaned, ≤ 60 chars | `repo:44`, `:884-891` | done |
+| Directory cache | 5 min for reading, fresh for sending | `repo:43`, `:404-434`, `policy:268` | done |
+| Stale retries | ≤ 2, silent | `msgrepo:63` | done |
+| `e2e.sync.put` batch | client 400, server 1-500 | no sync code | missing (constant to add: 400) |
+| `e2e.sync.page` | ~400 messages per page, 600 calls / 10 min | | missing |
+| `e2e.sync.put` limit | 400 calls / 10 min | | missing |
+| `e2e.sync.approved` | 60 / 10 min | | missing |
+| Recovery limits | set 10/h, get 30/h, blob salt ≤ 64, iv ≤ 32, ct ≤ 4096 chars | | missing |
+| Upload blob type | `application/x-connectum-e2e`, `.e2e`, blob = ciphertext ‖ 16-byte tag, no iv or key inside | `attachment_repository.dart:94-95`, `crypto:489-516` | done (blob file name is `attachment.e2e`, the server picks the stored name anyway) |
+| Poll intervals | web 30 s while late | 60 s, 2 s event debounce (`repo:45-46`) | different, allowed |
+
+Not in the docs, and I could not match: the web's `fresh: true` lookup applies to DMs; for groups we ask `e2e.group_devices` at each send (`policy:314`), which is the same idea.
+
+---
+
+## 9. Test vectors
+
+`/debug/e2e` loads **`mobile-handoff/e2e-vectors.json`** (`debug_e2e_controller.dart:35`, our file from 29 Oct, made by us from the web code), not `reference/backend-e2e/e2e-test-vectors.json`. The two files have different sections. I compared the `lateBox` sections with a script: **identical**.
+
+| Section in `reference/backend-e2e/e2e-test-vectors.json` | Runs on `/debug/e2e`? | Detail |
+|---|---|---|
+| `lateBox` (+ `intermediates`) | **yes** | same envelope and device as our file; checks ek present, opens with the box `ek`, wrap key matches (`:454-470`), 4 tamper cases |
+| `recipient` / `sender` (`reference-ann` / `reference-bob`, with private scalars) | no | our file uses its own fixed `alice` / `bob` / `carol` keys |
+| `envelope` + `expected` (a real ann → bob envelope with expected plaintext) | **no** | it is the same envelope as in `lateBox`; the ordinary (first-box) path is covered by our own `envelopes` section, not by this one |
+| `registration` (proof for `reference-bob`) | no | our own `registration` is checked (`:537-559`) |
+| `rewrap` (2 positive, 7 negative) | **no, and nothing to run it against** | needs the missing rewrap function |
+| `recovery` (open + 7 `mustRefuse`) | **no, same reason** | needs the missing recovery code |
+
+| Section in our `mobile-handoff/e2e-vectors.json` | Backend file has it? | Runs |
+|---|---|---|
+| `devices`, `envelopes` (4: two-device DM, unicode, 64-byte padding edge, **group "design"**), `negative` (6) | no | yes (`:217`, `:248`, `:362`) |
+| `file`, `base64url` | no | yes (`:578`, `:770`) |
+| `safetyNumber`, `deviceFingerprint` | **no** | yes (`:746`, `:761`) |
+| padding (`paddingNote` + the 64-byte edge cases) | **no** | yes |
+| `assets/debug/e2e-attachment-vectors.json` (4 files + 8 refusals) | the backend's copy is not in `reference/backend-e2e/`, so I cannot compare it | yes (`:686-718`) |
+
+So the three things the web doc lists as "missing on the backend" (group envelope, safety number, padding frame) are **covered by our own file**, produced by running the web code, but the backend has not published them; the same goes for the device fingerprint and base64url cases. Still missing everywhere: edit of an envelope, group label with upper case / spaces / non-ASCII, a group late-box with signature check, restore with the recovery key as source. We should ask the backend to publish ours as theirs, so a future change on either side shows up (question B8).
+
+---
+
+## 10. User-facing E2E texts
+
+Web text from `E2E_WEB_COMPLETE.md` §I and `E2E_NEW_DEVICE_AND_HISTORY.md` §3 and §7.2.
+
+| Web text | App | Status |
+|---|---|---|
+| Header lock "End-to-end encrypted. Click to verify." | a lock icon with a screen-reader label "End-to-end encrypted" (`conversation_header.dart:66-72`); not tappable; no safety-number screen | partial |
+| "Not end-to-end encrypted: the server has to read this chat." (global, host, workspace) | none | missing |
+| Dialog "End-to-end encryption / Only you and the people in the chat can read…" and the "Locked on your device before it is sent…" banner | none; Security row "Secure messaging" (`security_view.dart:72`) | missing |
+| "Encryption could not start on this device: {reason}" | "Couldn't set up secure messaging" + reason (`security_sheets.dart:26`) | same meaning |
+| Key changed: "@x's security key changed… Compare the safety number…" + button "I checked, trust the new key" | "Security key changed" sheet, same advice, button "Trust new key" (`key_change_sheet.dart:34-72`) | same meaning. The "new key is now trusted" follow-up is missing |
+| Safety number "Safety number with @x / If you both see the same number, nobody has swapped the keys." | number only inside the key-changed sheet, no explanation line, not reachable on its own | partial |
+| Devices: "Your devices n", "This device / Signed in elsewhere", "Remove" | "My devices", `DeviceRow` marks this phone, "Remove this device?" (`security_view.dart:62`, `security_sheets.dart:38`) | same meaning |
+| "This device was removed. Sign in again to set it up." | "This phone was removed from your encryption devices" (`security_sheets.dart:25`) | same meaning |
+| Limit of 10 devices | "You've reached the limit of N devices… Remove one…" (`security_sheets.dart:59`) | same meaning |
+| Recovery: off / code shown / progress / done / failed / turn off / "Enter recovery code" / backup suggestion | none | missing |
+| Security line about recovery | "This phone can't use a recovery key yet…" (`security_view.dart:140`) | true today; **must change when recovery ships** |
+| Waiting: "Your earlier messages are not shown here yet" + helper names | "Waiting for your other device to show your earlier messages" + "Can show them: …" (`security_controller.dart:53-71`), home notice "Earlier messages aren't shown yet" (`home_shell_controller.dart:86-96`) | same meaning |
+| Waiting, no helper active: "…use your recovery code" | "None of your other devices was active recently. If you set up a recovery code, you can use it…" (`security_controller.dart:66`) | **different, misleading**: the phone cannot use a code |
+| Approve card, progress, "All set", "Could not finish" | none | missing |
+| Placeholder `not_for_this_device` (long, mentions approve / recovery) | "This message can't be read on this device" | differ (generic) |
+| Placeholders `key_changed`, `bad_signature`, `no_device`, `unknown_sender_device`, `decrypt_failed`, `wrong_conversation`, `bad_payload`, fallback (8 more) | the same one generic text; pending shows "Decrypting..." (`message_bubble.dart:189`) | differ. The web advice ("Approve this device on another…", "Check the safety number…") is lost. Wording for a phone, never "browser", as the doc asks |
+| Toast "@x added a new device ({labels})… check the safety number" | none | missing |
+| Toast key changed on read | none (send-time block only: "x's security key changed", `policy:136`) | partial (see pins) |
+| Send failures: "{names} has/have not set up encryption yet." | "{peer} hasn't set up encryption yet" / "a, b haven't…" (`msgrepo:1430-1431`, `:1493-1494`; `policy:122`, `:192`) | same meaning |
+| `e2e_disabled`, `too_long`, other refusals | own wording (`msgrepo:1432-1435`) | same meaning |
+| `e2e_required` ("Messages here are end-to-end encrypted. Update your app…") | falls to "Can't send securely right now: the server didn't accept the encrypted message" | differ (less specific) |
+| Group over 200: "Groups of more than 200 people cannot use end-to-end encryption yet." | "groups of more than 200 people can't be encrypted yet" (`policy:320`) | same meaning |
+| Stale devices exhausted | "Not sent. Tap to retry" (`staleFailure`, `e2e_models.dart:208`) | acceptable |
+| "🔒 Decrypting attachment…" | not checked (attachment bubble not read) | unknown |
+| "Encrypted message" in pinned / saved / previews | chat list preview "Encrypted message" (`conversation_tile.dart:203`); pinned and saved lists not built | partial |
+| Feed "A new device was added to your encrypted messages" | no feed list screen | missing |
+| Org-level notice "Secure messaging is on in this organisation…" | app-only text (`repo:87-90`); the web has none | app-only |
+
+---
+
+## 11. Other differences worth a decision
+
+| Topic | Web / docs | App | Verdict |
+|---|---|---|---|
+| **Group over 200 members** (check 6) | `e2e.group_devices` returns `limit`; the web refuses to send at all, not even plain, in any mode but `off` (`Client:299`, `Socket:418-423`). Probably unintended (Q2 of both docs) | blocked, never plain: "groups of more than 200 people can't be encrypted yet" (`policy:317-322`); more than 250 boxes also blocked (`:218-223`) | **same as the web**, and safe. If the backend later allows plain here, only `policy:317` changes |
+| Group send and read | supported | send and read both built (`policy:159`, `repo:595`, `open` via group list `repo:976`). `CLAUDE.md` still says "encrypted groups stay read-only" | `CLAUDE.md` is out of date; the web group messages wrapped for a registered phone are readable |
+| Optional mode, peer has no device | web sends **plain**, regardless of history (`Client:348-352`) | plain only on a thread with no encrypted history; otherwise blocked (`policy:120-125`, `:189-196`) | different, stricter; safe |
+| Edit in an encrypted chat | allowed, new envelope with a new `mid`; plain → encrypted edit allowed, the reverse refused (`e2e_required`) | blocked: "Editing isn't supported in encrypted chats yet" (`msgrepo:762-767`) | different (missing feature) |
+| `#`, `@`, commands in encrypted threads | | blocked (`msgrepo:757-761`, per `CLAUDE.md`) | different, stricter |
+| Reactions, delete, reply link, pin, save | not encrypted (server sees ids) | not touched by this analysis; replies and sends go through the same seal path | not checked in detail |
+| Forward prefix `↪ [Forwarded by …]` | needed only if forwarding exists | no forward feature (no hit in `lib/`) | n/a |
+| Attachments, upload failure | web falls back to a `data:` link; mobile should show an error | error, blocked pairing of plain file in encrypted send and the reverse (`msgrepo:750-755`) | done |
+| Unreadable edited / deleted messages | | not checked | |
+
+---
+
+## 12. Prioritised build plan (one line per future prompt)
+
+Each line names what it needs from the backend or which vector.
+
+**P0, small, no backend answer needed (can run now)**
+
+1. **Send `"client":"mobile"`** on `/enter` and `/setup/verify`; update `mobile-handoff/sessions.md`. Removes the web-kicks-phone-and-wipes-outbox bug. Needs: confirmation B1 that those are the only session-creating calls (I found two in `sd_ident.erl`).
+2. **`e2e.status {id}`** at every call (`repo:227`, `policy:347`). Needs: nothing.
+3. **Pin on read:** check and pin the sender's device keys when opening, refuse a changed key with a "key changed" placeholder, and add the one-time "contact added a new device" notice (`E2E_WEB_COMPLETE.md` §C). Needs: nothing (rules in `Client:305-371`).
+4. **Per-code placeholders and copy fixes:** the nine texts in phone wording; fix `security_controller.dart:66` so it does not promise a recovery code; update `CLAUDE.md` (groups are not read-only). Needs: nothing.
+5. **Throttle `e2e.devices` at send:** one list per peer per few seconds, still fresh for the stale retry. Needs: answer B3 first.
+
+**P1, history sync**
+
+6. **Rewrap in `crypto`** (unwrap own box with its `ek`, fresh one-time pair, new box with the waiting device id) plus the `rewrap` vector on `/debug/e2e` (2 positive, 7 negative). Needs: vector `rewrap` (present). No backend answer.
+7. **Older-device offer and Approve / That is not me / Later** (reads `pending.waiting`, fresh target lookup, `e2e.remove` after a second confirmation, calls `e2e.sync.approved`). Needs: B6.
+8. **Hand-on job:** page → skip boxes the target already has → `put` ≤400 → `done`, progress, Stop, `not_waiting` = stop quietly, back off on `rate_limited`, empty history still ends with `done`. Needs: B4 (own SQLite envelopes or `sync.page`), B5 (batch size).
+9. **Two-device test with the stand-in new device** (`tools/e2e-kit/new-device.mjs`, `E2E_HISTORY_SYNC_MOBILE.md`) and the real phone + web run from `E2E_FRESH_DEVICES_CHANGE.md` "After the mobile release". Needs: P0-1 first (otherwise the web sign-in ends the phone's session).
+
+**P2, recovery**
+
+10. **Recovery crypto:** code generate/normalise, seal, open, PKCS#8 import as non-extractable, against the `recovery` vector (open + 7 refusals) on `/debug/e2e`. Needs: vector `recovery` (present); B8.
+11. **Recovery on / change / off** (`e2e.recovery.set|delete`, show the code once, copy, "I have saved it", a verify-the-code step the web lacks). Needs: B9.
+12. **Backup of the past** (item 8's job with the recovery key as target, `backedUp`, "Back up now"). Needs: nothing beyond 8.
+13. **Restore on a new phone** (`recovery.get` → open → rewrap source = recovery, target = this device → `done`, `nothing_restored`, refetch). Needs: B5, a source-is-recovery rewrap vector (B8).
+
+**P3, later**
+
+14. **Safety-number screen and lock sheet** reachable from the header; the "not end-to-end encrypted" tooltip for global / host / workspace.
+15. **Edits in encrypted chats** (new envelope, new `mid`); decide `@` / `#` rules. Needs: B10.
+16. **Security feed list** with "A new device was added…". Needs: the `feed.list` shape from the mobile Postman collection.
+
+---
+
+## 13. Questions for the backend
+
+B1. **Which endpoints read `client`?** I found `sd_ident.erl:361` (`enter_as`, i.e. `/enter`) and `:649` (setup). Are there others (a password login that creates an enterprise session)? Is `mobile` the value you want (`android` and `ios` also work)?
+
+B2. **Slots:** after the fix, does a phone connection get `session_replaced` only when another phone signs in (`replaced_kind`), and is `session_added` the feed item the phone should show when the laptop signs in?
+
+B3. **`e2e.devices` rate** (600 / 10 min per person) against sends: the outbox can send 30 messages per 10 s, and we force a lookup per send. Is a lookup shared across conversations (so a 10-second reuse is fine, as `E2E_MOBILE_REVIEW.md` once said), or must it be fresh for every message as `E2E_FRESH_DEVICES_CHANGE.md` says? Please give one rule.
+
+B4. **Restore and `done`:** if a restore is interrupted after some `put` calls, a retry is `not_waiting` only after `done`. Confirm that a device stays writable until `done`, and that calling `done` with `nothing_restored` is wrong. What should a phone do if `put` says `not_waiting` mid-restore?
+
+B5. **Batch size:** the client sends 400 per `put`, the server accepts 500. Is 400 a recommendation or a rule? Is the 400 calls / 10 min budget shared between backup, hand-on and restore? Does `sync.page` include conversations the phone never opened? (`E2E_NEW_DEVICE_AND_HISTORY.md` §3.2 says it walks every conversation; please confirm for a phone that holds only some of them.)
+
+B6. **`e2e.sync.approved`:** nothing else reads `approvedTs` or the audit event? Is it safe for the phone to call it and ignore errors?
+
+B7. **Group label normalisation:** `Socket:23` and `Server` should agree on trimming and on case-folding non-ASCII names. Is a trailing space possible in a group name? Please publish a vector with an upper-case, spaced and non-ASCII name.
+
+B8. **Vectors we ask you to publish:** a group envelope, the safety number, the device fingerprint, the padding edge (60 vs 64 bytes), an edit of an envelope, a rewrap with the recovery key as the source and the waiting device as target, and the current `e2e-attachment-vectors.json`. Our `mobile-handoff/e2e-vectors.json` has the first four from running the web code; a backend-owned copy would stop the two drifting.
+
+B9. **Recovery:** is `recovery.set` with `replace:true` atomic (the old key stays until the new one is accepted)? What exactly does `e2e.sync.pending.recovery` return for a key made before #607? Is there any lockout on `recovery.get` other than 30 per hour?
+
+B10. **Edits and commands in encrypted chats:** the web edits as a new envelope. Do you want the phone to do the same, and is `#` / `@` meant to be encrypted or refused in a DM?
+
+B11. **Optional mode, peer without a device:** the web sends plain even on a thread with encrypted history. We block instead. Is blocking acceptable, or should the phone follow the web?
+
+B12. **Envelope near the 120,000-character cap:** still untested over the socket for large envelopes (carried over from the 2 Nov questions). Do you want a result from us?

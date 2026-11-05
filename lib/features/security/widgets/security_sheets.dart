@@ -8,25 +8,66 @@ import '../../../core/widgets/app_button.dart';
 import '../../../data/e2e/e2e_models.dart';
 import '../../../data/repositories/e2e_repository.dart';
 import '../security_controller.dart';
-import 'device_row.dart';
+import '../../../core/widgets/app_highlight_text.dart';
+import '../../../data/e2e/e2e_texts.dart';
+import 'device_card.dart';
+import 'device_limit_sheet.dart';
 
 /// The sheets of secure-messaging setup: device limit reached, removed from
 /// the list, refused. Plain words; a device is never removed without a
-/// confirmation of its own.
+/// confirmation of its own. Only one of them is open at a time.
 class SecuritySheets {
   SecuritySheets._();
 
-  static Future<void> openIssue(BuildContext context, SecurityController c) =>
-      AppBottomSheet.show<void>(
-        context,
-        title: switch (c.e2e.phase.value) {
-          E2eSetupPhase.limit => 'Device limit reached',
-          E2eSetupPhase.removed =>
-            'This phone was removed from your encryption devices',
-          _ => "Couldn't set up secure messaging",
-        },
-        child: _Issue(controller: c),
-      );
+  static bool _isIssueOpen = false;
+
+  /// The sheet for a full device list, with the devices in it. Does nothing
+  /// while a setup sheet is open, or when this organisation's one showing was
+  /// already used (unless [isRequested]: the person asked for it).
+  static Future<void> openLimit(
+    BuildContext context,
+    SecurityController c, {
+    bool isRequested = false,
+  }) async {
+    final org = c.orgKey;
+    if (org == null || _isIssueOpen) return;
+    if (!SecurityController.limitGate.tryOpen(org, isRequested: isRequested)) {
+      return;
+    }
+    final sheet = c.limitController();
+    c.activeLimit = sheet;
+    try {
+      await DeviceLimitSheet.show(context, sheet);
+    } finally {
+      c.activeLimit = null;
+      SecurityController.limitGate.closed();
+    }
+  }
+
+  /// The sheet for a removed or refused setup.
+  static Future<void> openIssue(BuildContext context, SecurityController c) {
+    if (_isIssueOpen || SecurityController.limitGate.isOpen) {
+      return Future.value();
+    }
+    _isIssueOpen = true;
+    final phase = c.e2e.phase.value;
+    final title = switch (phase) {
+      E2eSetupPhase.removed =>
+        'This phone was removed from your encryption devices',
+      _ => "Couldn't set up secure messaging",
+    };
+    return AppBottomSheet.show<void>(
+      context,
+      title: title,
+      titleWidget: Obx(
+        () => Text(
+          c.e2e.phase.value == E2eSetupPhase.ready ? E2eTexts.limitDone : title,
+          style: AppText.title,
+        ),
+      ),
+      child: _Issue(controller: c, kind: phase),
+    ).whenComplete(() => _isIssueOpen = false);
+  }
 
   /// Asks before a removal and runs it. Returns true when it was removed.
   static Future<void> confirmRemove(
@@ -35,48 +76,29 @@ class SecuritySheets {
     E2eDevicePublic device,
   ) => AppBottomSheet.show<void>(
     context,
-    title: 'Remove this device?',
+    title: E2eTexts.removeTitle,
     child: _ConfirmRemove(controller: c, device: device),
   );
 }
 
 class _Issue extends StatelessWidget {
-  const _Issue({required this.controller});
+  const _Issue({required this.controller, required this.kind});
 
   final SecurityController controller;
+
+  /// The phase the sheet was opened for: it fixes the body, so title and body
+  /// always belong together. Only "ready" replaces both (set up now).
+  final E2eSetupPhase kind;
 
   @override
   Widget build(BuildContext context) {
     final c = controller;
     return Obx(() {
-      final phase = c.e2e.phase.value;
+      final phase = c.e2e.phase.value == E2eSetupPhase.ready
+          ? E2eSetupPhase.ready
+          : kind;
       final children = <Widget>[];
       switch (phase) {
-        case E2eSetupPhase.limit:
-          children
-            ..add(
-              Text(
-                "You've reached the limit of ${c.e2e.maxDevices.value} devices for secure messaging. Remove one you no longer use, and this phone will be set up straight after.",
-                style: AppText.readable,
-              ),
-            )
-            ..add(const SizedBox(height: AppSpacing.sm))
-            ..addAll([
-              for (var i = 0; i < c.devices.length; i++)
-                DeviceRow(
-                  device: c.devices[i],
-                  isThisPhone: c.isThisPhone(c.devices[i]),
-                  hasDivider: i > 0,
-                  isBusy: c.busyId.value == c.devices[i].id,
-                  onRemove: c.isBusy.value
-                      ? null
-                      : () => SecuritySheets.confirmRemove(
-                          context,
-                          c,
-                          c.devices[i],
-                        ),
-                ),
-            ]);
         case E2eSetupPhase.removed:
           children
             ..add(
@@ -99,8 +121,8 @@ class _Issue extends StatelessWidget {
             ..add(
               Text(
                 c.e2e.issueReason.value.isEmpty
-                    ? 'The server refused the setup.'
-                    : 'The server said: ${c.e2e.issueReason.value}',
+                    ? E2eTexts.couldNotStart('the server refused the setup.')
+                    : E2eTexts.couldNotStart(c.e2e.issueReason.value),
                 style: AppText.readable,
               ),
             )
@@ -115,12 +137,7 @@ class _Issue extends StatelessWidget {
             );
         default:
           children
-            ..add(
-              const Text(
-                'Secure messaging is set up on this phone.',
-                style: AppText.readable,
-              ),
-            )
+            ..add(const Text(E2eTexts.limitDoneBody, style: AppText.readable))
             ..add(const SizedBox(height: AppSpacing.lg))
             ..add(
               AppButton.secondary(
@@ -153,15 +170,14 @@ class _ConfirmRemove extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     final isThis = c.isThisPhone(device);
-    final name = device.label.isEmpty ? 'this device' : device.label;
+    final name = device.label.isEmpty ? 'This device' : device.label;
+    final when = E2eTexts.ago(DeviceFacts.lastUsed(device), DateTime.now());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          isThis
-              ? "You won't be able to read new encrypted messages on this phone until you set it up again. The keys on this phone are deleted."
-              : "$name won't be able to read new encrypted messages until it is set up again. Messages it already received stay readable there only if its keys are still on it.",
-          style: AppText.readable,
+        AppHighlightText(
+          isThis ? E2eTexts.removeThisBody : E2eTexts.removeBody(when),
+          values: {'name': name},
         ),
         Obx(
           () => c.problem.value == null

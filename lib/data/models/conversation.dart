@@ -31,6 +31,7 @@ class Conversation {
     this.avatar,
     this.memberCount = 0,
     this.members = const [],
+    this.owner = '',
   });
 
   final String convId;
@@ -66,6 +67,9 @@ class Conversation {
   /// Usernames of a group's members from the stored list (empty when not known).
   final List<String> members;
 
+  /// A group's owner (the only one who may add people), empty when not known.
+  final String owner;
+
   /// "99+" past the cap, a plain number below it, nothing at 0.
   String get unreadLabel => unreadMore || unread > 99 ? '99+' : '$unread';
 
@@ -98,6 +102,7 @@ class Conversation {
     avatar: avatar,
     memberCount: memberCount,
     members: members,
+    owner: owner,
   );
 
   /// The other person's username for a direct message.
@@ -144,6 +149,7 @@ class Conversation {
       avatar: r['avatar'] == null ? null : idText(r['avatar']),
       memberCount: _count(r['members_json'] as String?),
       members: _names(r['members_json'] as String?),
+      owner: idText(r['owner']),
     );
   }
 
@@ -211,7 +217,8 @@ class Conversation {
       other.peerReadId == peerReadId &&
       other.peerDeliveredId == peerDeliveredId &&
       other.avatar == avatar &&
-      other.memberCount == memberCount;
+      other.memberCount == memberCount &&
+      other.owner == owner;
 
   @override
   int get hashCode => Object.hash(
@@ -239,6 +246,7 @@ class Conversation {
       peerDeliveredId,
       avatar,
       memberCount,
+      owner,
     ),
   );
 }

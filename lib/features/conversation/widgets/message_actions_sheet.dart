@@ -10,10 +10,11 @@ import '../../../core/widgets/app_list_row.dart';
 import '../../../core/utils/attachment_tag.dart';
 import '../../../data/models/message.dart';
 import '../conversation_controller.dart';
+import 'forward_sheet.dart';
 import 'reaction_picker.dart';
 
-/// The long-press menu of a message: Copy, Reply (direct messages and
-/// groups) and Delete (my own, not in teams). Nothing else.
+/// The long-press menu of a message: Reply (direct messages and groups),
+/// Forward, Copy and Delete (my own, not in teams).
 class MessageActionsSheet extends StatelessWidget {
   const MessageActionsSheet({
     super.key,
@@ -47,6 +48,7 @@ class MessageActionsSheet extends StatelessWidget {
         !m.isEncryptedUnsupported &&
         !isForm &&
         !(m.isEncrypted && AttachmentTag.parse(m.text) != null);
+    final canForward = c.canForward(m);
     final canReply =
         c.canReply && isSettled && !m.isDeleted && !m.isEncryptedUnsupported;
     // A form that reached the server stays: it is a record. Only one that
@@ -136,16 +138,6 @@ class MessageActionsSheet extends StatelessWidget {
               },
             ),
         ],
-        if (canCopy)
-          AppListRow(
-            title: 'Copy',
-            minHeight: AppSpacing.settingRowHeight,
-            leading: const Icon(Icons.copy, size: 20, color: AppColors.muted),
-            onTap: () {
-              c.copy(m);
-              Navigator.of(context).pop();
-            },
-          ),
         if (canReply)
           AppListRow(
             title: 'Reply',
@@ -154,6 +146,30 @@ class MessageActionsSheet extends StatelessWidget {
             onTap: () {
               Navigator.of(context).pop();
               c.startReply(m);
+            },
+          ),
+        if (canForward)
+          AppListRow(
+            title: 'Forward',
+            minHeight: AppSpacing.settingRowHeight,
+            leading: const Icon(
+              Icons.shortcut,
+              size: 20,
+              color: AppColors.muted,
+            ),
+            onTap: () {
+              Navigator.of(context).pop();
+              ForwardSheet.show(context, c, m);
+            },
+          ),
+        if (canCopy)
+          AppListRow(
+            title: 'Copy',
+            minHeight: AppSpacing.settingRowHeight,
+            leading: const Icon(Icons.copy, size: 20, color: AppColors.muted),
+            onTap: () {
+              c.copy(m);
+              Navigator.of(context).pop();
             },
           ),
         if (canDelete) ...[
