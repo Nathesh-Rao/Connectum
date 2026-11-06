@@ -82,5 +82,8 @@ class TaskPeopleController {
   }
 
   /// The sheet closed: no search is left waiting.
-  void close() => _debounce?.cancel();
+  void close() {
+    _debounce?.cancel();
+    query.dispose();
+  }
 }

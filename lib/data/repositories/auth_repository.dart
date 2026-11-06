@@ -275,9 +275,12 @@ class AuthRepository extends GetxService {
 
   /// The organisation's public card for a scanned or typed code (no session).
   Future<ConnectCard> connectCard(ConnectCode link) async {
+    final query = ConnectLinkParser.query({
+      'org': link.org,
+      'branch': link.branch,
+    });
     final data = await _api.get(
-      '/connect/${link.code}',
-      query: {'org': ?link.org, 'branch': ?link.branch},
+      '/connect/${link.code}${query == null ? '' : '?$query'}',
     );
     return ConnectCard.fromJson(data);
   }
@@ -292,15 +295,7 @@ class AuthRepository extends GetxService {
       final org = idText(data['org']);
       final branch = idText(data['branch']);
       return ConnectLinkParser.parse(
-        Uri(
-          scheme: 'https',
-          host: ConnectLinkParser.publicHost,
-          pathSegments: ['connect', idText(data['code'])],
-          queryParameters: {
-            if (org.isNotEmpty) 'org': org,
-            if (branch.isNotEmpty) 'branch': branch,
-          },
-        ).toString(),
+        ConnectLinkParser.link(idText(data['code']), org: org, branch: branch),
       ).value;
     } on ApiException catch (e) {
       if (e.status == 404 || e.code == 'not_found') return null;

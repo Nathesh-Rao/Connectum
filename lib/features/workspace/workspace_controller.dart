@@ -11,6 +11,8 @@ import '../../core/widgets/app_state_view.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../../data/models/form_card.dart';
+import '../../data/commands/command_line.dart';
+import '../../data/commands/command_reply.dart';
 import '../../data/models/hash_command.dart';
 import '../../data/models/message.dart';
 import '../../data/repositories/command_repository.dart';
@@ -23,6 +25,7 @@ import '../home_shell/home_shell_controller.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
+import '../commands/command_runner.dart';
 import '../conversation/models/command_prompt.dart';
 import 'models/workspace_note.dart';
 import 'models/workspace_row.dart';
@@ -59,6 +62,7 @@ class WorkspaceController extends GetxController {
   /// The gentle line under the field for text that is sent nowhere.
   final nudge = RxnString();
   late final prompt = CommandPrompt(commands);
+  late final runner = CommandRunner(commands, prompt);
   final _notes = <WorkspaceNote>[];
   final _noteWorkers = <Worker>[];
   int _noteSeq = 0;
@@ -177,12 +181,19 @@ class WorkspaceController extends GetxController {
   void onChanged(String value) {
     length.value = value.characters.length;
     nudge.value = null;
-    prompt.onTextChanged(value);
+    final caret = text.selection;
+    prompt.onTextChanged(value, caret: caret.isValid ? caret.baseOffset : null);
   }
 
   /// Puts `#name ` into the field; nothing runs until send.
-  void pickCommand(HashCommand command) {
-    final value = '#${command.name} ';
+  void pickCommand(HashCommand command) => _setText('#${command.name} ');
+
+  void pickCommandItem(CommandSuggestion item) => _setText(prompt.insert(item));
+
+  void renameCommand(String name) =>
+      _setText(CommandPrompt.rename(text.text, name));
+
+  void _setText(String value) {
     text.value = TextEditingValue(
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
@@ -200,22 +211,33 @@ class WorkspaceController extends GetxController {
   /// `#` lines run as commands, `@name text` is a direct message; anything
   /// else is kept in the field with a hint and sent nowhere.
   Future<void> send() async {
-    if (_isRunning) return;
+    if (_isRunning || runner.isRunning.value) return;
     final body = text.text.trim();
     if (body.isEmpty) return;
     nudge.value = null;
     final at = RegExp(r'^@(\S+)\s+([\s\S]+)$').firstMatch(body);
-    if (!CommandRepository.isHashLine(body) && at == null) {
+    final isCommand =
+        CommandRepository.isHashLine(body) || CommandLine.isEscape(body);
+    if (!isCommand && at == null) {
       nudge.value = body.startsWith('@') && !body.contains(RegExp(r'\s'))
           ? 'Add a message after $body.'
           : nudgeText;
       return;
     }
+    if (isCommand) {
+      if (await runner.run(body) && text.text.trim() == body) {
+        text.clear();
+        length.value = 0;
+        prompt.close();
+      }
+      return;
+    }
     _isRunning = true;
     try {
-      final result = CommandRepository.isHashLine(body)
-          ? await commands.run(body)
-          : await commands.sendDirect(at!.group(1)!, at.group(2)!.trim());
+      final result = await commands.sendDirect(
+        at!.group(1)!,
+        at.group(2)!.trim(),
+      );
       switch (result.kind) {
         case HashKind.info:
           _addNote(
@@ -367,6 +389,7 @@ class WorkspaceController extends GetxController {
 
   @override
   void onClose() {
+    prompt.dispose();
     _submissionsWorker?.dispose();
     _definitionsWorker?.dispose();
     _loadedWorker?.dispose();

@@ -133,4 +133,11 @@ class TaskFormController {
       isSubmitting.value = false;
     }
   }
+
+  void dispose() {
+    title.dispose();
+    description.dispose();
+    dueField.dispose();
+    assigneeField.dispose();
+  }
 }

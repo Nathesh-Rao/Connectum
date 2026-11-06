@@ -18,6 +18,8 @@ import '../../core/theme/app_motion.dart';
 import '../../core/utils/chat_time.dart';
 import '../../core/utils/mention_text.dart';
 import '../../data/models/conversation.dart';
+import '../../data/commands/command_line.dart';
+import '../../data/commands/command_reply.dart';
 import '../../data/models/hash_command.dart';
 import '../../data/models/ids.dart';
 import '../../data/models/form_card.dart';
@@ -48,6 +50,7 @@ import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
 import '../../core/widgets/app_notices.dart';
 import 'models/chat_item.dart';
+import '../commands/command_runner.dart';
 import 'models/command_prompt.dart';
 import 'models/file_download.dart';
 import 'models/forward.dart';
@@ -103,6 +106,13 @@ class ConversationController extends GetxController
 
   /// The "#" commands list of the composer.
   late final prompt = CommandPrompt(commands);
+
+  late final runner = CommandRunner(
+    commands,
+    prompt,
+    activeConvId: conversationId,
+    applyDraft: _applyDraft,
+  );
 
   /// The forms button's sheet. A form is posted into this conversation only
   /// where the server takes one (a direct message or a group).
@@ -187,9 +197,6 @@ class ConversationController extends GetxController
   bool _hasSeedFailed = false;
   final notice = RxnString();
 
-  final _notes = <({String id, String text, int ts})>[];
-  int _noteSeq = 0;
-  bool _isRunning = false;
   final _byId = <String, Message>{};
   final _seen = <String>{};
   final _fresh = <String>{};
@@ -521,6 +528,12 @@ class ConversationController extends GetxController
       }
     });
     ConversationRoute.jumpListeners[conversationId] = _runJump;
+    final draft = ConversationRoute.takeDraft(conversationId);
+    if (draft != null) {
+      text.text = draft;
+      text.selection = TextSelection.collapsed(offset: draft.length);
+      length.value = draft.characters.length;
+    }
     _load();
   }
 
@@ -712,13 +725,8 @@ class ConversationController extends GetxController
     }
     final out = <ChatItem>[];
     Message? prev;
-    var noteAt = 0;
     for (var i = 0; i < asc.length; i++) {
       final m = asc[i];
-      while (noteAt < _notes.length && _notes[noteAt].ts <= m.ts) {
-        out.add(ChatItem.system(_notes[noteAt].text, refId: _notes[noteAt].id));
-        noteAt++;
-      }
       final isNewDay = prev == null || !ChatTime.isSameDay(prev.ts, m.ts);
       if (isNewDay) out.add(ChatItem.day(ChatTime.day(m.ts, now)));
       final isUnreadStart = m.msgId == _firstUnreadId;
@@ -741,9 +749,6 @@ class ConversationController extends GetxController
         ),
       );
       prev = m;
-    }
-    for (; noteAt < _notes.length; noteAt++) {
-      out.add(ChatItem.system(_notes[noteAt].text, refId: _notes[noteAt].id));
     }
     final reversed = out.reversed.toList();
     if (isLoadingOlder.value) {
@@ -900,7 +905,8 @@ class ConversationController extends GetxController
 
   void onChanged(String value) {
     length.value = value.characters.length;
-    prompt.onTextChanged(value);
+    final caret = text.selection;
+    prompt.onTextChanged(value, caret: caret.isValid ? caret.baseOffset : null);
     if (value.trim().isEmpty || !canType || !socket.isOnline) return;
     final now = DateTime.now();
     if (now.difference(_lastTyping) < _typingEvery) return;
@@ -926,8 +932,19 @@ class ConversationController extends GetxController
   }
 
   /// Puts `#name ` into the composer; nothing runs until send.
-  void pickCommand(HashCommand command) {
-    final value = '#${command.name} ';
+  void pickCommand(HashCommand command) => _setText('#${command.name} ');
+
+  void pickCommandItem(CommandSuggestion item) => _setText(prompt.insert(item));
+
+  void renameCommand(String name) =>
+      _setText(CommandPrompt.rename(text.text, name));
+
+  void _applyDraft(String draft) {
+    _setText(draft);
+    prompt.close();
+  }
+
+  void _setText(String value) {
     text.value = TextEditingValue(
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
@@ -937,45 +954,23 @@ class ConversationController extends GetxController
     focus.requestFocus();
   }
 
-  /// A `#` line: online only, shown as a notice, a small row, or the normal
-  /// events of the message it sends.
+  /// A `#` line: online only, answered by a notice, a screen, a sheet or a
+  /// chat opened with a draft. The text stays when it needs fixing.
   Future<void> _runHash(String body) async {
-    if (_isRunning) return;
-    _isRunning = true;
-    try {
-      final result = await commands.run(body);
-      switch (result.kind) {
-        case HashKind.info:
-          _notes.add((
-            id: 'n${_noteSeq++}',
-            text: result.text,
-            ts: DateTime.now().millisecondsSinceEpoch,
-          ));
-          _rebuild();
-        case HashKind.directQueued:
-          if (result.convId != conversationId) {
-            _say('Sent to @${result.user}');
-          }
-        case HashKind.done:
-          break;
-        default:
-          _say(result.text);
-      }
-      if (result.isFinished) {
-        text.clear();
-        length.value = 0;
-        prompt.close();
-        WidgetsBinding.instance.addPostFrameCallback((_) => scrollToLatest());
-      }
-    } finally {
-      _isRunning = false;
+    if (!await runner.run(body)) return;
+    if (text.text.trim() == body) {
+      text.clear();
+      length.value = 0;
+      prompt.close();
     }
   }
 
   Future<void> send() async {
     final body = text.text.trim();
     if (body.isEmpty) return;
-    if (CommandRepository.isHashLine(body)) return _runHash(body);
+    if (CommandRepository.isHashLine(body) || CommandLine.isEscape(body)) {
+      return _runHash(body);
+    }
     if (body.characters.length > maxLength) {
       _say('Messages can be up to $maxLength characters.');
       return;
@@ -1684,6 +1679,7 @@ class ConversationController extends GetxController
     scroll.removeListener(_onScroll);
     scroll.dispose();
     text.removeListener(_updateMentions);
+    prompt.dispose();
     text.dispose();
     focus.dispose();
     super.onClose();

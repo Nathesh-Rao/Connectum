@@ -18,6 +18,29 @@ class NotificationTexts {
   static const resolve = 'Resolve';
   static const dismiss = 'Dismiss';
   static const menu = 'More';
+  static const open = 'Open';
+
+  static const priorityHigh = 'High';
+  static const priorityMedium = 'Medium';
+  static const priorityLow = 'Low';
+  static const priorityResolved = 'Resolved';
+  static const detailDevice = 'Device';
+  static const categoryGeneral = 'General';
+  static const categorySubmissions = 'Submissions';
+  static const categoryTickets = 'Tickets';
+  static const categorySignatures = 'Signatures';
+  static const categoryApprovals = 'Approvals';
+  static const categoryTasks = 'Tasks';
+  static const categoryMentions = 'Mentions';
+  static const categoryMessages = 'Messages';
+  static const categoryReminders = 'Reminders';
+  static const categoryAnnouncements = 'Announcements';
+  static const categoryTeam = 'Team';
+  static const categoryRecordings = 'Recordings';
+  static const categorySecurity = 'Security';
+  static const categoryApi = 'API';
+  static const categorySystem = 'System';
+  static const detailSource = 'Source';
 
   static const emptyTitle = 'Nothing here';
   static const emptyMessage = 'New notifications will show up here.';

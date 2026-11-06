@@ -27,6 +27,17 @@ class ConversationRoute {
   static String? takeJump(String conversationId) =>
       _jumps.remove(conversationId);
 
+  static final _drafts = <String, String>{};
+
+  /// Text a `#dm` or `#groupmsg` leaves in the box of [conversationId]; the
+  /// conversation takes it once, when it opens. Never sent from here.
+  static void setDraft(String conversationId, String text) {
+    if (text.isNotEmpty) _drafts[conversationId] = text;
+  }
+
+  static String? takeDraft(String conversationId) =>
+      _drafts.remove(conversationId);
+
   static void open(String conversationId) {
     final name = AppRoutes.conversationOf(conversationId);
     if (Get.currentRoute == name) return;

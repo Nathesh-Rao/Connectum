@@ -13,6 +13,7 @@ import '../../data/socket/socket_service.dart';
 import '../tasks/tasks_controller.dart';
 import '../../data/models/ids.dart';
 import '../../data/session_store.dart';
+import 'feed_actions.dart';
 import 'models/feed_item.dart';
 import 'widgets/feed_detail_sheet.dart';
 
@@ -325,11 +326,28 @@ class NotificationRouter extends GetxService {
   static int? ticketIdOf(Destination d) =>
       d.kind == DestinationKind.ticket ? idNumber(d.submissionId) : null;
 
-  /// The title and the whole message of an item, in a light sheet.
+  /// The title and the whole message of an item, with its actions, in a
+  /// sheet. The way to where it leads is offered unless that leads back to
+  /// the sheet.
   void showDetail(FeedItem item) {
     final context = Get.context;
     if (context == null) return;
-    FeedDetailSheet.show(context, item, _feed.readableText(item));
+    final destination = resolve(item);
+    final isRoutable = switch (destination.kind) {
+      DestinationKind.none ||
+      DestinationKind.detail ||
+      DestinationKind.submission ||
+      DestinationKind.ticket => false,
+      _ => true,
+    };
+    FeedDetailSheet.show(
+      context,
+      item,
+      text: _feed.readableText(item),
+      feed: _feed,
+      actions: FeedActions(_feed),
+      onOpen: isRoutable ? () => handle(destination) : null,
+    );
   }
 
   /// Tasks and Approvals open on their first tab. Already there: nothing to

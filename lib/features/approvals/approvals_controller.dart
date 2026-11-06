@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/widgets/app_notice_card.dart';
@@ -18,8 +17,7 @@ import 'models/approval_rules.dart';
 /// The Approvals screen: "To review" and "Sent by me", a history filter, and
 /// the answers. An answer is sent once and never replayed: a failure is shown
 /// with the server's own words and a manual Retry where that is safe.
-class ApprovalsController extends GetxController
-    with GetSingleTickerProviderStateMixin {
+class ApprovalsController extends GetxController {
   ApprovalsController({required this.approvals, required this.connectivity});
 
   final ApprovalRepository approvals;
@@ -33,7 +31,8 @@ class ApprovalsController extends GetxController
     ApprovalsTexts.filterIgnored,
   ];
 
-  late final tabController = TabController(length: 2, vsync: this);
+  /// 0 = to review, 1 = sent by me.
+  final selectedTab = 0.obs;
   final selectedFilter = 0.obs;
 
   /// The requests of the selected status, for both tabs; each tab shows its
@@ -83,7 +82,6 @@ class ApprovalsController extends GetxController
   void onClose() {
     _changes?.cancel();
     _refreshes?.cancel();
-    tabController.dispose();
     super.onClose();
   }
 

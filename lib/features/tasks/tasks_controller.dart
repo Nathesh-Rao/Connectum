@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/widgets/app_notice_card.dart';
@@ -38,8 +37,7 @@ class TaskList {
 /// The Tasks screen: "Assigned to me" and "Created by me", a status filter,
 /// and every action on a task. Writes are sent once and never replayed: a
 /// failure is shown with the server's own words and a manual Retry.
-class TasksController extends GetxController
-    with GetTickerProviderStateMixin {
+class TasksController extends GetxController {
   TasksController({
     required this.tasks,
     required this.people,
@@ -66,10 +64,11 @@ class TasksController extends GetxController
     TasksTexts.filterAll,
   ];
 
-  late final tabController = TabController(length: tabs.length, vsync: this);
+  /// 0 = assigned to me, 1 = created by me.
+  final selectedTab = 0.obs;
 
   /// 0 = To-dos, 1 = Tickets.
-  late final sectionController = TabController(length: 2, vsync: this);
+  final selectedSection = 0.obs;
   final selectedFilter = 0.obs;
   final lists = {for (final t in tabs) t: TaskList()};
 
@@ -95,7 +94,7 @@ class TasksController extends GetxController
     unawaited(refreshAll());
     final id = Get.arguments;
     if (id is int) unawaited(openTask(id));
-    if (id == showTickets) sectionController.index = 1;
+    if (id == showTickets) selectedSection.value = 1;
   }
 
   /// Opens the task [id] of a notice: from the lists, else read with
@@ -119,8 +118,6 @@ class TasksController extends GetxController
     _openRequests?.cancel();
     _changes?.cancel();
     _refreshes?.cancel();
-    tabController.dispose();
-    sectionController.dispose();
     super.onClose();
   }
 

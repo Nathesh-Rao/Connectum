@@ -5,8 +5,10 @@ import 'package:get/get.dart';
 
 import '../db/app_database.dart';
 import '../e2e/e2e_models.dart';
+import '../models/chat_thread.dart';
 import '../models/conversation.dart';
 import '../models/ids.dart';
+import '../models/thread_names.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
@@ -41,6 +43,8 @@ class ConversationRepository extends GetxService {
   final _readTimers = <String, Timer>{};
   final _deliveredTimers = <String, Timer>{};
   final _receipts = StreamController<String>.broadcast();
+  Timer? _namesTimer;
+  Timer? _threadNamesTimer;
 
   static const _syncGrace = Duration(seconds: 10);
   static const _readDelay = Duration(milliseconds: 600);
@@ -140,6 +144,8 @@ class ConversationRepository extends GetxService {
     );
     // Last, so its archive, pin, mute and unread win over the lists above.
     await syncInbox();
+    await loadCareNames();
+    await loadRecordNames();
     await flushPositions();
     if (scope != _scope) return;
     _syncGraceTimer?.cancel();
@@ -224,6 +230,146 @@ class ConversationRepository extends GetxService {
     });
     await reload();
     changed.forEach(_receipts.add);
+  }
+
+  /// The titles of the record conversations I am in, the ones I may rename and
+  /// the ones their form keeps out of the main list, from `record.names`. Kept
+  /// per conversation, so they show offline. A failed call keeps what is stored.
+  Future<void> loadRecordNames() async {
+    final org = _session.orgId;
+    final user = _session.userId;
+    if (org == null || user == null || !_socket.isOnline) return;
+    final Map<String, dynamic> data;
+    try {
+      data = await _socket.sdCall('record.names', {});
+    } on SocketCallError catch (_) {
+      return;
+    }
+    if (org != _session.orgId || user != _session.userId) return;
+    final record = RecordNames.fromReply(data);
+    await _db.transaction((sql) async {
+      await sql.update(
+        'UPDATE conversations SET is_list_hidden = 0, can_rename = 0 '
+        'WHERE org_id = ? AND user_id = ? AND (is_list_hidden = 1 OR can_rename = 1)',
+        [org, user],
+      );
+      for (final g in record.hidden) {
+        await sql.update(
+          'UPDATE conversations SET is_list_hidden = 1 '
+          'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+          [org, user, 'group:$g'],
+        );
+      }
+      for (final g in record.canRename) {
+        await sql.update(
+          'UPDATE conversations SET can_rename = 1 '
+          'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+          [org, user, 'group:$g'],
+        );
+      }
+      for (final entry in record.names.entries) {
+        await sql.update(
+          'UPDATE conversations SET thread_title = ? '
+          'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+          [entry.value, org, user, 'group:${entry.key}'],
+        );
+      }
+    });
+    await reload();
+  }
+
+  /// The titles of the people's shared threads (`care-<username>`): the
+  /// person's name from `care.names`, and for my own thread the organisation's
+  /// name from `org.name`, as the web does. Stored like the record titles; a
+  /// failed call keeps what is stored, and until a name is known the tidied
+  /// username shows.
+  Future<void> loadCareNames() async {
+    final org = _session.orgId;
+    final user = _session.userId;
+    if (org == null || user == null || !_socket.isOnline) return;
+    var names = const <String, String>{};
+    var orgName = '';
+    try {
+      orgName = CareNames.orgFromReply(await _socket.sdCall('org.name', {}));
+    } on SocketCallError catch (_) {}
+    try {
+      names = CareNames.fromReply(await _socket.sdCall('care.names', {}));
+    } on SocketCallError catch (_) {}
+    if (org != _session.orgId || user != _session.userId) return;
+    final me = user.toLowerCase();
+    final titles = {...names, if (orgName.isNotEmpty) me: orgName};
+    if (titles.isEmpty) return;
+    await _db.transaction((sql) async {
+      for (final entry in titles.entries) {
+        await sql.update(
+          'UPDATE conversations SET thread_title = ? '
+          'WHERE org_id = ? AND user_id = ? AND LOWER(conv_id) = ?',
+          [entry.value, org, user, 'group:care-${entry.key}'],
+        );
+      }
+    });
+    await reload();
+  }
+
+  /// Renames a record conversation for everyone in it (`record.rename`; only
+  /// the person who saved the record may). The new title shows at once and is
+  /// put back if the server refuses; an empty [name] asks for the made title
+  /// back. Throws the [SocketCallError] of a refusal.
+  Future<void> renameRecord(Conversation c, String name) async {
+    final org = _session.orgId;
+    final user = _session.userId;
+    final group = ChatThread.groupName(c.convId);
+    final id = group == null ? null : ChatThread.recordId(group);
+    if (org == null || user == null || group == null || id == null) {
+      throw const SocketCallError(
+        'invalid',
+        'That conversation cannot be renamed.',
+      );
+    }
+    final wanted = name.trim();
+    final shown = wanted.isEmpty ? ChatThread.fallbackTitle(group) : wanted;
+    _setTitle(c.convId, shown);
+    final RecordRename done;
+    try {
+      done = RecordRename.fromReply(
+        await _socket.sdCall('record.rename', {'id': id, 'name': wanted}),
+      );
+    } on SocketCallError {
+      _setTitle(c.convId, c.title, onlyIf: shown);
+      rethrow;
+    }
+    if (org != _session.orgId || user != _session.userId) return;
+    await _db.update(
+      'UPDATE conversations SET thread_title = ? '
+      'WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [done.title, org, user, c.convId],
+    );
+    await reload();
+  }
+
+  /// Changes the shown title in the list only; with [onlyIf] only while it is
+  /// still that text (a refresh in between wins).
+  void _setTitle(String convId, String title, {String? onlyIf}) {
+    final i = conversations.indexWhere((x) => x.convId == convId);
+    if (i < 0) return;
+    if (onlyIf != null && conversations[i].title != onlyIf) return;
+    conversations[i] = conversations[i].withTitle(title);
+  }
+
+  /// Bursts of events (a record edited, a thread joined) become one read.
+  void _scheduleRecordNames() {
+    _namesTimer?.cancel();
+    _namesTimer = Timer(const Duration(milliseconds: 600), loadRecordNames);
+  }
+
+  /// A thread joined during the session needs its name too: the web asks for
+  /// the care names, the organisation's name and the record names again.
+  void _scheduleThreadNames() {
+    _threadNamesTimer?.cancel();
+    _threadNamesTimer = Timer(const Duration(milliseconds: 600), () async {
+      await loadCareNames();
+      await loadRecordNames();
+    });
   }
 
   /// A position of 0 means none. Ids are stored as text.
@@ -506,6 +652,12 @@ class ConversationRepository extends GetxService {
     final user = _session.userId;
     if (org == null || user == null) return;
     switch (e['type']) {
+      case 'sd_event':
+        final event = e['event'];
+        if (event == 'submissions_changed' || event == 'resync') {
+          _scheduleRecordNames();
+        }
+        return;
       case 'conversations':
         await _db.transaction((sql) async {
           for (final item in (e['list'] as List? ?? []).cast<Map>()) {
@@ -580,6 +732,10 @@ class ConversationRepository extends GetxService {
         return;
     }
     await reload();
+    if ((e['type'] == 'added_to_group' || e['type'] == 'group_created') &&
+        ChatThread.isThreadName(idText(e['name']))) {
+      _scheduleThreadNames();
+    }
     if (e['type'] == 'hosts' && _listsReady?.isCompleted == false) {
       _listsReady!.complete();
     }

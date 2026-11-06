@@ -256,7 +256,7 @@ class _List extends StatelessWidget {
                   ? 'Member · ${list[i].enterprise}'
                   : list[i].enterprise,
               trailing: c.enteringId.value == list[i].enterprise
-                  ? const AppSpinner()
+                  ? const AppSpinner(size: AppSpinnerSize.sm)
                   : list[i].enterprise == c.currentOrgId
                   ? const EnterpriseCurrentCheck()
                   : list[i].isActive

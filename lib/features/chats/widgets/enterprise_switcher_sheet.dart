@@ -39,7 +39,7 @@ class EnterpriseSwitcherSheet extends StatelessWidget {
                   ? 'Waiting for approval · ${list[i].enterprise}'
                   : 'Not approved · ${list[i].enterprise}',
               trailing: c.enteringId.value == list[i].enterprise
-                  ? const AppSpinner()
+                  ? const AppSpinner(size: AppSpinnerSize.sm)
                   : list[i].enterprise == c.currentOrgId
                   ? const EnterpriseCurrentCheck()
                   : list[i].isActive

@@ -26,12 +26,10 @@ class ConnectCode {
   /// The whole link in the one form the server reads for sure; what the
   /// server calls and the stored pending target use. Parsing it again gives
   /// the same code, org and branch.
-  String get linkText => Uri(
-    scheme: 'https',
-    host: ConnectLinkParser.publicHost,
-    pathSegments: ['connect', code],
-    queryParameters: {'org': ?org, 'branch': ?branch},
-  ).toString();
+  String get linkText => ConnectLinkParser.link(code, org: org, branch: branch);
+
+  /// The same code without the branch, once the server called it unavailable.
+  ConnectCode withoutBranch() => ConnectCode(code: code, org: org);
 
   @override
   String toString() => 'ConnectCode(…)';
@@ -70,6 +68,25 @@ class ConnectLinkParser {
     return {publicHost, if (host.isNotEmpty) host.toLowerCase()};
   }
 
+  /// The https link for a code. Spaces are written as `%20`, never `+`.
+  static String link(String code, {String? org, String? branch}) => Uri(
+    scheme: 'https',
+    host: publicHost,
+    pathSegments: ['connect', code],
+    query: query({'org': org, 'branch': branch}),
+  ).toString();
+
+  /// A query string with every value percent-encoded (`%20` for a space).
+  /// Null and empty values are left out.
+  static String? query(Map<String, String?> values) {
+    final parts = [
+      for (final e in values.entries)
+        if (e.value != null && e.value!.isNotEmpty)
+          '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value!)}',
+    ];
+    return parts.isEmpty ? null : parts.join('&');
+  }
+
   static ConnectParse parse(String raw) {
     final text = raw.trim();
     if (text.isEmpty) {
@@ -80,6 +97,10 @@ class ConnectLinkParser {
     }
     if (_control.hasMatch(text)) {
       return const ConnectParse.rejected(ConnectRejection.notConnectLink);
+    }
+    final mark = text.indexOf('?');
+    if (mark > 0 && _bare.hasMatch(text.substring(0, mark))) {
+      return _bareWithQuery(text.substring(0, mark), text.substring(mark + 1));
     }
     if (_bare.hasMatch(text)) {
       final code = _normalize(text, isForgiving: true);
@@ -120,15 +141,35 @@ class ConnectLinkParser {
     if (code == null) {
       return const ConnectParse.rejected(ConnectRejection.badCode);
     }
-    final org = _normalize(
-      uri.queryParameters['org'] ?? '',
-      isForgiving: false,
+    return _accepted(
+      code,
+      uri.queryParameters['org'],
+      uri.queryParameters['branch'],
     );
+  }
+
+  /// `CODE?branch=X`, `CODE?org=Y&branch=X` or `CODE?org=Y` without a scheme.
+  static ConnectParse _bareWithQuery(String head, String query) {
+    final code = _normalize(head, isForgiving: true);
+    if (code == null) {
+      return const ConnectParse.rejected(ConnectRejection.badCode);
+    }
+    final Map<String, String> params;
+    try {
+      params = Uri.splitQueryString(query);
+    } on FormatException {
+      return const ConnectParse.rejected(ConnectRejection.notConnectLink);
+    }
+    return _accepted(code, params['org'], params['branch']);
+  }
+
+  static ConnectParse _accepted(String code, String? orgText, String? branch) {
+    final org = _normalize(orgText ?? '', isForgiving: false);
     return ConnectParse.accepted(
       ConnectCode(
         code: code,
         org: org == code ? null : org,
-        branch: _branch(uri.queryParameters['branch']),
+        branch: _branch(branch),
       ),
     );
   }

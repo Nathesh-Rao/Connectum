@@ -285,47 +285,6 @@ void main() {
     });
   });
 
-  group('events that only refresh, and their in-app line', () {
-    test('task, ticket, request and broadcast lines', () async {
-      final lines = <FeedNotice>[];
-      final sub = feed.onNotice.listen(lines.add);
-      feed.onEvent(
-        _event('task_assigned', {
-          'task': {'id': 7},
-        }),
-      );
-      feed.onEvent(_event('task_updated', {}));
-      feed.onEvent(
-        _event('ticket_assigned', {
-          'id': 38,
-          'tstruct': 'help_ticket',
-          'action': 'Raised',
-          'by': 'rhea',
-        }),
-      );
-      feed.onEvent(_event('ticket_assigned', {'id': 39, 'action': 'Send'}));
-      feed.onEvent(_event('request_created', {}));
-      feed.onEvent(_event('broadcast', {'text': 'x' * 300}));
-      feed.onEvent(_event('broadcast', {'text': ''}));
-      feed.onEvent(_event('request_resolved', {}));
-      feed.onEvent(_event('submission_approved', {}));
-      await Future<void>.delayed(Duration.zero);
-      expect(lines, hasLength(6));
-      expect(lines[0].line, 'You have a new task.');
-      expect(lines[0].taskId, 7);
-      expect(lines[1].line, 'A task was updated.');
-      expect(lines[1].taskId, isNull);
-      expect(lines[2].line, 'A ticket was raised to you.');
-      expect(lines[2].ticketId, 38);
-      expect(lines[2].tstruct, 'help_ticket');
-      expect(lines[3].line, 'A ticket is now with you.');
-      expect(lines[4].line, 'You have a new request to review.');
-      expect(lines[5].line, startsWith('Announcement: '));
-      expect(lines[5].line.length, lessThanOrEqualTo(120));
-      await sub.cancel();
-    });
-  });
-
   group('optimistic changes and rollback', () {
     setUp(() async => feed.refresh());
 

@@ -12,6 +12,7 @@ import '../../core/routes/deep_link_service.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/app_settings.dart';
 import '../../core/utils/connect_code.dart';
+import '../../core/widgets/app_notices.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
 import '../../data/models/connect_card.dart';
@@ -390,6 +391,11 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
           ? await SeedConnect.resolve(link)
           : await auth.connectCard(link);
       if (!_isOpen) return;
+      if (found.isBranchUnavailable) {
+        link = link.withoutBranch();
+        _link = link;
+        AppNotices.show(ConnectCard.branchUnavailableText);
+      }
       card.value = found;
       membership.value = _membershipOf(found);
       keptPersonLink = link.isPersonLink ? link : null;

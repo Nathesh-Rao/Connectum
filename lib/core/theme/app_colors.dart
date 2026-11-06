@@ -42,6 +42,7 @@ class AppColors {
   static const cardChip = Color(0xFFF3F3F2);
 
   static const error = Color(0xFFB5351D);
+  static const disabledInk = Color(0xFFB3ADA8);
 
   static const yesFill = Color(0xFFE3F6E9);
   static const yesDot = Color(0xFF16A34A);

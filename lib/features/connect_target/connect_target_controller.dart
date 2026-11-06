@@ -204,7 +204,16 @@ class ConnectTargetController extends GetxController {
     }
   }
 
+  void _dropUnavailableBranch() {
+    target = target.withoutBranch();
+    AppNotices.show(ConnectCard.branchUnavailableText);
+  }
+
   void _show(ConnectLookup found) {
+    if (found.isBranchUnavailable ||
+        (found.card?.isBranchUnavailable ?? false)) {
+      _dropUnavailableBranch();
+    }
     final who = found.person;
     if (who != null) {
       person.value = who;
@@ -257,6 +266,7 @@ class ConnectTargetController extends GetxController {
         _fail(ConnectTargetFailure.notFound);
         return;
       }
+      if (found.isBranchUnavailable) _dropUnavailableBranch();
       card.value = found;
       membership.value = _membershipOf(found);
       step.value = ConnectTargetStep.otherOrganisation;

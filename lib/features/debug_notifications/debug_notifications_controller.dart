@@ -17,22 +17,11 @@ class DebugNotificationsController extends GetxController {
   final FeedRepository feed;
   final LocalNotificationService notifications;
 
-  final isBackground = false.obs;
   int _seq = 0;
   String? _lastId;
   int _coalesced = 1;
 
   int get _now => DateTime.now().millisecondsSinceEpoch;
-
-  void setBackground(bool value) {
-    isBackground.value = value;
-    notifications.debugForceBackground = value;
-    AppNotices.info(
-      value
-          ? 'The app now acts as in the background.'
-          : 'The app acts as in the foreground.',
-    );
-  }
 
   void _send(String event, Map<String, dynamic> data) =>
       feed.onEvent({'type': 'sd_event', 'event': event, 'data': data});
@@ -210,9 +199,12 @@ class DebugNotificationsController extends GetxController {
     });
   }
 
-  /// A local notification for a sample item, whatever the rules say.
+  /// A real system notification for a sample item through the same `show()`
+  /// path as live items, whatever the rules say. The result is logged
+  /// (`notifyflow:`) and told.
   Future<void> fireLocal() async {
-    await notifications.show(
+    await notifications.refreshPermission();
+    final isShown = await notifications.show(
       FeedItem(
         id: _id,
         priority: 'high',
@@ -225,5 +217,13 @@ class DebugNotificationsController extends GetxController {
         chatId: 'user-sam1',
       ),
     );
+    final isOn = notifications.isEnabled.value;
+    if (isShown && isOn) {
+      AppNotices.info('show() succeeded. Look in the notification shade.');
+    } else if (isShown) {
+      AppNotices.error('show() ran but notifications are off for this app.');
+    } else {
+      AppNotices.error('show() failed. See the notifyflow: log lines.');
+    }
   }
 }

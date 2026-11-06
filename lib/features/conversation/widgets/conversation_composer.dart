@@ -80,6 +80,8 @@ class ConversationComposer extends StatelessWidget {
           CommandsPanel(
             prompt: c.prompt,
             onPick: c.pickCommand,
+            onPickItem: c.pickCommandItem,
+            onPickName: c.renameCommand,
             isOnline: () => c.commands.isOnline,
           ),
           MentionPanel(
@@ -156,7 +158,10 @@ class ConversationComposer extends StatelessWidget {
                     ),
                   ),
                   Obx(() {
-                    final isActive = c.length.value > 0 && c.canSend;
+                    final isActive =
+                        c.length.value > 0 &&
+                        c.canSend &&
+                        !c.runner.isRunning.value;
                     return ComposerSendButton(
                       isActive: isActive,
                       onTap: c.send,

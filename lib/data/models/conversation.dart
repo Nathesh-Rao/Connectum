@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'chat_thread.dart';
 import 'ids.dart';
 import 'message.dart';
 
@@ -32,6 +33,8 @@ class Conversation {
     this.memberCount = 0,
     this.members = const [],
     this.owner = '',
+    this.isListHidden = false,
+    this.canRename = false,
   });
 
   final String convId;
@@ -70,40 +73,56 @@ class Conversation {
   /// A group's owner (the only one who may add people), empty when not known.
   final String owner;
 
+  /// A record conversation whose form keeps it out of All and Direct & Teams
+  /// (`record.names` `hidden`): it shows under Threads only.
+  final bool isListHidden;
+
+  /// A record conversation I saved the record of: I may rename it
+  /// (`record.names` `canRename`).
+  final bool canRename;
+
   /// "99+" past the cap, a plain number below it, nothing at 0.
   String get unreadLabel => unreadMore || unread > 99 ? '99+' : '$unread';
 
   bool get isEncryptedUnsupported => isEncrypted;
 
-  Conversation withFlags({bool? isPinned, bool? isMuted}) => Conversation(
-    convId: convId,
-    kind: kind,
-    title: title,
-    lastText: lastText,
-    lastTs: lastTs,
-    lastFrom: lastFrom,
-    unread: unread,
-    isArchived: isArchived,
-    isEncrypted: isEncrypted,
-    lastKind: lastKind,
-    lastFormName: lastFormName,
-    lastIsMine: lastIsMine,
-    lastStatus: lastStatus,
-    lastIsEncrypted: lastIsEncrypted,
-    lastIsDeleted: lastIsDeleted,
-    lastId: lastId,
-    readId: readId,
-    unreadMore: unreadMore,
-    isPinned: isPinned ?? this.isPinned,
-    isMuted: isMuted ?? this.isMuted,
-    deliveredId: deliveredId,
-    peerReadId: peerReadId,
-    peerDeliveredId: peerDeliveredId,
-    avatar: avatar,
-    memberCount: memberCount,
-    members: members,
-    owner: owner,
-  );
+  Conversation withFlags({bool? isPinned, bool? isMuted}) =>
+      _copy(isPinned: isPinned, isMuted: isMuted);
+
+  Conversation withTitle(String title) => _copy(title: title);
+
+  Conversation _copy({String? title, bool? isPinned, bool? isMuted}) =>
+      Conversation(
+        convId: convId,
+        kind: kind,
+        title: title ?? this.title,
+        lastText: lastText,
+        lastTs: lastTs,
+        lastFrom: lastFrom,
+        unread: unread,
+        isArchived: isArchived,
+        isEncrypted: isEncrypted,
+        lastKind: lastKind,
+        lastFormName: lastFormName,
+        lastIsMine: lastIsMine,
+        lastStatus: lastStatus,
+        lastIsEncrypted: lastIsEncrypted,
+        lastIsDeleted: lastIsDeleted,
+        lastId: lastId,
+        readId: readId,
+        unreadMore: unreadMore,
+        isPinned: isPinned ?? this.isPinned,
+        isMuted: isMuted ?? this.isMuted,
+        deliveredId: deliveredId,
+        peerReadId: peerReadId,
+        peerDeliveredId: peerDeliveredId,
+        avatar: avatar,
+        memberCount: memberCount,
+        members: members,
+        owner: owner,
+        isListHidden: isListHidden,
+        canRename: canRename,
+      );
 
   /// The other person's username for a direct message.
   String? get peer => kind == 'dm' ? convId.substring(3) : null;
@@ -113,7 +132,7 @@ class Conversation {
     return Conversation(
       convId: idText(r['conv_id']),
       kind: idText(r['kind']),
-      title: idText(r['title']),
+      title: _title(r),
       lastText: r['lm_dstate'] == 'ok' && r['lm_plain'] != null
           ? idText(r['lm_plain'])
           : r['lm_text'] != null
@@ -150,7 +169,19 @@ class Conversation {
       memberCount: _count(r['members_json'] as String?),
       members: _names(r['members_json'] as String?),
       owner: idText(r['owner']),
+      isListHidden: intOf(r['is_list_hidden']) == 1,
+      canRename: intOf(r['can_rename']) == 1,
     );
+  }
+
+  /// The title the server gave a shared thread (a record's, possibly renamed;
+  /// a person's name or the organisation's), else the tidied group name, else
+  /// the stored title.
+  static String _title(Map<String, Object?> r) {
+    final given = idText(r['thread_title']);
+    if (given.isNotEmpty) return given;
+    final title = idText(r['title']);
+    return r['kind'] == 'group' ? ChatThread.fallbackTitle(title) : title;
   }
 
   static List<String> _names(String? json) {
@@ -218,7 +249,9 @@ class Conversation {
       other.peerDeliveredId == peerDeliveredId &&
       other.avatar == avatar &&
       other.memberCount == memberCount &&
-      other.owner == owner;
+      other.owner == owner &&
+      other.isListHidden == isListHidden &&
+      other.canRename == canRename;
 
   @override
   int get hashCode => Object.hash(
@@ -247,6 +280,8 @@ class Conversation {
       avatar,
       memberCount,
       owner,
+      isListHidden,
+      canRename,
     ),
   );
 }

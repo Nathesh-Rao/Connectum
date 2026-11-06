@@ -4,21 +4,25 @@ import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
+import 'app_png_icon.dart';
 
 class AppNavItem {
   const AppNavItem({
     required this.label,
-    required this.icon,
+    required this.selectedAsset,
+    required this.unselectedAsset,
     this.showDot = false,
   });
 
   final String label;
-  final IconData icon;
+  final String selectedAsset;
+  final String unselectedAsset;
   final bool showDot;
 }
 
-/// The bottom bar: fixed, background running into the system inset, each item
-/// at least 48 dp, an accent indicator that slides between the items.
+/// The bottom bar: fixed, background running into the system inset, a plain
+/// row of items of at least 48 dp. The active one is told apart by the
+/// accent icon and label only.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -40,7 +44,6 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final slot = 2 / items.length;
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.background,
@@ -55,33 +58,16 @@ class AppBottomNav extends StatelessWidget {
         ),
         child: SizedBox(
           height: AppSpacing.navItemHeight,
-          child: Stack(
+          child: Row(
             children: [
-              Row(
-                children: [
-                  for (var i = 0; i < items.length; i++)
-                    Expanded(
-                      child: _NavButton(
-                        item: items[i],
-                        isActive: i == index,
-                        onTap: () => onSelected(i),
-                      ),
-                    ),
-                ],
-              ),
-              AnimatedAlign(
-                duration: AppDurations.base,
-                curve: AppCurves.out,
-                alignment: Alignment(-1 + slot * (index + 0.5), 1),
-                child: Container(
-                  width: AppSpacing.navIndicatorWidth,
-                  height: AppSpacing.navIndicatorHeight,
-                  decoration: const BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.all(Radius.circular(2)),
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _NavButton(
+                    item: items[i],
+                    isActive: i == index,
+                    onTap: () => onSelected(i),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -113,13 +99,18 @@ class _NavButtonState extends State<_NavButton> {
     setState(() => _isPressed = value);
   }
 
+  static const _swap = Duration(milliseconds: 220);
+
   @override
   Widget build(BuildContext context) {
     final color = widget.isActive ? AppColors.accent : AppColors.muted;
+    final isStill = MediaQuery.disableAnimationsOf(context);
+    final duration = isStill ? Duration.zero : _swap;
+    final item = widget.item;
     return Semantics(
       button: true,
       selected: widget.isActive,
-      label: widget.item.label,
+      label: item.label,
       excludeSemantics: true,
       child: Listener(
         onPointerDown: (_) => _set(true),
@@ -135,33 +126,52 @@ class _NavButtonState extends State<_NavButton> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                const SizedBox(height: AppSpacing.xs - 2),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      widget.item.icon,
-                      size: AppSpacing.navIcon,
-                      color: color,
-                    ),
-                    if (widget.item.showDot)
-                      Positioned(
-                        top: -1,
-                        right: -AppSpacing.xs,
-                        child: Container(
-                          width: AppSpacing.navDot,
-                          height: AppSpacing.navDot,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
+                const SizedBox(height: AppSpacing.xxs),
+                SizedBox(
+                  width: AppSpacing.navIconBox,
+                  height: AppSpacing.navIconBox,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      TweenAnimationBuilder<double>(
+                        key: ValueKey(widget.isActive),
+                        tween: Tween<double>(
+                          begin: widget.isActive && !isStill ? 0.9 : 1,
+                          end: 1,
+                        ),
+                        duration: AppDurations.fast,
+                        curve: AppCurves.out,
+                        builder: (context, scale, child) =>
+                            Transform.scale(scale: scale, child: child),
+                        child: AppPngIcon(
+                          asset: widget.isActive
+                              ? item.selectedAsset
+                              : item.unselectedAsset,
+                          size: AppSpacing.navIcon,
+                          color: color,
                         ),
                       ),
-                  ],
+                      if (item.showDot)
+                        Positioned(
+                          top: 2,
+                          right: 0,
+                          child: Container(
+                            width: AppSpacing.navDot,
+                            height: AppSpacing.navDot,
+                            decoration: const BoxDecoration(
+                              color: AppColors.accent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xxs + 2),
-                Text(
-                  widget.item.label,
+                const SizedBox(height: AppSpacing.xxs),
+                AnimatedDefaultTextStyle(
+                  duration: duration,
+                  curve: AppCurves.out,
                   style: AppText.label.copyWith(
                     color: color,
                     height: 1.2,
@@ -169,6 +179,7 @@ class _NavButtonState extends State<_NavButton> {
                         ? FontWeight.w600
                         : FontWeight.w400,
                   ),
+                  child: Text(item.label),
                 ),
               ],
             ),

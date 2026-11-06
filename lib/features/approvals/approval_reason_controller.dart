@@ -50,4 +50,9 @@ class ApprovalReasonController {
       isSending.value = false;
     }
   }
+
+  void dispose() {
+    reason.dispose();
+    comment.dispose();
+  }
 }

@@ -24,13 +24,11 @@ FeedItem item({
 
 NotificationShow decide(
   FeedItem i, {
-  bool isForeground = false,
   Set<String> muted = const {},
   String? open,
   String? me = 'me',
 }) => LocalNotificationRules.decide(
   i,
-  isForeground: isForeground,
   myUser: me,
   mutedConversations: muted,
   openConversationId: open,
@@ -55,7 +53,7 @@ void main() {
       );
 
       test(
-        'group message is low: system in the background, silent in the foreground',
+        'group message is low: a system notification while the switch is on',
         () {
           final g = item(
             priority: 'low',
@@ -64,7 +62,6 @@ void main() {
             from: 'ana',
           );
           expect(decide(g), NotificationShow.system);
-          expect(decide(g, isForeground: true), NotificationShow.none);
         },
       );
 
@@ -101,17 +98,6 @@ void main() {
         },
       );
 
-      test('the same items in the foreground are an in-app notice', () {
-        expect(
-          decide(item(actionType: 'approvals'), isForeground: true),
-          NotificationShow.inApp,
-        );
-        expect(
-          decide(item(priority: 'high'), isForeground: true),
-          NotificationShow.inApp,
-        );
-      });
-
       test('an API message with severity low stays quiet', () {
         expect(
           decide(item(priority: 'low', category: 'api')),
@@ -141,7 +127,7 @@ void main() {
         NotificationShow.none,
       );
       expect(
-        decide(item(chatId: 'user-ana'), open: 'dm:ana', isForeground: true),
+        decide(item(chatId: 'user-ana'), open: 'dm:ana'),
         NotificationShow.none,
       );
     });

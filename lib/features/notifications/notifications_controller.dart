@@ -10,10 +10,12 @@ import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
+import 'feed_actions.dart';
 import 'models/feed_item.dart';
 import 'models/feed_reducer.dart';
 import 'notification_router.dart';
 import 'notification_texts.dart';
+import 'widgets/notifications_more_menu.dart';
 
 class NotificationsController extends GetxController {
   NotificationsController({
@@ -39,6 +41,8 @@ class NotificationsController extends GetxController {
     NotificationTexts.filterLow,
     NotificationTexts.filterResolved,
   ];
+
+  late final _actions = FeedActions(feed);
 
   final selected = 0.obs;
   final isUnreadOnly = false.obs;
@@ -146,17 +150,28 @@ class NotificationsController extends GetxController {
   }
 
   Future<void> setRead(FeedItem item, {required bool isRead}) =>
-      _run(() => feed.setRead([item.id], isRead: isRead));
+      _actions.setRead(item, isRead: isRead);
 
-  Future<void> resolve(FeedItem item) => _run(() => feed.resolve(item.id));
+  Future<void> resolve(FeedItem item) => _actions.resolve(item);
 
-  Future<void> dismiss(FeedItem item) => _run(() => feed.dismiss(item.id));
+  Future<void> dismiss(FeedItem item) => _actions.dismiss(item);
 
-  Future<void> markAllRead() => _run(feed.markAllRead);
+  /// An item of the more menu: the two switches and the bulk actions.
+  void onMenu(NotificationsMenuItem item) => switch (item) {
+    NotificationsMenuItem.notifyGroups => setNotifyGroups(
+      !notifications.shouldNotifyGroups.value,
+    ),
+    NotificationsMenuItem.unreadOnly => setUnreadOnly(!isUnreadOnly.value),
+    NotificationsMenuItem.markAllRead => unawaited(markAllRead()),
+    NotificationsMenuItem.markAllResolved => unawaited(resolveAll()),
+    NotificationsMenuItem.clearResolved => unawaited(clearResolved()),
+  };
 
-  Future<void> resolveAll() => _run(feed.resolveAll);
+  Future<void> markAllRead() => _actions.run(feed.markAllRead);
 
-  Future<void> clearResolved() => _run(feed.clearResolved);
+  Future<void> resolveAll() => _actions.run(feed.resolveAll);
+
+  Future<void> clearResolved() => _actions.run(feed.clearResolved);
 
   void setNotifyGroups(bool value) =>
       unawaited(notifications.setNotifyGroups(value));
@@ -166,15 +181,6 @@ class NotificationsController extends GetxController {
       await AppSettings.open();
     } else {
       await notifications.request();
-    }
-  }
-
-  Future<void> _run(Future<void> Function() action) async {
-    try {
-      await action();
-    } on SocketCallError catch (e) {
-      _say(e);
-      if (e.code == 'not_found') feed.scheduleRefresh();
     }
   }
 

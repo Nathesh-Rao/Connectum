@@ -5,8 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_filter_chips.dart';
-import '../../../core/widgets/app_filter_tabs.dart';
+import '../../../core/widgets/app_pill_bar.dart';
 import '../../../core/widgets/app_refresh.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_state_view.dart';
@@ -34,15 +33,20 @@ class TicketsPane extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
           child: Obx(
-            () => AppFilterTabs(
-              controller: c.tabController,
-              tabs: [
-                AppFilterTab(
+            () => AppPillBar(
+              pills: [
+                AppPill(
                   label: TicketsTexts.tabWithMe,
                   count: c.withTotal.value,
+                  kind: AppPillKind.accent,
                 ),
-                const AppFilterTab(label: TicketsTexts.tabRaised),
+                const AppPill(
+                  label: TicketsTexts.tabRaised,
+                  kind: AppPillKind.sand,
+                ),
               ],
+              selected: c.selectedTab.value,
+              onSelected: (i) => c.selectedTab.value = i,
             ),
           ),
         ),
@@ -54,10 +58,10 @@ class TicketsPane extends StatelessWidget {
               horizontal: AppSpacing.page,
               vertical: AppSpacing.xs,
             ),
-            child: AppFilterChips(
-              chips: [
-                const AppFilterChip(label: TicketsTexts.filterAll),
-                for (final f in forms) AppFilterChip(label: f.caption),
+            child: AppPillBar(
+              pills: [
+                const AppPill(label: TicketsTexts.filterAll),
+                for (final f in forms) AppPill(label: f.caption),
               ],
               selected: c.selectedIndex,
               onSelected: c.selectFilter,
@@ -65,12 +69,14 @@ class TicketsPane extends StatelessWidget {
           );
         }),
         Expanded(
-          child: TabBarView(
-            controller: c.tabController,
-            children: [
-              for (final as in TicketsController.tabs)
-                _Pane(controller: c, as: as),
-            ],
+          child: Obx(
+            () => IndexedStack(
+              index: c.selectedTab.value,
+              children: [
+                for (final as in TicketsController.tabs)
+                  _Pane(controller: c, as: as),
+              ],
+            ),
           ),
         ),
       ],

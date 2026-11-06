@@ -90,6 +90,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
+    ever(connection, (state) => debugPrint('notifyflow: socket state=$state'));
     ever(_connectivity.hasNetwork, (hasNetwork) {
       if (!_wantConnected) return;
       if (hasNetwork) {
@@ -110,6 +111,11 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint(
+      'notifyflow: socket lifecycle=$state connection=${connection.value} '
+      'wantConnected=$_wantConnected (the socket is not closed or paused on '
+      'lifecycle changes)',
+    );
     if (state == AppLifecycleState.resumed &&
         (_session.current.value?.isExpired ?? false)) {
       _drop(SocketState.expired);

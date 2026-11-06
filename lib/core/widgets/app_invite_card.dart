@@ -60,7 +60,7 @@ class AppInviteCard extends StatelessWidget {
               borderRadius: AppRadius.mdAll,
             ),
             child: isLoading
-                ? const Center(child: AppSpinner())
+                ? const Center(child: AppSpinner(size: AppSpinnerSize.sm))
                 : Icon(icon, size: 18, color: AppColors.accent),
           ),
           const SizedBox(width: AppSpacing.sm),

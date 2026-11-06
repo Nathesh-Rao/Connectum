@@ -42,7 +42,8 @@ class TicketActionSheet extends StatelessWidget {
       context,
       title: action.name,
       child: TicketActionSheet(controller: controller, form: form),
-    ).whenComplete(form.dispose);
+      onDispose: form.dispose,
+    );
   }
 
   @override

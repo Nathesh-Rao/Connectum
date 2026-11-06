@@ -44,6 +44,7 @@ class ApprovalReasonSheet extends StatelessWidget {
           ? ApprovalsTexts.reasonTitleReturn
           : ApprovalsTexts.reasonTitleReject,
       child: ApprovalReasonSheet(form: form),
+      onDispose: form.dispose,
     );
   }
 

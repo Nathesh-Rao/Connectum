@@ -5,11 +5,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/attachment_tag.dart';
+import '../../../core/utils/avatar_palette.dart';
 import '../../../core/utils/forwarded_text.dart';
 import '../../../core/utils/relative_time.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_row_highlight.dart';
 import '../../../core/widgets/app_unread_badge.dart';
+import '../../../data/models/chat_thread.dart';
 import '../../../data/models/conversation.dart';
 import '../../../data/models/message.dart';
 import '../chats_controller.dart';
@@ -41,6 +43,9 @@ class ConversationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = conversation;
     final hasUnread = c.unread > 0;
+    final tone = AvatarPalette.indexOf(c.title) < 0
+        ? AppColors.accent
+        : AvatarPalette.fromName(c.title).foreground;
     return Semantics(
       button: true,
       label:
@@ -107,8 +112,11 @@ class ConversationTile extends StatelessWidget {
                             ),
                             style: AppText.caption.copyWith(
                               color: hasUnread && !c.isMuted
-                                  ? AppColors.accentInk
+                                  ? tone
                                   : AppColors.muted,
+                              fontWeight: hasUnread && !c.isMuted
+                                  ? FontWeight.w600
+                                  : null,
                             ),
                           ),
                         ),
@@ -122,6 +130,7 @@ class ConversationTile extends StatelessWidget {
                           AppUnreadBadge(
                             label: c.unreadLabel,
                             isMuted: c.isMuted,
+                            color: tone,
                           ),
                         ],
                       ],
@@ -149,15 +158,28 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDirect = conversation.kind == 'dm';
-    if (!isDirect) {
-      return AppAvatar(name: conversation.title, isSquare: true);
+    final c = conversation;
+    final groupName = ChatThread.groupName(c.convId);
+    if (c.kind == 'dm') {
+      return Obx(
+        () => AppAvatar(
+          name: c.title,
+          kind: AppAvatarKind.person,
+          presence: controller.presenceFor(c),
+        ),
+      );
     }
-    return Obx(
-      () => AppAvatar(
-        name: conversation.title,
-        presence: controller.presenceFor(conversation),
-      ),
+    final isRecord = groupName != null && ChatThread.isRecordName(groupName);
+    final isCare = groupName != null && ChatThread.careUser(groupName) != null;
+    // A care thread is a person's: their name when the title has one.
+    final hasPersonName = isCare && c.title.isNotEmpty && c.title != groupName;
+    return AppAvatar(
+      name: c.title,
+      kind: hasPersonName
+          ? AppAvatarKind.person
+          : isRecord
+          ? AppAvatarKind.ticket
+          : AppAvatarKind.group,
     );
   }
 }

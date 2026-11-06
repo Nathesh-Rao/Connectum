@@ -114,6 +114,7 @@ class _PackedScroll extends StatelessWidget {
         final vertical = padding.resolve(Directionality.of(context)).vertical;
         return SingleChildScrollView(
           padding: padding,
+          physics: const BouncingScrollPhysics(),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: ConstrainedBox(
             constraints: BoxConstraints(

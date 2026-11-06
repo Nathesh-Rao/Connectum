@@ -8,16 +8,26 @@ class ConnectPerson {
     required this.username,
     this.designation = '',
     this.department = '',
+    this.branch = '',
   });
 
   final String name;
   final String username;
   final String designation;
   final String department;
+  final String branch;
 
   /// "Designation, Department" when either is present.
   String get role =>
       [designation, department].where((s) => s.isNotEmpty).join(', ');
+
+  /// "@username - designation - department - branch", empty parts skipped.
+  String get summary => [
+    if (username.isNotEmpty) '@$username',
+    designation,
+    department,
+    branch,
+  ].where((s) => s.isNotEmpty).join(' - ');
 
   factory ConnectPerson.fromJson(Map<String, dynamic> user) => ConnectPerson(
     name: idText(user['name']).isEmpty
@@ -26,6 +36,7 @@ class ConnectPerson {
     username: idText(user['username']),
     designation: idText(user['designation']),
     department: idText(user['department']),
+    branch: idText(user['branch']),
   );
 }
 
@@ -35,16 +46,21 @@ class ConnectLookup {
   const ConnectLookup.person(
     ConnectPerson this.person, {
     this.isConnected = false,
+    this.isBranchUnavailable = false,
   }) : card = null;
   const ConnectLookup.organisation(ConnectCard this.card)
     : person = null,
-      isConnected = false;
+      isConnected = false,
+      isBranchUnavailable = false;
 
   final ConnectPerson? person;
   final ConnectCard? card;
 
   /// Already associates (`connected` on a lookup, `alreadyConnected` on a scan).
   final bool isConnected;
+
+  /// The link's branch is no longer active (the answer carries no branch).
+  final bool isBranchUnavailable;
 
   factory ConnectLookup.fromJson(Map<String, dynamic> data) {
     if (data['type'] == 'person') {
@@ -53,6 +69,9 @@ class ConnectLookup {
         ConnectPerson.fromJson(user),
         isConnected:
             data['connected'] == true || data['alreadyConnected'] == true,
+        isBranchUnavailable:
+            data['branchUnavailable'] == true ||
+            user['branchUnavailable'] == true,
       );
     }
     return ConnectLookup.organisation(ConnectCard.fromJson(data));

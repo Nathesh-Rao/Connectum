@@ -5,14 +5,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_filter_chips.dart';
+import '../../core/widgets/app_pill_bar.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_refresh.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_spinner.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_tab_bar.dart';
 import 'approvals_controller.dart';
 import 'approvals_texts.dart';
 import 'widgets/approval_detail_sheet.dart';
@@ -20,6 +19,14 @@ import 'widgets/approval_tile.dart';
 
 class ApprovalsView extends GetView<ApprovalsController> {
   const ApprovalsView({super.key});
+
+  /// One per filter, in the order of [ApprovalsController.filterLabels].
+  static const _filterKinds = [
+    AppPillKind.sand,
+    AppPillKind.success,
+    AppPillKind.accent,
+    AppPillKind.calm,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -60,18 +67,37 @@ class ApprovalsView extends GetView<ApprovalsController> {
               horizontal: AppSpacing.page,
               vertical: AppSpacing.xs,
             ),
-            child: AppTabBar(
-              controller: c.tabController,
-              labels: const [ApprovalsTexts.tabReview, ApprovalsTexts.tabSent],
+            child: Obx(
+              () => AppPillBar(
+                pills: const [
+                  AppPill(
+                    label: ApprovalsTexts.tabReview,
+                    kind: AppPillKind.accent,
+                  ),
+                  AppPill(
+                    label: ApprovalsTexts.tabSent,
+                    kind: AppPillKind.sand,
+                  ),
+                ],
+                selected: c.selectedTab.value,
+                onSelected: (i) => c.selectedTab.value = i,
+              ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
             child: Obx(
-              () => AppFilterChips(
-                chips: [
-                  for (final label in ApprovalsController.filterLabels)
-                    AppFilterChip(label: label),
+              () => AppPillBar(
+                pills: [
+                  for (
+                    var i = 0;
+                    i < ApprovalsController.filterLabels.length;
+                    i++
+                  )
+                    AppPill(
+                      label: ApprovalsController.filterLabels[i],
+                      kind: _filterKinds[i],
+                    ),
                 ],
                 selected: c.selectedFilter.value,
                 onSelected: c.selectFilter,
@@ -79,12 +105,14 @@ class ApprovalsView extends GetView<ApprovalsController> {
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: c.tabController,
-              children: [
-                _Pane(controller: c, index: 0),
-                _Pane(controller: c, index: 1),
-              ],
+            child: Obx(
+              () => IndexedStack(
+                index: c.selectedTab.value,
+                children: [
+                  _Pane(controller: c, index: 0),
+                  _Pane(controller: c, index: 1),
+                ],
+              ),
             ),
           ),
         ],
@@ -159,7 +187,7 @@ class _Pane extends StatelessWidget {
                 () => c.isLoadingMore.value
                     ? const Padding(
                         padding: EdgeInsets.all(AppSpacing.md),
-                        child: Center(child: AppSpinner.medium()),
+                        child: Center(child: AppSpinner()),
                       )
                     : const SizedBox(height: AppSpacing.xl),
               ),

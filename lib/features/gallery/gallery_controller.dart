@@ -6,6 +6,9 @@ class GalleryController extends GetxController {
   final multiline = TextEditingController();
   final withError = TextEditingController(text: 'not-an-email');
 
+  Future<void> sampleRefresh() =>
+      Future<void>.delayed(const Duration(seconds: 2));
+
   @override
   void onClose() {
     singleLine.dispose();

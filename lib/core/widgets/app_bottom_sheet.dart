@@ -18,6 +18,8 @@ class AppBottomSheet {
     required Widget child,
     Widget? titleWidget,
     bool hasClose = true,
+    bool hasHeader = true,
+    VoidCallback? onDispose,
   }) {
     return showModalBottomSheet<T>(
       context: context,
@@ -37,12 +39,16 @@ class AppBottomSheet {
         curve: AppCurves.sheet,
         reverseCurve: AppCurves.out,
       ),
-      builder: (context) => RepaintBoundary(
-        child: _SheetBody(
-          title: title,
-          titleWidget: titleWidget,
-          hasClose: hasClose,
-          child: child,
+      builder: (context) => _SheetLifetime(
+        onDispose: onDispose,
+        child: RepaintBoundary(
+          child: _SheetBody(
+            title: title,
+            titleWidget: titleWidget,
+            hasClose: hasClose,
+            hasHeader: hasHeader,
+            child: child,
+          ),
         ),
       ),
     );
@@ -85,6 +91,31 @@ class AppBottomSheet {
       ),
     );
   }
+}
+
+/// Runs [onDispose] when the sheet's widgets are removed, after the closing
+/// animation. The route's future completes when the sheet starts to close,
+/// while the fields inside still rebuild, so a controller they use must be
+/// disposed here, not in `whenComplete`.
+class _SheetLifetime extends StatefulWidget {
+  const _SheetLifetime({required this.child, this.onDispose});
+
+  final VoidCallback? onDispose;
+  final Widget child;
+
+  @override
+  State<_SheetLifetime> createState() => _SheetLifetimeState();
+}
+
+class _SheetLifetimeState extends State<_SheetLifetime> {
+  @override
+  void dispose() {
+    widget.onDispose?.call();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _FixedSheetBody extends StatelessWidget {
@@ -139,11 +170,15 @@ class _SheetBody extends StatelessWidget {
     required this.child,
     this.titleWidget,
     this.hasClose = true,
+    this.hasHeader = true,
   });
 
   final String title;
   final Widget? titleWidget;
   final bool hasClose;
+
+  /// False: the handle, then the child; the child brings its own title.
+  final bool hasHeader;
   final Widget child;
 
   @override
@@ -167,6 +202,7 @@ class _SheetBody extends StatelessWidget {
             bottom: MediaQuery.viewInsetsOf(context).bottom,
           ),
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
               AppSpacing.sheetPaddingX,
               AppSpacing.sheetPaddingTop,
@@ -189,20 +225,22 @@ class _SheetBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: [
-                    Expanded(
-                      child: titleWidget ?? Text(title, style: AppText.title),
-                    ),
-                    if (hasClose)
-                      AppButton.icon(
-                        icon: Icons.close,
-                        semanticLabel: 'Close',
-                        onPressed: () => Navigator.of(context).pop(),
+                if (hasHeader) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: titleWidget ?? Text(title, style: AppText.title),
                       ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
+                      if (hasClose)
+                        AppButton.icon(
+                          icon: Icons.close,
+                          semanticLabel: 'Close',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
                 child,
               ],
             ),

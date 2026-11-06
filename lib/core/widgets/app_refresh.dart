@@ -1,10 +1,11 @@
 import 'package:flutter/cupertino.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_spinner.dart';
 
-/// Pull to refresh for a list of slivers. The orange Cupertino spinner follows
-/// the drag, and bouncing physics make it pull on Android and on short lists.
+/// Pull to refresh for a list of slivers, the Cupertino way on both platforms:
+/// the content bounces, the header grows with the pull and stays pinned while
+/// [onRefresh] runs. The Lottie ring loops in the header.
 class AppRefresh extends StatelessWidget {
   const AppRefresh({super.key, required this.onRefresh, required this.slivers});
 
@@ -19,24 +20,22 @@ class AppRefresh extends StatelessWidget {
     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
     slivers: [
       CupertinoSliverRefreshControl(
+        refreshTriggerPullDistance: AppSpacing.refreshTrigger,
+        refreshIndicatorExtent: AppSpacing.refreshExtent,
         onRefresh: onRefresh,
-        builder: (context, mode, pulled, trigger, extent) {
-          final progress = (pulled / trigger).clamp(0.0, 1.0);
-          return Center(
-            child: mode == RefreshIndicatorMode.drag
-                ? CupertinoActivityIndicator.partiallyRevealed(
-                    radius: AppSpacing.spinnerMedium,
-                    color: AppColors.accent,
-                    progress: progress,
-                  )
-                : const CupertinoActivityIndicator(
-                    radius: AppSpacing.spinnerMedium,
-                    color: AppColors.accent,
-                  ),
-          );
-        },
+        builder: _buildHeader,
       ),
       ...slivers,
     ],
+  );
+
+  static Widget _buildHeader(
+    BuildContext context,
+    RefreshIndicatorMode mode,
+    double pulledExtent,
+    double refreshTriggerPullDistance,
+    double refreshIndicatorExtent,
+  ) => const Center(
+    child: AppSpinner(size: AppSpinnerSize.lg, isStandalone: true),
   );
 }

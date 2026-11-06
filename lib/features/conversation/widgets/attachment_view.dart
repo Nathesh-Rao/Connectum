@@ -65,7 +65,12 @@ class _Picture extends StatelessWidget {
             child: ColoredBox(
               color: AppColors.sage,
               child: isLoading
-                  ? const Center(child: AppSpinner())
+                  ? const Center(
+                      child: AppSpinner(
+                        size: AppSpinnerSize.lg,
+                        isStandalone: true,
+                      ),
+                    )
                   : provider == null
                   ? error
                   : Image(
@@ -170,7 +175,10 @@ class AttachmentViewer extends StatelessWidget {
                 loadingBuilder: (context, child, progress) => progress == null
                     ? child
                     : const Center(
-                        child: AppSpinner(color: AppColors.background),
+                        child: AppSpinner(
+                          size: AppSpinnerSize.lg,
+                          isStandalone: true,
+                        ),
                       ),
                 errorBuilder: (context, _, _) => const Center(
                   child: Icon(

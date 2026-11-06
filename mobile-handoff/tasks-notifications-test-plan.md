@@ -87,7 +87,7 @@ Preconditions: Me signed in, `Org A`. The notifications explainer ("Stay in the 
 | L-02 | Granted | Same, tap **Allow notifications**. | – | Android 13+ system dialog; tap Allow; the row disappears; settings show the app allowed. | ☐ |
 | L-03 | Denied once | Fresh data, Allow -> in the dialog **Don't allow**. | – | No notifications; the row shows **Open settings** (once asked); nothing asks again. | ☐ |
 | L-04 | Permanently denied | Deny twice (Android blocks further prompts). Then tap the row. | – | "Open settings" opens the system page for the app. Enable it; return to the app: the row disappears (state re-read on resume). | ☐ |
-| L-05 | Foreground | Allowed. App on Chats. | Ana sends a DM. | Only the in-app notice card; **no** system notification in the tray. | ☐ |
+| L-05 | Foreground | Allowed. App on Chats. | Ana sends a DM. | A system notification (heads-up); **no** in-app notice card. | ☐ |
 | L-06 | Background, socket alive | Press Home (app in background, <1 min). | Ana sends a DM "bg 1". | A system notification "Ana / bg 1" in the tray (channel Messages). | ☐ |
 | L-07 | Tap, warm start | Tap the notification from L-06. | – | App opens the Ana DM; the item is read; the notification leaves the tray; badge down. | ☐ |
 | L-08 | Collapse | Background. | Ana sends 4 DMs in a row. | One notification for Ana (replaced, number 4 on Android), not four. Different senders: one each; at 3 or more a group summary "Messages: n new". | ☐ |

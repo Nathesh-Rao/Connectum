@@ -21,11 +21,13 @@ import '../../data/socket/socket_service.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
 import 'enterprise_switcher_controller.dart';
+import 'models/chat_filter.dart';
 import 'models/message_hit.dart';
+import 'models/new_chat_button_state.dart';
 import 'new_chat_controller.dart';
+import 'record_rename_controller.dart';
 
-class ChatsController extends GetxController
-    with GetSingleTickerProviderStateMixin {
+class ChatsController extends GetxController {
   ChatsController({
     required this.conversations,
     required this.messages,
@@ -52,20 +54,22 @@ class ChatsController extends GetxController
   final EnterpriseSwitcherController switcher;
   final NewChatController newChat;
 
-  late final TabController filterTabs = TabController(length: 2, vsync: this);
   final searchField = TextEditingController();
   final searchFocus = FocusNode();
 
   final viewState = AppViewState.loading.obs;
   final visibleIds = <String>[].obs;
   final unreadChats = 0.obs;
-  final isDirectTab = false.obs;
+  final filter = ChatFilterKind.all.obs;
+  final hasThreads = false.obs;
+  final threadUnread = 0.obs;
   final query = ''.obs;
   final searchConversations = <Conversation>[].obs;
   final searchMessages = <MessageHit>[].obs;
   final hasSearched = false.obs;
   final minute = DateTime.now().obs;
   final isRefreshing = false.obs;
+  final newChatButton = NewChatButtonState();
 
   final _rows = <String, Rx<Conversation>>{};
   final _all = <String, Conversation>{};
@@ -79,7 +83,11 @@ class ChatsController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    filterTabs.addListener(_apply);
+    ever(filter, (_) {
+      showNewChat();
+      _apply();
+    });
+    ever(viewState, (_) => showNewChat());
     ever(conversations.conversations, (_) => _apply());
     ever(conversations.isLoaded, (_) => _apply());
     ever(conversations.loadError, (_) => _apply());
@@ -114,13 +122,16 @@ class ChatsController extends GetxController
     return conversations.conversations.toList();
   }
 
-  /// What the All list may hold: not archived, and the global room only once
-  /// it has had a message.
-  bool _isShown(Conversation c) =>
-      !c.isArchived && (c.kind != 'global' || c.lastTs > 0);
+  /// Called by the chips. The Threads chip is not offered without threads.
+  void select(ChatFilterKind next) {
+    filter.value = next == ChatFilterKind.threads && !hasThreads.value
+        ? ChatFilterKind.all
+        : next;
+    if (isSearching) _runSearch();
+  }
 
   void _apply() {
-    final source = _source.where(_isShown).toList()
+    final source = _source.where(ChatFilter.isListed).toList()
       ..sort((a, b) {
         if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
         return b.lastTs.compareTo(a.lastTs);
@@ -129,13 +140,15 @@ class ChatsController extends GetxController
       ..clear()
       ..addEntries(source.map((c) => MapEntry(c.convId, c)));
     // A muted conversation keeps its own count but is left out of the tab
-    // dot and the All badge.
+    // dot.
     unreadChats.value = source.where((c) => c.unread > 0 && !c.isMuted).length;
-    final onlyDirect = filterTabs.index == 1;
-    isDirectTab.value = onlyDirect;
-    final shown = onlyDirect
-        ? source.where((c) => c.kind != 'global' && c.kind != 'host').toList()
-        : source;
+    final every = _source;
+    hasThreads.value = ChatFilter.hasThreads(every);
+    threadUnread.value = ChatFilter.threadUnread(every);
+    if (filter.value == ChatFilterKind.threads && !hasThreads.value) {
+      filter.value = ChatFilterKind.all;
+    }
+    final shown = ChatFilter.apply(source, filter.value);
     final ids = <String>[];
     for (final c in shown) {
       ids.add(c.convId);
@@ -148,7 +161,10 @@ class ChatsController extends GetxController
     }
     _rows.removeWhere((id, _) => !_all.containsKey(id));
     if (!_sameIds(ids)) visibleIds.assignAll(ids);
-    viewState.value = _stateFor(source.isEmpty);
+    final state = _stateFor(source.isEmpty);
+    viewState.value = state == AppViewState.content && shown.isEmpty
+        ? AppViewState.empty
+        : state;
   }
 
   bool _sameIds(List<String> next) {
@@ -242,6 +258,12 @@ class ChatsController extends GetxController
     }
   }
 
+  /// The rename of one record conversation, for the rename sheet.
+  RecordRenameController renameFor(Conversation c) => RecordRenameController(
+    onRename: (name) => conversations.renameRecord(c, name),
+    isOffline: () => isOffline,
+  );
+
   void open(String convId) {
     ConversationRoute.open(convId);
   }
@@ -265,6 +287,10 @@ class ChatsController extends GetxController
     };
   }
 
+  // ---- new chat button -----------------------------------------------------------
+
+  void showNewChat() => newChatButton.show();
+
   // ---- refresh -----------------------------------------------------------------
 
   Future<void> refreshList() async {
@@ -278,6 +304,7 @@ class ChatsController extends GetxController
       ]);
     } finally {
       isRefreshing.value = false;
+      showNewChat();
     }
   }
 
@@ -307,6 +334,7 @@ class ChatsController extends GetxController
   void clearSearch() {
     searchField.clear();
     onQueryChanged('');
+    showNewChat();
   }
 
   /// Local only, so it works offline: conversation titles and last texts, and
@@ -320,8 +348,8 @@ class ChatsController extends GetxController
       searchConversations.assignAll(
         _all.values.where(
           (c) =>
-              c.title.toLowerCase().contains(lower) ||
-              c.lastText.toLowerCase().contains(lower),
+              ChatFilter.matches(filter.value, c) &&
+              ChatFilter.matchesQuery(lower, c),
         ),
       );
       searchMessages.clear();
@@ -349,7 +377,8 @@ class ChatsController extends GetxController
     if (seq != _searchSeq) return;
     searchConversations.assignAll([
       for (final r in convRows)
-        if (_all[idText(r['conv_id'])] != null) _all[idText(r['conv_id'])]!,
+        if (_all[idText(r['conv_id'])] case final c?)
+          if (ChatFilter.matches(filter.value, c)) c,
     ]);
     searchMessages.assignAll([
       for (final r in messageRows)
@@ -379,7 +408,6 @@ class ChatsController extends GetxController
     _searchTimer?.cancel();
     searchField.dispose();
     searchFocus.dispose();
-    filterTabs.dispose();
     super.onClose();
   }
 }

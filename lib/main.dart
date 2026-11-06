@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -8,6 +10,7 @@ import 'core/routes/app_pages.dart';
 import 'core/routes/conversation_route.dart';
 import 'core/routes/home_reload.dart';
 import 'core/routes/initial_binding.dart';
+import 'core/theme/app_scroll_behavior.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_config_error.dart';
 import 'core/widgets/app_connectivity_scope.dart';
@@ -37,6 +40,7 @@ class ConnectumApp extends StatelessWidget {
       title: 'Connectum',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      scrollBehavior: const AppScrollBehavior(),
       initialBinding: InitialBinding(connectivity),
       initialRoute: AppPages.initial,
       getPages: AppPages.pages,

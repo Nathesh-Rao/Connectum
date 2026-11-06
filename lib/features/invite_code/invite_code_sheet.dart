@@ -15,6 +15,7 @@ class InviteCodeSheet {
       context,
       title: 'Have an invite code or link?',
       child: const InviteCodeView(),
-    ).whenComplete(Get.delete<InviteCodeController>);
+      onDispose: Get.delete<InviteCodeController>,
+    );
   }
 }

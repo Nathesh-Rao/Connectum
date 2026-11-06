@@ -9,8 +9,12 @@ class ConnectCard {
     required this.location,
     required this.categories,
     this.branch,
+    this.isBranchUnavailable = false,
     this.isFromPersonLink = false,
   });
+
+  static const branchUnavailableText =
+      'That branch is no longer active. You will join the organisation without a branch label.';
 
   final String code;
   final String display;
@@ -18,6 +22,9 @@ class ConnectCard {
   final String location;
   final List<String> categories;
   final String? branch;
+
+  /// The server dropped the branch from the link (no longer active).
+  final bool isBranchUnavailable;
   final bool isFromPersonLink;
 
   factory ConnectCard.fromJson(Map<String, dynamic> data) {
@@ -29,7 +36,9 @@ class ConnectCard {
       idText(place['city']),
       idText(place['country']),
     ].where((s) => s.isNotEmpty).join(', ');
-    final branch = idText(e['branch']);
+    final isUnavailable =
+        data['branchUnavailable'] == true || e['branchUnavailable'] == true;
+    final branch = isUnavailable ? '' : idText(e['branch']);
     final code = idText(e['code']).replaceAll('-', '').toUpperCase();
     return ConnectCard(
       code: code,
@@ -38,6 +47,7 @@ class ConnectCard {
       location: cityCountry.isEmpty ? idText(place['address']) : cityCountry,
       categories: ((e['categories'] as List?) ?? []).map(idText).toList(),
       branch: branch.isEmpty ? null : branch,
+      isBranchUnavailable: isUnavailable,
       isFromPersonLink: data['fromPersonLink'] == true,
     );
   }

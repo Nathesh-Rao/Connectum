@@ -5,14 +5,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_filter_chips.dart';
+import '../../core/widgets/app_pill_bar.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_refresh.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_spinner.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_tab_bar.dart';
 import '../tickets/tickets_texts.dart';
 import '../tickets/widgets/tickets_pane.dart';
 import 'tasks_controller.dart';
@@ -54,9 +53,8 @@ class TasksView extends GetView<TasksController> {
                 const Expanded(
                   child: Text(TasksTexts.screenTitle, style: AppText.title),
                 ),
-                AnimatedBuilder(
-                  animation: c.sectionController,
-                  builder: (context, _) => c.sectionController.index == 0
+                Obx(
+                  () => c.selectedSection.value == 0
                       ? AppButton.icon(
                           icon: Icons.add,
                           semanticLabel: TasksTexts.newTask,
@@ -73,22 +71,32 @@ class TasksView extends GetView<TasksController> {
               horizontal: AppSpacing.page,
               vertical: AppSpacing.xs,
             ),
-            child: AppTabBar(
-              controller: c.sectionController,
-              labels: const [
-                TicketsTexts.sectionTodos,
-                TicketsTexts.sectionTickets,
-              ],
+            child: Obx(
+              () => AppPillBar(
+                pills: const [
+                  AppPill(
+                    label: TicketsTexts.sectionTodos,
+                    kind: AppPillKind.accent,
+                  ),
+                  AppPill(
+                    label: TicketsTexts.sectionTickets,
+                    kind: AppPillKind.sand,
+                  ),
+                ],
+                selected: c.selectedSection.value,
+                onSelected: (i) => c.selectedSection.value = i,
+              ),
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: c.sectionController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _Todos(controller: c),
-                TicketsPane(controller: c.tickets),
-              ],
+            child: Obx(
+              () => IndexedStack(
+                index: c.selectedSection.value,
+                children: [
+                  _Todos(controller: c),
+                  TicketsPane(controller: c.tickets),
+                ],
+              ),
             ),
           ),
         ],
@@ -99,6 +107,14 @@ class TasksView extends GetView<TasksController> {
 
 class _Todos extends StatelessWidget {
   const _Todos({required this.controller});
+
+  /// One per filter, in the order of [TasksController.filterLabels].
+  static const _filterKinds = [
+    AppPillKind.accent,
+    AppPillKind.success,
+    AppPillKind.calm,
+    AppPillKind.neutral,
+  ];
 
   final TasksController controller;
 
@@ -112,18 +128,30 @@ class _Todos extends StatelessWidget {
             horizontal: AppSpacing.page,
             vertical: AppSpacing.xs,
           ),
-          child: AppTabBar(
-            controller: c.tabController,
-            labels: const [TasksTexts.tabAssigned, TasksTexts.tabCreated],
+          child: Obx(
+            () => AppPillBar(
+              pills: const [
+                AppPill(
+                  label: TasksTexts.tabAssigned,
+                  kind: AppPillKind.accent,
+                ),
+                AppPill(label: TasksTexts.tabCreated, kind: AppPillKind.sand),
+              ],
+              selected: c.selectedTab.value,
+              onSelected: (i) => c.selectedTab.value = i,
+            ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
           child: Obx(
-            () => AppFilterChips(
-              chips: [
-                for (final label in TasksController.filterLabels)
-                  AppFilterChip(label: label),
+            () => AppPillBar(
+              pills: [
+                for (var i = 0; i < TasksController.filterLabels.length; i++)
+                  AppPill(
+                    label: TasksController.filterLabels[i],
+                    kind: _filterKinds[i],
+                  ),
               ],
               selected: c.selectedFilter.value,
               onSelected: c.selectFilter,
@@ -131,12 +159,14 @@ class _Todos extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: TabBarView(
-            controller: c.tabController,
-            children: [
-              for (final as in TasksController.tabs)
-                _Pane(controller: c, as: as),
-            ],
+          child: Obx(
+            () => IndexedStack(
+              index: c.selectedTab.value,
+              children: [
+                for (final as in TasksController.tabs)
+                  _Pane(controller: c, as: as),
+              ],
+            ),
           ),
         ),
       ],
@@ -213,7 +243,7 @@ class _Pane extends StatelessWidget {
                 () => list.isLoadingMore.value
                     ? const Padding(
                         padding: EdgeInsets.all(AppSpacing.md),
-                        child: Center(child: AppSpinner.medium()),
+                        child: Center(child: AppSpinner()),
                       )
                     : const SizedBox(height: AppSpacing.xl),
               ),

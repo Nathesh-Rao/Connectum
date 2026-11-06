@@ -36,6 +36,7 @@ class AppFilterChips extends StatelessWidget {
         height: AppSpacing.filterTabHeight,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -10,6 +10,8 @@ import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_assets/debug_assets_binding.dart';
 import '../../features/debug_chat/debug_chat_binding.dart';
+import '../../features/debug_commands/debug_commands_binding.dart';
+import '../../features/debug_commands/debug_commands_view.dart';
 import '../../features/debug_notifications/debug_notifications_binding.dart';
 import '../../features/debug_notifications/debug_notifications_view.dart';
 import '../../features/debug_chat/debug_chat_view.dart';
@@ -216,6 +218,12 @@ class AppPages {
         AppRoutes.debugNotifications,
         () => const DebugNotificationsView(),
         DebugNotificationsBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugCommands,
+        () => const DebugCommandsView(),
+        DebugCommandsBinding(),
         AppTransitionKind.push,
       ),
       _page(

@@ -8,13 +8,21 @@ import '../theme/app_text.dart';
 /// The accent count on a row (grey when muted). It pops when the number
 /// changes. 99+ is the cap.
 class AppUnreadBadge extends StatelessWidget {
-  const AppUnreadBadge({super.key, required this.label, this.isMuted = false});
+  const AppUnreadBadge({
+    super.key,
+    required this.label,
+    this.isMuted = false,
+    this.color = AppColors.accent,
+  });
 
   /// The text to show: a number, or "99+" past the cap.
   final String label;
 
   /// A muted conversation keeps a count, in a quieter grey.
   final bool isMuted;
+
+  /// The fill when not muted.
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +45,7 @@ class AppUnreadBadge extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 5),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isMuted ? AppColors.noDot : AppColors.accent,
+            color: isMuted ? AppColors.noDot : color,
             borderRadius: BorderRadius.circular(AppSpacing.unreadBadge),
           ),
           child: Text(

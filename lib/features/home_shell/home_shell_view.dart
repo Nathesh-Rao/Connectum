@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_state_view.dart';
@@ -78,20 +79,25 @@ class HomeShellView extends GetView<HomeShellController> {
                     items: [
                       AppNavItem(
                         label: 'Chats',
-                        icon: Icons.chat_bubble_outline,
+                        selectedAsset: AppIcons.bottomNav.chatSelected,
+                        unselectedAsset: AppIcons.bottomNav.chatUnselected,
                         showDot: c.hasUnread.value,
                       ),
-                      const AppNavItem(
-                        label: 'AI Agents',
-                        icon: Icons.auto_awesome_outlined,
+                      AppNavItem(
+                        label: 'Agents',
+                        selectedAsset: AppIcons.bottomNav.aiSelected,
+                        unselectedAsset: AppIcons.bottomNav.aiUnselected,
                       ),
-                      const AppNavItem(
-                        label: 'Submissions',
-                        icon: Icons.description_outlined,
+                      AppNavItem(
+                        label: 'Submits',
+                        selectedAsset: AppIcons.bottomNav.submissionsSelected,
+                        unselectedAsset:
+                            AppIcons.bottomNav.submissionsUnselected,
                       ),
-                      const AppNavItem(
+                      AppNavItem(
                         label: 'Profile',
-                        icon: Icons.person_outline,
+                        selectedAsset: AppIcons.bottomNav.profileSelected,
+                        unselectedAsset: AppIcons.bottomNav.profileUnselected,
                       ),
                     ],
                   ),

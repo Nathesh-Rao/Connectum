@@ -223,6 +223,24 @@ class AppText {
     color: AppColors.ink,
   );
 
+  /// The count inside the notification bell's accent circle.
+  static const bellCount = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    color: AppColors.background,
+  );
+
+  /// Label of the compact pill (Chats filters).
+  static const pillCompact = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: heightBody,
+    color: AppColors.ink,
+  );
+
   static const rowCaption = TextStyle(
     fontFamily: fontFamily,
     fontSize: sizeCaption,

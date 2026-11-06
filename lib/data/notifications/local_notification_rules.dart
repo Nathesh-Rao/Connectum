@@ -1,51 +1,72 @@
 import '../../features/notifications/models/feed_item.dart';
 
 /// What to do with a live `feed_item`.
-enum NotificationShow { none, system, inApp }
+enum NotificationShow { none, system }
 
-/// The rules for when a feed item becomes a notification. Pure.
+/// The decision and the reason behind it, for the log.
+typedef NotificationDecision = ({NotificationShow show, String reason});
+
+/// The rules for when a feed item becomes a notification. Pure. Foreground
+/// and background are the same: the system notification is the only trigger.
 class LocalNotificationRules {
   LocalNotificationRules._();
 
   /// The words of a local notification are clipped to this.
   static const bodyMax = 100;
 
-  /// [isForeground] the app is on screen; [mutedConversations] and
-  /// [openConversationId] are conversation ids (`dm:x`, `group:y`).
-  /// A background item becomes a system notification; a foreground one an
-  /// in-app notice for high and medium items only. A low group message
-  /// (see [isGroupMessage]) also notifies in the background when
-  /// [shouldNotifyGroups] is on.
+  /// [mutedConversations] and [openConversationId] are conversation ids
+  /// (`dm:x`, `group:y`). A low item notifies only when it is a group message
+  /// (see [isGroupMessage]) and [shouldNotifyGroups] is on.
   static NotificationShow decide(
     FeedItem item, {
-    required bool isForeground,
+    required String? myUser,
+    required Set<String> mutedConversations,
+    required String? openConversationId,
+    bool shouldNotifyGroups = true,
+  }) => explain(
+    item,
+    myUser: myUser,
+    mutedConversations: mutedConversations,
+    openConversationId: openConversationId,
+    shouldNotifyGroups: shouldNotifyGroups,
+  ).show;
+
+  /// [decide] with the reason, e.g. `skipped: muted`.
+  static NotificationDecision explain(
+    FeedItem item, {
     required String? myUser,
     required Set<String> mutedConversations,
     required String? openConversationId,
     bool shouldNotifyGroups = true,
   }) {
-    if (item.isRead || item.isResolved) return NotificationShow.none;
+    const none = NotificationShow.none;
+    if (item.isRead || item.isResolved) {
+      return (show: none, reason: 'skipped: read or resolved');
+    }
     final from = item.from;
     if (from != null &&
         myUser != null &&
         from.toLowerCase() == myUser.toLowerCase()) {
-      return NotificationShow.none;
+      return (show: none, reason: 'skipped: own action');
     }
     final conversation = item.conversationId;
     if (conversation != null) {
       if (mutedConversations.contains(conversation)) {
-        return NotificationShow.none;
+        return (show: none, reason: 'skipped: muted');
       }
-      if (conversation == openConversationId) return NotificationShow.none;
+      if (conversation == openConversationId) {
+        return (show: none, reason: 'skipped: open conversation');
+      }
     }
-    final isLow = item.priority == 'low';
-    if (isForeground) {
-      return isLow ? NotificationShow.none : NotificationShow.inApp;
+    if (item.priority == 'low') {
+      if (!isGroupMessage(item)) {
+        return (show: none, reason: 'skipped: low severity');
+      }
+      if (!shouldNotifyGroups) {
+        return (show: none, reason: 'skipped: group switch off');
+      }
     }
-    if (isLow && !(shouldNotifyGroups && isGroupMessage(item))) {
-      return NotificationShow.none;
-    }
-    return NotificationShow.system;
+    return (show: NotificationShow.system, reason: 'shown');
   }
 
   /// A message in a group: `open_chat` with a `room-` chat id.

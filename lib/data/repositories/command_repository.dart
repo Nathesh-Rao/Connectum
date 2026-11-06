@@ -5,13 +5,16 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
 import '../../core/debug/seed_ui.dart';
+import '../commands/command_handlers.dart';
+import '../commands/command_line.dart';
+import '../commands/command_menu.dart';
+import '../commands/command_reply.dart';
 import '../models/hash_command.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/connectivity_service.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
-import 'encryption_policy.dart';
 import 'message_repository.dart';
 
 enum HashKind {
@@ -23,6 +26,25 @@ enum HashKind {
   directQueued,
   info,
   done,
+  usage,
+  draft,
+  screen,
+  rows,
+  confirm,
+  soon,
+  success,
+  notice,
+}
+
+/// One line of a list a command opened (people, groups, associates).
+class CommandRow {
+  const CommandRow(this.title, {this.subtitle = '', this.convId = ''});
+
+  final String title;
+  final String subtitle;
+
+  /// The conversation a tap opens; empty when there is none.
+  final String convId;
 }
 
 /// What a `#` line or an `@user` line did, for the screen to show.
@@ -33,6 +55,9 @@ class HashResult {
     this.user = '',
     this.convId = '',
     this.cid = '',
+    this.suggestions = const [],
+    this.rows = const [],
+    this.target = '',
   ]);
 
   final HashKind kind;
@@ -41,52 +66,82 @@ class HashResult {
   final String convId;
   final String cid;
 
+  /// Command names the server suggests for an unknown one.
+  final List<String> suggestions;
+  final List<CommandRow> rows;
+
+  /// `screen`: what to open. `confirm`: the group.
+  final String target;
+
   /// Nothing more to fix: the screen clears the composer. Everything else
   /// keeps the typed text so it can be corrected or sent again.
   bool get isFinished =>
       kind == HashKind.directQueued ||
       kind == HashKind.info ||
-      kind == HashKind.done;
+      kind == HashKind.done ||
+      kind == HashKind.draft ||
+      kind == HashKind.screen ||
+      kind == HashKind.rows ||
+      kind == HashKind.success ||
+      kind == HashKind.soon ||
+      kind == HashKind.notice;
 }
 
-/// The `#` command catalog and the one place a `#` line or an `@user` line is
-/// turned into a send.
+/// The `#` command catalogue and the one place a `#` line or an `@user` line is
+/// turned into an action.
 ///
-/// The server rewrites a raw `#` line into the `/command` it stands for and
-/// runs it in the clear, so a raw line never leaves the phone when it would
-/// message a person or group that is, or may be, encrypted. `#dm` is expanded
-/// here into the normal direct-message send (outbox, cid, encryption policy).
+/// A `#` line is never a chat message. `#dm` and `#groupmsg` are not sent at
+/// all: they open the chat with the text as a draft, so the text goes out of
+/// the normal composer (which encrypts where the chat is encrypted); the
+/// server would run a raw line in the clear.
 class CommandRepository extends GetxService {
   CommandRepository(
     this._socket,
     this._store,
     this._connectivity,
     this._messages,
-    this._conversations,
-  );
+    this._conversations, {
+    Duration replyWait = const Duration(seconds: 12),
+  }) : _replyWait = replyWait;
 
-  static const encryptedBlock = "Can't send in encrypted chats from mobile yet";
-  static const _unknownBlock =
-      "Can't tell yet whether that chat is encrypted. Try again in a moment";
   static const _maxLength = 2000;
-  static const _formsHint = 'Use the forms button to open a form.';
-  static const _replyWait = Duration(seconds: 6);
-  static final _line = RegExp(r'^#([A-Za-z]\S*)\s*(.*)$', dotAll: true);
+  static const escapeNotice =
+      'Messages starting with ## go to the general room, which is not available in the app.';
+  static const comingSoon = 'This command is coming soon in the app.';
+  static const noPerson = 'No such person.';
+  static const noGroup = 'No such group.';
+
+  /// Frames each command answers with when the catalogue does not say.
+  static const _expected = {
+    'users': ['users'],
+    'groups': ['groups'],
+    'creategroup': ['group_created'],
+    'addmember': ['group_created', 'group_invite_pending'],
+    'leavegroup': ['left_group'],
+  };
 
   final SocketService _socket;
   final SessionStore _store;
   final ConnectivityService _connectivity;
   final MessageRepository _messages;
   final ConversationRepository _conversations;
+  final Duration _replyWait;
 
   final catalog = <HashCommand>[].obs;
+  final categories = <CommandCategory>[].obs;
   final isLoading = false.obs;
+
+  /// What the person may do, from `perm.mine`; null until known. Commands that
+  /// need a permission stay out of the menu while it is null.
+  final permissions = Rxn<Set<String>>();
+  final isAdmin = false.obs;
 
   String? _loadedOrg;
   bool _isFresh = false;
   Future<void>? _loading;
+  final _cids = <String, String>{};
 
-  static bool isHashLine(String text) => _line.hasMatch(text.trim());
+  static bool isHashLine(String text) => CommandLine.isCommand(text);
 
   bool get isOnline => SeedUi.isActive
       ? _connectivity.state.value != AppConnectivity.offline
@@ -95,33 +150,42 @@ class CommandRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.onOnline.listen((_) => _isFresh = false);
+    _socket.onOnline.listen((_) {
+      _isFresh = false;
+      if (_store.orgId != null) unawaited(ensureLoaded());
+    });
+    _socket.events.listen((e) {
+      if (e['type'] == 'sd_event' && e['event'] == 'permissions_changed') {
+        _isFresh = false;
+        unawaited(ensureLoaded());
+      }
+    });
     ever(_store.current, (_) {
       _isFresh = false;
       _loadedOrg = null;
       catalog.clear();
+      categories.clear();
+      permissions.value = null;
+      isAdmin.value = false;
+      _cids.clear();
     });
   }
 
   // ---- the catalog ---------------------------------------------------------
 
-  List<HashCommand> matching(String prefix) {
-    final p = prefix.toLowerCase();
-    return [
-      for (final c in catalog)
-        if (c.startsWithPrefix(p)) c,
-    ];
-  }
+  /// The rows the menu shows for the text after `#`.
+  List<HashCommand> menu(String query) => CommandMenu.filter(
+    catalog,
+    query,
+    categories: categories,
+    permissions: permissions.value,
+    isAdmin: isAdmin.value,
+  );
 
-  HashCommand? _find(String word) {
-    for (final c in catalog) {
-      if (c.answersTo(word)) return c;
-    }
-    return null;
-  }
+  HashCommand? find(String word) => CommandMenu.find(catalog, word);
 
   /// Reads the cache for this organisation, then asks the server once per
-  /// connection (`/cmds` and `cmd.list`) when online.
+  /// connection (`/cmds`, `perm.mine` and `cmd.list`) when online.
   Future<void> ensureLoaded() =>
       _loading ??= _load().whenComplete(() => _loading = null);
 
@@ -146,24 +210,32 @@ class CommandRepository extends GetxService {
     }
   }
 
-  String _key(String org) => 'cmds.catalog.$org';
+  String _key(String org) => 'cmds.catalog2.$org';
 
   Future<void> _readCache(String org) async {
     try {
       final raw = await _store.readValue(_key(org));
       if (raw == null) return;
-      catalog.assignAll([
-        for (final j in jsonDecode(raw) as List)
+      final data = (jsonDecode(raw) as Map).cast<String, dynamic>();
+      final all = [
+        for (final j in (data['commands'] as List))
           HashCommand.fromJson(
             (j as Map).cast<String, dynamic>(),
             isCustom: j['custom'] == true,
           ),
-      ]);
+      ];
+      categories.assignAll(_categoriesOf(data['categories']));
+      catalog.assignAll([...all, ...CommandMenu.localEntries(all)]);
     } catch (_) {}
   }
 
+  static List<CommandCategory> _categoriesOf(Object? list) => [
+    for (final c in (list as List? ?? const []))
+      if (c is Map) CommandCategory(idText(c['id']), idText(c['label'])),
+  ];
+
   Future<void> _fetch(String org) async {
-    final wait = _next('cmd_catalog', const Duration(seconds: 8));
+    final wait = _next((e) => e['type'] == 'cmd_catalog');
     if (!await _socket.sendCommand('/cmds')) return;
     final event = await wait;
     if (event == null) return;
@@ -186,176 +258,520 @@ class CommandRepository extends GetxService {
         }
       }
     } on SocketCallError catch (_) {}
-    catalog.assignAll([...builtIn, ...custom]);
+    final all = [...builtIn, ...custom];
+    categories.assignAll([
+      ..._categoriesOf(event['categories']),
+      if (custom.isNotEmpty) const CommandCategory('custom', 'Custom'),
+    ]);
+    catalog.assignAll([...all, ...CommandMenu.localEntries(all)]);
     _isFresh = true;
     await _store.writeValue(
       _key(org),
-      jsonEncode([for (final c in catalog) c.toJson()]),
+      jsonEncode({
+        'categories': [
+          for (final c in categories) {'id': c.id, 'label': c.label},
+        ],
+        'commands': [for (final c in all) c.toJson()],
+      }),
     );
+    await _loadPermissions();
   }
 
-  Future<Map<String, dynamic>?> _next(String type, Duration timeout) {
+  Future<void> _loadPermissions() async {
+    try {
+      final data = await _socket.sdCall('perm.mine', {});
+      permissions.value = {
+        for (final p in (data['permissions'] as List? ?? const [])) idText(p),
+      };
+      isAdmin.value = data['isAdmin'] == true;
+    } on SocketCallError catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> _next(
+    bool Function(Map<String, dynamic>) isMine, [
+    Duration timeout = const Duration(seconds: 8),
+  ]) {
     final done = Completer<Map<String, dynamic>?>();
     final sub = _socket.events.listen((e) {
-      if (e['type'] == type && !done.isCompleted) done.complete(e);
+      if (isMine(e) && !done.isCompleted) done.complete(e);
     });
     return done.future
         .timeout(timeout, onTimeout: () => null)
         .whenComplete(sub.cancel);
   }
 
+  /// `#help <name>`: one command in full; the catalogue entry when the server
+  /// does not answer.
+  Future<HashCommand?> detail(String name) async {
+    final local = find(name);
+    if (!isOnline || SeedUi.isActive) return local;
+    final wait = _next((e) => e['type'] == 'cmd_help');
+    if (!await _socket.sendCommand('#help $name')) return local;
+    final event = await wait;
+    final raw = event?['command'] ?? (event?['commands'] as List?)?.firstOrNull;
+    if (raw is! Map) return local;
+    final c = HashCommand.fromJson(raw.cast<String, dynamic>());
+    return c.name.isEmpty ? local : c;
+  }
+
+  // ---- suggestions -----------------------------------------------------------
+
+  /// A suggester wired to `/cmdcomplete`; the caller owns it and disposes it.
+  CommandSuggester createSuggester() => CommandSuggester(_complete);
+
+  Future<CommandSuggestions?> _complete(
+    String input,
+    int page,
+    int reqId,
+  ) async {
+    if (!isOnline || SeedUi.isActive) return null;
+    final wait = _next(
+      (e) => e['type'] == 'cmd_suggestions' && intOf(e['reqId']) == reqId,
+      const Duration(seconds: 5),
+    );
+    final body = jsonEncode({
+      'input': input,
+      'page': page,
+      'pageSize': CommandSuggester.pageSize,
+      'reqId': reqId,
+    });
+    if (!await _socket.sendCommand('/cmdcomplete $body')) return null;
+    final e = await wait;
+    return e == null ? null : CommandSuggestions.fromFrame(e);
+  }
+
   // ---- running a line ------------------------------------------------------
 
   /// Runs a line that starts with `#` and a letter. Online only, never queued.
-  Future<HashResult> run(String line) async {
-    final m = _line.firstMatch(line.trim());
-    if (m == null) return const HashResult(HashKind.invalid, 'Not a command.');
-    final word = m.group(1)!.toLowerCase();
-    final rest = m.group(2)!.trim();
+  /// [activeConvId] is the open chat, for `#leavegroup` without a name.
+  /// [isConfirmed] is set after the person agreed to a risky command.
+  Future<HashResult> run(
+    String line, {
+    String? activeConvId,
+    bool isConfirmed = false,
+  }) async {
+    if (CommandLine.isEscape(line)) {
+      return const HashResult(HashKind.notice, escapeNotice);
+    }
+    final parsed = CommandLine.parse(line);
+    if (parsed == null) {
+      return const HashResult(HashKind.invalid, 'Not a command.');
+    }
     await ensureLoaded();
-    final cmd = _find(word);
-    if (cmd == null) {
-      if (catalog.isNotEmpty) {
-        return const HashResult(HashKind.unknown, 'Unknown command');
-      }
+    final cmd = find(parsed.name);
+    if (cmd == null && catalog.isEmpty && !isOnline) {
+      return const HashResult(HashKind.needsConnection, 'Needs a connection');
+    }
+    if (cmd == null) return _sendUnknown(parsed);
+    if (!cmd.isAvailable || _isDenied(cmd)) {
       return HashResult(
-        isOnline ? HashKind.error : HashKind.needsConnection,
-        isOnline
-            ? "Commands aren't available right now."
-            : 'Needs a connection',
+        HashKind.blocked,
+        "You don't have access to #${cmd.name}. Ask your administrator to give you the permission.",
       );
+    }
+    final handler = CommandHandlers.of(cmd);
+    switch (handler.mode) {
+      case CommandMode.soon:
+        return const HashResult(HashKind.soon, comingSoon);
+      case CommandMode.screen:
+        return _screen(handler.target, parsed);
+      case CommandMode.draft:
+        return _draft(cmd, parsed, handler.target);
+      case CommandMode.line:
+      case CommandMode.list:
+        break;
     }
     if (!isOnline) {
       return const HashResult(HashKind.needsConnection, 'Needs a connection');
     }
-    if (cmd.name == 'help' && !cmd.isCustom) return _help(rest);
-    if (!cmd.isCustom && _opensForm(cmd.name)) {
-      return const HashResult(HashKind.info, _formsHint);
-    }
-    if (cmd.name == 'dm' && !cmd.isCustom) {
-      final parts = rest.split(RegExp(r'\s+'));
-      final text = rest.length > parts.first.length
-          ? rest.substring(parts.first.length).trim()
-          : '';
-      if (rest.isEmpty || text.isEmpty) {
-        return HashResult(
-          HashKind.invalid,
-          'Usage: #${cmd.name} <user> <text>',
-        );
+    final names = _groupNames();
+    var args = parsed.bind(cmd, groupNames: names);
+    if (cmd.name == 'leavegroup' && args['group'] == null) {
+      final active = activeConvId ?? '';
+      if (active.startsWith('group:')) {
+        args = CommandArgs({'group': active.substring(6)}, '');
       }
-      return sendDirect(parts.first, text);
     }
-    if (cmd.sendsMessage) {
-      final blocked = await _blockedMessage(cmd, rest);
-      if (blocked != null) return HashResult(HashKind.blocked, blocked);
+    final problem = CommandValidator.check(cmd, args);
+    if (problem != null) return _usage(cmd, problem);
+    if (cmd.name == 'addmember') {
+      final denied = _notOwner(args['group'] ?? '');
+      if (denied != null) return HashResult(HashKind.blocked, denied);
     }
-    if (SeedUi.isActive) return HashResult(HashKind.info, SeedUi.hashInfo(cmd));
-    return _sendRaw(cmd, '#$word $rest'.trim());
-  }
-
-  static bool _opensForm(String name) =>
-      name == 'tstruct' || name == 'tstruct-add' || name == 'form';
-
-  HashResult _help(String rest) {
-    final word = rest.split(RegExp(r'\s+')).first.toLowerCase();
-    final cmd = word.isEmpty ? null : _find(word.replaceFirst('#', ''));
-    if (cmd == null) {
-      return const HashResult(
-        HashKind.info,
-        'Type # to see the commands, then pick one.',
+    if (handler.isRisky && !isConfirmed) {
+      return HashResult(
+        HashKind.confirm,
+        '',
+        '',
+        '',
+        '',
+        const [],
+        const [],
+        args['group'] ?? '',
       );
     }
-    final usage = cmd.usage.isEmpty ? '#${cmd.name}' : cmd.usage;
-    return HashResult(HashKind.info, '$usage: ${cmd.summary}');
+    final text = _lineOf(cmd, parsed, args);
+    if (SeedUi.isActive) return HashResult(HashKind.info, SeedUi.hashInfo(cmd));
+    if (cmd.isLocal) return _localList();
+    return _exchange(cmd, text, args);
   }
 
-  /// The reason a raw line may not leave the phone, or null when it may. A
-  /// message to a person or group goes out raw only when the policy says
-  /// plain; encrypted, unknown, or a target that cannot be worked out is held.
-  Future<String?> _blockedMessage(HashCommand cmd, String rest) async {
-    final convId = _targetOf(cmd, rest);
-    if (convId == null) return encryptedBlock;
-    if (SeedUi.isActive) {
-      return SeedUi.isEncrypted(convId) ? encryptedBlock : null;
-    }
-    return switch (await _messages.verdictOf(convId)) {
-      EncryptionVerdict.plain => null,
-      EncryptionVerdict.encrypted => encryptedBlock,
-      EncryptionVerdict.unknown => _unknownBlock,
-    };
+  bool _isDenied(HashCommand cmd) {
+    final need = CommandMenu.permissionOf(cmd);
+    final held = permissions.value;
+    return need != null && held != null && !held.contains(need);
   }
 
-  /// The conversation a message-sending command names, or null when it cannot
-  /// be told. `#reply` is the global room.
-  String? _targetOf(HashCommand cmd, String rest) {
-    switch (cmd.name) {
-      case 'reply':
-        return 'global';
-      case 'replydm':
-        final user = rest.split(RegExp(r'\s+')).first.toLowerCase();
-        return user.isEmpty ? null : 'dm:$user';
-      case 'groupmsg':
-      case 'replygroup':
-        final name = _groupIn(rest);
-        return name == null ? null : 'group:$name';
+  HashResult _usage(HashCommand cmd, String problem) => HashResult(
+    HashKind.usage,
+    cmd.usage.isEmpty ? problem : '$problem Usage: ${cmd.usage}',
+  );
+
+  Iterable<String> _groupNames() {
+    final list = SeedUi.isActive
+        ? SeedUi.conversations()
+        : _conversations.conversations;
+    return [
+      for (final c in list)
+        if (c.kind == 'group') c.convId.substring(6),
+    ];
+  }
+
+  /// The web's check: only the owner adds people, when the owner is known.
+  String? _notOwner(String group) {
+    final me = (_store.userId ?? '').toLowerCase();
+    for (final c in _conversations.conversations) {
+      if (c.convId.toLowerCase() != 'group:${group.toLowerCase()}') continue;
+      if (c.owner.isNotEmpty && c.owner.toLowerCase() != me) {
+        return 'Only the group admin (${c.owner}) can add members';
+      }
     }
     return null;
   }
 
-  /// The longest of my groups the line starts with (names may hold spaces).
-  String? _groupIn(String rest) {
-    final line = rest.toLowerCase();
-    String? best;
-    final groups = SeedUi.isActive
-        ? SeedUi.conversations()
-        : _conversations.conversations;
-    for (final c in groups) {
-      if (c.kind != 'group') continue;
-      final name = c.convId.substring(6);
-      final n = name.toLowerCase();
-      final isMatch =
-          line == n || line.startsWith('$n ') || line.startsWith('$n\t');
-      if (isMatch && (best == null || name.length > best.length)) best = name;
-    }
-    return best;
+  /// The line the socket gets: as typed (the server reads aliases itself),
+  /// with the open group filled in for a bare `#leavegroup`.
+  String _lineOf(HashCommand cmd, CommandLine parsed, CommandArgs args) {
+    final rest = cmd.name == 'leavegroup' && parsed.rest.trim().isEmpty
+        ? args['group'] ?? ''
+        : parsed.rest;
+    return '#${parsed.name}${rest.isEmpty ? '' : ' $rest'}';
   }
 
-  Future<HashResult> _sendRaw(HashCommand cmd, String line) async {
-    final isSd = cmd.isCustom || cmd.replies.contains('sd');
-    if (isSd) {
-      try {
-        final data = await _socket.hashCall(line, cmd.name);
-        return HashResult(HashKind.info, _summary(data));
-      } on SocketCallError catch (e) {
-        return HashResult(HashKind.error, _sdProblem(e));
-      }
+  HashResult _screen(String target, CommandLine parsed) {
+    if (target == 'help') {
+      return HashResult(
+        HashKind.screen,
+        '',
+        '',
+        '',
+        '',
+        const [],
+        const [],
+        parsed.rest.trim().isEmpty ? 'help' : 'help:${parsed.rest.trim()}',
+      );
     }
-    final types = {...cmd.replies};
-    final reply = Completer<Map<String, dynamic>?>();
-    final sub = _socket.events.listen((e) {
-      final type = e['type'];
-      final isMine =
-          types.contains(type) || (type == 'error' && e['conv'] == null);
-      if (isMine && !reply.isCompleted) reply.complete(e);
-    });
-    try {
-      if (!await _socket.sendCommand(line)) {
+    return HashResult(
+      HashKind.screen,
+      '',
+      '',
+      '',
+      '',
+      const [],
+      const [],
+      target,
+    );
+  }
+
+  // ---- dm and groupmsg: a draft, never sent ----------------------------------
+
+  Future<HashResult> _draft(
+    HashCommand cmd,
+    CommandLine parsed,
+    String target,
+  ) async {
+    final isGroup = target == 'group';
+    final args = parsed.bind(cmd, groupNames: _groupNames());
+    final first = args[isGroup ? 'group' : 'user'] ?? '';
+    if (first.isEmpty) {
+      return _usage(cmd, 'Missing ${isGroup ? 'group' : 'user'}.');
+    }
+    final draft = args['text'] ?? '';
+    if (draft.runes.length > _maxLength) {
+      return _usage(cmd, 'text is too long (max $_maxLength characters).');
+    }
+    if (isGroup) {
+      final name = _groupNames()
+          .where((n) => n.toLowerCase() == first.toLowerCase())
+          .firstOrNull;
+      if (name == null) return const HashResult(HashKind.error, noGroup);
+      return HashResult(HashKind.draft, draft, '', 'group:$name');
+    }
+    final user = first.toLowerCase();
+    if (user == (_store.userId ?? '').toLowerCase()) {
+      return const HashResult(HashKind.invalid, "You can't message yourself.");
+    }
+    final convId = 'dm:$user';
+    if (!_knowsPerson(convId, user)) {
+      if (!isOnline) {
         return const HashResult(HashKind.needsConnection, 'Needs a connection');
       }
-      final event = await reply.future.timeout(
-        _replyWait,
-        onTimeout: () => null,
-      );
-      if (event == null) return const HashResult(HashKind.info, 'Sent');
-      if (event['type'] == 'error') {
-        return HashResult(HashKind.error, _errorText(event));
+      if (!await _isRealPerson(user)) {
+        return const HashResult(HashKind.error, noPerson);
       }
-      final text = _eventSummary(event);
-      return text == null
-          ? const HashResult(HashKind.done)
-          : HashResult(HashKind.info, text);
+    }
+    return HashResult(HashKind.draft, draft, user, convId);
+  }
+
+  bool _knowsPerson(String convId, String user) {
+    final list = SeedUi.isActive
+        ? SeedUi.conversations()
+        : _conversations.conversations;
+    return list.any(
+      (c) =>
+          c.convId == convId ||
+          (c.kind == 'group' && c.members.any((m) => m.toLowerCase() == user)),
+    );
+  }
+
+  Future<bool> _isRealPerson(String user) async {
+    try {
+      final data = await _socket.sdCall('users.search', {'q': user});
+      return (data['users'] as List? ?? const []).whereType<Map>().any(
+        (u) => idText(u['username']).toLowerCase() == user,
+      );
+    } on SocketCallError catch (_) {
+      return false;
+    }
+  }
+
+  // ---- sending the line --------------------------------------------------------
+
+  Future<HashResult> _sendUnknown(CommandLine parsed) async {
+    if (!isOnline) {
+      return const HashResult(HashKind.needsConnection, 'Needs a connection');
+    }
+    final text =
+        '#${parsed.name}${parsed.rest.isEmpty ? '' : ' ${parsed.rest}'}';
+    final reply = await _send(text, name: parsed.name, replies: const []);
+    if (reply == null) return const HashResult(HashKind.error, noAnswer);
+    return reply.isOk ? const HashResult(HashKind.done) : _failure(reply, null);
+  }
+
+  static const noAnswer = 'No answer from the server. Try again.';
+
+  /// Sends [text] (with a `/c <cid>` wrapper where the server takes one) and
+  /// waits for the frame that answers it. A retry of the same line reuses the
+  /// client id, so the server never does it twice.
+  Future<CommandReply?> _send(
+    String text, {
+    required String name,
+    required List<String> replies,
+    bool isSd = false,
+    bool withCid = false,
+  }) async {
+    var line = text;
+    if (withCid) line = '/c ${_cids.putIfAbsent(text, newCid)} $text';
+    final reply = Completer<CommandReply>();
+    final sub = _socket.events.listen((e) {
+      final r = CommandReply.fromFrame(e, name: name, replies: replies);
+      if (r != null && !reply.isCompleted) reply.complete(r);
+    });
+    try {
+      if (isSd) {
+        final call = _socket
+            .hashCall(line, name)
+            .then(
+              (data) => CommandReply(frame: data),
+              onError: (Object e) => e is SocketCallError
+                  ? CommandReply(isOk: false, code: e.code, text: _sdProblem(e))
+                  : CommandReply(isOk: false, text: "That didn't work."),
+            );
+        return await Future.any([call, reply.future]).timeout(_replyWait);
+      }
+      if (!await _socket.sendCommand(line)) {
+        return const CommandReply(
+          isOk: false,
+          code: 'not_connected',
+          text: 'Needs a connection',
+        );
+      }
+      return await reply.future.timeout(_replyWait);
+    } on TimeoutException {
+      return null;
     } finally {
       await sub.cancel();
+    }
+  }
+
+  Future<HashResult> _exchange(
+    HashCommand cmd,
+    String text,
+    CommandArgs args,
+  ) async {
+    final handler = CommandHandlers.of(cmd);
+    final isSd =
+        cmd.isCustom ||
+        cmd.replies.contains('sd') ||
+        handler.target == 'associates';
+    final replies = [...cmd.replies, ...?_expected[cmd.name]];
+    final withCid =
+        !cmd.isCustom && CommandHandlers.idempotent.contains(cmd.name);
+    final reply = await _send(
+      text,
+      name: cmd.name,
+      replies: replies,
+      isSd: isSd,
+      withCid: withCid,
+    );
+    if (reply == null) {
+      return HashResult(
+        HashKind.error,
+        withCid
+            ? 'No answer yet. Send it again; it will not be done twice.'
+            : noAnswer,
+      );
+    }
+    if (!reply.isOk) {
+      return _failure(reply, cmd);
+    }
+    _cids.remove(text);
+    return _success(cmd, handler, reply, args);
+  }
+
+  HashResult _failure(CommandReply reply, HashCommand? cmd) {
+    switch (reply.code) {
+      case 'unknown_command':
+        return HashResult(
+          HashKind.unknown,
+          reply.message,
+          '',
+          '',
+          '',
+          reply.suggestions,
+        );
+      case 'usage':
+        return HashResult(HashKind.usage, reply.message);
+      case 'not_connected':
+        return const HashResult(HashKind.needsConnection, 'Needs a connection');
+    }
+    return HashResult(HashKind.error, reply.message);
+  }
+
+  Future<HashResult> _success(
+    HashCommand cmd,
+    CommandHandler handler,
+    CommandReply reply,
+    CommandArgs args,
+  ) async {
+    final f = reply.frame;
+    switch (cmd.name) {
+      case 'creategroup':
+        await _conversations.saveGroup(f);
+        return const HashResult(HashKind.success, 'Group created');
+      case 'addmember':
+        final user = args['user'] ?? '';
+        if (f['type'] == 'group_invite_pending') {
+          return HashResult(HashKind.success, 'Invitation sent to $user');
+        }
+        await _conversations.saveGroup(f);
+        return HashResult(HashKind.success, 'Added $user');
+      case 'leavegroup':
+        return HashResult(
+          HashKind.success,
+          'You left ${idText(f['text']).isEmpty ? args['group'] : idText(f['text'])}',
+        );
+    }
+    switch (handler.target) {
+      case 'users':
+        final me = (_store.userId ?? '').toLowerCase();
+        final rows = <CommandRow>[
+          for (final u in (f['list'] as List? ?? const []))
+            if (_userOf(u).isNotEmpty && _userOf(u).toLowerCase() != me)
+              CommandRow(
+                _userOf(u),
+                subtitle: 'Online',
+                convId: 'dm:${_userOf(u).toLowerCase()}',
+              ),
+        ];
+        return HashResult(
+          HashKind.rows,
+          'Online now',
+          '',
+          '',
+          '',
+          const [],
+          rows,
+        );
+      case 'groups':
+        final rows = <CommandRow>[
+          for (final g in (f['list'] as List? ?? const []).whereType<Map>())
+            if (idText(g['name']).isNotEmpty)
+              CommandRow(
+                idText(g['name']),
+                subtitle: _members((g['members'] as List?)?.length),
+                convId: 'group:${idText(g['name'])}',
+              ),
+        ];
+        return HashResult(
+          HashKind.rows,
+          'My groups',
+          '',
+          '',
+          '',
+          const [],
+          rows,
+        );
+      case 'associates':
+        return HashResult(
+          HashKind.rows,
+          'Connections',
+          '',
+          '',
+          '',
+          const [],
+          _associates(f),
+        );
+      case 'custom':
+        return HashResult(HashKind.info, _summary(f));
+    }
+    return const HashResult(HashKind.done);
+  }
+
+  static String _userOf(Object? u) =>
+      u is Map ? idText(u['user'] ?? u['username'] ?? u['name']) : idText(u);
+
+  static String _members(int? n) =>
+      n == null ? '' : '$n member${n == 1 ? '' : 's'}';
+
+  static List<CommandRow> _associates(Map<String, dynamic> f) => [
+    for (final a in (f['associates'] as List? ?? const []).whereType<Map>())
+      if (idText(a['user']).isNotEmpty)
+        CommandRow(
+          idText(a['user']),
+          subtitle: [
+            if (idText(a['relation']).isNotEmpty) idText(a['relation']),
+            if (a['online'] == true) 'Online',
+          ].join(' · '),
+          convId: 'dm:${idText(a['user']).toLowerCase()}',
+        ),
+  ];
+
+  /// The local `#connections` entry: the associates, asked for directly.
+  Future<HashResult> _localList() async {
+    try {
+      final data = await _socket.sdCall('assoc.list', {});
+      return HashResult(
+        HashKind.rows,
+        'Connections',
+        '',
+        '',
+        '',
+        const [],
+        _associates(data),
+      );
+    } on SocketCallError catch (e) {
+      return HashResult(HashKind.error, _sdProblem(e));
     }
   }
 
@@ -465,19 +881,6 @@ class CommandRepository extends GetxService {
 
   // ---- reading the answers -------------------------------------------------
 
-  static String _errorText(Map<String, dynamic> e) {
-    final code = idText(e['code']);
-    final text = idText(e['text']);
-    if (code == 'unknown_command') return 'Unknown command';
-    if (code == 'not_associated') {
-      return "You're not connected with them yet. Connect first.";
-    }
-    if (text.contains('Too many commands')) {
-      return 'Too many commands. Wait a moment and try again.';
-    }
-    return text.isEmpty ? "That didn't work." : text;
-  }
-
   static String _sdProblem(SocketCallError e) => switch (e.code) {
     'forbidden' || 'admin_locked' => "You don't have permission to do that.",
     'unauthenticated' ||
@@ -512,35 +915,5 @@ class CommandRepository extends GetxService {
       if (v.isNotEmpty) return v;
     }
     return idText(item['text']);
-  }
-
-  /// A line for the chat commands whose answer is not already shown by the
-  /// screens that read it (a message ack needs none).
-  static String? _eventSummary(Map<String, dynamic> e) {
-    switch (e['type']) {
-      case 'users':
-        final list = [for (final u in (e['list'] as List? ?? [])) idText(u)];
-        return list.isEmpty ? 'No one is online' : 'Online: ${list.join(', ')}';
-      case 'groups':
-        final list = [
-          for (final g in (e['list'] as List? ?? []))
-            if (g is Map) idText(g['name']),
-        ];
-        return list.isEmpty
-            ? "You're not in any groups"
-            : 'Groups: ${list.join(', ')}';
-      case 'group_created':
-        return 'Group "${idText(e['name'])}" now has ${(e['members'] as List? ?? []).length} members';
-      case 'left_group':
-        return 'Left "${idText(e['text'])}"';
-      case 'profile':
-        final status = idText(e['status']);
-        return '${idText(e['user'] ?? e['name'])}: ${status.isEmpty ? 'no status' : status}';
-      case 'conversations':
-        return 'Inbox refreshed';
-      case 'history':
-        return 'History refreshed';
-    }
-    return null;
   }
 }

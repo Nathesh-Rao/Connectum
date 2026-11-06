@@ -121,15 +121,7 @@ class InstallReferrerParser {
     if (code == null || code.isEmpty) return null;
     final org = params['connect_org'];
     final branch = params['connect_branch'];
-    final link = Uri(
-      scheme: 'https',
-      host: ConnectLinkParser.publicHost,
-      pathSegments: ['connect', code],
-      queryParameters: {
-        if (org != null && org.isNotEmpty) 'org': org,
-        if (branch != null && branch.isNotEmpty) 'branch': branch,
-      },
-    ).toString();
+    final link = ConnectLinkParser.link(code, org: org, branch: branch);
     return ConnectLinkParser.parse(link).value;
   }
 }

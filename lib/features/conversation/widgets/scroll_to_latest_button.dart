@@ -63,8 +63,10 @@ class ScrollToLatestButton extends StatelessWidget {
                       Positioned(
                         top: 0,
                         right: 0,
-                        child: AppUnreadBadge(
-                          label: count > 99 ? '99+' : '$count',
+                        child: IgnorePointer(
+                          child: AppUnreadBadge(
+                            label: count > 99 ? '99+' : '$count',
+                          ),
                         ),
                       ),
                   ],

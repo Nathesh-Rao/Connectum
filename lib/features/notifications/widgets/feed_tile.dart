@@ -8,13 +8,15 @@ import '../../../core/utils/relative_time.dart';
 import '../../../core/widgets/app_button.dart';
 import '../models/feed_item.dart';
 import '../notification_router.dart';
+import '../notification_style.dart';
 import '../notification_texts.dart';
+import 'feed_priority_pill.dart';
 
 enum FeedTileMenu { toggleRead, resolve, dismiss }
 
-/// One feed item: icon tinted by priority, title, clipped message, time, a
-/// count when the server folded several into one, an unread dot and an
-/// optional action button.
+/// One feed item: a round icon from [styleFor], title, clipped message, time,
+/// the priority pill, a count when the server folded several into one, an
+/// unread dot, the more menu and an optional action button.
 class FeedTile extends StatelessWidget {
   const FeedTile({
     super.key,
@@ -23,6 +25,7 @@ class FeedTile extends StatelessWidget {
     required this.onTap,
     required this.onMenu,
     required this.onDismissed,
+    this.topPadding = AppSpacing.sm,
   });
 
   final FeedItem item;
@@ -34,68 +37,46 @@ class FeedTile extends StatelessWidget {
   final ValueChanged<FeedTileMenu> onMenu;
   final VoidCallback onDismissed;
 
-  static const double _iconBox = 40;
-
-  static const _icons = {
-    'chat': Icons.chat_bubble_outline,
-    'alternate_email': Icons.alternate_email,
-    'alarm': Icons.alarm,
-    'task_alt': Icons.task_alt,
-    'fact_check': Icons.fact_check_outlined,
-    'approval': Icons.approval,
-    'security': Icons.shield_outlined,
-    'lock': Icons.lock_outline,
-    'campaign': Icons.campaign_outlined,
-    'group': Icons.group_outlined,
-    'description': Icons.description_outlined,
-    'confirmation_number': Icons.confirmation_number_outlined,
-    'api': Icons.api,
-  };
-
-  (Color, Color) get _tint => switch (item.priority) {
-    'high' => (AppColors.accentTint, AppColors.accent),
-    'medium' => (AppColors.sand, AppColors.accentInk),
-    'resolved' => (AppColors.yesFill, AppColors.yesText),
-    _ => (AppColors.noFill, AppColors.noText),
-  };
+  /// Space above the tile's content (icon circle / title).
+  final double topPadding;
 
   @override
   Widget build(BuildContext context) {
-    final (fill, ink) = _tint;
+    final style = styleFor(item);
     final destination = NotificationRouter.resolve(item);
     return Dismissible(
       key: ValueKey('dismiss-${item.id}'),
       direction: DismissDirection.endToStart,
       onDismissed: (_) => onDismissed(),
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppSpacing.page),
-        color: AppColors.accentTint,
-        child: const Icon(Icons.close, color: AppColors.accentInk),
-      ),
+      background: FeedSwipeBackground(style: style),
       child: Semantics(
         button: true,
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.page,
-              vertical: AppSpacing.sm,
+            padding: EdgeInsets.only(
+              left: AppSpacing.page,
+              right: AppSpacing.xxs,
+              top: topPadding,
+              bottom: AppSpacing.sm,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: _iconBox,
-                  height: _iconBox,
-                  decoration: BoxDecoration(
-                    color: fill,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Icon(
-                    _icons[item.icon] ?? Icons.notifications_none,
-                    size: 20,
-                    color: ink,
+                Opacity(
+                  opacity: item.isRead ? 0.75 : 1,
+                  child: Container(
+                    width: AppSpacing.feedIconCircle,
+                    height: AppSpacing.feedIconCircle,
+                    decoration: BoxDecoration(
+                      color: style.tint,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      style.icon,
+                      size: AppSpacing.feedIcon,
+                      color: style.color,
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -104,15 +85,21 @@ class FeedTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!item.isRead) ...[
-                            const _UnreadDot(),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.xxs,
+                              ),
+                              child: _UnreadDot(color: style.color),
+                            ),
                             const SizedBox(width: AppSpacing.xxs),
                           ],
                           Expanded(
                             child: Text(
                               item.title,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: item.isRead
                                   ? AppText.readableStrong.copyWith(
@@ -121,18 +108,8 @@ class FeedTile extends StatelessWidget {
                                   : AppText.readableStrong,
                             ),
                           ),
-                          if (item.count > 1) ...[
-                            const SizedBox(width: AppSpacing.xxs),
-                            _CountBadge(count: item.count),
-                          ],
-                          const SizedBox(width: AppSpacing.xs),
-                          Text(
-                            RelativeTime.label(item.ts, DateTime.now()),
-                            style: AppText.caption,
-                          ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.xxs),
                       FutureBuilder<String?>(
                         key: ValueKey('${item.id}@${item.ts}'),
                         future: readText(item),
@@ -147,11 +124,25 @@ class FeedTile extends StatelessWidget {
                               : item.message;
                           return Text(
                             text,
-                            maxLines: 2,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.readable,
                           );
                         },
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xxs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            RelativeTime.label(item.ts, DateTime.now()),
+                            style: AppText.caption,
+                          ),
+                          FeedPriorityPill(priority: item.priority),
+                          if (item.count > 1) _CountBadge(count: item.count),
+                        ],
                       ),
                       if (destination.hasAction &&
                           (item.actionLabel ?? '').isNotEmpty)
@@ -159,7 +150,7 @@ class FeedTile extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: AppButton.text(
                             label: item.actionLabel!,
-                            tone: AppTextButtonTone.accent,
+                            color: style.color,
                             onPressed: onTap,
                           ),
                         ),
@@ -211,17 +202,42 @@ class FeedTile extends StatelessWidget {
   }
 }
 
+/// What the swipe reveals: the tile's tint, a little stronger, with the
+/// dismiss label and icon in its strong shade.
+class FeedSwipeBackground extends StatelessWidget {
+  const FeedSwipeBackground({super.key, required this.style});
+
+  final NotificationStyle style;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    alignment: Alignment.centerRight,
+    padding: const EdgeInsets.only(right: AppSpacing.page),
+    color: style.tintStrong,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          NotificationTexts.dismiss,
+          style: AppText.readableStrong.copyWith(color: style.strong),
+        ),
+        const SizedBox(width: AppSpacing.xxs),
+        Icon(Icons.close, color: style.strong),
+      ],
+    ),
+  );
+}
+
 class _UnreadDot extends StatelessWidget {
-  const _UnreadDot();
+  const _UnreadDot({required this.color});
+
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Container(
     width: AppSpacing.navDot + 3,
     height: AppSpacing.navDot + 3,
-    decoration: const BoxDecoration(
-      color: AppColors.accent,
-      shape: BoxShape.circle,
-    ),
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
   );
 }
 

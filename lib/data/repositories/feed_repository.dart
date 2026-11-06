@@ -16,18 +16,6 @@ import 'e2e_repository.dart';
 /// events sent while the app was offline are lost and `feed.list` has no
 /// "since" cursor, so every (re)connect and every resume reads the summary and
 /// the latest [firstReadSize] items and replaces the local list with them.
-/// A line for the in-app notice; [taskId] when it is about one task.
-class FeedNotice {
-  const FeedNotice(this.line, {this.taskId, this.ticketId, this.tstruct});
-
-  final String line;
-  final int? taskId;
-
-  /// A ticket is now with the person (`ticket_assigned`).
-  final int? ticketId;
-  final String? tstruct;
-}
-
 class FeedRepository extends GetxService with WidgetsBindingObserver {
   FeedRepository(this._socket, this._store, this._e2e);
 
@@ -60,16 +48,12 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
 
   final _itemController = StreamController<FeedItem>.broadcast();
   final _goneController = StreamController<List<String>>.broadcast();
-  final _noticeController = StreamController<FeedNotice>.broadcast();
 
   /// A `feed_item` event: new, or changed (a coalesced count, re-opened).
   Stream<FeedItem> get onItem => _itemController.stream;
 
   /// Ids that no longer need a notification: removed, read or resolved.
   Stream<List<String>> get onGone => _goneController.stream;
-
-  /// A short line for the in-app notice of the events that only refresh.
-  Stream<FeedNotice> get onNotice => _noticeController.stream;
 
   final _hasMore = <String, bool>{};
   final _loaded = <String>{};
@@ -97,7 +81,6 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
     _online?.cancel();
     _itemController.close();
     _goneController.close();
-    _noticeController.close();
     super.onClose();
   }
 
@@ -224,6 +207,11 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
       case 'feed_item':
         final item = FeedItem.tryParse(data['notification']);
         _setCounts(data['counts']);
+        debugPrint(
+          'notifyflow: feed_item event id=${item?.id} priority=${item?.priority} '
+          'category=${item?.category} actionType=${item?.actionType} '
+          'chatId=${item?.chatId}',
+        );
         if (item == null) {
           scheduleRefresh();
           return;
@@ -244,19 +232,6 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
         if (isRead) _goneController.add(ids);
       case final String name when _quiet.contains(name):
         scheduleRefresh();
-        final line = _noticeFor(name, data);
-        if (line != null) {
-          _noticeController.add(
-            FeedNotice(
-              line,
-              taskId: _taskIdOf(name, data),
-              ticketId: name == 'ticket_assigned' ? idNumber(data['id']) : null,
-              tstruct: name == 'ticket_assigned'
-                  ? idText(data['tstruct'])
-                  : null,
-            ),
-          );
-        }
     }
   }
 
@@ -273,33 +248,6 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
     if (raw is List)
       for (final id in raw) idText(id),
   ];
-
-  /// The task of a `task_assigned` / `task_updated` event: `data.task.id`.
-  static int? _taskIdOf(String event, Map<String, dynamic> data) {
-    if (event != 'task_assigned' && event != 'task_updated') return null;
-    final task = data['task'];
-    return task is Map ? idNumber(task['id']) : null;
-  }
-
-  static String? _noticeFor(String event, Map<String, dynamic> data) {
-    switch (event) {
-      case 'task_assigned':
-        return 'You have a new task.';
-      case 'task_updated':
-        return 'A task was updated.';
-      case 'ticket_assigned':
-        return data['action'] == 'Raised'
-            ? 'A ticket was raised to you.'
-            : 'A ticket is now with you.';
-      case 'request_created':
-        return 'You have a new request to review.';
-      case 'broadcast':
-        final text = idText(data['text']);
-        return text.isEmpty ? null : FeedItem.clip('Announcement: $text', 120);
-      default:
-        return null;
-    }
-  }
 
   // ---- actions (optimistic, rolled back on an error) ------------------------
 

@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notices.dart';
 import '../../features/notifications/models/feed_item.dart';
 import '../../features/notifications/notification_router.dart';
 import '../../features/notifications/notification_texts.dart';
@@ -16,9 +15,9 @@ import 'local_notification_rules.dart';
 import 'push/push_payload.dart';
 import 'push/push_token_registry.dart';
 
-/// System notifications for live feed items while the app is in the
-/// background, and the light in-app notice while it is on screen. No push:
-/// a killed app cannot be woken. The tap goes to [NotificationRouter].
+/// System notifications for live feed items, in the foreground and the
+/// background alike: the `feed_item` event is the single trigger. No push: a
+/// killed app cannot be woken. The tap goes to [NotificationRouter].
 class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   LocalNotificationService(
     this._feed,
@@ -52,31 +51,35 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   final shouldNotifyGroups = true.obs;
 
   bool _isReady = false;
-  bool _isForeground = true;
 
-  /// Debug page only: behave as if the app were in the background.
-  bool debugForceBackground = false;
-
-  bool get isForeground => _isForeground && !debugForceBackground;
+  /// Item id -> the `ts|count` last shown, so one event never shows twice
+  /// while a coalesced item (a higher count) still does.
+  final _shown = <String, String>{};
 
   static const _importances = {
-    'messages': Importance.defaultImportance,
+    'messages': Importance.high,
     'approvals': Importance.high,
     'tasks': Importance.defaultImportance,
-    'system': Importance.low,
+    'system': Importance.defaultImportance,
     'security': Importance.high,
   };
 
+  /// Channel settings cannot change after creation, so a changed setting needs
+  /// a new id; the earlier ones are deleted at startup.
+  static const _channelSuffix = '_v2';
+  static const _smallIcon = 'ic_stat_notification';
+
+  static String channelId(String channel) => '$channel$_channelSuffix';
+
+  static void _log(String line) => debugPrint('notifyflow: $line');
+
   Future<LocalNotificationService> start() async {
-    _isForeground =
-        WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
-        WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden &&
-        WidgetsBinding.instance.lifecycleState != AppLifecycleState.inactive;
     WidgetsBinding.instance.addObserver(this);
+    _log('start lifecycle=${WidgetsBinding.instance.lifecycleState}');
     try {
       await _plugin.initialize(
         settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings(_smallIcon),
           iOS: DarwinInitializationSettings(
             requestAlertPermission: false,
             requestBadgePermission: false,
@@ -87,18 +90,19 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
       );
       await _createChannels();
       _isReady = true;
+      _log('plugin initialised, small icon=$_smallIcon');
     } catch (e) {
-      debugPrint('Local notifications unavailable: ${e.runtimeType}');
+      _log('initialise failed: $e');
       return this;
     }
     wasAsked.value = await _store.readValue(_askedKey) != null;
     await refreshPermission();
     _subscriptions
       ..add(_feed.onItem.listen(_onItem))
-      ..add(_feed.onGone.listen(_cancelAll))
-      ..add(_feed.onNotice.listen(_onNotice));
+      ..add(_feed.onGone.listen(_cancelAll));
     await _loadGroups();
     ever(_store.current, (_) {
+      _shown.clear();
       unawaited(_plugin.cancelAll());
       unawaited(_loadGroups());
     });
@@ -121,8 +125,8 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _isForeground = state == AppLifecycleState.resumed;
-    if (_isForeground) unawaited(refreshPermission());
+    _log('lifecycle=$state');
+    if (state == AppLifecycleState.resumed) unawaited(refreshPermission());
   }
 
   // ---- permission ----------------------------------------------------------
@@ -130,6 +134,7 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   Future<void> refreshPermission() async {
     if (!_isReady) return;
     isEnabled.value = await _check();
+    _log('permission enabled=${isEnabled.value}');
     await _registry.setPermitted(isEnabled.value);
   }
 
@@ -210,15 +215,22 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
           AndroidFlutterLocalNotificationsPlugin
         >();
     if (android == null) return;
+    for (final base in NotificationTexts.channels.keys) {
+      await android.deleteNotificationChannel(channelId: base);
+    }
     for (final e in NotificationTexts.channels.entries) {
+      final importance = _importances[e.key] ?? Importance.defaultImportance;
       await android.createNotificationChannel(
         AndroidNotificationChannel(
-          e.key,
+          channelId(e.key),
           e.value.$1,
           description: e.value.$2,
-          importance: _importances[e.key] ?? Importance.defaultImportance,
+          importance: importance,
+          playSound: true,
+          enableVibration: true,
         ),
       );
+      _log('channel ${channelId(e.key)} created importance=${importance.name}');
     }
   }
 
@@ -231,9 +243,8 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
     return Uri.decodeComponent(route.substring(prefix.length));
   }
 
-  NotificationShow _decide(FeedItem item) => LocalNotificationRules.decide(
+  NotificationDecision _decide(FeedItem item) => LocalNotificationRules.explain(
     item,
-    isForeground: isForeground,
     myUser: _store.userId,
     mutedConversations: {
       for (final c in _conversations.conversations)
@@ -244,101 +255,86 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   );
 
   Future<void> _onItem(FeedItem item) async {
-    switch (_decide(item)) {
-      case NotificationShow.none:
-        return;
-      case NotificationShow.system:
-        if (isEnabled.value) await show(item);
-      case NotificationShow.inApp:
-        await _showInApp(item);
-    }
-  }
-
-  void _onNotice(FeedNotice notice) {
-    if (!isForeground) return;
-    final ticketId = notice.ticketId;
-    if (ticketId != null) {
-      AppNotices.show(
-        notice.line,
-        actionLabel: 'Open',
-        onAction: () =>
-            _router.handle(Destination.ticket('$ticketId', notice.tstruct)),
-      );
+    _log(
+      'feed_item id=${item.id} priority=${item.priority} '
+      'category=${item.category} actionType=${item.actionType} '
+      'chatId=${item.chatId}',
+    );
+    final decision = _decide(item);
+    if (decision.show == NotificationShow.none) {
+      _log('decision id=${item.id} ${decision.reason}');
       return;
     }
-    final taskId = notice.taskId;
-    if (taskId == null) {
-      AppNotices.info(notice.line);
+    final signature = '${item.ts}|${item.count}';
+    if (_shown[item.id] == signature) {
+      _log('decision id=${item.id} skipped: already shown');
       return;
     }
-    AppNotices.show(
-      notice.line,
-      actionLabel: 'Open',
-      onAction: () => _router.handle(Destination.task(taskId)),
-    );
+    isEnabled.value = await _check();
+    _log('permission enabled=${isEnabled.value}');
+    if (!isEnabled.value) {
+      _log('decision id=${item.id} skipped: permission off');
+      return;
+    }
+    _log('decision id=${item.id} ${decision.reason}');
+    _shown[item.id] = signature;
+    await show(item);
   }
 
-  Future<void> _showInApp(FeedItem item) async {
-    final text = await _feed.readableText(item);
-    final body = item.isE2e
-        ? (text ?? NotificationTexts.newMessage)
-        : item.message;
-    final destination = NotificationRouter.resolve(item);
-    AppNotices.show(
-      FeedItem.clip(body, LocalNotificationRules.bodyMax),
-      title: item.isE2e && text == null ? null : item.title,
-      key: 'feed-${item.id}',
-      actionLabel: destination.hasAction ? (item.actionLabel ?? 'Open') : null,
-      onAction: destination.hasAction ? () => _openItem(item) : null,
-    );
-  }
-
-  /// Shows (or replaces) the system notification of [item]. The id comes
-  /// from the item, so a coalesced item never stacks.
-  Future<void> show(FeedItem item) async {
-    if (!_isReady) return;
-    final text = await _feed.readableText(item);
-    final String title;
-    final String? body;
-    if (item.isE2e) {
-      final isOpen = text != null;
-      title = isOpen && item.title.isNotEmpty
-          ? item.title
-          : NotificationTexts.newMessage;
-      body = isOpen
-          ? FeedItem.clip(text, LocalNotificationRules.bodyMax)
-          : null;
-    } else {
-      title = item.title.isEmpty ? NotificationTexts.newMessage : item.title;
-      body = item.message.isEmpty
-          ? null
-          : FeedItem.clip(item.message, LocalNotificationRules.bodyMax);
+  /// Shows (or replaces) the system notification of [item]; false when it
+  /// could not be posted. The id comes from the item, so a coalesced item
+  /// never stacks.
+  Future<bool> show(FeedItem item) async {
+    if (!_isReady) {
+      _log('show id=${item.id} skipped: plugin not ready');
+      return false;
     }
     final channel = LocalNotificationRules.channelOf(item);
     final info = NotificationTexts.channels[channel]!;
-    final payload = PushPayload(
-      itemId: item.id,
-      actionType: item.actionType,
-      chatId: item.chatId,
-      messageId: item.messageId,
-      count: item.count,
-    ).toJson();
+    final importance = _importances[channel] ?? Importance.defaultImportance;
     try {
+      final text = await _feed.readableText(item);
+      final String title;
+      final String? body;
+      if (item.isE2e) {
+        final isOpen = text != null;
+        title = isOpen && item.title.isNotEmpty
+            ? item.title
+            : NotificationTexts.newMessage;
+        body = isOpen
+            ? FeedItem.clip(text, LocalNotificationRules.bodyMax)
+            : null;
+      } else {
+        title = item.title.isEmpty ? NotificationTexts.newMessage : item.title;
+        body = item.message.isEmpty
+            ? null
+            : FeedItem.clip(item.message, LocalNotificationRules.bodyMax);
+      }
+      final payload = PushPayload(
+        itemId: item.id,
+        actionType: item.actionType,
+        chatId: item.chatId,
+        messageId: item.messageId,
+        count: item.count,
+      ).toJson();
+      _log('show id=${item.id} channel=${channelId(channel)} calling');
       await _plugin.show(
         id: LocalNotificationRules.notificationId(item.id),
         title: title,
         body: body,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            channel,
+            channelId(channel),
             info.$1,
             channelDescription: info.$2,
-            importance: _importances[channel] ?? Importance.defaultImportance,
-            priority: switch (item.priority) {
-              'high' => Priority.high,
-              'low' => Priority.low,
-              _ => Priority.defaultPriority,
-            },
+            importance: importance,
+            priority: importance == Importance.high
+                ? Priority.high
+                : Priority.defaultPriority,
+            playSound: true,
+            enableVibration: true,
+            silent: false,
+            icon: _smallIcon,
             groupKey: _groupKey(channel),
             number: item.count > 1 ? item.count : null,
             styleInformation: body == null
@@ -347,14 +343,20 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
           ),
           iOS: DarwinNotificationDetails(
             threadIdentifier: channel,
+            presentAlert: true,
+            presentBanner: true,
+            presentSound: true,
             badgeNumber: _feed.unread.value,
           ),
         ),
         payload: payload,
       );
+      _log('show id=${item.id} ok');
       await _updateSummary(channel);
+      return true;
     } catch (e) {
-      debugPrint('Local notification failed: ${e.runtimeType}');
+      _log('show id=${item.id} failed: $e');
+      return false;
     }
   }
 
@@ -385,9 +387,10 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
         body: '$shown new',
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            channel,
+            channelId(channel),
             info.$1,
             channelDescription: info.$2,
+            icon: _smallIcon,
             groupKey: _groupKey(channel),
             setAsGroupSummary: true,
           ),
@@ -403,6 +406,7 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   Future<void> _cancelAll(List<String> ids) async {
     if (!_isReady) return;
     for (final id in ids) {
+      _shown.remove(id);
       await _plugin.cancel(id: LocalNotificationRules.notificationId(id));
     }
     for (final channel in NotificationTexts.channels.keys) {
@@ -443,10 +447,5 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
     if (id != null) {
       unawaited(_feed.setRead([id], isRead: true).catchError((_) {}));
     }
-  }
-
-  void _openItem(FeedItem item) {
-    _router.handleItem(item);
-    unawaited(_feed.setRead([item.id], isRead: true).catchError((_) {}));
   }
 }

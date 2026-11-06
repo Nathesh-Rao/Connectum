@@ -43,6 +43,7 @@ class TaskFormSheet extends StatelessWidget {
           ? TasksTexts.formCreateTitle
           : TasksTexts.formEditTitle,
       child: TaskFormSheet(form: form, controller: controller),
+      onDispose: form.dispose,
     );
   }
 

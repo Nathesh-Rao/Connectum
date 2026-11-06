@@ -8,8 +8,10 @@ import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_list_row.dart';
 import '../../../data/models/conversation.dart';
 import '../chats_controller.dart';
+import 'record_rename_sheet.dart';
 
-/// The long-press menu of a conversation row: pin and mute, nothing else.
+/// The long-press menu of a conversation row: pin and mute, and rename for a
+/// record conversation I saved the record of.
 class ConversationActionsSheet extends StatelessWidget {
   const ConversationActionsSheet({
     super.key,
@@ -82,6 +84,20 @@ class ConversationActionsSheet extends StatelessWidget {
           ),
           onTap: () => run(() => controller.toggleMute(c)),
         ),
+        if (c.canRename)
+          AppListRow(
+            title: 'Rename',
+            minHeight: AppSpacing.settingRowHeight,
+            leading: const Icon(
+              Icons.edit_outlined,
+              size: 20,
+              color: AppColors.muted,
+            ),
+            onTap: () {
+              final navigator = Navigator.of(context)..pop();
+              RecordRenameSheet.show(navigator.context, controller, c);
+            },
+          ),
       ],
     );
   }

@@ -35,6 +35,7 @@ class AppRoutes {
   static const debugNotifications = '/debug/notifications';
   static const debugTasks = '/debug/tasks';
   static const debugTickets = '/debug/tickets';
+  static const debugCommands = '/debug/commands';
 
   static String ticketOf(int id) => '/tickets/$id';
 

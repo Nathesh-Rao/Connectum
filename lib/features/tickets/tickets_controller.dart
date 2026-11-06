@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
@@ -37,8 +36,7 @@ class TicketList {
 /// each read with `status.mine`, and a filter by form. The list of forms is
 /// the distinct structures in the replies. Tickets are a third list: they
 /// never mix with the To-do tasks or the approvals.
-class TicketsController extends GetxController
-    with GetSingleTickerProviderStateMixin {
+class TicketsController extends GetxController {
   TicketsController({required this.tickets, required this.connectivity});
 
   final TicketRepository tickets;
@@ -46,7 +44,8 @@ class TicketsController extends GetxController
 
   static const tabs = ['with', 'raised'];
 
-  late final tabController = TabController(length: tabs.length, vsync: this);
+  /// 0 = with me, 1 = raised by me.
+  final selectedTab = 0.obs;
   final lists = {for (final t in tabs) t: TicketList()};
 
   /// The form key picked in the filter; null = all forms.
@@ -66,7 +65,6 @@ class TicketsController extends GetxController
   @override
   void onClose() {
     _refreshes?.cancel();
-    tabController.dispose();
     super.onClose();
   }
 

@@ -26,6 +26,7 @@ class AppButton extends StatefulWidget {
   }) : _kind = _AppButtonKind.primary,
        isDanger = false,
        tone = AppTextButtonTone.muted,
+       color = null,
        semanticLabel = null;
 
   const AppButton.secondary({
@@ -38,6 +39,7 @@ class AppButton extends StatefulWidget {
     this.isLoading = false,
   }) : _kind = _AppButtonKind.secondary,
        tone = AppTextButtonTone.muted,
+       color = null,
        isCentered = true,
        isCompact = false,
        semanticLabel = null;
@@ -47,6 +49,7 @@ class AppButton extends StatefulWidget {
     required String this.label,
     required this.onPressed,
     this.tone = AppTextButtonTone.muted,
+    this.color,
     this.leadingIcon,
     this.isLoading = false,
   }) : _kind = _AppButtonKind.text,
@@ -64,6 +67,7 @@ class AppButton extends StatefulWidget {
   }) : _kind = _AppButtonKind.icon,
        isDanger = false,
        tone = AppTextButtonTone.muted,
+       color = null,
        label = null,
        leadingIcon = null,
        isCentered = true,
@@ -76,6 +80,9 @@ class AppButton extends StatefulWidget {
   final IconData? icon;
   final IconData? leadingIcon;
   final AppTextButtonTone tone;
+
+  /// Text only: replaces the colour of [tone].
+  final Color? color;
 
   /// Secondary only: the label, icon and border use the error colour.
   final bool isDanger;
@@ -194,11 +201,13 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
   }
 
   Widget _buildText() {
-    final color = switch (widget.tone) {
-      AppTextButtonTone.accent => AppColors.accentInk,
-      AppTextButtonTone.ink => AppColors.ink,
-      AppTextButtonTone.muted => AppColors.muted,
-    };
+    final color =
+        widget.color ??
+        switch (widget.tone) {
+          AppTextButtonTone.accent => AppColors.accentInk,
+          AppTextButtonTone.ink => AppColors.ink,
+          AppTextButtonTone.muted => AppColors.muted,
+        };
     final isDimmed = !_isEnabled && !widget.isLoading;
     final tint = isDimmed ? AppColors.taupe : color;
     final label = Text(
@@ -292,10 +301,7 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
           ),
           child: Center(
             child: widget.isLoading
-                ? AppSpinner(
-                    size: AppSpinnerSize.medium,
-                    color: isPrimary ? AppColors.background : AppColors.accent,
-                  )
+                ? const AppSpinner(size: AppSpinnerSize.sm)
                 : Row(
                     mainAxisSize: isSpaced
                         ? MainAxisSize.max

@@ -24,7 +24,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 9;
+  static const _version = 11;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -135,6 +135,14 @@ class AppDatabase {
     ],
     // A group's owner is the only person who may add members.
     9: ['ALTER TABLE conversations ADD COLUMN owner TEXT'],
+    // A record conversation's title and whether its form keeps it out of the
+    // main list, both from `record.names`.
+    10: [
+      'ALTER TABLE conversations ADD COLUMN thread_title TEXT',
+      'ALTER TABLE conversations ADD COLUMN is_list_hidden INTEGER DEFAULT 0',
+    ],
+    // Whether I may rename a record conversation (`record.names` `canRename`).
+    11: ['ALTER TABLE conversations ADD COLUMN can_rename INTEGER DEFAULT 0'],
   };
 
   static const _scopedTables = [

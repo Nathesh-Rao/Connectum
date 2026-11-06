@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_filter_chips.dart';
+import '../../core/widgets/app_pill_bar.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_refresh.dart';
 import '../../core/widgets/app_scaffold.dart';
@@ -15,8 +15,30 @@ import '../../core/widgets/app_state_view.dart';
 import 'notification_texts.dart';
 import 'notifications_controller.dart';
 import 'widgets/feed_tile.dart';
+import 'widgets/notifications_more_menu.dart';
 
-enum _HeaderMenu { markAllRead, markAllResolved, clearResolved }
+// TUNE ME: notifications spacing (dp). Hot restart after changing a value.
+class NotificationsSpacing {
+  NotificationsSpacing._();
+
+  /// Title row bottom to the pills' top.
+  static const double titleToPills = 16;
+
+  /// Pills' bottom to the first tile's content (icon circle / title). Change
+  /// this alone to move the first tile; the list top padding follows.
+  static const double pillsToFirstTile = 32;
+
+  /// Horizontal gap between the pills.
+  static const double pillGap = 10;
+
+  /// A tile's own space above its content. Counted inside pillsToFirstTile,
+  /// so changing it does not move the first tile.
+  static const double firstTileTopPadding = 12;
+
+  /// Blank space at the top of the scrolling list, above the first tile's own
+  /// padding. Scrolls away with the list.
+  static const double listTopPadding = pillsToFirstTile - firstTileTopPadding;
+}
 
 class NotificationsView extends GetView<NotificationsController> {
   const NotificationsView({super.key});
@@ -42,16 +64,23 @@ class NotificationsView extends GetView<NotificationsController> {
                 : const SizedBox.shrink(),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.page,
+              NotificationsSpacing.titleToPills,
+              AppSpacing.page,
+              0,
+            ),
             child: Obx(
-              () => AppFilterChips(
-                chips: [
+              () => AppPillBar(
+                size: AppPillSize.compact,
+                gap: NotificationsSpacing.pillGap,
+                pills: [
                   for (
                     var i = 0;
                     i < NotificationsController.chipLabels.length;
                     i++
                   )
-                    AppFilterChip(
+                    AppPill(
                       label: NotificationsController.chipLabels[i],
                       count: i == 0
                           ? 0
@@ -63,52 +92,6 @@ class NotificationsView extends GetView<NotificationsController> {
                 selected: c.selected.value,
                 onSelected: c.selectChip,
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.page,
-              vertical: AppSpacing.xxs,
-            ),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    NotificationTexts.notifyGroups,
-                    style: AppText.readable,
-                  ),
-                ),
-                Obx(
-                  () => Switch(
-                    value: c.notifications.shouldNotifyGroups.value,
-                    activeThumbColor: AppColors.accent,
-                    onChanged: c.setNotifyGroups,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.page,
-              vertical: AppSpacing.xxs,
-            ),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    NotificationTexts.unreadOnly,
-                    style: AppText.readable,
-                  ),
-                ),
-                Obx(
-                  () => Switch(
-                    value: c.isUnreadOnly.value,
-                    activeThumbColor: AppColors.accent,
-                    onChanged: c.setUnreadOnly,
-                  ),
-                ),
-              ],
             ),
           ),
           Expanded(child: _Body(controller: c)),
@@ -129,9 +112,9 @@ class _Header extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xs,
-        AppSpacing.sm,
-        AppSpacing.xs,
         AppSpacing.xxs,
+        AppSpacing.xs,
+        0,
       ),
       child: Row(
         children: [
@@ -143,35 +126,10 @@ class _Header extends StatelessWidget {
           const Expanded(
             child: Text(NotificationTexts.screenTitle, style: AppText.title),
           ),
-          PopupMenuButton<_HeaderMenu>(
-            tooltip: NotificationTexts.menu,
-            icon: const Icon(Icons.more_horiz, color: AppColors.ink),
-            color: AppColors.background,
-            onSelected: (m) => switch (m) {
-              _HeaderMenu.markAllRead => c.markAllRead(),
-              _HeaderMenu.markAllResolved => c.resolveAll(),
-              _HeaderMenu.clearResolved => c.clearResolved(),
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: _HeaderMenu.markAllRead,
-                child: Text(NotificationTexts.markAllRead, style: AppText.body),
-              ),
-              PopupMenuItem(
-                value: _HeaderMenu.markAllResolved,
-                child: Text(
-                  NotificationTexts.markAllResolved,
-                  style: AppText.body,
-                ),
-              ),
-              PopupMenuItem(
-                value: _HeaderMenu.clearResolved,
-                child: Text(
-                  NotificationTexts.clearResolved,
-                  style: AppText.body,
-                ),
-              ),
-            ],
+          NotificationsMoreMenu(
+            shouldNotifyGroups: c.notifications.shouldNotifyGroups,
+            isUnreadOnly: c.isUnreadOnly,
+            onSelected: c.onMenu,
           ),
         ],
       ),
@@ -247,12 +205,18 @@ class _Body extends StatelessWidget {
           child: AppRefresh(
             onRefresh: c.onRefresh,
             slivers: [
+              const SliverToBoxAdapter(
+                child: SizedBox(height: NotificationsSpacing.listTopPadding),
+              ),
               SliverList.separated(
                 itemCount: items.length,
                 separatorBuilder: (context, i) => const Divider(
                   height: 1,
                   color: AppColors.line,
-                  indent: AppSpacing.page,
+                  indent:
+                      AppSpacing.page +
+                      AppSpacing.feedIconCircle +
+                      AppSpacing.sm,
                   endIndent: AppSpacing.page,
                 ),
                 itemBuilder: (context, i) {
@@ -260,6 +224,7 @@ class _Body extends StatelessWidget {
                   return FeedTile(
                     key: ValueKey(item.id),
                     item: item,
+                    topPadding: NotificationsSpacing.firstTileTopPadding,
                     readText: c.feed.readableText,
                     onTap: () => c.open(item),
                     onDismissed: () => c.dismiss(item),
@@ -279,7 +244,7 @@ class _Body extends StatelessWidget {
                   () => c.isLoadingMore.value
                       ? const Padding(
                           padding: EdgeInsets.all(AppSpacing.md),
-                          child: Center(child: AppSpinner.medium()),
+                          child: Center(child: AppSpinner()),
                         )
                       : const SizedBox(height: AppSpacing.xl),
                 ),

@@ -103,9 +103,9 @@ class _PersonHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(person.name, style: AppText.subtitle),
-              if (person.role.isNotEmpty) ...[
+              if (person.summary.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xxs),
-                Text(person.role, style: AppText.readable),
+                Text(person.summary, style: AppText.readable),
               ],
             ],
           ),

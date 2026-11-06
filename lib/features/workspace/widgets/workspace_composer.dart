@@ -29,6 +29,8 @@ class WorkspaceComposer extends StatelessWidget {
         CommandsPanel(
           prompt: c.prompt,
           onPick: c.pickCommand,
+          onPickItem: c.pickCommandItem,
+          onPickName: c.renameCommand,
           isOnline: () => c.commands.isOnline,
         ),
         Padding(
@@ -73,7 +75,7 @@ class WorkspaceComposer extends StatelessWidget {
                 ),
                 Obx(
                   () => ComposerSendButton(
-                    isActive: c.length.value > 0,
+                    isActive: c.length.value > 0 && !c.runner.isRunning.value,
                     onTap: c.send,
                   ),
                 ),

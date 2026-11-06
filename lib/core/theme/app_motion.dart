@@ -5,6 +5,7 @@ class AppDurations {
   AppDurations._();
 
   static const fast = Duration(milliseconds: 190);
+  static const fab = Duration(milliseconds: 200);
   static const base = Duration(milliseconds: 320);
   static const slow = Duration(milliseconds: 500);
   static const page = Duration(milliseconds: 450);

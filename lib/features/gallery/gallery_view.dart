@@ -11,12 +11,15 @@ import '../../core/widgets/app_animation_placeholder.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_refresh.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_spinner.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'gallery_controller.dart';
+import 'widgets/avatar_samples.dart';
 
 class GalleryView extends GetView<GalleryController> {
   const GalleryView({super.key});
@@ -69,6 +72,7 @@ class GalleryView extends GetView<GalleryController> {
     'debug/notifications': AppRoutes.debugNotifications,
     'debug/tasks': AppRoutes.debugTasks,
     'debug/tickets': AppRoutes.debugTickets,
+    'debug/commands': AppRoutes.debugCommands,
   };
 
   @override
@@ -222,6 +226,32 @@ class GalleryView extends GetView<GalleryController> {
               AppStatusPill(isYes: false),
             ],
           ),
+          _section('AppAvatar palette (person, group, ticket)'),
+          const AvatarSamples(),
+          _section('AppSpinner (xs 16, sm 20, md 24, lg 32)'),
+          _spinnerRow(AppColors.background),
+          _spinnerRow(AppColors.accent),
+          _section('Pull header (drag the list down)'),
+          SizedBox(
+            height: 220,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.line),
+              ),
+              child: AppRefresh(
+                onRefresh: controller.sampleRefresh,
+                slivers: [
+                  SliverList.builder(
+                    itemCount: 8,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Text('Row ${index + 1}', style: AppText.readable),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           _section('AppBottomSheet'),
           AppButton.secondary(
             label: 'Open sheet',
@@ -275,6 +305,25 @@ class GalleryView extends GetView<GalleryController> {
       ),
     );
   }
+
+  Widget _spinnerRow(Color background) => ColoredBox(
+    color: background,
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          for (final size in AppSpinnerSize.values)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.line, width: 0.5),
+              ),
+              child: AppSpinner(size: size, isStandalone: true),
+            ),
+        ],
+      ),
+    ),
+  );
 
   Widget _section(String title) => Padding(
     padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.sm),

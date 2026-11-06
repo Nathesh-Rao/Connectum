@@ -6,23 +6,23 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_filter_tabs.dart';
 import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_row_highlight.dart';
 import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_unread_badge.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'chats_controller.dart';
+import 'models/chat_filter.dart';
+import 'widgets/chat_filter_bar.dart';
+import 'widgets/chats_header.dart';
+import 'widgets/workspace_row.dart';
 import 'widgets/conversation_actions_sheet.dart';
 import 'widgets/conversation_tile.dart';
 import 'widgets/enterprise_switcher_sheet.dart';
+import 'widgets/new_chat_fab.dart';
 import 'widgets/new_chat_sheet.dart';
 import 'widgets/search_results.dart';
 import 'widgets/skeleton_rows.dart';
@@ -34,6 +34,7 @@ class ChatsView extends GetView<ChatsController> {
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     AppStateImage.precache(context, const [
       AppStateImageKind.emptyChats,
       AppStateImageKind.error,
@@ -45,146 +46,74 @@ class ChatsView extends GetView<ChatsController> {
       padding: EdgeInsets.zero,
       body: Column(
         children: [
-          _Header(controller: c),
+          ChatsHeader(
+            enterpriseName: () {
+              c.store.current.value;
+              c.store.identity.value;
+              return c.enterpriseName;
+            },
+            unread: () => c.feed.unread.value,
+            onSwitchEnterprise: () {
+              c.switcher.prepare();
+              AppBottomSheet.show<void>(
+                context,
+                title: 'Enterprises',
+                child: EnterpriseSwitcherSheet(controller: c.switcher),
+              );
+            },
+            onOpenNotifications: c.openNotifications,
+          ),
           const AppOfflineBar(),
           _SearchRow(controller: c),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-            child: Obx(
-              () => AppFilterTabs(
-                controller: c.filterTabs,
-                tabs: [
-                  AppFilterTab(label: 'All', count: c.unreadChats.value),
-                  const AppFilterTab(label: 'Direct & Teams'),
-                ],
-              ),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.page,
+              0,
+              AppSpacing.page,
+              AppSpacing.sm,
+            ),
+            child: ChatFilterBar(
+              filter: c.filter,
+              hasThreads: c.hasThreads,
+              threadUnread: c.threadUnread,
+              onSelected: c.select,
             ),
           ),
           if (SeedUi.isActive) const _DebugStates(),
-          Expanded(child: _Body(controller: c)),
+          Expanded(
+            child: Stack(
+              children: [
+                NotificationListener<ScrollNotification>(
+                  onNotification: c.newChatButton.onScroll,
+                  child: _Body(controller: c),
+                ),
+                Positioned(
+                  right: AppSpacing.fabMargin,
+                  bottom: AppSpacing.fabMargin,
+                  child: Obx(
+                    () => NewChatFab(
+                      isShown: c.newChatButton.isShown.value,
+                      isKeyboardOpen: isKeyboardOpen,
+                      onPressed: () => _openNewChat(context, c),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.controller});
-
-  final ChatsController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = controller;
-    return Container(
-      height: AppSpacing.headerHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Semantics(
-                button: true,
-                label: 'Switch enterprise',
-                excludeSemantics: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    c.switcher.prepare();
-                    AppBottomSheet.show<void>(
-                      context,
-                      title: 'Enterprises',
-                      child: EnterpriseSwitcherSheet(controller: c.switcher),
-                    );
-                  },
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: AppSpacing.minTapTarget,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('YOUR ENTERPRISE', style: AppText.eyebrow),
-                        Obx(() {
-                          c.store.current.value;
-                          c.store.identity.value;
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  c.enterpriseName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppText.subtitle,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              const Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 18,
-                                color: AppColors.ink,
-                              ),
-                            ],
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              AppButton.icon(
-                icon: Icons.notifications_none,
-                semanticLabel: 'Notifications',
-                onPressed: c.openNotifications,
-              ),
-              Positioned(
-                top: AppSpacing.xxs,
-                right: AppSpacing.xxs,
-                child: Obx(() {
-                  final n = c.feed.unread.value;
-                  return n > 0
-                      ? AppUnreadBadge(label: n > 99 ? '99+' : '$n')
-                      : const SizedBox.shrink();
-                }),
-              ),
-            ],
-          ),
-          Semantics(
-            button: true,
-            label: 'Profile',
-            excludeSemantics: true,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: c.openProfile,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: AppSpacing.minTapTarget,
-                  minHeight: AppSpacing.minTapTarget,
-                ),
-                child: Center(
-                  child: Obx(() {
-                    c.store.identity.value;
-                    return AppAvatar(name: c.myName, size: 32);
-                  }),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+void _openNewChat(BuildContext context, ChatsController c) {
+  c.newChat.prepare();
+  AppBottomSheet.show<void>(
+    context,
+    title: 'New Group / Chat',
+    child: NewChatSheet(controller: c.newChat),
+  );
 }
 
 class _SearchRow extends StatelessWidget {
@@ -200,7 +129,7 @@ class _SearchRow extends StatelessWidget {
         AppSpacing.page,
         AppSpacing.sm,
         AppSpacing.page,
-        AppSpacing.xs,
+        AppSpacing.xl,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,35 +163,6 @@ class _SearchRow extends StatelessWidget {
               onChanged: c.onQueryChanged,
             ),
           ),
-          const SizedBox(width: AppSpacing.xs),
-          Semantics(
-            button: true,
-            label: 'New chat',
-            excludeSemantics: true,
-            child: GestureDetector(
-              onTap: () {
-                c.newChat.prepare();
-                AppBottomSheet.show<void>(
-                  context,
-                  title: 'New Group / Chat',
-                  child: NewChatSheet(controller: c.newChat),
-                );
-              },
-              child: Container(
-                width: AppSpacing.iconButton,
-                height: AppSpacing.searchHeight,
-                decoration: const BoxDecoration(
-                  color: AppColors.accentTint,
-                  borderRadius: BorderRadius.all(Radius.circular(AppRadius.xs)),
-                ),
-                child: const Icon(
-                  Icons.edit_square,
-                  size: 20,
-                  color: AppColors.accent,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -280,6 +180,7 @@ class _Body extends StatelessWidget {
     return Obx(() {
       final isSearching = c.isSearching;
       final state = c.viewState.value;
+      final isFiltered = c.filter.value != ChatFilterKind.all;
       final Widget child = isSearching
           ? SearchResults(key: const ValueKey('search'), controller: c)
           : _Refreshable(
@@ -289,17 +190,14 @@ class _Body extends StatelessWidget {
                 key: ValueKey(state),
                 state: state,
                 emptyImage: AppStateImageKind.emptyChats,
-                emptyTitle: 'No conversations yet',
-                emptyMessage: 'Start a chat to see it here.',
-                emptyActionLabel: 'Start a chat',
-                onEmptyAction: () {
-                  c.newChat.prepare();
-                  AppBottomSheet.show<void>(
-                    context,
-                    title: 'New Group / Chat',
-                    child: NewChatSheet(controller: c.newChat),
-                  );
-                },
+                emptyTitle: _emptyTitle(c.filter.value),
+                emptyMessage: _emptyMessage(c.filter.value),
+                emptyActionLabel: isFiltered
+                    ? 'View all conversations'
+                    : 'Start a chat',
+                onEmptyAction: isFiltered
+                    ? () => c.select(ChatFilterKind.all)
+                    : () => _openNewChat(context, c),
                 errorMessage: 'We could not read your chats.',
                 onRetry: c.retry,
                 loadingChild: const SkeletonRows(),
@@ -308,10 +206,10 @@ class _Body extends StatelessWidget {
             );
       return Column(
         children: [
-          if (!isSearching && !c.isDirectTab.value)
+          if (!isSearching && c.filter.value != ChatFilterKind.threads)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: _WorkspaceRow(onTap: c.openWorkspace),
+              child: WorkspaceRow(onTap: c.openWorkspace),
             ),
           Expanded(
             child: AnimatedSwitcher(
@@ -325,6 +223,19 @@ class _Body extends StatelessWidget {
     });
   }
 }
+
+String _emptyTitle(ChatFilterKind filter) => switch (filter) {
+  ChatFilterKind.all => 'No conversations yet',
+  ChatFilterKind.direct => 'No direct conversations',
+  ChatFilterKind.threads => 'No threads',
+};
+
+String _emptyMessage(ChatFilterKind filter) => switch (filter) {
+  ChatFilterKind.all => 'Start a chat to see it here.',
+  ChatFilterKind.direct =>
+    "You don't have any direct messages or team conversations open.",
+  ChatFilterKind.threads => "You don't have any thread conversations open.",
+};
 
 Future<void> _refresh(ChatsController c) async {
   if (c.isOffline) AppNotices.info("You're offline");
@@ -367,20 +278,18 @@ class _List extends StatelessWidget {
         Obx(() {
           final ids = c.visibleIds.toList();
           return SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.page,
+              AppSpacing.sm,
+              AppSpacing.page,
+              AppSpacing.fab +
+                  AppSpacing.fabMargin * 2 +
+                  MediaQuery.paddingOf(context).bottom,
+            ),
             sliver: SliverList.builder(
-              itemCount: ids.length + 1,
+              itemCount: ids.length,
               itemBuilder: (context, index) {
-                if (index == 0) {
-                  return const Padding(
-                    padding: EdgeInsets.only(
-                      top: AppSpacing.lg,
-                      bottom: AppSpacing.xs,
-                    ),
-                    child: Text('Direct & Teams', style: AppText.eyebrow),
-                  );
-                }
-                final id = ids[index - 1];
+                final id = ids[index];
                 final row = c.rowOf(id);
                 return Obx(
                   () => ConversationTile(
@@ -397,97 +306,6 @@ class _List extends StatelessWidget {
           );
         }),
       ],
-    );
-  }
-}
-
-/// The pinned My Work Space row above the conversations. It is not a
-/// conversation, so it is never archived and always comes first.
-class _WorkspaceRow extends StatelessWidget {
-  const _WorkspaceRow({required this.onTap});
-
-  final VoidCallback onTap;
-
-  static const preview = "Type '#' for commands, automated tasks & alerts";
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'My Work Space, pinned',
-      excludeSemantics: true,
-      child: AppRowHighlight(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.chatRowHeight,
-          ),
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.line)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: AppSpacing.avatar,
-                height: AppSpacing.avatar,
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(AppRadius.tile),
-                  ),
-                  border: Border.all(color: AppColors.peach),
-                ),
-                child: const Icon(
-                  Icons.dashboard_outlined,
-                  size: 22,
-                  color: AppColors.accent,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('My Work Space', style: AppText.rowTitle),
-                        const SizedBox(width: AppSpacing.xs),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.line),
-                          ),
-                          child: Text(
-                            'PINNED',
-                            style: AppText.eyebrow.copyWith(
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.7,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Text(
-                      preview,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.rowCaption,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: AppColors.rowChevron,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -44,8 +44,8 @@ class TaskPeopleSheet extends StatelessWidget {
           Navigator.of(context).pop();
         },
       ),
+      onDispose: people.close,
     ).whenComplete(() {
-      people.close();
       final p = picked;
       if (p != null) onPicked(p);
     });
@@ -68,7 +68,7 @@ class TaskPeopleSheet extends StatelessWidget {
           height: AppSpacing.pickerListHeight,
           child: Obx(() {
             if (p.isLoading.value) {
-              return const Center(child: AppSpinner.medium());
+              return const Center(child: AppSpinner(isStandalone: true));
             }
             final error = p.error.value;
             if (error != null) {

@@ -93,8 +93,8 @@ Rules (`data/notifications/local_notification_rules.dart:17-45`), **test** `loca
 | read or resolved item | none | test |
 | from me (any case) | none | test |
 | muted conversation / open conversation | none | test |
-| foreground | in-app notice for medium and high; none for low | test |
-| background | system notification; low only for a group message (`open_chat`, chat id `room-…`) while the setting "Notify for group messages" is on (default) | test |
+| foreground and background | the same: the `feed_item` event is the only trigger and posts a system notification (heads-up); the in-app notices of `task_assigned`, `task_updated`, `request_created`, `ticket_assigned` and `broadcast` are gone (those events only re-read the lists). One item id never shows twice for the same `ts` and `count` | test |
+| low severity | system notification only for a group message for a group message (`open_chat`, chat id `room-…`) while the setting "Notify for group messages" is on (default) | test |
 | e2e item | same rules, text opened on the device; if unreadable "New message" without body | test (rules), code (text) |
 | coalescing | notification id = hash of the item id, so a coalesced item replaces its banner | test (stable id) |
 | clear on read/resolve/dismiss/remove | `onGone` -> cancel + group summary update (`:377`); a re-read sweeps the rest (`:388`) | test (events emit `onGone`), NOT (system tray) |
@@ -139,7 +139,7 @@ Loading: `AppStateView` default / `AppSpinner` for paging (`notifications_view.d
 |---|---|
 | `/debug/tasks`, `lib/features/debug_tasks/`, `lib/core/debug/seed_tasks.dart`, `SeedTasks` branches in task/approval repos and `task_people_controller` | yes |
 | `/debug/tickets`, `lib/features/debug_tickets/`, `seed_tickets.dart`, `SeedTickets` branches, `assets/debug/tickets/` | yes |
-| `/debug/notifications`, `lib/features/debug_notifications/`, `LocalNotificationService.debugForceBackground` | **no -> added now (F3)** |
+| `/debug/notifications`, `lib/features/debug_notifications/`, `/debug/notifications` | **no -> added now (F3)** |
 | `TaskRepository.me`/`ApprovalRepository.me`/`TicketRepository.me` fall back to the seed user when no one is signed in | covered by "the `SeedTasks`/`SeedTickets` branches" |
 | `/debug/forms`, `/debug/formlogic` (other feature) | **no**, outside this audit: `app_routes.dart:30-31` |
 | `test/support/` and the tests read `assets/debug/tickets/` and the Postman file: they are test-only; the asset folder goes with the release cleanup, the tests that use it then need the fixtures moved to `test/` |
@@ -153,7 +153,7 @@ Loading: `AppStateView` default / `AppSpinner` for paging (`notifications_view.d
 |---|---|---|---|---|
 | F1 | minor | `data/repositories/ticket_repository.dart:75-90` | `_known` (last tickets read), `_names` and the badge `withTotal` stayed when another person or organisation signed in. Ticket detail pre-fills from `_known[id]`, so ticket 38 of the previous account could flash in the next one; the badge showed the old number. | `ever(_store.current, …)` clears them. **test** `ticket_detail_controller_test` "does not leak". |
 | F2 | minor | `features/notifications/notifications_controller.dart:167` | read/resolve/dismiss on a tile that was already removed on another device: rollback brought the dead tile back and it stayed until the next re-read; every tap gave "No such notification." | on `not_found` also `feed.scheduleRefresh()`. |
-| F3 | minor | `CLAUDE.md` Before release | `/debug/notifications` and `lib/features/debug_notifications/` were not in the list. | added, with `debugForceBackground`. |
+| F3 | minor | `CLAUDE.md` Before release | `/debug/notifications` and `lib/features/debug_notifications/` were not in the list. | added. |
 
 ### Needs a decision (product/app)
 | # | Sev | Where | What goes wrong | Proposal |
@@ -226,3 +226,10 @@ Before: 259 tests. After: **392** (+133), `flutter test` all pass, `dart analyze
 | `test/support/` | – | `FakeSocket`, `FakeStore`, `Postman` fixture reader |
 
 Not testable without a phone/server: the system tray (collapse, clearing, permission prompts), cold/warm tap routing, the socket's own `onOnline`/`session_replaced` handling, rendering at text scale 1.3.
+
+## Update: one rule for foreground and background, new channels
+
+- Rules: `LocalNotificationRules.explain` returns the decision with its reason; `decide` wraps it. There is no foreground input and no in-app notice for feed items. `AppNotices` stays for errors and results of the person's own actions.
+- Android channels are `messages_v2`, `approvals_v2`, `security_v2` (importance high) and `tasks_v2`, `system_v2` (default), all with sound and vibration. The earlier ids (`messages`, `approvals`, `tasks`, `system`, `security`) are deleted at startup, because a channel's settings cannot change after creation.
+- The small icon is `@drawable/ic_stat_notification` (white on transparent), kept from shrinking by `res/raw/keep.xml`.
+- Temporary `notifyflow:` logs trace lifecycle, socket state, each `feed_item`, the decision, the permission, channel creation and `show()`; they are on the "Before release" removal list.

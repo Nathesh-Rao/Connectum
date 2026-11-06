@@ -25,13 +25,11 @@ FeedItem item({
 
 NotificationShow decide(
   FeedItem i, {
-  bool isForeground = false,
   Set<String> muted = const {},
   String? open,
   bool shouldNotifyGroups = true,
 }) => LocalNotificationRules.decide(
   i,
-  isForeground: isForeground,
   myUser: 'me',
   mutedConversations: muted,
   openConversationId: open,
@@ -43,16 +41,26 @@ void main() {
     expect(decide(item()), NotificationShow.system);
   });
 
-  test('foreground: an in-app notice for high and medium, nothing for low', () {
-    expect(decide(item(), isForeground: true), NotificationShow.inApp);
-    expect(
-      decide(item(priority: 'high'), isForeground: true),
-      NotificationShow.inApp,
-    );
-    expect(
-      decide(item(priority: 'low'), isForeground: true),
-      NotificationShow.none,
-    );
+  test('high and medium notify, low does not, in either app state', () {
+    expect(decide(item()), NotificationShow.system);
+    expect(decide(item(priority: 'high')), NotificationShow.system);
+    expect(decide(item(priority: 'low')), NotificationShow.none);
+  });
+
+  test('every skip carries its reason', () {
+    String why(FeedItem i, {Set<String> muted = const {}, String? open}) =>
+        LocalNotificationRules.explain(
+          i,
+          myUser: 'me',
+          mutedConversations: muted,
+          openConversationId: open,
+        ).reason;
+    expect(why(item()), 'shown');
+    expect(why(item(read: true)), 'skipped: read or resolved');
+    expect(why(item(from: 'me')), 'skipped: own action');
+    expect(why(item(), muted: {'dm:sam1'}), 'skipped: muted');
+    expect(why(item(), open: 'dm:sam1'), 'skipped: open conversation');
+    expect(why(item(priority: 'low')), 'skipped: low severity');
   });
 
   test('low severity that is not a group message stays silent', () {
@@ -96,13 +104,6 @@ void main() {
       expect(decide(group(), open: 'group:team'), NotificationShow.none);
     });
 
-    test(
-      'foreground is unchanged: no in-app notice for a low group message',
-      () {
-        expect(decide(group(), isForeground: true), NotificationShow.none);
-      },
-    );
-
     test('a direct chat or a low item with no open_chat is not a group', () {
       expect(
         decide(
@@ -127,21 +128,13 @@ void main() {
     expect(decide(item(from: null)), NotificationShow.system);
   });
 
-  test('a muted conversation is silent in both states', () {
+  test('a muted conversation is silent', () {
     expect(decide(item(), muted: {'dm:sam1'}), NotificationShow.none);
-    expect(
-      decide(item(), muted: {'dm:sam1'}, isForeground: true),
-      NotificationShow.none,
-    );
     expect(decide(item(), muted: {'dm:other'}), NotificationShow.system);
   });
 
   test('the open conversation is silent', () {
     expect(decide(item(), open: 'dm:sam1'), NotificationShow.none);
-    expect(
-      decide(item(), open: 'dm:sam1', isForeground: true),
-      NotificationShow.none,
-    );
     expect(decide(item(), open: 'dm:other'), NotificationShow.system);
   });
 

@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/app_spinner.dart';
 import '../../../core/widgets/app_tag.dart';
 import '../../../data/e2e/e2e_models.dart';
 import '../../../data/e2e/e2e_texts.dart';
@@ -139,14 +140,7 @@ class DeviceCard extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 onPressed: isBusy ? null : onRemove,
                 icon: isBusy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.error,
-                        ),
-                      )
+                    ? const AppSpinner(size: AppSpinnerSize.sm)
                     : const Icon(
                         Icons.delete_outline,
                         size: 22,

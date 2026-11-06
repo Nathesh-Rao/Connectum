@@ -85,16 +85,18 @@ class _List extends StatelessWidget {
           if (note != null) ...[
             const SizedBox(height: AppSpacing.xs),
             AppHighlightText(
-            E2eTexts.removedTemplate,
-            values: {'label': note},
-            style: AppText.caption,
-          ),
+              E2eTexts.removedTemplate,
+              values: {'label': note},
+              style: AppText.caption,
+            ),
           ],
           const SizedBox(height: AppSpacing.md),
           if (c.isLoading.value && devices.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Center(child: AppSpinner()),
+              child: Center(
+                child: AppSpinner(size: AppSpinnerSize.lg, isStandalone: true),
+              ),
             )
           else if (c.isLoadFailed.value && devices.isEmpty)
             AppInviteCard(
@@ -170,7 +172,7 @@ class _Registering extends StatelessWidget {
     padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
     child: Row(
       children: [
-        AppSpinner(),
+        AppSpinner(size: AppSpinnerSize.sm),
         SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(E2eTexts.limitRegisteringBody, style: AppText.readable),
