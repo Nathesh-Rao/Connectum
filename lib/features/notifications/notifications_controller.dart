@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:get/get.dart';
 
 import '../../core/utils/app_settings.dart';
+import '../../core/widgets/app_pill_bar.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/notifications/local_notification_service.dart';
@@ -44,16 +45,31 @@ class NotificationsController extends GetxController {
 
   late final _actions = FeedActions(feed);
 
-  final selected = 0.obs;
+  /// The selected chips, by priority id. Never empty; user state, so no
+  /// reload, reconnect or event touches it.
+  final selectedIds = Rx<Set<String>>({'all'});
   final isUnreadOnly = false.obs;
   final isFilterLoading = false.obs;
   final isLoadingMore = false.obs;
 
-  String get priority => priorities[selected.value];
+  List<String> get _selection => [
+    for (final p in priorities)
+      if (selectedIds.value.contains(p)) p,
+  ];
 
-  List<FeedItem> get visible => FeedReducer.filter(
+  /// The empty state's text: the filters when a chip other than All is on.
+  String get emptyMessage {
+    if (!selectedIds.value.contains('all')) {
+      return NotificationTexts.emptyFilters;
+    }
+    return isUnreadOnly.value
+        ? NotificationTexts.emptyUnread
+        : NotificationTexts.emptyMessage;
+  }
+
+  List<FeedItem> get visible => FeedReducer.filterAny(
     feed.items,
-    priority: priority,
+    priorities: selectedIds.value,
     isUnreadOnly: isUnreadOnly.value,
     mutedConversations: {
       for (final c in conversations.conversations)
@@ -61,7 +77,8 @@ class NotificationsController extends GetxController {
     },
   );
 
-  bool get hasMore => feed.hasMore(priority, isUnreadOnly.value);
+  bool get hasMore =>
+      _selection.any((p) => feed.hasMore(p, isUnreadOnly.value));
 
   AppViewState get viewState {
     if (feed.isLoading.value && feed.items.isEmpty) {
@@ -101,9 +118,14 @@ class NotificationsController extends GetxController {
     await _ensure();
   }
 
-  void selectChip(int index) {
-    if (index == selected.value) return;
-    selected.value = index;
+  /// All is exclusive; the other chips add up. Deselecting the last one goes
+  /// back to All.
+  void toggleChip(String id) {
+    selectedIds.value = AppPillBar.toggle(
+      selectedIds.value,
+      id,
+      exclusiveId: 'all',
+    );
     unawaited(_ensure());
   }
 
@@ -115,7 +137,9 @@ class NotificationsController extends GetxController {
   Future<void> _ensure() async {
     isFilterLoading.value = true;
     try {
-      await feed.ensureFilter(priority, isUnreadOnly.value);
+      for (final p in _selection) {
+        await feed.ensureFilter(p, isUnreadOnly.value);
+      }
     } on SocketCallError catch (e) {
       _say(e);
     } finally {
@@ -127,7 +151,9 @@ class NotificationsController extends GetxController {
     if (isLoadingMore.value || !hasMore) return;
     isLoadingMore.value = true;
     try {
-      await feed.loadMore(priority, isUnreadOnly.value);
+      for (final p in _selection) {
+        await feed.loadMore(p, isUnreadOnly.value);
+      }
     } on SocketCallError catch (e) {
       _say(e);
     } finally {

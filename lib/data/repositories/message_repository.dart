@@ -114,7 +114,7 @@ class MessageRepository extends GetxService {
           .then((_) => _socket.isCurrent(e) ? _handle(e) : null)
           .catchError((Object _) {});
     });
-    _socket.onOnline.listen((_) => _onOnline());
+    _socket.listenOnline('messages', _onOnline);
     _e2e.unlockRequests.listen((_) => unawaited(_unlockLocked()));
     _e2e.registrations.listen((_) => unawaited(reopenNoDevice()));
     _conversations.receiptsChanged.listen(applyReceipts);

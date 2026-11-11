@@ -301,7 +301,10 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
           ),
           child: Center(
             child: widget.isLoading
-                ? const AppSpinner(size: AppSpinnerSize.sm)
+                ? AppSpinner(
+                    size: AppSpinnerSize.sm,
+                    color: isPrimary ? AppColors.background : AppColors.accent,
+                  )
                 : Row(
                     mainAxisSize: isSpaced
                         ? MainAxisSize.max

@@ -18,6 +18,7 @@ class AppDurations {
   static const sheetResize = Duration(milliseconds: 230);
   static const scanSweep = Duration(seconds: 1);
   static const scanSuccess = Duration(milliseconds: 300);
+  static const chartGrow = Duration(milliseconds: 400);
 }
 
 class AppCurves {

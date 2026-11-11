@@ -50,6 +50,45 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
   /// The last read of ticket [id], if any.
   Ticket? known(int id) => _known[id];
 
+  /// Changes whenever a known ticket changes, so a card reading it rebuilds.
+  final cardRevision = 0.obs;
+  static const cardTtl = Duration(seconds: 60);
+  final _extras = <int, ({bool isAdmin, bool? inPool})>{};
+  final _readAt = <int, DateTime>{};
+  final _reading = <int, Future<void>>{};
+
+  /// What a chat card needs to work out its actions, from the last read.
+  /// Reading [cardRevision] first makes an `Obx` follow it.
+  ({Ticket ticket, bool isAdmin, bool? inPool})? stateOf(int id) {
+    cardRevision.value;
+    final t = _known[id];
+    if (t == null) return null;
+    final extra = _extras[id];
+    return (ticket: t, isAdmin: extra?.isAdmin ?? false, inPool: extra?.inPool);
+  }
+
+  /// Reads ticket [id] for a card when the last read is older than
+  /// [cardTtl] or a ticket event made it stale. One read per ticket at a
+  /// time; a refused or failed read is not repeated until the same moment.
+  Future<void> ensure(int id) {
+    final at = _readAt[id];
+    if (at != null && DateTime.now().difference(at) < cardTtl) {
+      return Future.value();
+    }
+    return _reading[id] ??= _readForCard(id).whenComplete(() {
+      _reading.remove(id);
+    });
+  }
+
+  Future<void> _readForCard(int id) async {
+    try {
+      await get(id);
+    } on SocketCallError {
+      // The card keeps what it has (or shows no actions).
+    }
+    _readAt[id] = DateTime.now();
+  }
+
   /// A person's display name when it is known, else the username.
   String nameOf(String user) {
     if (user.isEmpty) return user;
@@ -84,6 +123,8 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
   void _reset() {
     _burst?.cancel();
     _known.clear();
+    _extras.clear();
+    _readAt.clear();
     _names.clear();
     withTotal.value = 0;
   }
@@ -108,6 +149,8 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
   void scheduleRefresh() {
     _burst?.cancel();
     _burst = Timer(burst, () {
+      _readAt.clear();
+      cardRevision.value++;
       if (!_refreshes.isClosed) _refreshes.add(null);
     });
   }
@@ -143,6 +186,7 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
     for (final t in page.tickets) {
       _known[t.id] = t;
     }
+    if (page.tickets.isNotEmpty) cardRevision.value++;
     if (as == 'with') withTotal.value = page.total;
     return page;
   }
@@ -161,6 +205,8 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
         TicketDetail.tryParse(data) ??
         (throw const SocketCallError('error', 'The server sent no ticket.'));
     _known[id] = detail.ticket;
+    _extras[id] = (isAdmin: detail.isAdmin, inPool: detail.inPool);
+    cardRevision.value++;
     return detail;
   }
 

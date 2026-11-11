@@ -6,8 +6,12 @@ import '../../features/approvals/approvals_binding.dart';
 import '../../features/approvals/approvals_view.dart';
 import '../../features/authentication/authentication_binding.dart';
 import '../../features/authentication/authentication_view.dart';
+import '../../features/chat_info/chat_info_binding.dart';
+import '../../features/chat_info/chat_info_view.dart';
 import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
+import '../../features/debug_ai/debug_ai_binding.dart';
+import '../../features/debug_ai/debug_ai_view.dart';
 import '../../features/debug_assets/debug_assets_binding.dart';
 import '../../features/debug_chat/debug_chat_binding.dart';
 import '../../features/debug_commands/debug_commands_binding.dart';
@@ -146,6 +150,14 @@ class AppPages {
       AppTransitionKind.push,
     ),
     _page(
+      AppRoutes.chatInfo,
+      () => ChatInfoView(
+        conversationId: Uri.decodeComponent(Get.parameters['id'] ?? ''),
+      ),
+      ChatInfoBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
       AppRoutes.newGroup,
       () => const NewGroupView(),
       NewGroupBinding(),
@@ -224,6 +236,12 @@ class AppPages {
         AppRoutes.debugCommands,
         () => const DebugCommandsView(),
         DebugCommandsBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugAi,
+        () => const DebugAiView(),
+        DebugAiBinding(),
         AppTransitionKind.push,
       ),
       _page(

@@ -57,13 +57,32 @@ class FeedReducer {
     required String priority,
     required bool isUnreadOnly,
     Set<String> mutedConversations = const {},
+  }) => filterAny(
+    list,
+    priorities: {priority},
+    isUnreadOnly: isUnreadOnly,
+    mutedConversations: mutedConversations,
+  );
+
+  /// What several chips show together: an item that matches any of them.
+  static List<FeedItem> filterAny(
+    List<FeedItem> list, {
+    required Set<String> priorities,
+    required bool isUnreadOnly,
+    Set<String> mutedConversations = const {},
   }) => [
     for (final i in list)
-      if ((priority == 'all' ? !i.isResolved : i.priority == priority) &&
+      if (priorities.any((p) => matches(p, i)) &&
           (!isUnreadOnly || !i.isRead) &&
           !isMuted(i, mutedConversations))
         i,
   ];
+
+  /// One chip: All is the open items, a priority chip is that priority (a
+  /// resolved item has the priority `resolved`, so it only shows under
+  /// Resolved).
+  static bool matches(String priority, FeedItem item) =>
+      priority == 'all' ? !item.isResolved : item.priority == priority;
 
   /// An item of a conversation the person muted stays out of the list. The
   /// server still creates it, so the client hides it.

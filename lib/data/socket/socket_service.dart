@@ -43,6 +43,8 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   static const _pace = Duration(milliseconds: 400);
   static const _handshakeTimeout = Duration(seconds: 15);
+  static const _stableAfter = Duration(seconds: 10);
+  static const _maxBackoff = Duration(seconds: 15);
 
   final SessionStore _session;
   final ConnectivityService _connectivity;
@@ -60,6 +62,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   StreamSubscription<dynamic>? _subscription;
   Timer? _retryTimer;
   Timer? _handshakeTimer;
+  Timer? _stableTimer;
   int _attempt = 0;
   int _callSeq = 0;
   bool _wantConnected = false;
@@ -211,7 +214,11 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (type == 'welcome') {
       _hasWelcome = true;
       _handshakeTimer?.cancel();
-      _attempt = 0;
+      // The backoff restarts only once the connection has held for a while: a
+      // server that closes right after the welcome must not be retried at the
+      // shortest delay forever.
+      _stableTimer?.cancel();
+      _stableTimer = Timer(_stableAfter, () => _attempt = 0);
       connection.value = SocketState.online;
       _onlineSignal.add(null);
       return;
@@ -298,6 +305,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   void _drop(SocketState next, {bool retry = false}) {
     _handshakeTimer?.cancel();
+    _stableTimer?.cancel();
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close();
@@ -311,13 +319,61 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (retry && _wantConnected) _scheduleRetry();
   }
 
-  // Capped exponential backoff with jitter; reset on the next `welcome`.
+  @visibleForTesting
+  void emitOnline() {
+    connection.value = SocketState.online;
+    _onlineSignal.add(null);
+  }
+
+  /// 1 s, 2 s, 4 s, 8 s, then 15 s.
+  static Duration backoff(int attempt) {
+    final ms = 1000 * pow(2, min(attempt, 10)).toInt();
+    return Duration(milliseconds: min(ms, _maxBackoff.inMilliseconds));
+  }
+
+  // Capped exponential backoff with jitter; reset after a stable connection.
   void _scheduleRetry() {
     _retryTimer?.cancel();
-    final base = min(30000, 1000 * pow(2, _attempt).toInt());
-    final delay = (base * (0.7 + _random.nextDouble() * 0.6)).round();
+    final base = backoff(_attempt).inMilliseconds;
+    final delay = (base * (0.8 + _random.nextDouble() * 0.4)).round();
     _attempt = min(_attempt + 1, 10);
     _retryTimer = Timer(Duration(milliseconds: delay), connectNow);
+  }
+
+  /// Runs [run] on every `welcome`. A drop mid-run ends it quietly (the next
+  /// `welcome` runs it again); a trigger while it runs becomes one follow-up
+  /// run.
+  StreamSubscription<void> listenOnline(
+    String name,
+    FutureOr<void> Function() run,
+  ) {
+    var isRunning = false;
+    var isAgain = false;
+    return onOnline.listen((_) async {
+      if (isRunning) {
+        isAgain = true;
+        return;
+      }
+      isRunning = true;
+      try {
+        do {
+          isAgain = false;
+          try {
+            await run();
+          } on SocketCallError catch (e) {
+            _logGap(name, e);
+          } on StateError catch (e) {
+            _logGap(name, e);
+          }
+        } while (isAgain && isOnline);
+      } finally {
+        isRunning = false;
+      }
+    });
+  }
+
+  void _logGap(String name, Object error) {
+    if (kDebugMode) debugPrint('connectflow: $name aborted ($error)');
   }
 
   Future<bool> sendCommand(String line) async {
@@ -371,18 +427,22 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (!isOnline) throw const SocketCallError('not_connected');
     final completer = Completer<Map<String, dynamic>>();
     _calls[id] = completer;
-    final sent = await sendCommand(line);
-    if (!sent) {
-      _calls.remove(id);
-      throw const SocketCallError('not_connected');
-    }
-    return completer.future.timeout(
+    // Listened to before the send waits for its slot: a drop meanwhile
+    // completes the call with an error nobody would otherwise receive.
+    final answer = completer.future.timeout(
       timeout,
       onTimeout: () {
         _calls.remove(id);
         throw const SocketCallError('timeout');
       },
     );
+    final sent = await sendCommand(line);
+    if (!sent) {
+      _calls.remove(id);
+      answer.ignore();
+      throw const SocketCallError('not_connected');
+    }
+    return answer;
   }
 
   void _log(String line) {

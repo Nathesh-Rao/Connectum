@@ -31,5 +31,8 @@ class AppTones {
   static const purple = AppTone(Color(0xFF7C3AED), Color(0xFF5B21B6));
   static const teal = AppTone(Color(0xFF0F766E), Color(0xFF0B5651));
   static const indigo = AppTone(Color(0xFF4F46E5), Color(0xFF3730A3));
+
+  /// The primary (orange) as a tone: the soft style of a main action.
+  static const primary = AppTone(AppColors.accent, AppColors.accentInk);
   static const slate = AppTone(Color(0xFF475569), Color(0xFF334155));
 }

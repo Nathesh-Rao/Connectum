@@ -8,10 +8,9 @@ import '../../../core/utils/attachment_tag.dart';
 import '../../../core/utils/avatar_palette.dart';
 import '../../../core/utils/forwarded_text.dart';
 import '../../../core/utils/relative_time.dart';
-import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/conversation_avatar.dart';
 import '../../../core/widgets/app_row_highlight.dart';
 import '../../../core/widgets/app_unread_badge.dart';
-import '../../../data/models/chat_thread.dart';
 import '../../../data/models/conversation.dart';
 import '../../../data/models/message.dart';
 import '../chats_controller.dart';
@@ -159,27 +158,9 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = conversation;
-    final groupName = ChatThread.groupName(c.convId);
-    if (c.kind == 'dm') {
-      return Obx(
-        () => AppAvatar(
-          name: c.title,
-          kind: AppAvatarKind.person,
-          presence: controller.presenceFor(c),
-        ),
-      );
-    }
-    final isRecord = groupName != null && ChatThread.isRecordName(groupName);
-    final isCare = groupName != null && ChatThread.careUser(groupName) != null;
-    // A care thread is a person's: their name when the title has one.
-    final hasPersonName = isCare && c.title.isNotEmpty && c.title != groupName;
-    return AppAvatar(
-      name: c.title,
-      kind: hasPersonName
-          ? AppAvatarKind.person
-          : isRecord
-          ? AppAvatarKind.ticket
-          : AppAvatarKind.group,
+    if (c.kind != 'dm') return conversationAvatarFor(c);
+    return Obx(
+      () => conversationAvatarFor(c, presence: controller.presenceFor(c)),
     );
   }
 }

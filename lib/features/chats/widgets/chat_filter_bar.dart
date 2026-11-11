@@ -23,17 +23,20 @@ class ChatFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // A selected Threads chip stays while the list is empty or loading.
+      final hasThreadsChip =
+          hasThreads.value || filter.value == ChatFilterKind.threads;
       final kinds = [
         ChatFilterKind.all,
         ChatFilterKind.direct,
-        if (hasThreads.value) ChatFilterKind.threads,
+        if (hasThreadsChip) ChatFilterKind.threads,
       ];
       return AppPillBar(
         size: AppPillSize.compact,
         pills: [
           const AppPill(label: 'All'),
           const AppPill(label: 'Direct & Teams'),
-          if (hasThreads.value)
+          if (hasThreadsChip)
             AppPill(label: 'Threads', count: threadUnread.value),
         ],
         selected: kinds.indexOf(filter.value).clamp(0, kinds.length - 1),

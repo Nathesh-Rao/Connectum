@@ -27,11 +27,14 @@ enum AppPillSize { regular, compact }
 
 class AppPill {
   const AppPill({
+    this.id,
     required this.label,
     this.count = 0,
     this.kind = AppPillKind.neutral,
   });
 
+  /// What a multi-select bar reports and selects by.
+  final String? id;
   final String label;
 
   /// Shown after the label when above zero.
@@ -49,15 +52,59 @@ class AppPillBar extends StatelessWidget {
     required this.onSelected,
     this.size = AppPillSize.regular,
     this.gap,
-  });
+  }) : selectedIds = null,
+       onToggle = null,
+       exclusiveId = null;
+
+  /// Several pills can be selected at once, by [AppPill.id]. [onToggle] gets
+  /// the tapped id; [toggle] gives the next set. While [exclusiveId] is
+  /// selected, no other pill shows as selected.
+  const AppPillBar.multi({
+    super.key,
+    required this.pills,
+    required Set<String> this.selectedIds,
+    required ValueChanged<String> this.onToggle,
+    this.exclusiveId,
+    this.size = AppPillSize.regular,
+    this.gap,
+  }) : selected = -1,
+       onSelected = null;
 
   final List<AppPill> pills;
   final AppPillSize size;
   final int selected;
-  final ValueChanged<int> onSelected;
+  final ValueChanged<int>? onSelected;
+  final Set<String>? selectedIds;
+  final ValueChanged<String>? onToggle;
+  final String? exclusiveId;
 
   /// Horizontal gap between pills; the size's default when null.
   final double? gap;
+
+  /// The selection after a tap on [id]: the exclusive pill replaces every
+  /// other; another pill joins or leaves the set; an empty set falls back to
+  /// the exclusive pill when there is one.
+  static Set<String> toggle(
+    Set<String> selected,
+    String id, {
+    String? exclusiveId,
+  }) {
+    if (id == exclusiveId) return {id};
+    final next = {...selected}..remove(exclusiveId);
+    if (!next.remove(id)) next.add(id);
+    if (next.isEmpty && exclusiveId != null) return {exclusiveId};
+    return next;
+  }
+
+  bool _isSelected(int i) {
+    final ids = selectedIds;
+    if (ids == null) return i == selected;
+    final id = pills[i].id;
+    if (id == null || !ids.contains(id)) return false;
+    return exclusiveId == null ||
+        !ids.contains(exclusiveId) ||
+        id == exclusiveId;
+  }
 
   static const double _height = 34;
 
@@ -85,8 +132,15 @@ class AppPillBar extends StatelessWidget {
               _PillButton(
                 pill: pills[i],
                 size: size,
-                isSelected: i == selected,
-                onTap: () => onSelected(i),
+                isSelected: _isSelected(i),
+                onTap: () {
+                  final id = pills[i].id;
+                  if (onToggle != null) {
+                    if (id != null) onToggle!(id);
+                  } else {
+                    onSelected!(i);
+                  }
+                },
               ),
             ],
           ],

@@ -41,6 +41,9 @@ class AppSpacing {
   static const double chipHeight = 40;
   static const double checkBadge = 64;
   static const double stateImage = 160;
+  static const double agentsLottieMax = 420;
+  static const double agentsCopyMaxWidth = 320;
+  static const double agentsCompactHeight = 480;
   static const double stateImageSmall = 96;
   static const double stateImageRow = 40;
   static const double successAnimation = 120;
@@ -86,7 +89,7 @@ class AppSpacing {
   static const double stageHeight = 270;
   static const double heroLogoWidth = 66;
   static const double verifyLogoWidth = 54;
-  static const double splashLogoWidth = 106;
+  static const double splashLogoSize = 148;
   static const double headerLogoWidth = 26;
   static const double headerHeight = 72;
   static const double searchHeight = 44;

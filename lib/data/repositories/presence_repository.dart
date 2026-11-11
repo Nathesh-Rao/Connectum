@@ -26,7 +26,7 @@ class PresenceRepository extends GetxService with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _socket.events.listen(_onEvent);
-    _socket.onOnline.listen((_) => refresh());
+    _socket.listenOnline('presence', refresh);
     ever(_socket.connection, (state) {
       if (state == SocketState.online) return;
       online.clear();

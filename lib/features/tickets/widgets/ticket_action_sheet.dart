@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/theme/app_tones.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_list_row.dart';
@@ -15,6 +16,7 @@ import '../../../data/repositories/attachment_repository.dart';
 import '../../chats/models/chat_person.dart';
 import '../../forms/models/field_input.dart';
 import '../../tasks/widgets/task_people_sheet.dart';
+import '../models/ticket_action_style.dart';
 import '../ticket_action_form.dart';
 import '../ticket_detail_controller.dart';
 import '../tickets_texts.dart';
@@ -41,6 +43,7 @@ class TicketActionSheet extends StatelessWidget {
     return AppBottomSheet.show<void>(
       context,
       title: action.name,
+      titleWidget: TicketSheetTitle(action: action),
       child: TicketActionSheet(controller: controller, form: form),
       onDispose: form.dispose,
     );
@@ -51,7 +54,7 @@ class TicketActionSheet extends StatelessWidget {
     final c = controller;
     final f = form;
     final a = f.action;
-    final hint = TicketsTexts.assignHint(a.assign);
+    final style = actionStyleFor(a.name);
     return Obx(() {
       final isStillOffered = c.actions.any((x) => x.name == a.name);
       final problem = f.problem;
@@ -61,18 +64,13 @@ class TicketActionSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (hint.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(hint, style: AppText.readable),
-            ),
           if (!isStillOffered)
             const _Gap(Text(TicketsTexts.actionGone, style: AppText.error)),
           if (a.asksReason)
             _Gap(a.reasons.isEmpty ? _reasonField(f) : _reasonChoice(f)),
           if (a.asksRemarks) _Gap(_remarksField(f)),
           if (a.asksSendTo) _Gap(_sendTo(context, c, f)),
-          if (a.asksPercent) _Gap(_percent(f)),
+          if (a.asksPercent) _Gap(_percent(f, style.tone)),
           if (a.percent == 'hundred')
             const _Gap(
               Text(TicketsTexts.percentHundred, style: AppText.bodyStrong),
@@ -81,6 +79,7 @@ class TicketActionSheet extends StatelessWidget {
           if (error != null) _Gap(Text(error, style: AppText.error)),
           AppButton.primary(
             label: a.name,
+            leadingIcon: style.icon,
             isCentered: true,
             isLoading: isBusy,
             onPressed: isBusy || problem != null || !isStillOffered
@@ -97,21 +96,27 @@ class TicketActionSheet extends StatelessWidget {
     });
   }
 
-  Widget _reasonField(TicketActionForm f) => AppTextField(
-    controller: f.reasonText,
+  Widget _reasonField(TicketActionForm f) => _Labeled(
+    icon: Icons.help_outline,
     label: TicketsTexts.reasonField,
-    hint: f.action.reason == 'required'
-        ? TicketsTexts.reasonRequiredHint
-        : TicketsTexts.reasonHint,
-    minLines: 1,
-    maxLines: 3,
-    onChanged: (v) => f.reason.value = v,
+    child: AppTextField(
+      controller: f.reasonText,
+      hint: f.action.reason == 'required'
+          ? TicketsTexts.reasonRequiredHint
+          : TicketsTexts.reasonHint,
+      minLines: 1,
+      maxLines: 3,
+      onChanged: (v) => f.reason.value = v,
+    ),
   );
 
   Widget _reasonChoice(TicketActionForm f) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(TicketsTexts.reasonField, style: AppText.readableStrong),
+      const _FieldLabel(
+        icon: Icons.help_outline,
+        label: TicketsTexts.reasonField,
+      ),
       const SizedBox(height: AppSpacing.xxs),
       for (final r in f.action.reasons)
         AppListRow(
@@ -126,15 +131,18 @@ class TicketActionSheet extends StatelessWidget {
     ],
   );
 
-  Widget _remarksField(TicketActionForm f) => AppTextField(
-    controller: f.remarks,
+  Widget _remarksField(TicketActionForm f) => _Labeled(
+    icon: Icons.notes,
     label: TicketsTexts.remarksField,
-    hint: f.action.remarks == 'required'
-        ? TicketsTexts.remarksRequiredHint
-        : TicketsTexts.remarksHint,
-    minLines: 2,
-    maxLines: 5,
-    onChanged: (v) => f.remarksText.value = v,
+    child: AppTextField(
+      controller: f.remarks,
+      hint: f.action.remarks == 'required'
+          ? TicketsTexts.remarksRequiredHint
+          : TicketsTexts.remarksHint,
+      minLines: 2,
+      maxLines: 5,
+      onChanged: (v) => f.remarksText.value = v,
+    ),
   );
 
   Widget _sendTo(
@@ -146,7 +154,10 @@ class TicketActionSheet extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(TicketsTexts.sendToField, style: AppText.readableStrong),
+        const _FieldLabel(
+          icon: Icons.person_add_alt,
+          label: TicketsTexts.sendToField,
+        ),
         const SizedBox(height: AppSpacing.xxs),
         AppButton.secondary(
           label: person == null ? TicketsTexts.sendToPick : person.name,
@@ -180,20 +191,30 @@ class TicketActionSheet extends StatelessWidget {
     });
   }
 
-  Widget _percent(TicketActionForm f) => Column(
+  Widget _percent(TicketActionForm f, AppTone tone) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Row(
         children: [
           const Expanded(
-            child: Text(
-              TicketsTexts.percentField,
-              style: AppText.readableStrong,
+            child: _FieldLabel(
+              icon: Icons.speed,
+              label: TicketsTexts.percentField,
             ),
           ),
-          Text(
-            TicketsTexts.percentValue(f.percent.value),
-            style: AppText.bodyStrong,
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: tone.tint,
+              borderRadius: AppRadius.pillAll,
+            ),
+            child: Text(
+              TicketsTexts.percentValue(f.percent.value),
+              style: AppText.label.copyWith(color: tone.strong),
+            ),
           ),
         ],
       ),
@@ -201,12 +222,119 @@ class TicketActionSheet extends StatelessWidget {
         value: f.percent.value.toDouble(),
         max: 100,
         divisions: 100,
-        activeColor: AppColors.accent,
-        inactiveColor: AppColors.line,
+        activeColor: tone.solid,
+        inactiveColor: tone.tint,
         onChanged: (v) => f.percent.value = v.round(),
       ),
     ],
   );
+}
+
+/// The sheet's header: the action's icon in a tinted circle, its name and,
+/// under it, where the ticket goes.
+class TicketSheetTitle extends StatelessWidget {
+  const TicketSheetTitle({super.key, required this.action});
+
+  final TicketAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = actionStyleFor(action.name);
+    final hint = TicketsTexts.assignHint(action.assign);
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: style.tone.tint,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(style.icon, size: 20, color: style.tone.strong),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(action.name, style: AppText.title),
+              if (hint.isNotEmpty)
+                Text(
+                  hint,
+                  style: AppText.readable.copyWith(color: AppColors.muted),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, size: 16, color: AppColors.muted),
+      const SizedBox(width: AppSpacing.xxs),
+      Flexible(child: Text(label, style: AppText.readableStrong)),
+    ],
+  );
+}
+
+class _Labeled extends StatelessWidget {
+  const _Labeled({
+    required this.icon,
+    required this.label,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _FieldLabel(icon: icon, label: label),
+      const SizedBox(height: AppSpacing.xxs),
+      child,
+    ],
+  );
+}
+
+/// A soft dashed tile, the target of "Attach a file".
+class _DashedPainter extends CustomPainter {
+  const _DashedPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          const Radius.circular(AppRadius.control),
+        ),
+      );
+    final paint = Paint()
+      ..color = AppColors.inputBorder
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    for (final metric in path.computeMetrics()) {
+      for (var at = 0.0; at < metric.length; at += 9) {
+        canvas.drawPath(metric.extractPath(at, at + 5), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedPainter old) => false;
 }
 
 class _Files extends StatelessWidget {
@@ -222,11 +350,11 @@ class _Files extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            form.action.attachments == 'required'
+          _FieldLabel(
+            icon: Icons.attach_file,
+            label: form.action.attachments == 'required'
                 ? '${TicketsTexts.filesLabel} *'
                 : TicketsTexts.filesLabel,
-            style: AppText.readableStrong,
           ),
           const SizedBox(height: AppSpacing.xxs),
           for (final item in items)
@@ -238,12 +366,48 @@ class _Files extends StatelessWidget {
                 onRemove: () => controller.removeFile(form, item),
               ),
             ),
-          AppButton.secondary(
+          Semantics(
+            button: true,
             label: items.isEmpty
                 ? TicketsTexts.attach
                 : TicketsTexts.attachAnother,
-            icon: Icons.attach_file,
-            onPressed: () => _choose(context),
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: () => _choose(context),
+              borderRadius: AppRadius.controlAll,
+              child: CustomPaint(
+                painter: const _DashedPainter(),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.attach_file,
+                        size: 18,
+                        color: AppColors.accentInk,
+                      ),
+                      const SizedBox(width: AppSpacing.xxs),
+                      Flexible(
+                        child: Text(
+                          items.isEmpty
+                              ? TicketsTexts.attach
+                              : TicketsTexts.attachAnother,
+                          style: AppText.readableStrong.copyWith(
+                            color: AppColors.accentInk,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       );

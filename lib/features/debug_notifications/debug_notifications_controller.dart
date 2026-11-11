@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../core/widgets/app_notices.dart';
+import '../../core/widgets/app_pill_bar.dart';
 import '../../data/notifications/local_notification_service.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../notifications/models/feed_item.dart';
@@ -16,6 +17,15 @@ class DebugNotificationsController extends GetxController {
 
   final FeedRepository feed;
   final LocalNotificationService notifications;
+
+  /// The multi-select pill sample: same rules as the Notifications screen.
+  final sampleFilter = Rx<Set<String>>({'all'});
+
+  void toggleSampleFilter(String id) => sampleFilter.value = AppPillBar.toggle(
+    sampleFilter.value,
+    id,
+    exclusiveId: 'all',
+  );
 
   int _seq = 0;
   String? _lastId;

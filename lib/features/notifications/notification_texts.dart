@@ -44,6 +44,7 @@ class NotificationTexts {
 
   static const emptyTitle = 'Nothing here';
   static const emptyMessage = 'New notifications will show up here.';
+  static const emptyFilters = 'No notifications match these filters';
   static const emptyUnread = 'You are all caught up.';
   static const errorMessage = "Couldn't load your notifications.";
   static const encrypted = 'Encrypted message';

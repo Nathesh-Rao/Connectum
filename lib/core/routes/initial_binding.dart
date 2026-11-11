@@ -1,3 +1,6 @@
+import '../../data/ai/ai_repository.dart';
+import '../../data/ai/ai_setup_cache.dart';
+import '../../data/ai/ai_repository_impl.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -99,20 +102,31 @@ class InitialBinding extends Bindings {
       FormOptionsRepository(db, store, socket),
       permanent: true,
     );
-    Get.put(
+    final submissions = Get.put(
       SubmissionRepository(db, store, socket, messages, formOptions),
       permanent: true,
     );
+    final tickets = Get.put(
+      TicketRepository(socket, store, conversations),
+      permanent: true,
+    );
+    final ai = Get.put<AiRepository>(
+      AiRepositoryImpl(
+        socket,
+        store,
+        messages,
+        statusOf: (id) => submissions.submissionById(id)?.status,
+        displayNameOf: tickets.nameOf,
+      ),
+      permanent: true,
+    );
+    Get.put(AiSetupCache(ai), permanent: true);
     Get.put(FormLogicService(store, socket), permanent: true);
     Get.put(PresenceRepository(socket), permanent: true);
     Get.put(TypingRepository(socket), permanent: true);
     final feed = Get.put(FeedRepository(socket, store, e2e), permanent: true);
     final tasks = Get.put(TaskRepository(socket, store), permanent: true);
     Get.put(ApprovalRepository(socket, store, feed), permanent: true);
-    final tickets = Get.put(
-      TicketRepository(socket, store, conversations),
-      permanent: true,
-    );
     final notificationRouter = Get.put(
       NotificationRouter(store, feed, tasks, tickets),
       permanent: true,

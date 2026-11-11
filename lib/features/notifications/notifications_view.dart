@@ -71,7 +71,7 @@ class NotificationsView extends GetView<NotificationsController> {
               0,
             ),
             child: Obx(
-              () => AppPillBar(
+              () => AppPillBar.multi(
                 size: AppPillSize.compact,
                 gap: NotificationsSpacing.pillGap,
                 pills: [
@@ -81,6 +81,7 @@ class NotificationsView extends GetView<NotificationsController> {
                     i++
                   )
                     AppPill(
+                      id: NotificationsController.priorities[i],
                       label: NotificationsController.chipLabels[i],
                       count: i == 0
                           ? 0
@@ -89,8 +90,9 @@ class NotificationsView extends GetView<NotificationsController> {
                             ),
                     ),
                 ],
-                selected: c.selected.value,
-                onSelected: c.selectChip,
+                selectedIds: c.selectedIds.value,
+                onToggle: c.toggleChip,
+                exclusiveId: 'all',
               ),
             ),
           ),
@@ -192,9 +194,7 @@ class _Body extends StatelessWidget {
         state: state,
         emptyImage: AppStateImageKind.emptyGeneric,
         emptyTitle: NotificationTexts.emptyTitle,
-        emptyMessage: c.isUnreadOnly.value
-            ? NotificationTexts.emptyUnread
-            : NotificationTexts.emptyMessage,
+        emptyMessage: c.emptyMessage,
         errorMessage: NotificationTexts.errorMessage,
         onRetry: c.retry,
         child: NotificationListener<ScrollNotification>(

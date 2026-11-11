@@ -156,7 +156,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     _socket.events.listen(_onEvent);
-    _socket.onOnline.listen((_) => unawaited(ensureSetup()));
+    _socket.listenOnline('e2e', ensureSetup);
     ever(_session.current, (_) => _reset());
     WidgetsBinding.instance.addObserver(this);
   }

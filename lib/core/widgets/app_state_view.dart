@@ -6,16 +6,7 @@ import 'app_button.dart';
 import 'app_loading.dart';
 import 'app_state_image.dart';
 
-enum AppViewState {
-  content,
-  loading,
-  empty,
-  error,
-  offline,
-  noResults,
-  locked,
-  comingSoon,
-}
+enum AppViewState { content, loading, empty, error, offline, noResults, locked }
 
 class AppStateView extends StatelessWidget {
   const AppStateView({
@@ -53,8 +44,7 @@ class AppStateView extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (state) {
       AppViewState.content => child,
-      AppViewState.loading =>
-        loadingChild ?? const _Message(),
+      AppViewState.loading => loadingChild ?? const _Message(),
       AppViewState.empty => _Message(
         image: image ?? emptyImage,
         title: emptyTitle,
@@ -81,11 +71,6 @@ class AppStateView extends StatelessWidget {
       ),
       AppViewState.locked => _Message(
         image: image ?? AppStateImageKind.locked,
-        title: emptyTitle,
-        message: emptyMessage,
-      ),
-      AppViewState.comingSoon => _Message(
-        image: image ?? AppStateImageKind.comingSoon,
         title: emptyTitle,
         message: emptyMessage,
       ),

@@ -68,7 +68,7 @@ class SubmissionRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.onOnline.listen((_) => _onOnline());
+    _socket.listenOnline('submissions', _onOnline);
     ever(_session.current, (_) {
       // The other organisation's forms go before the new one's first read.
       submissions.clear();

@@ -1,0 +1,1 @@
+Play Store feature graphic (dev-only, not part of the app): `STORE_GRAPHIC=1 flutter test tool/store_graphic/feature_graphic_test.dart` composes `design/store/feature_art.png` with the real logo and fonts into `design/store/out/feature_graphic_1024x500.png` (final) and `feature_graphic_2048x1000.png` (preview). Without `STORE_GRAPHIC=1` the test is skipped.

@@ -62,6 +62,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/connectum_logo.png
+    - assets/images/
     - assets/images/states/
     - assets/icons/home/
     - assets/icons/bottom_nav/
@@ -89,3 +90,9 @@ flutter:
           weight: 700
         - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
           weight: 800
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700

@@ -1,3 +1,5 @@
+import '../ai_chat/ai_entry.dart';
+import '../ai_chat/widgets/ai_header_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -7,12 +9,14 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_form_card.dart';
+import '../../core/widgets/conversation_avatar.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_skeleton.dart';
 import '../../core/widgets/app_state_image.dart';
 import 'conversation_controller.dart';
 import 'models/chat_item.dart';
+import 'widgets/ticket_card_actions.dart';
 import 'widgets/attachment_view.dart';
 import 'widgets/chat_rows.dart';
 import 'widgets/conversation_composer.dart';
@@ -21,7 +25,6 @@ import 'widgets/message_actions_sheet.dart';
 import 'widgets/device_limit_banner.dart';
 import 'widgets/key_change_sheet.dart';
 import 'widgets/message_bubble.dart';
-import 'widgets/members_sheet.dart';
 import 'widgets/message_status_mark.dart';
 import 'widgets/reaction_chips.dart';
 import '../tickets/tickets_texts.dart';
@@ -59,30 +62,21 @@ class ConversationView extends GetView<ConversationController> {
               // The sample data has no Rx behind the title; the loaded flag
               // keeps this Obx observing something.
               final isReady = c.isLoaded.value;
+              final conv = c.avatarConversation;
               return ConversationHeader(
                 title: c.title,
                 status: isReady ? c.status : null,
-                isSquareAvatar: c.kind != 'dm',
-                presence: c.presenceDot,
+                avatar: conversationAvatarFor(conv, presence: c.presenceDot),
                 isEncrypted: c.isLocked.value || c.isBlocked.value,
-                onStatusTap: c.kind == 'group' && c.members.isNotEmpty
-                    ? () => MembersSheet.open(
-                        context,
-                        title: c.title,
-                        members: c.members,
-                        me: c.me,
-                        onAddPeople: c.isOwner
-                            ? () {
-                                Get.back<void>();
-                                Get.toNamed<void>(
-                                  AppRoutes.newGroup,
-                                  arguments: c.target,
-                                );
-                              }
-                            : null,
-                      )
-                    : null,
+                onInfoTap: () => Get.toNamed<void>(
+                  AppRoutes.chatInfoOf(c.conversationId),
+                  arguments: c.isLocked.value || c.isBlocked.value,
+                ),
                 onBack: Get.back,
+                trailing: [
+                  if (c.canUseAi)
+                    AiHeaderButton(onPressed: () => openAi(context, c.ai)),
+                ],
               );
             }),
             const AppOfflineBar(),
@@ -223,6 +217,9 @@ Widget _message(BuildContext context, ConversationController c, ChatItem item) {
             isHighlighted: c.highlighted.contains(m.msgId),
             stripLabel: card.isTicket && !card.isPending
                 ? '${TicketsTexts.ticketMarker} #${card.id}'
+                : null,
+            actions: card.isTicket && !card.isPending
+                ? TicketCardActions(card: card, controller: c)
                 : null,
             statusMark: m.isMine
                 ? MessageStatusMark(status: m.status, isDirect: c.isDirect)

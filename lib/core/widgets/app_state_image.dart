@@ -14,7 +14,6 @@ enum AppStateImageKind {
   offline('offline'),
   error('error'),
   locked('locked', scale: 0.85),
-  comingSoon('coming_soon'),
   aiWelcome('ai_welcome');
 
   const AppStateImageKind(this.file, {this.scale = 1});

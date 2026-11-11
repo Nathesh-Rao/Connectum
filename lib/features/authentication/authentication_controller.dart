@@ -6,7 +6,6 @@ import '../../core/data/app_countries.dart';
 import '../../core/data/country_lookup.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/invite_service.dart';
-import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
@@ -17,8 +16,7 @@ import '../../data/socket/connectivity_service.dart';
 import '../invite_code/invite_code_sheet.dart';
 import 'auth_validators.dart';
 
-class AuthenticationController extends GetxController
-    with GetSingleTickerProviderStateMixin {
+class AuthenticationController extends GetxController {
   AuthenticationController({
     required this.auth,
     required this.session,
@@ -58,8 +56,6 @@ class AuthenticationController extends GetxController
       key: FocusNode(),
   };
 
-  late final TabController tabController;
-
   /// 0 = Sign in, 1 = Set up, 2 = Self register.
   final mode = 0.obs;
 
@@ -93,11 +89,6 @@ class AuthenticationController extends GetxController
       email.text = prefill;
       session.loginEmail.value = null;
     }
-    tabController = TabController(
-      length: tabLabels.length,
-      vsync: this,
-      animationDuration: AppDurations.base,
-    )..addListener(_onTab);
     focus.forEach((key, node) {
       node.addListener(() {
         if (!node.hasFocus) touch(key);
@@ -105,8 +96,7 @@ class AuthenticationController extends GetxController
     });
   }
 
-  void _onTab() {
-    final index = tabController.index;
+  void selectTab(int index) {
     if (index == mode.value) return;
     direction = index > mode.value ? 1 : -1;
     mode.value = index;
@@ -240,7 +230,7 @@ class AuthenticationController extends GetxController
           AuthValidators.mobileError;
     } else if (e.code == 'no_account' && mode.value == 0 && invite.hasInvite) {
       // An invited person with a new email goes on to create the account.
-      tabController.animateTo(2);
+      selectTab(2);
       formError.value =
           'No account for that email yet. Create one to join ${invite.organisationName ?? 'this enterprise'}.';
     } else if (e.code == 'exists' || e.code == 'no_account') {
@@ -354,7 +344,6 @@ class AuthenticationController extends GetxController
   void onClose() {
     AppNotices.hide(_loginNoticeKey);
     invite.detach();
-    tabController.dispose();
     for (final c in [
       email,
       orgName,

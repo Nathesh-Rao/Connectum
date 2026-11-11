@@ -7,9 +7,9 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_ambient_backdrop.dart';
+import '../../core/widgets/app_animated_size.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_flex_gap.dart';
 import '../../core/widgets/app_invite_card.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_scaffold.dart';
@@ -28,6 +28,7 @@ class AuthenticationView extends GetView<AuthenticationController> {
   Widget build(BuildContext context) {
     return AppScaffold(
       ambient: AppAmbientVariant.access,
+      isScrollable: false,
       body: Obx(() {
         if (controller.isOffline) {
           return AppStateView(
@@ -50,11 +51,16 @@ class _Form extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
+    final viewport = MediaQuery.sizeOf(context).height;
+    final heroGap = (viewport * _heroGapShare).clamp(8.0, 56.0);
+    final fieldsGap = (viewport * _fieldsGapShare).clamp(24.0, 96.0);
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: [
+        SliverToBoxAdapter(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AppInviteSlot(invite: c.invite),
@@ -63,24 +69,40 @@ class _Form extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: Text('01 / YOUR ACCOUNT', style: AppText.eyebrow),
               ),
-              const AppFlexGap(flex: 33, min: 8, max: 56),
+              SizedBox(height: heroGap),
               const _Hero(),
-              const AppFlexGap(flex: 77, min: 24, max: 96),
+              SizedBox(height: fieldsGap),
               _Fields(controller: c),
             ],
           ),
         ),
-        Center(
-          child: AppButton.text(
-            label: 'Have an invite code or link?',
-            onPressed: c.openInviteSheet,
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: AppButton.text(
+                    label: 'Have an invite code or link?',
+                    onPressed: c.openInviteSheet,
+                  ),
+                ),
+                const _AccessFooter(),
+              ],
+            ),
           ),
         ),
-        const _AccessFooter(),
       ],
     );
   }
 }
+
+/// The prototype's measured gaps (33 and 77) as shares of its frame height.
+const double _heroGapShare = 33 / 844;
+const double _fieldsGapShare = 77 / 844;
 
 class _Hero extends StatelessWidget {
   const _Hero();
@@ -115,9 +137,11 @@ class _AccessFooter extends StatelessWidget {
         children: [
           Icon(Icons.check, size: 13, color: AppColors.muted),
           SizedBox(width: AppSpacing.xs),
-          Text(
-            'Private by design. Connected by choice.',
-            style: AppText.caption,
+          Flexible(
+            child: Text(
+              'Private by design. Connected by choice.',
+              style: AppText.caption,
+            ),
           ),
         ],
       ),
@@ -134,11 +158,15 @@ class _Fields extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppTabBar(
-          controller: c.tabController,
-          labels: AuthenticationController.tabLabels,
+        Obx(
+          () => AppTabBar(
+            selectedIndex: c.mode.value,
+            onChanged: c.selectTab,
+            labels: AuthenticationController.tabLabels,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         _ModeSwitcher(controller: c),
@@ -186,7 +214,7 @@ class _ModeSwitcher extends StatelessWidget {
     final isReduced = MediaQuery.disableAnimationsOf(context);
     return Obx(() {
       final index = c.mode.value;
-      return AnimatedSize(
+      return AppAnimatedSize(
         duration: isReduced ? Duration.zero : AppDurations.base,
         curve: AppCurves.out,
         alignment: Alignment.topCenter,
@@ -340,7 +368,7 @@ class _RegisterForm extends StatelessWidget {
         _EmailField(controller: c, isSignIn: false),
         const SizedBox(height: AppSpacing.sm),
         Obx(
-          () => AnimatedSize(
+          () => AppAnimatedSize(
             duration: isReduced ? Duration.zero : AppDurations.base,
             curve: AppCurves.out,
             alignment: Alignment.topCenter,

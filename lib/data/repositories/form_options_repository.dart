@@ -89,7 +89,7 @@ class FormOptionsRepository extends GetxService {
         unawaited(clearOrg());
       }
     });
-    _socket.onOnline.listen((_) => unawaited(refresh()));
+    _socket.listenOnline('form options', refresh);
     unawaited(load());
   }
 

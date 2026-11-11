@@ -109,21 +109,15 @@ class _PackedScroll extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final vertical = padding.resolve(Directionality.of(context)).vertical;
-        return SingleChildScrollView(
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: [
+        SliverPadding(
           padding: padding,
-          physics: const BouncingScrollPhysics(),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - vertical,
-            ),
-            child: IntrinsicHeight(child: body),
-          ),
-        );
-      },
+          sliver: SliverFillRemaining(hasScrollBody: false, child: body),
+        ),
+      ],
     );
   }
 }

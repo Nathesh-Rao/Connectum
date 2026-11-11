@@ -28,13 +28,16 @@ class RecordRenameSheet extends StatefulWidget {
     BuildContext context,
     ChatsController controller,
     Conversation conversation,
+  ) => showFor(context, controller.renameFor(conversation), conversation.title);
+
+  static Future<void> showFor(
+    BuildContext context,
+    RecordRenameController rename,
+    String initialName,
   ) => AppBottomSheet.show<void>(
     context,
     title: 'Rename conversation',
-    child: RecordRenameSheet(
-      rename: controller.renameFor(conversation),
-      initialName: conversation.title,
-    ),
+    child: RecordRenameSheet(rename: rename, initialName: initialName),
   );
 
   @override

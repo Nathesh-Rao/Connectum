@@ -35,6 +35,7 @@ class AppFormCard extends StatefulWidget {
     this.note,
     this.isHighlighted = false,
     this.statusMark,
+    this.actions,
   });
 
   static const widthFraction = 0.92;
@@ -65,6 +66,10 @@ class AppFormCard extends StatefulWidget {
   /// The sent / delivered / read mark next to the time, for my cards in a
   /// conversation. Without it a waiting card shows a plain clock.
   final Widget? statusMark;
+
+  /// Under the fields, above the time: a ticket's actions, in an
+  /// [AppFormCardActionArea]. It may build to nothing.
+  final Widget? actions;
 
   @override
   State<AppFormCard> createState() => _AppFormCardState();
@@ -105,6 +110,19 @@ class _AppFormCardState extends State<AppFormCard> {
     final fields = d.cardEntries;
     final shown = fields.take(AppFormCard.visibleFields).toList();
     final extra = fields.skip(AppFormCard.visibleFields).toList();
+    final time = ChatTime.time(d.ts);
+    final isWaiting = widget.state == AppFormCardState.waiting;
+    final line = _Footer.lineOf(
+      problem: widget.state == AppFormCardState.failed ? widget.problem : null,
+      note: widget.note,
+      isAwaitingApproval: d.isAwaitingApproval,
+    );
+    final stamp = _Stamp(
+      time: time,
+      isWaiting: isWaiting,
+      statusMark: widget.statusMark,
+    );
+    final footer = _Footer(line: line, stamp: stamp);
     Widget card = Listener(
       onPointerDown: (_) => _setPressed(true),
       onPointerUp: (_) => _setPressed(false),
@@ -184,16 +202,16 @@ class _AppFormCardState extends State<AppFormCard> {
                         ],
                       ),
                     ),
-                  _Footer(
-                    time: ChatTime.time(d.ts),
-                    isWaiting: widget.state == AppFormCardState.waiting,
-                    statusMark: widget.statusMark,
-                    isAwaitingApproval: d.isAwaitingApproval,
-                    problem: widget.state == AppFormCardState.failed
-                        ? widget.problem
-                        : null,
-                    note: widget.note,
-                  ),
+                  if (widget.actions != null)
+                    AppFormCardScope(
+                      timeLabel: time,
+                      stamp: stamp,
+                      line: line,
+                      footer: footer,
+                      child: widget.actions!,
+                    )
+                  else
+                    footer,
                 ],
               ),
             ),
@@ -232,41 +250,114 @@ class _AppFormCardState extends State<AppFormCard> {
   }
 }
 
-class _Footer extends StatelessWidget {
-  const _Footer({
+/// Sets [child] under a card's fields: a hairline inset like the fields',
+/// then the child, which spans the card's full width (it adds its own
+/// [AppFormCardActionArea.inset] where it needs one).
+class AppFormCardActionArea extends StatelessWidget {
+  const AppFormCardActionArea({super.key, required this.child});
+
+  final Widget child;
+
+  static const inset = AppSpacing.sm;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(inset, AppSpacing.xxs, inset, 0),
+        child: Divider(height: 1, color: AppColors.cardLine),
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      child,
+    ],
+  );
+}
+
+/// What an action area on a card needs to carry the time itself: the bar
+/// along the bottom shows [stamp] at its right, so the card has no row of
+/// its own under the actions. [footer] is the plain row for when the actions
+/// build to nothing.
+class AppFormCardScope extends InheritedWidget {
+  const AppFormCardScope({
+    super.key,
+    required this.timeLabel,
+    required this.stamp,
+    required this.line,
+    required this.footer,
+    required super.child,
+  });
+
+  final String timeLabel;
+  final Widget stamp;
+  final Widget? line;
+  final Widget footer;
+
+  static AppFormCardScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppFormCardScope>();
+
+  @override
+  bool updateShouldNotify(AppFormCardScope old) =>
+      timeLabel != old.timeLabel ||
+      stamp != old.stamp ||
+      line != old.line ||
+      footer != old.footer;
+}
+
+/// The time, with a clock while waiting or the sent / delivered / read mark.
+class _Stamp extends StatelessWidget {
+  const _Stamp({
     required this.time,
     required this.isWaiting,
     required this.statusMark,
-    required this.isAwaitingApproval,
-    required this.problem,
-    required this.note,
   });
 
   final String time;
   final bool isWaiting;
   final Widget? statusMark;
-  final bool isAwaitingApproval;
-  final String? problem;
-  final String? note;
 
   @override
   Widget build(BuildContext context) {
-    final line = problem != null
-        ? Text(
-            problem!,
-            style: AppText.caption.copyWith(color: AppColors.error),
-          )
-        : note != null
-        ? Text(
-            note!,
-            style: AppText.caption.copyWith(color: AppColors.cardMuted),
-          )
-        : isAwaitingApproval
-        ? Text(
-            'Waiting for approval',
-            style: AppText.caption.copyWith(color: AppColors.cardMuted),
-          )
-        : null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isWaiting && statusMark == null) ...[
+          const Icon(Icons.schedule, size: 12, color: AppColors.cardMuted),
+          const SizedBox(width: AppSpacing.xxs),
+        ],
+        Text(time, style: AppText.caption.copyWith(color: AppColors.cardMuted)),
+        if (statusMark != null) ...[
+          const SizedBox(width: AppSpacing.xxs),
+          statusMark!,
+        ],
+      ],
+    );
+  }
+}
+
+class _Footer extends StatelessWidget {
+  const _Footer({required this.line, required this.stamp});
+
+  final Widget? line;
+  final Widget stamp;
+
+  static Widget? lineOf({
+    required String? problem,
+    required String? note,
+    required bool isAwaitingApproval,
+  }) => problem != null
+      ? Text(problem, style: AppText.caption.copyWith(color: AppColors.error))
+      : note != null
+      ? Text(note, style: AppText.caption.copyWith(color: AppColors.cardMuted))
+      : isAwaitingApproval
+      ? Text(
+          'Waiting for approval',
+          style: AppText.caption.copyWith(color: AppColors.cardMuted),
+        )
+      : null;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.sm,
@@ -279,18 +370,7 @@ class _Footer extends StatelessWidget {
         children: [
           Expanded(child: line ?? const SizedBox.shrink()),
           const SizedBox(width: AppSpacing.xs),
-          if (isWaiting && statusMark == null) ...[
-            const Icon(Icons.schedule, size: 12, color: AppColors.cardMuted),
-            const SizedBox(width: AppSpacing.xxs),
-          ],
-          Text(
-            time,
-            style: AppText.caption.copyWith(color: AppColors.cardMuted),
-          ),
-          if (statusMark != null) ...[
-            const SizedBox(width: AppSpacing.xxs),
-            statusMark!,
-          ],
+          stamp,
         ],
       ),
     );

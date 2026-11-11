@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_button.dart';
 
-/// Back, avatar, title and a status line. Whatever is added on the right
+/// Back, avatar, title and a status line; the avatar and the two lines open
+/// the chat info. Whatever is added on the right
 /// later (the prototype has a sparkle button and a menu) goes in [trailing]
 /// and never moves the title.
 class ConversationHeader extends StatelessWidget {
@@ -14,21 +15,21 @@ class ConversationHeader extends StatelessWidget {
     super.key,
     required this.title,
     required this.status,
-    required this.isSquareAvatar,
+    required this.avatar,
     required this.onBack,
-    this.presence = AppPresenceDot.none,
     this.isEncrypted = false,
-    this.onStatusTap,
+    this.onInfoTap,
     this.trailing = const [],
   });
 
   final String title;
   final String? status;
-  final bool isSquareAvatar;
-  final AppPresenceDot presence;
+
+  /// Built by [conversationAvatarFor], so it matches the chat list.
+  final Widget avatar;
   final bool isEncrypted;
   final VoidCallback onBack;
-  final VoidCallback? onStatusTap;
+  final VoidCallback? onInfoTap;
   final List<Widget> trailing;
 
   @override
@@ -46,46 +47,57 @@ class ConversationHeader extends StatelessWidget {
             semanticLabel: 'Back',
             onPressed: onBack,
           ),
-          AppAvatar(name: title, isSquare: isSquareAvatar, presence: presence),
-          const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+            child: Semantics(
+              button: onInfoTap != null,
+              label: 'Chat info, $title',
+              excludeSemantics: onInfoTap != null,
+              child: InkWell(
+                onTap: onInfoTap,
+                borderRadius: AppRadius.controlAll,
+                child: Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.bodyStrong,
+                    avatar,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.bodyStrong,
+                                ),
+                              ),
+                              if (isEncrypted) ...[
+                                const SizedBox(width: AppSpacing.xxs),
+                                const Icon(
+                                  Icons.lock,
+                                  size: AppSpacing.statusIcon,
+                                  color: AppColors.yesText,
+                                  semanticLabel: 'End-to-end encrypted',
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (status != null)
+                            Text(
+                              status!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption,
+                            ),
+                        ],
                       ),
                     ),
-                    if (isEncrypted) ...[
-                      const SizedBox(width: AppSpacing.xxs),
-                      const Icon(
-                        Icons.lock,
-                        size: AppSpacing.statusIcon,
-                        color: AppColors.yesText,
-                        semanticLabel: 'End-to-end encrypted',
-                      ),
-                    ],
                   ],
                 ),
-                if (status != null)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onStatusTap,
-                    child: Text(
-                      status!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption,
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
           ...trailing,

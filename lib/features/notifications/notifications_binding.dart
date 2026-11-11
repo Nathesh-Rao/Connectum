@@ -10,14 +10,16 @@ import 'notifications_controller.dart';
 class NotificationsBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(
-      () => NotificationsController(
+    if (Get.isRegistered<NotificationsController>()) return;
+    Get.put(
+      NotificationsController(
         feed: Get.find<FeedRepository>(),
         router: Get.find<NotificationRouter>(),
         notifications: Get.find<LocalNotificationService>(),
         connectivity: Get.find<ConnectivityService>(),
         conversations: Get.find<ConversationRepository>(),
       ),
+      permanent: true,
     );
   }
 }

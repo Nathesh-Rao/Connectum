@@ -49,6 +49,14 @@ import '../../data/socket/socket_service.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
 import '../../core/widgets/app_notices.dart';
+import '../../data/models/ticket.dart';
+import '../../data/repositories/ticket_repository.dart';
+import '../tickets/models/ticket_actions.dart';
+import '../tickets/ticket_detail_controller.dart';
+import '../../data/ai/ai_repository.dart';
+import '../../data/ai/ai_setup_cache.dart';
+import '../../data/ai/care_summary_text.dart';
+import '../ai_chat/ai_summary_controller.dart';
 import 'models/chat_item.dart';
 import '../commands/command_runner.dart';
 import 'models/command_prompt.dart';
@@ -79,6 +87,10 @@ class ConversationController extends GetxController
     required this.commands,
     required this.attachments,
     required this.attachmentCache,
+    required this.tickets,
+    required this.newTicketDetail,
+    required this.aiRepository,
+    required this.aiSetup,
   });
 
   static const maxLength = 2000;
@@ -98,11 +110,33 @@ class ConversationController extends GetxController
   final ConnectivityService connectivity;
   final HomeShellController? shell;
   final SocketService socket;
+  final TicketRepository tickets;
+  final AiRepository aiRepository;
+  final AiSetupCache aiSetup;
+
+  /// Builds the controller of one ticket, for the status sheet opened from a
+  /// card.
+  final TicketDetailController Function(int id) newTicketDetail;
   final SessionStore store;
   final E2eRepository e2e;
   final CommandRepository commands;
   final AttachmentRepository attachments;
   final AttachmentCache attachmentCache;
+
+  /// The in-chat AI sheet.
+  late final ai = AiSummaryController(
+    ai: aiRepository,
+    setup: aiSetup,
+    chatId: conversationId,
+    title: () => title,
+    isEncrypted: () => isLocked.value || isBlocked.value,
+    isOnline: () => connectivity.hasNetwork.value,
+    post: (text) => messages.sendText(conversationId, text),
+    isAdmin: () => commands.isAdmin.value,
+    carePerson: CareSummaryText.personOf(conversationId),
+  );
+
+  bool get canUseAi => aiAvailableIn(conversationId);
 
   /// The "#" commands list of the composer.
   late final prompt = CommandPrompt(commands);
@@ -235,6 +269,12 @@ class ConversationController extends GetxController
     return null;
   }
 
+  /// The conversation the header draws its avatar from: the stored row, or
+  /// one made of the id and the title when nothing is stored yet.
+  Conversation get avatarConversation =>
+      conversation ??
+      Conversation(convId: conversationId, kind: kind, title: title);
+
   String get title {
     final t = conversation?.title ?? '';
     return t.isEmpty ? (kind == 'global' ? 'Everyone' : target) : t;
@@ -258,12 +298,6 @@ class ConversationController extends GetxController
     final count = conversation?.memberCount ?? 0;
     return kind == 'group' && count > 0 ? '$count members' : null;
   }
-
-  /// True for a group I own: the only one who may add people.
-  bool get isOwner =>
-      kind == 'group' &&
-      (conversation?.owner ?? '').toLowerCase() == me &&
-      store.userId != null;
 
   /// A group's members from the stored list, empty when not known.
   List<String> get members => conversation?.members ?? const [];
@@ -469,6 +503,42 @@ class ConversationController extends GetxController
         isEncryptedChat: isBlocked.value,
       ),
     );
+  }
+
+  final _ticketDetails = <int, TicketDetailController>{};
+
+  /// What I may do with the ticket on a card, from the last known state of
+  /// the ticket (the same rules as the ticket screen). Empty for a card that
+  /// is not a ticket, still waiting to be sent, or not mine to act on.
+  List<TicketAction> ticketActionsOf(FormCardData d) {
+    final id = d.isTicket && !d.isPending ? idNumber(d.id) : null;
+    if (id == null) return const [];
+    final state = tickets.stateOf(id);
+    if (state == null) return const [];
+    return TicketActions.of(
+      state.ticket,
+      tickets.me,
+      isAdmin: state.isAdmin,
+      inPool: state.inPool,
+    );
+  }
+
+  /// Reads the ticket of a visible card once in a while (shared, short
+  /// cache).
+  void ensureTicket(FormCardData d) {
+    final id = d.isTicket && !d.isPending ? idNumber(d.id) : null;
+    if (id != null) unawaited(tickets.ensure(id));
+  }
+
+  /// The controller the status sheet works on for the ticket on [d].
+  TicketDetailController? ticketDetailOf(FormCardData d) {
+    final id = idNumber(d.id);
+    if (!d.isTicket || id == null) return null;
+    return _ticketDetails.putIfAbsent(id, () {
+      final c = newTicketDetail(id);
+      c.onInit();
+      return c;
+    });
   }
 
   void openForm(Message m, FormCardData d) {
@@ -1658,6 +1728,10 @@ class ConversationController extends GetxController
 
   @override
   void onClose() {
+    for (final d in _ticketDetails.values) {
+      d.onClose();
+    }
+    _ticketDetails.clear();
     HomeReload.overlays.remove(conversationId);
     ConversationRoute.jumpListeners.remove(conversationId);
     WidgetsBinding.instance.removeObserver(this);

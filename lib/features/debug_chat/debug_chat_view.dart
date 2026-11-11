@@ -9,6 +9,7 @@ import '../conversation/widgets/document_card.dart';
 import '../conversation/widgets/chat_rows.dart';
 import '../conversation/widgets/message_bubble.dart';
 import 'debug_chat_controller.dart';
+import 'debug_chat_samples.dart';
 
 class DebugChatView extends GetView<DebugChatController> {
   const DebugChatView({super.key});
@@ -20,6 +21,8 @@ class DebugChatView extends GetView<DebugChatController> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         children: [
+          const DebugChatSamples(),
+          const SizedBox(height: AppSpacing.md),
           for (final item in c.items)
             item.kind == ChatItemKind.day
                 ? DayDivider(label: item.label)

@@ -73,6 +73,7 @@ class GalleryView extends GetView<GalleryController> {
     'debug/tasks': AppRoutes.debugTasks,
     'debug/tickets': AppRoutes.debugTickets,
     'debug/commands': AppRoutes.debugCommands,
+    'debug/ai': AppRoutes.debugAi,
   };
 
   @override
@@ -229,8 +230,8 @@ class GalleryView extends GetView<GalleryController> {
           _section('AppAvatar palette (person, group, ticket)'),
           const AvatarSamples(),
           _section('AppSpinner (xs 16, sm 20, md 24, lg 32)'),
-          _spinnerRow(AppColors.background),
-          _spinnerRow(AppColors.accent),
+          _spinnerRow(AppColors.background, AppColors.accent),
+          _spinnerRow(AppColors.accent, AppColors.background),
           _section('Pull header (drag the list down)'),
           SizedBox(
             height: 220,
@@ -306,7 +307,7 @@ class GalleryView extends GetView<GalleryController> {
     );
   }
 
-  Widget _spinnerRow(Color background) => ColoredBox(
+  Widget _spinnerRow(Color background, Color color) => ColoredBox(
     color: background,
     child: Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -318,7 +319,7 @@ class GalleryView extends GetView<GalleryController> {
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.line, width: 0.5),
               ),
-              child: AppSpinner(size: size, isStandalone: true),
+              child: AppSpinner(size: size, color: color, isStandalone: true),
             ),
         ],
       ),

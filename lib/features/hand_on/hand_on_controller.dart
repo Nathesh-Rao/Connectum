@@ -40,8 +40,13 @@ class HandOnController extends GetxController {
     final name = offer?.name ?? 'a new device';
     switch (hand.phase.value) {
       case HandOnPhase.offered:
+        // `later` clears the offer before the phase: no offer, no notice.
+        if (offer == null) {
+          AppNotices.hide(_key);
+          return;
+        }
         AppNotices.show(
-          offer!.isContinue
+          offer.isContinue
               ? 'An earlier run stopped part way. Continue where it stopped.'
               : 'This device was just added to your account. If it is yours, approve it.',
           key: _key,

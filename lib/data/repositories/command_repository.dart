@@ -150,9 +150,9 @@ class CommandRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.onOnline.listen((_) {
+    _socket.listenOnline('commands', () {
       _isFresh = false;
-      if (_store.orgId != null) unawaited(ensureLoaded());
+      if (_store.orgId != null) return ensureLoaded();
     });
     _socket.events.listen((e) {
       if (e['type'] == 'sd_event' && e['event'] == 'permissions_changed') {

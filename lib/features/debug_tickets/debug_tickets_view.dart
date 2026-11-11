@@ -3,8 +3,11 @@ import 'package:get/get.dart';
 
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
+import '../../core/widgets/app_action_bar.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../tickets/models/ticket_action_style.dart';
 import 'debug_tickets_controller.dart';
 
 class DebugTicketsView extends GetView<DebugTicketsController> {
@@ -110,7 +113,76 @@ class DebugTicketsView extends GetView<DebugTicketsController> {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          const Text('Card actions', style: AppText.subtitle),
+          const SizedBox(height: AppSpacing.xxs),
+          const Text(
+            '0, 1, 2, 3 and 6 actions as on a ticket card (tap More actions to '
+            'expand), then the full-screen layout. The details screen and the '
+            'status sheet: open ticket #38 above and press an action.',
+            style: AppText.readable,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final count in const [0, 1, 2, 3, 6])
+            _Sample(label: '$count actions', count: count),
+          const _Sample(
+            label: '6 actions, full layout',
+            count: 6,
+            isFull: true,
+          ),
           const SizedBox(height: AppSpacing.xl),
+        ],
+      ),
+    );
+  }
+}
+
+class _Sample extends StatelessWidget {
+  const _Sample({
+    required this.label,
+    required this.count,
+    this.isFull = false,
+  });
+
+  static const _names = [
+    'Send',
+    'Status update',
+    'Complete',
+    'Return',
+    'Drop',
+    'Escalate',
+  ];
+
+  final String label;
+  final int count;
+  final bool isFull;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      for (final name in _names.take(count))
+        ActionItem(
+          id: name,
+          label: name,
+          icon: actionStyleFor(name).icon,
+          tone: actionStyleFor(name).tone,
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppText.readableStrong),
+          const SizedBox(height: AppSpacing.xxs),
+          if (items.isEmpty)
+            const Text('(nothing shown)', style: AppText.readable)
+          else
+            AppActionBar(
+              items: items,
+              layout: isFull ? AppActionLayout.full : AppActionLayout.row,
+              onTap: (item) => AppNotices.info('Tapped ${item.label}'),
+            ),
         ],
       ),
     );

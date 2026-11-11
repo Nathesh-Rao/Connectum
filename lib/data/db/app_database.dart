@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -24,7 +25,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 11;
+  static const _version = 13;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -143,6 +144,11 @@ class AppDatabase {
     ],
     // Whether I may rename a record conversation (`record.names` `canRename`).
     11: ['ALTER TABLE conversations ADD COLUMN can_rename INTEGER DEFAULT 0'],
+    // An earlier build created `ai_consent` here and was never released; this
+    // version creates nothing. Phones that ran it are cleaned up by 13.
+    12: [],
+    // The AI consent table is gone: AI stays blocked in encrypted chats.
+    13: ['DROP TABLE IF EXISTS ai_consent'],
   };
 
   static const _scopedTables = [
@@ -176,12 +182,13 @@ class AppDatabase {
     return openDatabase(
       p.join(folder, 'connectum.db'),
       version: _version,
-      onCreate: (db, _) => _migrate(db, 0, _version),
-      onUpgrade: _migrate,
+      onCreate: (db, _) => migrate(db, 0, _version),
+      onUpgrade: migrate,
     );
   }
 
-  static Future<void> _migrate(Database db, int from, int to) async {
+  @visibleForTesting
+  static Future<void> migrate(Database db, int from, int to) async {
     for (var v = from + 1; v <= to; v++) {
       for (final statement in _migrations[v]!) {
         await db.execute(statement);

@@ -16,6 +16,7 @@ class AppLogo extends StatelessWidget {
       height: width * _aspect,
       child: Image.asset(
         'assets/images/connectum_logo.png',
+        // 'assets/images/Connectum-C.png',
         fit: BoxFit.contain,
       ),
     );

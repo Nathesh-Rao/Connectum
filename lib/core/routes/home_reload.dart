@@ -55,19 +55,42 @@ class HomeReload {
     } while (isRunning);
   }
 
-  static Future<void> run() async {
-    final restore = restoreHome;
-    _running++;
-    ConnectFlowLog.log('homereload start', {'running': _running});
-    try {
-      await _run();
-    } catch (_) {
-      restore?.call();
-      rethrow;
-    } finally {
-      _running--;
-      ConnectFlowLog.log('homereload end', {'running': _running});
+  static Future<void>? _current;
+  static bool _isAgain = false;
+
+  /// Replaceable in tests.
+  @visibleForTesting
+  static Future<void> Function() body = _run;
+
+  /// A reload asked for while one runs is not started beside it: it becomes
+  /// one follow-up run, and the caller waits for the whole.
+  static Future<void> run() {
+    final current = _current;
+    if (current != null) {
+      _isAgain = true;
+      ConnectFlowLog.log('homereload coalesced', {'running': _running});
+      return current;
     }
+    return _current = _runAll().whenComplete(() => _current = null);
+  }
+
+  static Future<void> _runAll() async {
+    final restore = restoreHome;
+    do {
+      _isAgain = false;
+      _running++;
+      ConnectFlowLog.log('homereload start', {'running': _running});
+      try {
+        await body();
+      } catch (_) {
+        _isAgain = false;
+        restore?.call();
+        rethrow;
+      } finally {
+        _running--;
+        ConnectFlowLog.log('homereload end', {'running': _running});
+      }
+    } while (_isAgain);
   }
 
   static Future<void> _run() async {

@@ -5,6 +5,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
+import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../../core/widgets/app_list_row.dart';
@@ -33,7 +34,7 @@ class WorkspaceView extends GetView<WorkspaceController> {
           ConversationHeader(
             title: 'My Work Space',
             status: null,
-            isSquareAvatar: true,
+            avatar: const AppAvatar(name: 'My Work Space', isSquare: true),
             onBack: Get.back,
             trailing: [
               AppButton.icon(

@@ -21,6 +21,7 @@ class AppRoutes {
   static const tasks = '/tasks';
   static const approvals = '/approvals';
   static const ticket = '/tickets/:id';
+  static const chatInfo = '/chat-info/:id';
 
   static const gallery = '/gallery';
   static const galleryAuth = '/gallery/auth';
@@ -36,8 +37,12 @@ class AppRoutes {
   static const debugTasks = '/debug/tasks';
   static const debugTickets = '/debug/tickets';
   static const debugCommands = '/debug/commands';
+  static const debugAi = '/debug/ai';
 
   static String ticketOf(int id) => '/tickets/$id';
+
+  static String chatInfoOf(String conversationId) =>
+      '/chat-info/${Uri.encodeComponent(conversationId)}';
 
   /// A conversation id holds `:` and a group name may hold spaces or `/`.
   static String conversationOf(String id) =>

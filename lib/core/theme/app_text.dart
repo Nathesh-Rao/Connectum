@@ -6,6 +6,7 @@ class AppText {
   AppText._();
 
   static const fontFamily = 'PlusJakartaSans';
+  static const displayFontFamily = 'SpaceGrotesk';
 
   static const double sizeDisplay = 30;
   static const double sizeHeading = 26;
@@ -26,6 +27,24 @@ class AppText {
     fontWeight: FontWeight.w600,
     height: heightHeading,
     letterSpacing: -1.2,
+    color: AppColors.ink,
+  );
+
+  static const displayBrand = TextStyle(
+    fontFamily: displayFontFamily,
+    fontSize: 32,
+    fontWeight: FontWeight.w700,
+    height: 1.1,
+    letterSpacing: -0.5,
+    color: AppColors.ink,
+  );
+
+  static const displayBrandSm = TextStyle(
+    fontFamily: displayFontFamily,
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    height: 1.1,
+    letterSpacing: -0.5,
     color: AppColors.ink,
   );
 
@@ -86,6 +105,14 @@ class AppText {
     fontWeight: FontWeight.w600,
     height: heightBody,
     color: AppColors.ink,
+  );
+
+  static const supporting = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeButton,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.muted,
   );
 
   static const readable = TextStyle(

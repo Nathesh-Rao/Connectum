@@ -122,11 +122,10 @@ class ChatsController extends GetxController {
     return conversations.conversations.toList();
   }
 
-  /// Called by the chips. The Threads chip is not offered without threads.
+  /// Called by the chips. The selection is the person's: only a tap changes
+  /// it, never a reload, a reconnect or an empty list.
   void select(ChatFilterKind next) {
-    filter.value = next == ChatFilterKind.threads && !hasThreads.value
-        ? ChatFilterKind.all
-        : next;
+    filter.value = next;
     if (isSearching) _runSearch();
   }
 
@@ -145,9 +144,6 @@ class ChatsController extends GetxController {
     final every = _source;
     hasThreads.value = ChatFilter.hasThreads(every);
     threadUnread.value = ChatFilter.threadUnread(every);
-    if (filter.value == ChatFilterKind.threads && !hasThreads.value) {
-      filter.value = ChatFilterKind.all;
-    }
     final shown = ChatFilter.apply(source, filter.value);
     final ids = <String>[];
     for (final c in shown) {

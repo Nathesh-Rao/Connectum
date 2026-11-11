@@ -5,8 +5,10 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_pill_bar.dart';
 import '../../core/widgets/app_popup_menu.dart';
 import '../notifications/models/feed_item.dart';
+import '../notifications/models/feed_reducer.dart';
 import '../notifications/notification_style.dart';
 import '../notifications/widgets/feed_detail_sheet.dart';
 import '../notifications/widgets/feed_tile.dart';
@@ -165,6 +167,41 @@ class DebugNotificationsView extends GetView<DebugNotificationsController> {
               _DebugMenuPreview(isGroups: false, isUnread: true),
             ],
           ),
+          const SizedBox(height: AppSpacing.md),
+          const Text('Multi-select pills', style: AppText.title),
+          const SizedBox(height: AppSpacing.xs),
+          Obx(() {
+            final shown = FeedReducer.filterAny(
+              _samples,
+              priorities: c.sampleFilter.value,
+              isUnreadOnly: false,
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppPillBar.multi(
+                  size: AppPillSize.compact,
+                  pills: const [
+                    AppPill(id: 'all', label: 'All'),
+                    AppPill(id: 'high', label: 'High', count: 1),
+                    AppPill(id: 'medium', label: 'Medium', count: 1),
+                    AppPill(id: 'low', label: 'Low'),
+                    AppPill(id: 'resolved', label: 'Resolved', count: 1),
+                  ],
+                  selectedIds: c.sampleFilter.value,
+                  onToggle: c.toggleSampleFilter,
+                  exclusiveId: 'all',
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  shown.isEmpty
+                      ? 'No notifications match these filters'
+                      : '${shown.length} samples match',
+                  style: AppText.readable,
+                ),
+              ],
+            );
+          }),
           const SizedBox(height: AppSpacing.md),
           const Text(
             'Per category: swipe and sheet header',
