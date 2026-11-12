@@ -67,6 +67,13 @@ final vectorNames = <String>[
   'A name that is rather long indeed, longer than any list row will show it, with several words in it',
   'x' * 300,
   'a b',
+  '\u0085Zed\u0085',
+  '\uFEFFZed',
+  '\u200Bzed',
+  '\u180Ezed',
+  'Zed\u2003Ali',
+  'ǅungla',
+  'ᾳbc',
   '\u{1F600}',
   '\u{20000}\u{20001}',
 ];
@@ -127,6 +134,7 @@ Future<Map<String, Object?>> buildAvatarVectors(WidgetTester tester) async {
     );
     final person = _avatarOf(tester, find.byType(AppAvatar));
     await tester.pumpWidget(_host(AppAvatar(name: name, size: 44)));
+    final plainError = tester.takeException() != null;
     final plain = _avatarOf(tester, find.byType(AppAvatar));
     await tester.pumpWidget(
       _host(AppAvatar(name: name, kind: AppAvatarKind.group, size: 44)),
@@ -147,6 +155,7 @@ Future<Map<String, Object?>> buildAvatarVectors(WidgetTester tester) async {
       'personLetter': person['text'],
       'personLetterColor': person['textColor'],
       'plainInitials': plain['text'],
+      'plainInitialsRenderError': plainError,
       'plainBackground': plain['background'],
       'plainTextColor': plain['textColor'],
       'tileLeadingColor': index < 0

@@ -27,26 +27,31 @@ Copied from `origin/dev` of the BE repo (`~/Development/Axi-apps`, folder `conne
 | 8 | Tickets and records: same button and flow, they are group chats | Icon shows in any `group:` chat | Verified by test; no change |
 | 9 | Care threads: `care.summary {person}` instead of AI | Icon hidden for `group:care-*` | Built, see "BE answers" below: icon shows when the person's username is in the thread name |
 | 10 | Sharing: no server marker; mobile plan "first line ✨ AI summary" works; decision whether to allow in v1; preview before posting | Share existed, first line `✨ AI summary · last 7 days`, confirm dialog without the text | First line is exactly `✨ AI summary` (parts: `✨ AI summary (1/2)`). The confirm dialog shows a preview of exactly what will be posted. Sharing stays (open question 3) |
-| 11 | E2E chats: rule not decided, AI stays blocked | A consent flow had been added (consent dialog, stored per chat, "decrypted on your phone" caption) | Removed and blocked again, see below |
+| 11 | E2E chats: rule not decided, AI stays blocked | A consent flow had been added (consent dialog, stored per chat, "decrypted on your phone" caption) | Blocked, then opened to match the web on 12 Nov 2026: see "E2E: decision (12 Nov 2026)" below |
 | 12 | Answer is Markdown, a `chart` fence may arrive: do not show raw JSON | Not handled | Charts are drawn, see "BE answers" below |
 | 13 | Wait up to 40 s, request over 200 KB is `too_large`, 20 s server limit | 40 s wait, 30 s `timeoutMs` | No change |
 | 14 | `{name}` in the opening line, `Today is {toDateString()}` | n/a | Username (`userId`) and a JS-style date (`Wed Nov 11 2026`); open question 2 |
 
-## E2E: what was removed and what blocks now
+## E2E: decision (12 Nov 2026): AI works in end-to-end chats, as on the web
 
-Removed completely:
-- `lib/data/ai/ai_consent_store.dart` and `test/ai_chat/ai_consent_test.dart` (the whole file).
-- Table `ai_consent`: version 12 now creates nothing, and new version 13 runs `DROP TABLE IF EXISTS ai_consent` (a phone that ran the unreleased 12 loses the table; fresh installs never create it). The version never goes down, so a phone already on 12 is not downgraded. `ai_consent` left `_scopedTables`; the `left_group` delete is gone.
-- `AiConsentStore` in `InitialBinding` and `ConversationBinding`; `aiConsent` in `ConversationController`.
-- Controller: `hasConsent`, `giveConsent`, `summarizeAsking`, `_isCheckingConsent`, `AiSummarizeResult.consentRequired`.
-- Texts: `consentTitle`, `consentText`, `consentConfirm`, `privacyEncrypted`. Sheet: the consent dialog and `_summarize` helper.
-- `/debug/ai`: the "E2E consent given" switch and the consent dialog button.
-- Tests: the consent group in `ai_summary_test.dart`, the consent dialog test in `ai_widgets_test.dart`, the "encrypted chat shares" test.
+The owner asked for parity with the web. Web source, `origin/main` of the read-only web repo (`connectum/chat-app/`):
 
-Blocked behaviour:
-- The icon still shows in encrypted chats. Tapping it opens a dialog: "Not available in encrypted chats. Summaries aren't available in end-to-end encrypted chats yet. Nothing from this chat was read or sent." No `ai.agents` call, no sheet.
-- `AiSummaryController.summarize()` returns `AiSummarizeResult.blocked` first thing for an encrypted chat: nothing is read, built or sent (also if the chat became encrypted while the sheet was open).
-- `/debug/ai` has an "E2E chat" switch and a button for the dialog, and an "I am an admin" switch.
+- No check anywhere blocks an E2E conversation: `askWorkspaceAgent` (`features/connectumChat/services/workspaceAgent.js:443-482`) and `read_chat` (`:220-238`) never look at encryption, and `ChatSummaryModal.jsx` has no E2E branch.
+- The plaintext comes from the socket layer: `loadHistory` (`workspaceAgent.js:159-183`) takes the `history` event, and `connectumSocket.decryptEvent` (`services/connectumSocket.js:506-522`, `openText` `:499-504`) has already opened every envelope on the device.
+- `formatTranscript` (`services/chatReader.js:91-115`, `lineFor` `:59-85`) puts `m.text` in the line. A message the browser could not open therefore enters as the lock wording of `E2E_REASON` / `E2E_UNREADABLE` (`connectumSocket.js:31-43`), not as ciphertext and not skipped. A reply quote uses the same text (`chatReader.js:80-83`).
+- What is sent: the transcript inside the system prompt, through `assistant.relay` (`workspaceAgent.js:346`), to the organisation's provider, as plaintext.
+- No warning, consent, preview or notice for anyone, in E2E chats or others.
+- The BE doc `docs/MOBILE_AI_IN_CHAT_FOLLOWUP.md` (lines 26 and 34-35) says this matches "tier 3" of `PRIVATE_AI_SUMMARY.md`, which the proposal says not to offer, and that no rule was decided. The owner has now decided to match the web.
+
+On mobile:
+- The block is gone: `AiEntry.encrypted`, `AiSummarizeResult.blocked`, `AiTexts.encryptedTitle/encryptedText`, the controller's `isEncrypted` and its checks. A locked chat simply yields lock lines or "nothing to summarize".
+- The transcript is built from SQLite rows that the existing E2E path (`MessageRepository._decryptPending`) has opened; `AiRepositoryImpl` first awaits `MessageRepository.settleDecrypt()` so a read never sees a row still marked pending. Typed care questions do the same after `fetchRecent`.
+- `AiTranscript`: an opened message is its plaintext; one that cannot be opened is a line with the chat's own lock wording (`E2eTexts.unreadableFor(code)`, the web's wording with "phone" for "browser"), also inside a reply quote; one still opening is left out (the web waits for it, a phone cannot). The envelope never enters the prompt.
+- Logs: nothing about messages or answers is logged (asserted with a `debugPrint` and `print` capture). The transcript lives only in the request; no persistence.
+- Unchanged: the one privacy caption of all chats ("The messages in the selected range are sent to your organisation's AI provider."), rate limits, error mapping, care threads, `client` is not sent.
+- `/debug/ai`: "E2E chat" switch now renames the chat and shows the transcript the model would read (opened lines, a lock line, a pending one left out). DEMO_MODE: the seeded encrypted chats now open the same canned sheet.
+- Tests: `test/ai_chat/ai_e2e_test.dart` (transcript, no ciphertext, lock lines, reply quotes, settle-then-read order, log capture); the old "blocked" tests in `ai_summary_test.dart`, `ai_widgets_test.dart` and `care_summary_test.dart` now check the new rule.
+- Differences from the web: a message still being opened is omitted (web awaits it); the lock wording says "phone".
 
 ## BE answers (11 Nov 2026) and what changed
 
@@ -71,7 +76,7 @@ Action offered per error (the person cannot fix key, credit, model or address on
 
 Care threads:
 - The person is the `<username>` of the group name `care-<username>` (the web does the same: `chatId.replace(/^room-care-/, "")`). A name without a usable username (`care-`, spaces) hides the icon.
-- Sheet: no range; the note "Up to the latest 500 messages and the person's forms"; "Older messages were left out." after the answer when `stats.truncated`. The e2e block and the privacy caption are as in other chats.
+- Sheet: no range; the note "Up to the latest 500 messages and the person's forms"; "Older messages were left out." after the answer when `stats.truncated`. The privacy caption is as in other chats; E2E chats are no longer blocked.
 - Prompt: the web has no AI "summarise" for a care thread. Its card is built from data with no AI, and the AI box takes the person's own question (`askAboutThread` in `workspaceAgent.js`, which reads the thread itself and builds its own record). So the system prompt is that function's text word for word (team and patient wording), the house style guide, and the `care.summary` text under `THE THREAD, FORMS AND GROUP CHAT IN ORDER` in place of its two data sections. The question text is an assumption (the chat question reworded for a thread): `AiPrompt.careQuestion`.
 
 ## Open questions for the BE / owner

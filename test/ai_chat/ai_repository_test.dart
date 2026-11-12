@@ -16,6 +16,10 @@ import '../support/fake_socket.dart';
 class _Messages extends Fake implements MessageRepository {
   List<Message> rows = [];
   int reads = 0;
+  int settled = 0;
+
+  @override
+  Future<void> settleDecrypt() async => settled++;
 
   @override
   Future<List<Message>> readFor(String org, String user, String convId) async {

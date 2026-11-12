@@ -25,7 +25,6 @@ AiSummaryController _make(FakeAiRepository fake, {String? person = 'ravi'}) =>
       setup: AiSetupCache(fake),
       chatId: person == null ? 'dm:ana' : 'group:care-$person',
       title: () => 'Ravi Kumar',
-      isEncrypted: () => false,
       isOnline: () => true,
       post: (_) async => SendResult.queued,
       isAdmin: () => false,

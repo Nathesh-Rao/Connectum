@@ -9,7 +9,7 @@ import 'ai_texts.dart';
 import 'widgets/ai_notice_dialog.dart';
 import 'widgets/ai_sheet.dart';
 
-/// What the AI icon does: a dialog (not set up, encrypted chat, cannot reach
+/// What the AI icon does: a dialog (not set up, cannot reach
 /// the server) or the sheet.
 Future<void> openAi(BuildContext context, AiSummaryController c) async {
   final entry = await c.resolveEntry();
@@ -20,12 +20,6 @@ Future<void> openAi(BuildContext context, AiSummaryController c) async {
         context,
         title: AiTexts.setupTitle,
         text: c.setupText,
-      );
-    case AiEntry.encrypted:
-      return AiNoticeDialog.show(
-        context,
-        title: AiTexts.encryptedTitle,
-        text: AiTexts.encryptedText,
       );
     case AiEntry.problem:
       return AiNoticeDialog.show(

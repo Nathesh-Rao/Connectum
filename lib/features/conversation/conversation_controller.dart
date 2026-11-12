@@ -129,7 +129,6 @@ class ConversationController extends GetxController
     setup: aiSetup,
     chatId: conversationId,
     title: () => title,
-    isEncrypted: () => isLocked.value || isBlocked.value,
     isOnline: () => connectivity.hasNetwork.value,
     post: (text) => messages.sendText(conversationId, text),
     isAdmin: () => commands.isAdmin.value,

@@ -33,7 +33,6 @@ Widget host(Widget child, {double width = 320, double scale = 1}) =>
 AiSummaryController make(
   FakeAiRepository fake, {
   bool isOnline = true,
-  bool isEncrypted = false,
   bool isAdmin = false,
   Future<SendResult> Function(String)? post,
 }) => AiSummaryController(
@@ -41,7 +40,6 @@ AiSummaryController make(
   setup: AiSetupCache(fake),
   chatId: 'dm:ana',
   title: () => 'Ana',
-  isEncrypted: () => isEncrypted,
   isOnline: () => isOnline,
   post: post ?? (_) async => SendResult.queued,
   isAdmin: () => isAdmin,
@@ -93,8 +91,7 @@ void main() {
       await tester.tap(find.text(AiTexts.summarize));
       await tester.pumpAndSettle();
       expect(find.text('Last 7 days'), findsOneWidget);
-      expect(find.text(AiTexts.privacy), findsOneWidget);
-      await tester.tap(find.text('Last 7 days'));
+        await tester.tap(find.text('Last 7 days'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Summarize'));
       await tester.tap(find.text('Summarize'));
@@ -197,11 +194,11 @@ void main() {
     expect(find.text('Alpha'), findsNothing);
   });
 
-  testWidgets('an encrypted chat: the dialog explains, nothing is sent', (
+  testWidgets('an end-to-end chat opens the sheet like any other', (
     tester,
   ) async {
     final fake = FakeAiRepository(delay: const Duration(milliseconds: 10));
-    final c = make(fake, isEncrypted: true);
+    final c = make(fake);
     await tester.pumpWidget(
       host(
         Builder(
@@ -214,14 +211,8 @@ void main() {
     );
     await tester.tap(find.text('ai'));
     await tester.pumpAndSettle();
-    expect(find.text(AiTexts.encryptedTitle), findsOneWidget);
-    expect(find.text(AiTexts.encryptedText), findsOneWidget);
-    expect(find.text(AiTexts.summarize), findsNothing);
-    expect(fake.setupCalls, 0);
-    expect(fake.summarizeCalls, 0);
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
+    expect(find.text(AiTexts.summarize), findsOneWidget);
+    expect(fake.setupCalls, greaterThan(0));
   });
 
   for (final isAdmin in [false, true]) {
@@ -262,7 +253,6 @@ void main() {
   group('share in chat', () {
     Future<(AiSummaryController, List<String>)> result(
       WidgetTester tester, {
-      bool isEncrypted = false,
       List<SendResult>? results,
       double width = 320,
       double scale = 1,
@@ -270,7 +260,6 @@ void main() {
       final sent = <String>[];
       final c = make(
         FakeAiRepository(delay: const Duration(milliseconds: 10)),
-        isEncrypted: isEncrypted,
         post: (t) async {
           sent.add(t);
           return results == null || results.isEmpty
@@ -497,7 +486,6 @@ void main() {
         setup: AiSetupCache(FakeAiRepository()),
         chatId: 'group:care-ravi',
         title: () => 'Ravi',
-        isEncrypted: () => false,
         isOnline: () => true,
         post: (_) async => SendResult.queued,
         isAdmin: () => false,
@@ -517,7 +505,6 @@ void main() {
       setup: AiSetupCache(fake),
       chatId: 'group:care-ravi',
       title: () => 'Ravi',
-      isEncrypted: () => false,
       isOnline: () => true,
       post: (_) async => SendResult.queued,
       isAdmin: () => false,

@@ -1,11 +1,16 @@
 import 'dart:convert';
 
+import '../e2e/e2e_texts.dart';
 import '../models/message.dart';
 import 'ai_prompt.dart';
 
 /// The chat as the model reads it: `formatTranscript()` of the web
 /// (`chatReader.js`, section 3.3 of `reference/ai-chat/MOBILE_AI_IN_CHAT_FOLLOWUP.md`).
 /// The time is the viewer's local time.
+///
+/// An end-to-end message enters as the text this phone opened, never as the
+/// envelope. One that cannot be opened is a line with the lock wording the
+/// chat shows (the web does the same); one still being opened is left out.
 class AiTranscript {
   const AiTranscript(this.text, this.count);
 
@@ -57,7 +62,7 @@ class AiTranscript {
               (m) =>
                   !m.isDeleted &&
                   m.ts > 0 &&
-                  !m.isEncryptedUnsupported &&
+                  !m.isDecrypting &&
                   (cutoff == null || m.ts >= cutoff),
             )
             .toList()
@@ -118,7 +123,7 @@ class AiTranscript {
     final reply = parent == null || parent.isDeleted
         ? ''
         : ' (reply to ${_name(parent.sender, nameOf)}: '
-              '"${_cut(_flat(parent.text), replyChars)}")';
+              '"${_cut(_flat(_readable(parent)), replyChars)}")';
     return '[${_stamp(m.ts)}] $who$reply: $body';
   }
 
@@ -127,8 +132,14 @@ class AiTranscript {
     return name.isEmpty ? 'someone' : name;
   }
 
+  /// The text of a message for the model: the unreadable wording instead of
+  /// an envelope.
+  static String _readable(Message m) => m.isEncryptedUnsupported
+      ? E2eTexts.unreadableFor(m.unreadableCode)
+      : m.text;
+
   static String _body(Message m, String? Function(String)? statusOf) {
-    if (m.kind != 'form') return _cut(_flat(m.text), lineChars);
+    if (m.kind != 'form') return _cut(_flat(_readable(m)), lineChars);
     final form = _decode(m.formJson);
     if (form == null) {
       final text = _cut(_flat(m.text), valueChars);

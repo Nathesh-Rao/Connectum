@@ -32,11 +32,10 @@ bool aiAvailableIn(String convId) {
 }
 
 /// What a tap on the header icon leads to.
-enum AiEntry { sheet, notSetUp, problem, encrypted }
+enum AiEntry { sheet, notSetUp, problem }
 
-/// What [AiSummaryController.summarize] did. [blocked] means an end-to-end
-/// encrypted chat: nothing was built or sent.
-enum AiSummarizeResult { started, blocked, busy }
+/// What [AiSummaryController.summarize] did.
+enum AiSummarizeResult { started, busy }
 
 /// The AI sheet of one chat. A summary can be read, copied or posted into the
 /// chat as an ordinary text message through [post].
@@ -46,7 +45,6 @@ class AiSummaryController extends GetxController {
     required this.setup,
     required this.chatId,
     required this.title,
-    required this.isEncrypted,
     required this.isOnline,
     required this.post,
     required this.isAdmin,
@@ -57,7 +55,6 @@ class AiSummaryController extends GetxController {
   final AiSetupCache setup;
   final String chatId;
   final String Function() title;
-  final bool Function() isEncrypted;
   final bool Function() isOnline;
 
   /// Sends one plain text message into this chat.
@@ -121,8 +118,6 @@ class AiSummaryController extends GetxController {
       AiTexts.errorBody(kind, detail: detail, isAdmin: isAdmin());
 
   Future<AiEntry> resolveEntry() async {
-    // Encrypted chats are blocked until the owner decides the rule: no call.
-    if (isEncrypted()) return AiEntry.encrypted;
     try {
       final state = await setup.get();
       _take(state);
@@ -136,7 +131,6 @@ class AiSummaryController extends GetxController {
   /// Called when the sheet opens: refreshes the setup state and reports it.
   Future<void> onSheetOpened() async {
     reset();
-    if (isEncrypted()) return;
     try {
       final state = await setup.get(isRefresh: true);
       _take(state);
@@ -186,8 +180,8 @@ class AiSummaryController extends GetxController {
   /// The caption under the range step.
   String get privacyText => AiTexts.privacy;
 
-  /// Summarises. An encrypted chat is refused before anything is read, built
-  /// or sent.
+  /// Summarises. An end-to-end chat is read from the messages this phone has
+  /// opened, like the web.
   Future<AiSummarizeResult> summarize() => _start(null);
 
   /// A typed question about a care thread, answered from the whole thread.
@@ -202,7 +196,6 @@ class AiSummaryController extends GetxController {
   Future<AiSummarizeResult> retry() => _start(_question);
 
   Future<AiSummarizeResult> _start(String? question) async {
-    if (isEncrypted()) return AiSummarizeResult.blocked;
     if (phase.value == AiPhase.loading) return AiSummarizeResult.busy;
     _question = question;
     final id = ++_run;

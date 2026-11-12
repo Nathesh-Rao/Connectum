@@ -3,11 +3,13 @@ import 'package:get/get.dart';
 import '../../data/ai/ai_models.dart';
 import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
+import '../../data/ai/ai_transcript.dart';
 import '../../data/ai/fake_ai_repository.dart';
+import '../../data/models/message.dart';
 import '../../data/repositories/message_repository.dart' show SendResult;
 import '../ai_chat/ai_summary_controller.dart';
 
-/// Every state of the in-chat AI (an encrypted chat is blocked, not asked) on the fake repository, or on the real one
+/// Every state of the in-chat AI (an end-to-end chat is summarised from the opened messages) on the fake repository, or on the real one
 /// with [useReal]; the real one reads the messages this phone holds for
 /// `dm:ana` and asks the server.
 class DebugAiController extends GetxController {
@@ -46,8 +48,7 @@ class DebugAiController extends GetxController {
       ai: ai,
       setup: AiSetupCache(ai),
       chatId: 'dm:ana',
-      title: () => 'Ana',
-      isEncrypted: () => isE2e.value,
+      title: () => isE2e.value ? 'Ana (encrypted)' : 'Ana',
       isOnline: () => !isOffline.value,
       post: (text) async {
         if (isSendFailing.value) return SendResult.invalid;
@@ -128,6 +129,44 @@ class DebugAiController extends GetxController {
   }
 
   void toggleE2e() => isE2e.toggle();
+
+  /// What the model reads in an end-to-end chat: opened messages, one line
+  /// for a message this phone cannot open, none for one still opening, and
+  /// never an envelope.
+  static String get e2eSample {
+    final day = DateTime(2026, 11, 12, 9).millisecondsSinceEpoch;
+    Message m(
+      int i,
+      String text, {
+      String? state,
+      String? code,
+      bool mine = false,
+    }) => Message(
+      msgId: 'e$i',
+      convId: 'dm:ana',
+      sender: mine ? 'me' : 'ana',
+      isMine: mine,
+      text: state == null || state == 'ok' ? text : 'e2e1:AAAA',
+      ts: day + i * 60000,
+      status: MessageStatus.sent,
+      isEncrypted: state != null,
+      decryptState: state,
+      unreadableCode: code,
+    );
+    return AiTranscript.build(
+      [
+        m(0, 'Shall we ship on Friday?', state: 'ok'),
+        m(1, '', state: 'cant_decrypt', code: 'not_for_this_device'),
+        m(2, 'Yes, I will do the notes.', state: 'ok', mine: true),
+        m(3, '', state: 'pending'),
+      ],
+      kind: 'dm',
+      title: 'Ana (encrypted)',
+      since: null,
+      nameOf: (u) => u,
+    ).text;
+  }
+
   void toggleAdmin() => isAdmin.toggle();
   void toggleOffline() => isOffline.toggle();
   void toggleSendFailing() => isSendFailing.toggle();

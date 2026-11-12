@@ -182,6 +182,7 @@ class AiRepositoryImpl implements AiRepository {
     } else {
       final since = request.range.since(now, date: request.date);
       final kind = ConversationRepository.kindOf(request.chatId);
+      await _messages.settleDecrypt();
       final rows = await _messages.readFor(org, user, request.chatId);
       final transcript = AiTranscript.build(
         rows,
@@ -292,6 +293,7 @@ class AiRepositoryImpl implements AiRepository {
       for (final m in team) m.username.toLowerCase(): m.label,
       who.toLowerCase(): name,
     };
+    await _messages.settleDecrypt();
     final rows = await _messages.readFor(org, me, conversation);
     final transcript = AiTranscript.build(
       rows,

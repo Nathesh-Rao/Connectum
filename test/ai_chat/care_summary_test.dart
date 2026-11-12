@@ -204,7 +204,6 @@ class Rig {
     setup: AiSetupCache(repo),
     chatId: 'group:care-$person',
     title: () => 'Ravi Kumar',
-    isEncrypted: () => false,
     isOnline: () => true,
     post: (t) async {
       posted?.add(t);
@@ -481,30 +480,12 @@ void main() {
         setup: AiSetupCache(r.repo),
         chatId: 'dm:ana',
         title: () => 'Ana',
-        isEncrypted: () => false,
         isOnline: () => true,
         post: (_) async => SendResult.queued,
         isAdmin: () => false,
       );
       expect(c.isCare, isFalse);
       expect(c.canSummarize, isFalse);
-    });
-
-    test('an encrypted chat still reads and sends nothing', () async {
-      final r = Rig();
-      final c = AiSummaryController(
-        ai: r.repo,
-        setup: AiSetupCache(r.repo),
-        chatId: 'group:care-ravi',
-        title: () => 'Ravi',
-        isEncrypted: () => true,
-        isOnline: () => true,
-        post: (_) async => SendResult.queued,
-        isAdmin: () => false,
-        carePerson: 'ravi',
-      );
-      expect(await c.summarize(), AiSummarizeResult.blocked);
-      expect(r.socket.calls, isEmpty);
     });
 
     test('no content is logged', () async {

@@ -34,11 +34,6 @@ class AiTexts {
   static const posted = 'Summary posted';
   static const postFailed = "Couldn't post the summary";
 
-  static const encryptedTitle = "Not available in encrypted chats";
-  static const encryptedText =
-      "Summaries aren't available in end-to-end encrypted chats yet. "
-      'Nothing from this chat was read or sent.';
-
   static const setupTitle = "AI isn't set up yet";
 
   /// The web's words (`workspaceAgent.js`, `no_agent`); an administrator is

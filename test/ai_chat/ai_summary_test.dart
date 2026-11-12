@@ -18,7 +18,6 @@ class Rig {
   Rig({
     AiSetup? setup,
     FakeAiScenario scenario = FakeAiScenario.short,
-    this.isEncrypted = false,
     this.isOnline = true,
     Future<SendResult> Function(String)? post,
     this.isAdmin = false,
@@ -30,7 +29,6 @@ class Rig {
       setup: AiSetupCache(fake),
       chatId: 'dm:ana',
       title: () => 'Ana',
-      isEncrypted: () => isEncrypted,
       isOnline: () => isOnline,
       post: post ?? (_) async => SendResult.queued,
       isAdmin: () => isAdmin,
@@ -39,7 +37,6 @@ class Rig {
 
   final FakeAiRepository fake;
   late final AiSummaryController c;
-  bool isEncrypted;
   bool isOnline;
   bool isAdmin;
 }
@@ -216,44 +213,19 @@ void main() {
     expect(r.c.text.value, isEmpty);
   });
 
-  group('encrypted chat is blocked', () {
-    test('summarize refuses, nothing is built, sent or shown', () async {
-      final r = Rig(isEncrypted: true);
-      expect(await r.c.summarize(), AiSummarizeResult.blocked);
-      expect(r.fake.summarizeCalls, 0);
-      expect(r.fake.setupCalls, 0);
-      expect(r.c.phase.value, AiPhase.menu);
+  group('an end-to-end chat is summarised like any other', () {
+    test('summarize starts: nothing is refused', () async {
+      final r = Rig();
+      expect(await r.c.summarize(), AiSummarizeResult.started);
+      await settle();
+      expect(r.fake.summarizeCalls, 1);
+      expect(r.c.phase.value, AiPhase.result);
     });
 
-    test(
-      'every try is refused, also after the chat became encrypted',
-      () async {
-        final r = Rig();
-        expect(await r.c.summarize(), AiSummarizeResult.started);
-        await settle();
-        r.isEncrypted = true;
-        expect(await r.c.summarize(), AiSummarizeResult.blocked);
-        expect(r.fake.summarizeCalls, 1);
-      },
-    );
-
-    test('the icon leads to the explanation, with no call', () async {
-      final r = Rig(isEncrypted: true);
-      expect(await r.c.resolveEntry(), AiEntry.encrypted);
-      await r.c.onSheetOpened();
-      expect(r.fake.setupCalls, 0);
-      expect(r.fake.summarizeCalls, 0);
-      expect(
-        AiTexts.encryptedText,
-        startsWith(
-          "Summaries aren't available in end-to-end encrypted chats yet.",
-        ),
-      );
-    });
-
-    test('the consent flow is gone: one caption for every chat', () {
-      expect(Rig(isEncrypted: true).c.privacyText, AiTexts.privacy);
-      expect(Rig().c.privacyText, AiTexts.privacy);
+    test('the icon opens the sheet, with the one caption', () async {
+      final r = Rig();
+      expect(await r.c.resolveEntry(), AiEntry.sheet);
+      expect(r.c.privacyText, AiTexts.privacy);
     });
 
     test('summarising and sharing log no message text', () async {
@@ -429,7 +401,6 @@ void main() {
         setup: AiSetupCache(fake),
         chatId: 'dm:ana',
         title: () => 'Ana',
-        isEncrypted: () => false,
         isOnline: () => true,
         post: (t) async {
           posted.add(t);
@@ -468,7 +439,6 @@ void main() {
         setup: AiSetupCache(fake),
         chatId: 'dm:ana',
         title: () => 'Ana',
-        isEncrypted: () => false,
         isOnline: () => true,
         post: (t) async => SendResult.queued,
         isAdmin: () => false,

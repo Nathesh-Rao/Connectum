@@ -44,6 +44,11 @@ class _Rows extends Fake implements MessageRepository {
     return isReachable ? hasMore : null;
   }
 
+  int settled = 0;
+
+  @override
+  Future<void> settleDecrypt() async => settled++;
+
   @override
   Future<List<Message>> readFor(String org, String user, String convId) async =>
       rows;

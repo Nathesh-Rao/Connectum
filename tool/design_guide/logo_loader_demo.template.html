@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connectum logo loader (reference)</title>
+<style>
+  :root { --ink:#071f50; --muted:#55658a; --line:#e3eaf4; --primary:#0052cc; --white:#fff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--white); color:var(--ink); font:13px/1.6 system-ui, sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:21px; margin:0 0 4px; letter-spacing:-.5px; }
+  p.lead { color:var(--muted); margin:0 0 20px; }
+  .stage { display:flex; justify-content:center; align-items:center; border:1px solid var(--line); border-radius:14px; height:340px; background:var(--white); }
+  svg { display:block; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 8px; align-items:center; }
+  button { font:inherit; font-weight:600; padding:10px 16px; border-radius:10px; border:1px solid #cbd5e4; background:var(--white); color:var(--ink); cursor:pointer; min-height:44px; }
+  button.primary { background:var(--primary); border-color:var(--primary); color:var(--white); }
+  button:focus-visible { outline:3px solid rgba(0,120,232,.35); outline-offset:1px; }
+  label { color:var(--muted); display:inline-flex; gap:6px; align-items:center; }
+  input[type=number] { width:80px; padding:8px; border:1px solid #cbd5e4; border-radius:10px; font:inherit; }
+  .bare main > :not(.stage) { display:none; }
+  .bare main { padding:0; max-width:none; }
+  .bare .stage { border:0; height:148px; width:148px; border-radius:0; }
+  pre { background:#f6f9fe; border:1px solid var(--line); border-radius:10px; padding:12px; margin:8px 0 0; font-size:12px; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Connectum logo loader</h1>
+  <p class="lead">Static C, then a ring that spins, then back to the C. Same maths as <code>lib/core/widgets/logo_loader/logo_loader.dart</code>, drawn from <code>logo_polys.json</code> (embedded below). Splash timeline and loader settings come from the same file.</p>
+  <div class="stage"><svg id="logo" width="148" height="148" viewBox="0 0 1024 1024" role="img" aria-label="Connectum logo"></svg></div>
+  <div class="row">
+    <button class="primary" id="splash">Play splash sequence</button>
+    <button id="start">Start loader</button>
+    <button id="stop">Stop loader</button>
+    <label><input type="checkbox" id="reduce"> Reduced motion</label>
+    <label>Size <input type="number" id="size" value="148" min="24" max="320"> px</label>
+    <label>Simulated work <input type="number" id="work" value="0" min="0" max="10000" step="100"> ms</label>
+  </div>
+  <pre id="log"></pre>
+</main>
+<script>
+const DATA = /*POLYS_JSON*/null;
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const C = DATA.config, T = DATA.timeline, G = DATA.geo;
+  const PI = Math.PI;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ---- controller (port of LogoLoaderController) ---------------------------
+  class Rhythm {
+    constructor() {
+      this.ph = Array.from({ length: 5 }, () => rand(0, PI * 2));
+      this.per = [3.7, 6.1, 10.3, 1.9, 17.3].map(v => v * rand(0.92, 1.08));
+      this.next = rand(1.2, 3.0);
+      this.bursts = [];
+    }
+    bump(u) { return (u <= 0 || u >= 1) ? 0 : Math.pow(Math.sin(PI * u), 2); }
+    at(t) {
+      const tau = PI * 2;
+      while (t >= this.next) {
+        const dur = rand(1.0, 1.8), amp = rand(C.burstMin, C.burstMax);
+        this.bursts.push([this.next, dur, amp]);
+        this.next += dur * 2.6 + rand(1.2, 4.5);
+      }
+      this.bursts = this.bursts.filter(b => !(t >= b[0] + b[1] * 2.6));
+      const am = 1 + 0.3 * Math.sin(tau * t / this.per[4] + this.ph[4]);
+      let m = 1 + C.rhythm * am * (
+        0.17 * Math.sin(tau * t / this.per[0] + this.ph[0]) +
+        0.12 * Math.sin(tau * t / this.per[1] + this.ph[1]) +
+        0.08 * Math.sin(tau * t / this.per[2] + this.ph[2]) +
+        0.04 * Math.sin(tau * t / this.per[3] + this.ph[3]));
+      for (const b of this.bursts) {
+        m += b[2] * this.bump((t - b[0]) / b[1]) - 0.55 * b[2] * this.bump((t - b[0] - b[1] * 0.9) / (b[1] * 1.7));
+      }
+      return clamp(m, C.minFactor, C.maxFactor);
+    }
+  }
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ramp = p => { const x = clamp((p - 0.05) / 0.95, 0, 1); return x * x * (3 - 2 * x); };
+  function hermite(s, x0, v0, x1, v1) {
+    const s2 = s * s, s3 = s2 * s;
+    return [
+      (2 * s3 - 3 * s2 + 1) * x0 + (s3 - 2 * s2 + s) * v0 + (-2 * s3 + 3 * s2) * x1 + (s3 - s2) * v1,
+      (6 * s2 - 6 * s) * x0 + (3 * s2 - 4 * s + 1) * v0 + (-6 * s2 + 6 * s) * x1 + (3 * s2 - 2 * s) * v1,
+    ];
+  }
+  const ctl = {
+    state: 'idle', p: 0, pv: 0, theta: 0, omega: 0, tRun: 0, plan: null, rhythm: new Rhythm(), waiters: [],
+    start() {
+      if (this.state === 'starting' || this.state === 'loading') return false;
+      this.rhythm = new Rhythm(); this.tRun = 0; this.plan = null;
+      if (this.state === 'idle') { this.p = 0; this.pv = 0; this.theta = 0; this.omega = 0; }
+      else this.theta = this.theta % 360;
+      this.state = 'starting'; return true;
+    },
+    stop() {
+      if (this.state === 'idle' || this.state === 'stopping') return false;
+      this.plan = this.planStop(); this.state = 'stopping'; return true;
+    },
+    whenIdle() { return this.state === 'idle' ? Promise.resolve() : new Promise(r => this.waiters.push(r)); },
+    stopAndWait() { this.stop(); return this.whenIdle(); },
+    toIdle() {
+      this.p = 0; this.pv = 0; this.theta = 0; this.omega = 0; this.plan = null; this.state = 'idle';
+      this.waiters.splice(0).forEach(r => r());
+    },
+    step(dt) {
+      if (this.state === 'idle' || dt <= 0) return;
+      if (this.state === 'stopping') {
+        const pl = this.plan; pl.s += dt / pl.ts;
+        if (pl.s >= 1) { this.toIdle(); return; }
+        const hp = hermite(pl.s, pl.p0, pl.pv0 * pl.ts, 0, 0);
+        const ht = hermite(pl.s, pl.th0, pl.w0 * pl.ts, pl.th0 + pl.d, 0);
+        this.p = clamp(hp[0], 0, 1); this.pv = hp[1] / pl.ts; this.theta = ht[0]; this.omega = ht[1] / pl.ts;
+        return;
+      }
+      this.tRun += dt;
+      if (this.state === 'starting') {
+        const vT = 1 / C.startMorph, a = vT / C.morphRamp;
+        this.pv += clamp(vT - this.pv, -a * dt, a * dt);
+        this.p += this.pv * dt;
+      }
+      const wT = lerp(C.startSpeed, C.baseSpeed * this.rhythm.at(this.tRun), ramp(this.p));
+      const lim = C.maxAccel * dt;
+      this.omega += clamp((wT - this.omega) * (1 - Math.exp(-dt / C.tau)), -lim, lim);
+      this.theta += this.omega * dt;
+      if (this.state === 'starting' && this.p >= 1) { this.p = 1; this.pv = 0; this.state = 'loading'; }
+    },
+    planStop() {
+      const th0 = this.theta % 360, w0 = Math.max(this.omega, 0);
+      let d = null, ts = C.stopMin;
+      if (th0 <= 20 && w0 <= 30) { d = -th0; ts = C.stopMin + 0.2; }
+      else {
+        const d0 = (360 - th0) % 360, w = Math.max(w0, 1e-3);
+        for (let j = 0; j < 6 && d === null; j++) {
+          const cand = d0 + 360 * j;
+          if (cand < 1e-6) continue;
+          const lo = Math.max(C.stopMin, 1.25 * cand / w), hi = Math.min(C.stopMax, 3 * cand / w);
+          if (lo <= hi) { d = cand; ts = clamp(2 * cand / w, lo, hi); }
+        }
+        if (d === null) { d = d0 < 120 ? d0 + 360 : d0; ts = C.stopMax * 0.8; }
+      }
+      return { ts, th0, d, w0, p0: this.p, pv0: this.pv, s: 0 };
+    },
+  };
+
+  // ---- painter (port of _LogoPainter) --------------------------------------
+  const svg = document.getElementById('logo');
+  const el = (name, attrs, parent) => {
+    const n = document.createElementNS(NS, name);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const defs = el('defs', {}, svg);
+  const mask = el('mask', { id: 'ring', maskUnits: 'userSpaceOnUse', x: 0, y: 0, width: 1024, height: 1024 }, defs);
+  const maskRing = el('path', { fill: '#fff', 'fill-rule': 'evenodd' }, mask);
+  const maskGaps = el('path', { fill: '#000' }, mask);
+  const cGroup = el('g', {}, svg);
+  DATA.originalPaths.forEach((d, i) => el('path', { d, fill: DATA.polys[i].color }, cGroup));
+  const rot = el('g', {}, svg);
+  const clipped = el('g', { mask: 'url(#ring)' }, rot);
+  const polyEls = DATA.polys.map(p => el('path', { fill: p.color }, clipped));
+
+  const easeCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeSine = t => -(Math.cos(PI * t) - 1) / 2;
+  function angWarp(a, e) {
+    const sg = a < 0 ? -1 : 1, m = Math.abs(a);
+    const mEnd = G.g0 * (1 - e) - C.overlap * e;
+    let m2;
+    if (m >= G.g0) {
+      const u = clamp((m - G.g0) / (PI - G.g0), 0, 1);
+      m2 = m + (mEnd - G.g0) * Math.pow(1 - u, C.tailBias);
+    } else m2 = m * (mEnd / G.g0);
+    return sg * m2;
+  }
+  const circle = (r) => `M${G.cx - r} ${G.cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
+  function setMask(ro, ri, gapW) {
+    maskRing.setAttribute('d', circle(ro) + (ri > 0.5 ? circle(ri) : ''));
+    let g = '';
+    if (gapW > 0.01) {
+      const r0 = G.rIn - 40, r1 = G.rOut + 40, h = gapW / 2;
+      for (let n = 0; n < C.segments; n++) {
+        const th = G.phiC + n * 2 * PI / C.segments;
+        const ux = Math.cos(th), uy = Math.sin(th), vx = -uy, vy = ux;
+        const f = (r, s) => `${(G.cx + r * ux + s * h * vx).toFixed(2)} ${(G.cy + r * uy + s * h * vy).toFixed(2)}`;
+        g += `M${f(r0, -1)}L${f(r1, -1)}L${f(r1, 1)}L${f(r0, 1)}Z`;
+      }
+    }
+    maskGaps.setAttribute('d', g);
+  }
+  let ringCache = false;
+  function render() {
+    const p = ctl.p;
+    if (p <= 0) { cGroup.style.display = ''; rot.style.display = 'none'; ringCache = false; return; }
+    cGroup.style.display = 'none'; rot.style.display = '';
+    rot.setAttribute('transform', `rotate(${ctl.theta % 360} ${G.cx} ${G.cy})`);
+    if (p >= 1 && ringCache) return;
+    const eA = easeCubic(clamp(p / 0.82, 0, 1));
+    const eR = easeCubic(clamp((p - 0.18) / 0.82, 0, 1));
+    const sw = Math.sin(PI * easeSine(p)) * C.swirl;
+    let rmin = Infinity, rmax = 0;
+    DATA.polys.forEach((poly, i) => {
+      let d = '';
+      for (let k = 0; k < poly.r.length; k++) {
+        const rr = poly.r[k] + (poly.rf[k] - poly.r[k]) * eR;
+        if (rr < rmin) rmin = rr;
+        if (rr > rmax) rmax = rr;
+        const ang = G.phiC + angWarp(poly.a[k], eA) + sw * (1 - clamp(rr / G.rOut, 0, 1));
+        d += (k ? 'L' : 'M') + (G.cx + rr * Math.cos(ang)).toFixed(2) + ' ' + (G.cy + rr * Math.sin(ang)).toFixed(2);
+      }
+      polyEls[i].setAttribute('d', d + 'Z');
+    });
+    const w = eR * eR * (3 - 2 * eR);
+    const ro = (rmax + 2) + (G.rOut - (rmax + 2)) * w;
+    const ri = Math.max(0, rmin - 2) + (G.rIn - Math.max(0, rmin - 2)) * w;
+    const wg = clamp((eR - 0.5) / 0.5, 0, 1);
+    setMask(ro, ri, C.gap * wg * wg * (3 - 2 * wg));
+    ringCache = p >= 1;
+  }
+
+  // ---- loop, controls, splash timeline -------------------------------------
+  const logEl = document.getElementById('log');
+  const log = s => { logEl.textContent = s + '\n' + logEl.textContent.split('\n').slice(0, 7).join('\n'); };
+  let last = null;
+  function frame(now) {
+    if (last !== null) ctl.step(clamp((now - last) / 1000, 0, 0.05));
+    last = now;
+    render();
+    requestAnimationFrame(frame);
+  }
+  const reduceBox = document.getElementById('reduce');
+  reduceBox.checked = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let running = false;
+  document.getElementById('start').onclick = () => { if (!reduceBox.checked) ctl.start(); };
+  document.getElementById('stop').onclick = () => ctl.stop();
+  document.getElementById('size').oninput = e => { const v = clamp(+e.target.value || 148, 24, 320); svg.setAttribute('width', v); svg.setAttribute('height', v); };
+  document.getElementById('splash').onclick = async () => {
+    if (running) return; running = true;
+    const t0 = performance.now(), at = () => ((performance.now() - t0) / 1000).toFixed(2) + ' s';
+    if (reduceBox.checked) {
+      log(at() + '  reduced motion: static C for ' + T.reducedMotionDelayMs + ' ms');
+      await sleep(T.reducedMotionDelayMs);
+    } else {
+      const work = sleep(+document.getElementById('work').value || 0);
+      await sleep(T.startDelayMs); ctl.start(); log(at() + '  loader.start() after ' + T.startDelayMs + ' ms');
+      await work;
+      await sleep(T.extraRunMs); log(at() + '  stop after ' + T.extraRunMs + ' ms extra run');
+      await ctl.stopAndWait(); log(at() + '  C restored');
+      await sleep(T.endDelayMs);
+    }
+    log(at() + '  navigate (splash done)');
+    running = false;
+  };
+  // ?still=<p>,<theta> draws one frame without animating (used to check the drawing).
+  if (new URLSearchParams(location.search).has('bare')) document.body.className = 'bare';
+  const still = new URLSearchParams(location.search).get('still');
+  if (still) { const [p, th] = still.split(',').map(Number); ctl.p = p; ctl.theta = th || 0; ctl.state = 'loading'; render(); }
+  else { requestAnimationFrame(frame); if (new URLSearchParams(location.search).has('autostart')) ctl.start(); }
+  window.__ctl = ctl; window.__render = render;
+})();
+</script>
+</body>
+</html>

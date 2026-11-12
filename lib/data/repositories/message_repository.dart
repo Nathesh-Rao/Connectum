@@ -136,6 +136,10 @@ class MessageRepository extends GetxService {
     _scheduleDecrypt();
   }
 
+  /// Completes when every envelope held so far has been tried, so a read
+  /// that follows sees the opened text (the AI transcript needs it).
+  Future<void> settleDecrypt() => _decrypting;
+
   void _scheduleDecrypt() {
     _decrypting = _decrypting
         .then((_) => _decryptPending())
