@@ -13,8 +13,7 @@ enum AppStateImageKind {
   noResults('no_results'),
   offline('offline'),
   error('error'),
-  locked('locked', scale: 0.85),
-  aiWelcome('ai_welcome');
+  locked('locked', scale: 0.85);
 
   const AppStateImageKind(this.file, {this.scale = 1});
 

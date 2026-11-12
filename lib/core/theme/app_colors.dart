@@ -3,69 +3,91 @@ import 'package:flutter/painting.dart';
 class AppColors {
   AppColors._();
 
-  static const accent = Color(0xFFF66510);
-  static const accentHover = Color(0xFFFF792D);
-  static const accentTint = Color(0xFFFFF0E6);
-  static const accentSoft = Color(0xFFFFF7F1);
-  static const accentInk = Color(0xFF9B3B00);
-  static const accentDisabled = Color(0xFFF8B58C);
-  static const accentDeep = Color(0xFF6E2900);
+  // Brand family. [primary] is filled buttons, links and active labels (white
+  // on it is 6.8:1). [primaryBright] is the logo blue for icons, dots, FAB,
+  // switches and the focus ring; never small text (white on it is 4.3:1).
+  static const primary = Color(0xFF0052CC);
+  static const primaryBright = Color(0xFF0078E8);
+  static const primaryLight = Color(0xFF00B4F1);
+  static const cyanBlue = Color(0xFF00A1E8);
+  static const primaryStrong = Color(0xFF00338D);
+  static const violet = Color(0xFF8B5CF6);
+  static const purple = Color(0xFF6A3FD4);
 
-  static const ivory = Color(0xFFFFF8F1);
-  static const peach = Color(0xFFFFE5D2);
-  static const apricot = Color(0xFFFFD0B0);
-  static const sand = Color(0xFFF5E7D8);
-  static const olive = Color(0xFF7E8965);
-  static const taupe = Color(0xFFD8D0C5);
+  // Tints of [primary] over white: soft 6 %, tint 10 %, strong 16 %, border
+  // about 26 %, disabled 40 %.
+  static const primarySoft = Color(0xFFF0F5FC);
+  static const primaryTint = Color(0xFFE6EEFA);
+  static const primaryTintStrong = Color(0xFFD6E3F7);
+  static const primaryBorder = Color(0xFFBDD2F2);
+  static const primaryDisabled = Color(0xFF99BAEB);
 
-  static const background = Color(0xFFFFFFFF);
-  static const surface = Color(0xFFFFFCFA);
-  static const sage = Color(0xFFF1EFEC);
-  static const bubbleIn = Color(0xFFF5F3F1);
-  static const searchFill = Color(0xFFF7F6F5);
-  static const avatarBg = Color(0xFFF1EEEB);
-  static const avatarText = Color(0xFF675E56);
+  /// Tint of [violet] over white (13 %) and its readable shade.
+  static const violetTint = Color(0xFFF0EAFE);
+  static const violetStrong = Color(0xFF5B21B6);
+
+  /// Soft violet glow behind the selected bottom navigation icon (20 %).
+  static const navIndicatorGlow = Color(0x338B5CF6);
+
+  /// Every page, sheet and card is [white]; [surfaceSubtle] is the cool fill
+  /// for a panel that has to read against a white page.
+  static const surfaceSubtle = Color(0xFFF6F9FE);
+  static const white = Color(0xFFFFFFFF);
+  static const surface = Color(0xFFFFFFFF);
+  static const fill = Color(0xFFEDF2FA);
+  static const slateLight = Color(0xFFCBD5E4);
+  static const bubbleIn = Color(0xFFF0F4FA);
+  static const bubbleOut = primaryTint;
+  static const searchFill = Color(0xFFF1F5FB);
+  static const avatarBg = Color(0xFFEDF2FA);
+  static const avatarText = Color(0xFF4A5B7A);
 
   /// A mention in message text; [mentionMe] is a tag of the signed-in person.
   /// Both are at least 4.5:1 on the bubbles (incoming, outgoing, highlighted).
-  static const mention = Color(0xFF1A5FB4);
-  static const mentionMe = Color(0xFF124A91);
+  static const mention = primary;
+  static const mentionMe = primaryStrong;
 
-  static const ink = Color(0xFF282522);
-  static const muted = Color(0xFF716B66);
-  static const line = Color(0xFFEEEBE8);
-  static const inputBorder = Color(0xFFDED9D5);
-  static const readOnlyInk = Color(0xFF4A4541);
+  static const ink = Color(0xFF071F50);
+  static const muted = Color(0xFF55658A);
+  static const line = Color(0xFFE3EAF4);
+  static const inputBorder = Color(0xFFCBD5E4);
+  static const readOnlyInk = Color(0xFF2C3E63);
 
-  static const cardLine = Color(0xFFECECEB);
-  static const cardMuted = Color(0xFF7D7D7B);
-  static const cardChip = Color(0xFFF3F3F2);
+  static const cardLine = Color(0xFFE3EAF4);
+  static const cardMuted = Color(0xFF5F6F94);
+  static const cardChip = Color(0xFFEFF3F9);
 
-  static const error = Color(0xFFB5351D);
-  static const disabledInk = Color(0xFFB3ADA8);
+  static const error = Color(0xFFC62A3A);
+
+  /// Non-essential text and disabled content only.
+  static const tertiary = Color(0xFF8C99B3);
+  static const disabledInk = Color(0xFFA9B4C8);
 
   static const yesFill = Color(0xFFE3F6E9);
   static const yesDot = Color(0xFF16A34A);
   static const yesText = Color(0xFF14532D);
-  static const noFill = Color(0xFFEFEFEE);
-  static const noDot = Color(0xFF9A9A98);
-  static const noText = Color(0xFF4A4A48);
+  static const noFill = Color(0xFFEDF1F7);
+  static const noDot = Color(0xFF8C99B3);
+  static const noText = Color(0xFF3E4C69);
 
-  static const sphereHighlight = Color(0xFFFFDBB9);
-  static const sphereMid = Color(0xFFFFA363);
+  static const sphereHighlight = Color(0xFFC9ECFC);
+  static const sphereMid = Color(0xFF5CC6F3);
 
-  static const ambientDiscCenter = Color(0x1CF66510);
-  static const ambientDiscEdge = Color(0x05F66510);
-  static const ambientOrbitOuter = Color(0x17F66510);
-  static const ambientOrbitInner = Color(0x0CF66510);
-  static const rowChevron = Color(0xFFA1998D);
-  static const tileCurrentBorder = Color(0xFFF8C8AA);
+  static const ambientDiscCenter = Color(0x1C0078E8);
+  static const ambientDiscEdge = Color(0x050078E8);
+  static const ambientOrbitOuter = Color(0x170078E8);
+  static const ambientOrbitInner = Color(0x0C0078E8);
+
+  /// The violet orbit ring of the splash and access backdrops (14 %).
+  static const ambientOrbitViolet = Color(0x238B5CF6);
+  static const rowChevron = Color(0xFFA3B0C7);
+  static const tileCurrentBorder = primaryBorder;
 
   static const tilePalettes = [
-    AppTilePalette(Color(0xFFF5F1ED), Color(0xFFE9E2DA), Color(0xFF8A7260)),
-    AppTilePalette(Color(0xFFF8F1ED), Color(0xFFEDE2DC), Color(0xFF99745F)),
-    AppTilePalette(Color(0xFFF3F2EF), Color(0xFFE7E5DE), Color(0xFF80775F)),
-    AppTilePalette(Color(0xFFF7F2ED), Color(0xFFEAE1D8), Color(0xFF967552)),
+    AppTilePalette(Color(0xFFEFF4FB), Color(0xFFDCE7F6), Color(0xFF4F6A94)),
+    AppTilePalette(Color(0xFFF1EFFC), Color(0xFFE1DCF7), Color(0xFF6B58B0)),
+    AppTilePalette(Color(0xFFECF6FB), Color(0xFFD6EAF5), Color(0xFF3F7A96)),
+    AppTilePalette(Color(0xFFF0F2F8), Color(0xFFDFE3EE), Color(0xFF5B6784)),
   ];
 
   /// File-type tiles on document cards: background, border, label.
@@ -85,19 +107,19 @@ class AppColors {
     Color(0xFF1B6B3A),
   );
   static const docSlides = AppTilePalette(
-    Color(0xFFFFE9D6),
-    Color(0xFFF8C8AA),
-    Color(0xFF9B3B00),
+    Color(0xFFF0EAFE),
+    Color(0xFFDCD0FA),
+    Color(0xFF5B21B6),
   );
   static const docText = AppTilePalette(
-    Color(0xFFEDEBE8),
-    Color(0xFFDAD6D1),
-    Color(0xFF4A4541),
+    Color(0xFFEDF1F7),
+    Color(0xFFD9E0EC),
+    Color(0xFF3E4C69),
   );
   static const docArchive = AppTilePalette(
-    Color(0xFFF6EBD0),
-    Color(0xFFE8D6A8),
-    Color(0xFF6B4E00),
+    Color(0xFFE2F3F1),
+    Color(0xFFBFE2DE),
+    Color(0xFF0B5651),
   );
   static const docOther = AppTilePalette(
     Color(0xFFE9ECEF),
@@ -108,17 +130,17 @@ class AppColors {
   /// Name colours for the senders in a group, picked by a stable hash of the
   /// username. All read on [bubbleIn]. No blue hues: blue is for mentions.
   static const senderInks = [
-    accentInk,
-    Color(0xFF5F6B47),
-    Color(0xFF7A5C2E),
-    Color(0xFF8A4B5F),
+    Color(0xFF7A2E9E),
+    Color(0xFF0F766E),
+    Color(0xFFA12B55),
     Color(0xFF2F6B4F),
     Color(0xFFA33B3B),
+    Color(0xFF9A3B7B),
   ];
 
-  static const scrim = Color(0xFF28211D);
-  static const sheetBackdrop = Color(0x6628211D);
-  static const sheetHandle = Color(0xFFD8D0C5);
+  static const scrim = Color(0xFF0B1B3B);
+  static const sheetBackdrop = Color(0x660B1B3B);
+  static const sheetHandle = Color(0xFFCBD5E4);
 }
 
 class AppTilePalette {

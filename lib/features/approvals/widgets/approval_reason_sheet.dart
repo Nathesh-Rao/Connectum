@@ -95,7 +95,7 @@ class ApprovalReasonSheet extends StatelessWidget {
                 ),
                 Switch(
                   value: f.allowResubmit.value,
-                  activeTrackColor: AppColors.accent,
+                  activeTrackColor: AppColors.primaryBright,
                   onChanged: f.isSending.value
                       ? null
                       : (v) => f.allowResubmit.value = v,

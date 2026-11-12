@@ -58,7 +58,7 @@ class AiNoticeDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.white,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xl,
@@ -76,13 +76,13 @@ class AiNoticeDialog extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: const BoxDecoration(
-                  color: AppColors.accentTint,
+                  color: AppColors.violetTint,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.auto_awesome_rounded,
                   size: 28,
-                  color: AppColors.accent,
+                  color: AppColors.violet,
                 ),
               ),
             ),

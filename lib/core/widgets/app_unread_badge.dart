@@ -12,7 +12,7 @@ class AppUnreadBadge extends StatelessWidget {
     super.key,
     required this.label,
     this.isMuted = false,
-    this.color = AppColors.accent,
+    this.color = AppColors.primary,
   });
 
   /// The text to show: a number, or "99+" past the cap.
@@ -51,7 +51,7 @@ class AppUnreadBadge extends StatelessWidget {
           child: Text(
             label,
             style: AppText.caption.copyWith(
-              color: AppColors.background,
+              color: AppColors.white,
               fontWeight: FontWeight.w700,
               height: 1.2,
             ),

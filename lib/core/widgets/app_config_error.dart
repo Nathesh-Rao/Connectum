@@ -16,7 +16,7 @@ class AppConfigError extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.white,
         body: SafeArea(
           child: Center(
             child: Padding(

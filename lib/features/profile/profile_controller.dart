@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../demo/demo_mode.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -102,7 +104,7 @@ class ProfileController extends GetxController {
     if (isLoggingOut.value) return;
     isLoggingOut.value = true;
     try {
-      if (SeedUi.isActive) {
+      if (SeedUi.isActive && !DemoMode.isActive) {
         await Future<void>.delayed(const Duration(milliseconds: 600));
         Get.back<void>();
         return;

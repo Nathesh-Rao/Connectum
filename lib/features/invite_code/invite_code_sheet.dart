@@ -9,13 +9,16 @@ import 'invite_code_view.dart';
 class InviteCodeSheet {
   InviteCodeSheet._();
 
+  static int _opened = 0;
+
   static Future<void> show(BuildContext context) {
-    InviteCodeBinding().dependencies();
+    final tag = 'invite-code-${++_opened}';
+    InviteCodeBinding(tag: tag).dependencies();
     return AppBottomSheet.show<void>(
       context,
       title: 'Have an invite code or link?',
-      child: const InviteCodeView(),
-      onDispose: Get.delete<InviteCodeController>,
+      child: InviteCodeView(controllerTag: tag),
+      onDispose: () => Get.delete<InviteCodeController>(tag: tag),
     );
   }
 }

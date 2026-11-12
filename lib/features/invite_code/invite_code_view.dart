@@ -8,7 +8,12 @@ import '../../core/widgets/app_text_field.dart';
 import 'invite_code_controller.dart';
 
 class InviteCodeView extends GetView<InviteCodeController> {
-  const InviteCodeView({super.key});
+  const InviteCodeView({super.key, this.controllerTag});
+
+  final String? controllerTag;
+
+  @override
+  String? get tag => controllerTag;
 
   @override
   Widget build(BuildContext context) {

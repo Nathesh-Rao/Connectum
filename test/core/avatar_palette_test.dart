@@ -46,7 +46,7 @@ void main() {
 
   test('foreground lightness stays in the deep range', () {
     for (final h in AvatarPalette.hues) {
-      expect(h.foregroundLightness, inInclusiveRange(0.32, 0.40));
+      expect(h.foregroundLightness, inInclusiveRange(0.30, 0.40));
     }
   });
 

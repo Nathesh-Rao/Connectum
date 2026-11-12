@@ -107,13 +107,13 @@ class DonePane extends StatelessWidget {
                   width: AppSpacing.checkBadge,
                   height: AppSpacing.checkBadge,
                   decoration: const BoxDecoration(
-                    color: AppColors.accentTint,
+                    color: AppColors.primaryTint,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.hourglass_top,
                     size: 28,
-                    color: AppColors.accent,
+                    color: AppColors.primaryBright,
                   ),
                 )
               : const AppSuccessAnimation(),

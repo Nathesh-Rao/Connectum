@@ -80,7 +80,7 @@ class TasksView extends GetView<TasksController> {
                   ),
                   AppPill(
                     label: TicketsTexts.sectionTickets,
-                    kind: AppPillKind.sand,
+                    kind: AppPillKind.violet,
                   ),
                 ],
                 selected: c.selectedSection.value,
@@ -135,7 +135,7 @@ class _Todos extends StatelessWidget {
                   label: TasksTexts.tabAssigned,
                   kind: AppPillKind.accent,
                 ),
-                AppPill(label: TasksTexts.tabCreated, kind: AppPillKind.sand),
+                AppPill(label: TasksTexts.tabCreated, kind: AppPillKind.violet),
               ],
               selected: c.selectedTab.value,
               onSelected: (i) => c.selectedTab.value = i,

@@ -31,7 +31,7 @@ class MessageStatusMark extends StatelessWidget {
       MessageStatus.sending => (Icons.schedule, AppColors.muted, 'Sending'),
       MessageStatus.sent => (Icons.check, AppColors.muted, 'Sent'),
       MessageStatus.delivered => (Icons.done_all, AppColors.muted, 'Delivered'),
-      MessageStatus.read => (Icons.done_all, AppColors.accent, 'Read'),
+      MessageStatus.read => (Icons.done_all, AppColors.primaryBright, 'Read'),
       MessageStatus.failed => (
         Icons.error_outline,
         AppColors.error,
@@ -52,7 +52,7 @@ class MessageStatusMark extends StatelessWidget {
         child: Icon(
           icon,
           key: ValueKey(
-            icon.codePoint * 10 + (color == AppColors.accent ? 1 : 0),
+            icon.codePoint * 10 + (color == AppColors.primaryBright ? 1 : 0),
           ),
           size: AppSpacing.statusIcon,
           color: color,

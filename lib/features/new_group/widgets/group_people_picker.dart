@@ -184,7 +184,7 @@ class _PersonRow extends StatelessWidget {
             Icon(
               isSelected ? Icons.check_circle : Icons.circle_outlined,
               size: 22,
-              color: isSelected ? AppColors.accent : AppColors.inputBorder,
+              color: isSelected ? AppColors.primaryBright : AppColors.inputBorder,
             ),
           ],
         ),
@@ -211,7 +211,7 @@ class _SelectedChip extends StatelessWidget {
           bottom: AppSpacing.xxs,
         ),
         decoration: const BoxDecoration(
-          color: AppColors.accentTint,
+          color: AppColors.primaryTint,
           borderRadius: AppRadius.pillAll,
         ),
         child: Row(
@@ -219,10 +219,10 @@ class _SelectedChip extends StatelessWidget {
           children: [
             Text(
               person.name,
-              style: AppText.readable.copyWith(color: AppColors.accentInk),
+              style: AppText.readable.copyWith(color: AppColors.primaryStrong),
             ),
             const SizedBox(width: AppSpacing.xxs),
-            const Icon(Icons.close, size: 14, color: AppColors.accentInk),
+            const Icon(Icons.close, size: 14, color: AppColors.primaryStrong),
           ],
         ),
       ),

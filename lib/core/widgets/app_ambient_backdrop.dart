@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 
 enum AppAmbientVariant { access, splash }
 
-/// The soft peach disc, thin orbits and small spheres behind the splash,
+/// The soft blue disc, thin orbits (the outer one violet) and small spheres behind the splash,
 /// authentication and verification screens. Static, no blur.
 class AppAmbientBackdrop extends StatelessWidget {
   const AppAmbientBackdrop({super.key, required this.variant});
@@ -50,7 +50,7 @@ class _AmbientPainter extends CustomPainter {
       _orbit(
         canvas,
         box(AppAmbient.splashOrbit),
-        AppColors.ambientOrbitOuter,
+        AppColors.ambientOrbitViolet,
         AppAmbient.splashOrbit.opacity,
       );
       _orbit(
@@ -62,7 +62,12 @@ class _AmbientPainter extends CustomPainter {
       return;
     }
     _disc(canvas, box(AppAmbient.accessDisc), 1);
-    _orbit(canvas, box(AppAmbient.accessOrbit), AppColors.ambientOrbitOuter, 1);
+    _orbit(
+      canvas,
+      box(AppAmbient.accessOrbit),
+      AppColors.ambientOrbitViolet,
+      1,
+    );
     final inner = box(AppAmbient.accessOrbitInner);
     _orbit(
       canvas,
@@ -116,7 +121,7 @@ class _AmbientPainter extends CustomPainter {
         colors: [
           _fade(AppColors.sphereHighlight, opacity),
           _fade(AppColors.sphereMid, opacity),
-          _fade(AppColors.accent, opacity),
+          _fade(AppColors.primaryBright, opacity),
         ],
         stops: const [0, 0.38, 0.85],
       ).createShader(rect);

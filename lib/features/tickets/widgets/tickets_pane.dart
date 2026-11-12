@@ -42,7 +42,7 @@ class TicketsPane extends StatelessWidget {
                 ),
                 const AppPill(
                   label: TicketsTexts.tabRaised,
-                  kind: AppPillKind.sand,
+                  kind: AppPillKind.violet,
                 ),
               ],
               selected: c.selectedTab.value,

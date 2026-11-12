@@ -45,8 +45,8 @@ void main() {
 
     for (final bubble in [
       AppColors.bubbleIn,
-      AppColors.accentTint,
-      AppColors.peach,
+      AppColors.primaryTint,
+      AppColors.primaryTintStrong,
     ]) {
       expect(ratio(AppColors.mention, bubble), greaterThanOrEqualTo(4.5));
       expect(ratio(AppColors.mentionMe, bubble), greaterThanOrEqualTo(4.5));

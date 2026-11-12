@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../demo/demo_mode.dart';
+
 class AppConfig {
   AppConfig._();
 
@@ -22,7 +24,7 @@ class AppConfig {
   /// Null when the build is configured; otherwise what is wrong. Debug builds
   /// may run unconfigured or on plain http/ws.
   static String? validate() {
-    if (kDebugMode) return null;
+    if (kDebugMode || DemoMode.isActive) return null;
     if (baseUrl.isEmpty || wsUrl.isEmpty) {
       return 'BASE_URL and WS_URL were not set for this build.';
     }

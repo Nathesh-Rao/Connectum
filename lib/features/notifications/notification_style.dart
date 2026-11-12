@@ -120,7 +120,7 @@ const notificationRules = [
   ),
   NotificationRule(
     icon: Icons.fact_check_rounded,
-    tone: AppTones.orange,
+    tone: AppTones.blue,
     category: NotificationTexts.categoryApprovals,
     types: {'approvals', 'approval', 'request', 'fact_check'},
     keywords: ['approval', 'approve', 'request'],

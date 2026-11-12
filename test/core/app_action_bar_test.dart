@@ -113,7 +113,7 @@ void main() {
         id: 'c',
         label: 'Return',
         icon: Icons.undo,
-        tone: AppTones.orange,
+        tone: AppTones.violet,
       ),
       const ActionItem(
         id: 'd',
@@ -149,7 +149,7 @@ void main() {
     for (final l in inCard.keys) {
       expect(buttonOf(l).color, inCard[l], reason: l);
     }
-    expect(inCard['Return'], AppTones.orange.tint);
+    expect(inCard['Return'], AppTones.violet.tint);
     expect(inCard['Drop'], AppTones.red.tint);
     expect(tester.getSize(find.text('Return')), cardSize);
   });
@@ -224,7 +224,7 @@ void main() {
       expect(text.style!.color, AppTones.primary.strong);
       expect(text.style!.fontWeight, FontWeight.w600);
       final shape = m.shape! as RoundedRectangleBorder;
-      expect(shape.side.color, AppColors.accent.withValues(alpha: 0.35));
+      expect(shape.side.color, AppColors.primary.withValues(alpha: 0.35));
       expect(
         tester
             .getSize(

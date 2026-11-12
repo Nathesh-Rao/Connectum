@@ -90,13 +90,13 @@ class _AppOfflineBarState extends State<AppOfflineBar> {
                     const Icon(
                       Icons.wifi_off_rounded,
                       size: 14,
-                      color: AppColors.background,
+                      color: AppColors.white,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       isOffline ? "You're offline" : 'Connecting…',
                       style: AppText.readable.copyWith(
-                        color: AppColors.background,
+                        color: AppColors.white,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

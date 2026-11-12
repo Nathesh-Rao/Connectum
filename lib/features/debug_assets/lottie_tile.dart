@@ -322,7 +322,7 @@ class _LottieTileState extends State<LottieTile>
               height: height,
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.line),
-                color: AppColors.sage,
+                color: AppColors.fill,
               ),
               child: Lottie(
                 composition: composition,

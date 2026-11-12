@@ -45,6 +45,14 @@ import '../../features/connect_target/connect_target_controller.dart';
 import '../utils/install_referrer.dart';
 import 'deep_link_service.dart';
 import 'invite_service.dart';
+import '../../demo/demo_ai_repository.dart';
+import '../../demo/demo_auth_repository.dart';
+import '../../demo/demo_feed_repository.dart';
+import '../../demo/demo_mode.dart';
+import '../../demo/demo_services.dart';
+import '../debug/seed_qr.dart';
+import '../debug/seed_tasks.dart';
+import '../debug/seed_tickets.dart';
 
 class InitialBinding extends Bindings {
   InitialBinding(this.connectivity);
@@ -53,14 +61,18 @@ class InitialBinding extends Bindings {
 
   @override
   void dependencies() {
-    final store = Get.put(SessionStore(), permanent: true);
+    final isDemo = DemoMode.isActive;
+    final store = Get.put(
+      isDemo ? DemoSessionStore() : SessionStore(),
+      permanent: true,
+    );
     store.identity.value = SeedUi.identity();
     final links = Get.put(
       DeepLinkService(
         AppLinks(),
         store,
         connectivity,
-        Platform.isAndroid
+        Platform.isAndroid && !isDemo
             ? const PlayInstallReferrerSource()
             : const NoInstallReferrerSource(),
       ),
@@ -70,7 +82,9 @@ class InitialBinding extends Bindings {
     final api = Get.put(ApiClient(store), permanent: true);
     Get.put(connectivity, permanent: true);
     final socket = Get.put(
-      SocketService(store, connectivity, api),
+      isDemo
+          ? DemoSocketService(store, connectivity, api)
+          : SocketService(store, connectivity, api),
       permanent: true,
     );
     connectivity.attachSocket(socket.connection);
@@ -89,7 +103,10 @@ class InitialBinding extends Bindings {
     );
     Get.put(GroupRepository(socket, store, conversations), permanent: true);
     final connect = Get.put(ConnectRepository(socket), permanent: true);
-    Get.put(QrRepository(socket), permanent: true);
+    Get.put(
+      isDemo ? const SeedQrScenario('Demo').repository() : QrRepository(socket),
+      permanent: true,
+    );
     final messages = Get.put(
       MessageRepository(db, store, socket, conversations, policy, e2e),
       permanent: true,
@@ -111,20 +128,27 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     final ai = Get.put<AiRepository>(
-      AiRepositoryImpl(
-        socket,
-        store,
-        messages,
-        statusOf: (id) => submissions.submissionById(id)?.status,
-        displayNameOf: tickets.nameOf,
-      ),
+      isDemo
+          ? DemoAiRepository()
+          : AiRepositoryImpl(
+              socket,
+              store,
+              messages,
+              statusOf: (id) => submissions.submissionById(id)?.status,
+              displayNameOf: tickets.nameOf,
+            ),
       permanent: true,
     );
     Get.put(AiSetupCache(ai), permanent: true);
     Get.put(FormLogicService(store, socket), permanent: true);
     Get.put(PresenceRepository(socket), permanent: true);
     Get.put(TypingRepository(socket), permanent: true);
-    final feed = Get.put(FeedRepository(socket, store, e2e), permanent: true);
+    final feed = Get.put(
+      isDemo
+          ? DemoFeedRepository(socket, store, e2e)
+          : FeedRepository(socket, store, e2e),
+      permanent: true,
+    );
     final tasks = Get.put(TaskRepository(socket, store), permanent: true);
     Get.put(ApprovalRepository(socket, store, feed), permanent: true);
     final notificationRouter = Get.put(
@@ -145,7 +169,7 @@ class InitialBinding extends Bindings {
       ),
       permanent: true,
     );
-    unawaited(localNotifications.start());
+    if (!isDemo) unawaited(localNotifications.start());
     final attachments = Get.put(AttachmentRepository(store), permanent: true);
     Get.put(FormFileRepository(attachments, store), permanent: true);
     final attachmentCache = Get.put(
@@ -155,14 +179,32 @@ class InitialBinding extends Bindings {
     // Decrypted documents made for the viewer last run do not outlive it.
     unawaited(attachmentCache.clearOpenTmp());
     final session = Get.put(
-      SessionRepository(store, db, api, socket, attachmentCache, links),
+      isDemo
+          ? DemoSessionRepository(
+              store,
+              db,
+              api,
+              socket,
+              attachmentCache,
+              links,
+            )
+          : SessionRepository(store, db, api, socket, attachmentCache, links),
       permanent: true,
     );
-    final auth = Get.put(AuthRepository(api, store, session), permanent: true);
+    final auth = Get.put(
+      isDemo
+          ? DemoAuthRepository(api, store, session)
+          : AuthRepository(api, store, session),
+      permanent: true,
+    );
     links.claimResolver = auth.claimInvite;
     links.membershipStatus = auth.membershipStatus;
     links.scanner = (target) =>
         ConnectTargetController.scanOutcome(connect, target);
     Get.put(InviteService(auth, store, links), permanent: true);
+    if (isDemo) {
+      SeedTasks.start();
+      unawaited(SeedTickets.start());
+    }
   }
 }

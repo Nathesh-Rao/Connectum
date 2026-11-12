@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:get/get.dart';
 
 import '../../data/models/form_entry.dart';
+import '../../demo/demo_mode.dart';
+import '../../demo/demo_replies.dart';
 import '../../data/models/ids.dart';
 import '../../data/models/message.dart';
 
@@ -595,6 +597,7 @@ class SeedMessages {
       ),
     );
     _walk(convId, id, isDm, text: isEncrypted ? text : '');
+    if (DemoMode.isActive) DemoReplies.after(convId);
     return cid;
   }
 

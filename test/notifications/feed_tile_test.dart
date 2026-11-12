@@ -169,7 +169,10 @@ void main() {
     expect((dot.decoration! as BoxDecoration).color, color);
     final action = find.text('View ticket');
     if (action.evaluate().isNotEmpty) {
-      expect(tester.widget<Text>(action).style!.color, color);
+      expect(
+        tester.widget<Text>(action).style!.color,
+        styleFor(item).tone.strong,
+      );
     }
   });
 

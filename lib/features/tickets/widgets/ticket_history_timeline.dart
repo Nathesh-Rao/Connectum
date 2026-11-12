@@ -78,7 +78,7 @@ class _Step extends StatelessWidget {
                   height: 8,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.accent,
+                    color: AppColors.primaryBright,
                   ),
                 ),
                 if (!isLast)

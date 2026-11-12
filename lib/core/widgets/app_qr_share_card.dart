@@ -61,7 +61,7 @@ class AppQrShareCard extends StatelessWidget {
       child: Container(
         width: cardWidth,
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.white,
           borderRadius: AppRadius.cardAll,
           border: Border.all(color: AppColors.cardLine),
           boxShadow: AppShadows.soft,
@@ -244,7 +244,7 @@ class _QrCode extends StatelessWidget {
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.white,
           borderRadius: AppRadius.mdAll,
           border: Border.all(color: AppColors.cardLine),
           boxShadow: AppShadows.soft,
@@ -266,7 +266,7 @@ class AppQrShareFrame extends StatelessWidget {
   static Future<void> preload() {
     final done = Completer<void>();
     final stream = const AssetImage(
-      'assets/images/connectum_logo.png',
+      'assets/images/connectum_logo_blue.png',
     ).resolve(ImageConfiguration.empty);
     late final ImageStreamListener listener;
     void finish() {
@@ -286,7 +286,7 @@ class AppQrShareFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: AppSpacing.qrShareWidth,
-      color: AppColors.sage,
+      color: AppColors.fill,
       padding: const EdgeInsets.all(
         (AppSpacing.qrShareWidth - AppSpacing.qrCardWidth) / 2,
       ),

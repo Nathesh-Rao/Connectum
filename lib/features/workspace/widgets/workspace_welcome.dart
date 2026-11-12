@@ -43,7 +43,7 @@ class WorkspaceWelcome extends StatelessWidget {
               children: [
                 Text(
                   sender,
-                  style: AppText.label.copyWith(color: AppColors.accentInk),
+                  style: AppText.label.copyWith(color: AppColors.primaryStrong),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(text, style: AppText.message),

@@ -150,7 +150,7 @@ class FeedTile extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: AppButton.text(
                             label: item.actionLabel!,
-                            color: style.color,
+                            color: style.tone.strong,
                             onPressed: onTap,
                           ),
                         ),
@@ -164,7 +164,7 @@ class FeedTile extends StatelessWidget {
                     size: 20,
                     color: AppColors.muted,
                   ),
-                  color: AppColors.background,
+                  color: AppColors.white,
                   onSelected: onMenu,
                   itemBuilder: (context) => [
                     PopupMenuItem(
@@ -250,12 +250,12 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
     decoration: const BoxDecoration(
-      color: AppColors.accentTint,
+      color: AppColors.primaryTint,
       borderRadius: AppRadius.pillAll,
     ),
     child: Text(
       count > 99 ? '99+' : '$count',
-      style: AppText.caption.copyWith(color: AppColors.accentInk),
+      style: AppText.caption.copyWith(color: AppColors.primaryStrong),
     ),
   );
 }

@@ -43,7 +43,7 @@ class ConversationTile extends StatelessWidget {
     final c = conversation;
     final hasUnread = c.unread > 0;
     final tone = AvatarPalette.indexOf(c.title) < 0
-        ? AppColors.accent
+        ? AppColors.primaryBright
         : AvatarPalette.fromName(c.title).foreground;
     return Semantics(
       button: true,

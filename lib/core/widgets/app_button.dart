@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import './app_spinner.dart';
+import './app_bubble_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
@@ -110,12 +111,14 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
   );
 
   Offset? _pressOrigin;
+  bool _isPressed = false;
 
   bool get _isEnabled => widget.onPressed != null && !widget.isLoading;
 
   void _press(PointerDownEvent event) {
     if (!_isEnabled) return;
     _pressOrigin = event.position;
+    _setPressed(true);
     _springTo(AppDistances.pressScale);
   }
 
@@ -129,7 +132,13 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
   void _release([PointerEvent? _]) {
     if (_pressOrigin == null) return;
     _pressOrigin = null;
+    _setPressed(false);
     _springTo(1);
+  }
+
+  void _setPressed(bool value) {
+    if (!mounted || _isPressed == value) return;
+    setState(() => _isPressed = value);
   }
 
   void _springTo(double target) {
@@ -204,12 +213,12 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
     final color =
         widget.color ??
         switch (widget.tone) {
-          AppTextButtonTone.accent => AppColors.accentInk,
+          AppTextButtonTone.accent => AppColors.primaryStrong,
           AppTextButtonTone.ink => AppColors.ink,
           AppTextButtonTone.muted => AppColors.muted,
         };
     final isDimmed = !_isEnabled && !widget.isLoading;
-    final tint = isDimmed ? AppColors.taupe : color;
+    final tint = isDimmed ? AppColors.slateLight : color;
     final label = Text(
       widget.label!,
       style: AppText.action.copyWith(color: tint),
@@ -256,15 +265,11 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
   Widget _buildLabelled() {
     final isPrimary = widget._kind == _AppButtonKind.primary;
     final foreground = isPrimary
-        ? AppColors.background
+        ? AppColors.white
         : widget.isDanger
         ? AppColors.error
         : AppColors.ink;
-    final background = isPrimary
-        ? (_isEnabled || widget.isLoading
-              ? AppColors.accent
-              : AppColors.accentDisabled)
-        : AppColors.background;
+    final background = AppColors.white;
     final hasIcons = widget.icon != null || widget.leadingIcon != null;
     final isSpaced = !widget.isCentered && hasIcons;
     final label = Text(
@@ -275,57 +280,59 @@ class _AppButtonState extends State<AppButton> with TickerProviderStateMixin {
         color: foreground,
       ),
     );
+    final content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.isCompact
+            ? AppSpacing.compactButtonPaddingX
+            : AppSpacing.buttonPaddingX,
+      ),
+      child: Center(
+        child: widget.isLoading
+            ? AppSpinner(
+                size: AppSpinnerSize.sm,
+                color: isPrimary ? AppColors.white : AppColors.primary,
+              )
+            : Row(
+                mainAxisSize: isSpaced ? MainAxisSize.max : MainAxisSize.min,
+                children: [
+                  if (widget.leadingIcon != null) ...[
+                    Icon(widget.leadingIcon, size: 18, color: foreground),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  isSpaced ? Expanded(child: label) : Flexible(child: label),
+                  if (widget.icon != null) ...[
+                    if (!isSpaced) const SizedBox(width: AppSpacing.sm),
+                    Icon(widget.icon, size: 18, color: foreground),
+                  ],
+                ],
+              ),
+      ),
+    );
     return ConstrainedBox(
       constraints: BoxConstraints(
         minHeight: widget.isCompact
             ? AppSpacing.compactButtonHeight
             : AppSpacing.controlHeight,
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: AppRadius.controlAll,
-          border: isPrimary
-              ? null
-              : Border.all(
+      child: isPrimary
+          ? AppBubbleSurface(
+              borderRadius: AppRadius.controlAll,
+              isEnabled: _isEnabled || widget.isLoading,
+              isPressed: _isPressed,
+              child: content,
+            )
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: AppRadius.controlAll,
+                border: Border.all(
                   color: widget.isDanger
                       ? AppColors.error
                       : AppColors.inputBorder,
                 ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: widget.isCompact
-                ? AppSpacing.compactButtonPaddingX
-                : AppSpacing.buttonPaddingX,
-          ),
-          child: Center(
-            child: widget.isLoading
-                ? AppSpinner(
-                    size: AppSpinnerSize.sm,
-                    color: isPrimary ? AppColors.background : AppColors.accent,
-                  )
-                : Row(
-                    mainAxisSize: isSpaced
-                        ? MainAxisSize.max
-                        : MainAxisSize.min,
-                    children: [
-                      if (widget.leadingIcon != null) ...[
-                        Icon(widget.leadingIcon, size: 18, color: foreground),
-                        const SizedBox(width: AppSpacing.sm),
-                      ],
-                      isSpaced
-                          ? Expanded(child: label)
-                          : Flexible(child: label),
-                      if (widget.icon != null) ...[
-                        if (!isSpaced) const SizedBox(width: AppSpacing.sm),
-                        Icon(widget.icon, size: 18, color: foreground),
-                      ],
-                    ],
-                  ),
-          ),
-        ),
-      ),
+              ),
+              child: content,
+            ),
     );
   }
 }

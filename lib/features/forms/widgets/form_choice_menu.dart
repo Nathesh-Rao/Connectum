@@ -238,12 +238,12 @@ class _MenuPanelState extends State<_MenuPanel> {
       child: Container(
         constraints: BoxConstraints(maxHeight: widget.maxHeight),
         decoration: const BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.white,
           borderRadius: AppRadius.controlAll,
           boxShadow: AppShadows.soft,
         ),
         child: Material(
-          color: AppColors.background,
+          color: AppColors.white,
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.controlAll,
             side: BorderSide(color: AppColors.line),
@@ -309,7 +309,7 @@ class _MenuPanelState extends State<_MenuPanel> {
               onTap: () => widget.onPick(c),
               child: Container(
                 height: AppSpacing.menuRowHeight,
-                color: isOn ? AppColors.accentSoft : null,
+                color: isOn ? AppColors.primarySoft : null,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.controlPaddingX,
                 ),
@@ -329,7 +329,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                       const Icon(
                         Icons.check,
                         size: 18,
-                        color: AppColors.accent,
+                        color: AppColors.primaryBright,
                       ),
                   ],
                 ),

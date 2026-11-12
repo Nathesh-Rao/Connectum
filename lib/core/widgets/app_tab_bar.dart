@@ -72,7 +72,7 @@ class AppTabBar extends StatelessWidget {
                       heightFactor: 1,
                       child: const DecoratedBox(
                         decoration: BoxDecoration(
-                          color: AppColors.accentTint,
+                          color: AppColors.primaryTint,
                           borderRadius: BorderRadius.all(
                             Radius.circular(AppRadius.segment),
                           ),
@@ -94,7 +94,7 @@ class AppTabBar extends StatelessWidget {
                                           : AppText.segment)
                                       .copyWith(
                                         color: i == selectedIndex
-                                            ? AppColors.accent
+                                            ? AppColors.primary
                                             : AppColors.muted,
                                       ),
                               child: Text(labels[i]),

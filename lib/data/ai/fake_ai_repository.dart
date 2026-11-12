@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'ai_models.dart';
+import 'ai_prompt.dart';
 import 'ai_repository.dart';
+import 'ai_transcript.dart';
 
 enum FakeAiScenario {
   short,
@@ -18,6 +20,53 @@ enum FakeAiScenario {
   chartMany,
   chartManyBars,
   chartEdge,
+}
+
+/// The care threads of the debug page and the tests.
+enum FakeCareThread {
+  /// A team member reading a patient's thread.
+  team,
+
+  /// The patient reading their own thread.
+  patient,
+
+  /// 400 messages near the 70,000 characters limit.
+  long,
+
+  /// `care.thread` says `not_found` to a team member.
+  notFound,
+
+  /// `care.thread` says `not_found` to the patient: no thread yet.
+  patientNotFound,
+}
+
+const _team = [
+  CareMember(username: 'nurse', name: 'Nina Nurse', roles: ['Nurse', 'Lead']),
+  CareMember(username: 'doc', name: 'Dr Dev', roles: ['Doctor']),
+];
+
+const _careChat =
+    'CHAT: group Ravi Kumar - 4 messages, 2026-11-09 09:12 to 2026-11-11 08:00 '
+    "(the whole conversation). Times are the viewer's local time.\n"
+    '[2026-11-09 09:12] Nina Nurse: [form submission] Vitals #5 - BP: 120/80; Pulse: 72\n'
+    '[2026-11-09 09:30] Ravi Kumar: Feeling better\n'
+    '[2026-11-10 14:05] Dr Dev: [form submission] Prescription #7 - Medicine: Paracetamol; Dose: 500 mg twice a day\n'
+    '[2026-11-11 08:00] Nina Nurse: Come at 9';
+
+/// 400 lines of about 172 characters: the whole block is 69,9xx characters,
+/// under [AiTranscript.careMaxChars].
+String _longCareChat() {
+  final lines = List.generate(AiTranscript.careMaxMessages, (i) {
+    final head =
+        '[2026-11-${(i ~/ 20 + 1).toString().padLeft(2, '0')} '
+        '${(8 + i % 10).toString().padLeft(2, '0')}:${(i % 60).toString().padLeft(2, '0')}] '
+        '${i.isEven ? 'Nina Nurse' : 'Ravi Kumar'}: Note ${i + 1}. ';
+    return head.padRight(171, 'x');
+  });
+  final head =
+      'CHAT: group Ravi Kumar - ${lines.length} messages, 2026-11-01 08:00 to 2026-11-20 17:39 '
+      "(the whole conversation). Times are the viewer's local time.";
+  return '$head\n${lines.join('\n')}';
 }
 
 String _fence(String json) => '```chart\n$json\n```';
@@ -101,6 +150,10 @@ class FakeAiRepository implements AiRepository {
   /// does; the debug page keeps it to preview the progressive view).
   bool isStreaming = false;
 
+  /// Which care thread [careThread] gives.
+  FakeCareThread care = FakeCareThread.team;
+
+  int careThreadCalls = 0;
   int setupCalls = 0;
   int summarizeCalls = 0;
   int cancelCalls = 0;
@@ -134,6 +187,25 @@ class FakeAiRepository implements AiRepository {
   Future<void> _run(StreamController<AiSummaryChunk> out) async {
     await Future<void>.delayed(delay);
     if (out.isClosed) return;
+    final request = lastRequest;
+    var isPatientView = false;
+    if (request != null && request.isCare) {
+      isPatientView =
+          care == FakeCareThread.patient ||
+          care == FakeCareThread.patientNotFound;
+      if (request.isCareQuestion) {
+        try {
+          await careThread(request.carePerson!);
+        } on AiError catch (e) {
+          if (!out.isClosed) {
+            out.addError(e);
+            await out.close();
+          }
+          return;
+        }
+        if (out.isClosed) return;
+      }
+    }
     if (scenario == FakeAiScenario.failure) {
       out.addError(AiError(failure));
       await out.close();
@@ -158,10 +230,50 @@ class FakeAiRepository implements AiRepository {
         isFinal: true,
         messageCount: 42,
         isTruncated: lastRequest?.isCare ?? false,
+        isPatientView: isPatientView,
       ),
     );
     await out.close();
   }
+
+  @override
+  Future<CareThread> careThread(String person) async {
+    careThreadCalls++;
+    await Future<void>.delayed(delay);
+    final isPatient = care == FakeCareThread.patient;
+    return switch (care) {
+      FakeCareThread.notFound => throw const AiError(AiErrorKind.careNotFound),
+      FakeCareThread.patientNotFound => throw const AiError(
+        AiErrorKind.careNotStarted,
+      ),
+      FakeCareThread.long => CareThread(
+        conversation: 'group:care-$person',
+        person: person,
+        name: 'Ravi Kumar',
+        transcript: _longCareChat(),
+        count: AiTranscript.careMaxMessages,
+        team: _team,
+      ),
+      _ => CareThread(
+        conversation: 'group:care-$person',
+        person: person,
+        name: 'Ravi Kumar',
+        transcript: _careChat,
+        count: 4,
+        team: _team,
+        isPatient: isPatient,
+      ),
+    };
+  }
+
+  /// The system text a typed question about [care] would carry.
+  String careSystemFor(CareThread t, DateTime now) => AiPrompt.careThreadSystem(
+    name: 'Maya Rao',
+    now: now,
+    isPatient: t.isPatient,
+    team: t.team,
+    transcript: t.transcript,
+  );
 
   @override
   void cancel() {

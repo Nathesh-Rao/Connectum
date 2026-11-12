@@ -23,7 +23,7 @@ void main() {
 
   test('priority becomes a tone: high red, medium orange, low slate', () {
     expect(TicketDetailRow.of('Priority', 'High').priority, AppTones.red);
-    expect(TicketDetailRow.of('Priority', 'Medium').priority, AppTones.orange);
+    expect(TicketDetailRow.of('Priority', 'Medium').priority, AppTones.violet);
     expect(TicketDetailRow.of('Priority', 'Low').priority, AppTones.slate);
     expect(TicketDetailRow.of('Category', 'High').priority, isNull);
   });

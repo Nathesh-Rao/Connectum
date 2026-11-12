@@ -1,6 +1,5 @@
 | File | Source | Licence |
 | --- | --- | --- |
-| ai_welcome.png | | |
 | coming_soon.png | | |
 | empty_chats.png | | |
 | empty_enterprises.png | | |

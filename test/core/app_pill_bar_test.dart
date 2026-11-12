@@ -38,7 +38,7 @@ void main() {
         AppPillBar(
           pills: const [
             AppPill(label: 'A', kind: AppPillKind.accent),
-            AppPill(label: 'B', kind: AppPillKind.sand),
+            AppPill(label: 'B', kind: AppPillKind.violet),
           ],
           selected: 1,
           onSelected: (_) {},
@@ -57,7 +57,7 @@ void main() {
     }
 
     expect(fillOf('A'), AppPillKind.accent.tint);
-    expect(fillOf('B'), AppPillKind.sand.fill);
+    expect(fillOf('B'), AppPillKind.violet.fill);
   });
 
   testWidgets('a long set scrolls sideways without overflow', (tester) async {

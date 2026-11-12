@@ -140,7 +140,7 @@ class _Dots extends StatelessWidget {
                       height: AppSpacing.dotWidth,
                       decoration: BoxDecoration(
                         color: i == controller.page.value
-                            ? AppColors.accent
+                            ? AppColors.primaryBright
                             : AppColors.inputBorder,
                         borderRadius: const BorderRadius.all(
                           Radius.circular(4),

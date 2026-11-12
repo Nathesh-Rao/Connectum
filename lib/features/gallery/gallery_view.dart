@@ -25,24 +25,27 @@ class GalleryView extends GetView<GalleryController> {
   const GalleryView({super.key});
 
   static const _colors = <String, Color>{
-    'accent': AppColors.accent,
-    'accentHover': AppColors.accentHover,
-    'accentTint': AppColors.accentTint,
-    'accentSoft': AppColors.accentSoft,
-    'accentInk': AppColors.accentInk,
-    'accentDisabled': AppColors.accentDisabled,
-    'ivory': AppColors.ivory,
-    'peach': AppColors.peach,
-    'apricot': AppColors.apricot,
-    'sand': AppColors.sand,
-    'olive': AppColors.olive,
-    'taupe': AppColors.taupe,
-    'background': AppColors.background,
-    'surface': AppColors.surface,
-    'sage': AppColors.sage,
+    'primary': AppColors.primary,
+    'primaryBright': AppColors.primaryBright,
+    'primaryLight': AppColors.primaryLight,
+    'cyanBlue': AppColors.cyanBlue,
+    'primaryStrong': AppColors.primaryStrong,
+    'violet': AppColors.violet,
+    'purple': AppColors.purple,
+    'primarySoft': AppColors.primarySoft,
+    'primaryTint': AppColors.primaryTint,
+    'primaryTintStrong': AppColors.primaryTintStrong,
+    'primaryBorder': AppColors.primaryBorder,
+    'primaryDisabled': AppColors.primaryDisabled,
+    'violetTint': AppColors.violetTint,
+    'surfaceSubtle': AppColors.surfaceSubtle,
+    'white': AppColors.white,
+    'fill': AppColors.fill,
+    'slateLight': AppColors.slateLight,
     'bubbleIn': AppColors.bubbleIn,
     'ink': AppColors.ink,
     'muted': AppColors.muted,
+    'tertiary': AppColors.tertiary,
     'line': AppColors.line,
     'inputBorder': AppColors.inputBorder,
     'error': AppColors.error,
@@ -68,6 +71,8 @@ class GalleryView extends GetView<GalleryController> {
     'notifications': AppRoutes.notifications,
     'debug/socket': AppRoutes.debugSocket,
     'debug/assets': AppRoutes.debugAssets,
+    'debug/palette': AppRoutes.debugPalette,
+    'debug/decor': AppRoutes.debugDecor,
     'debug/chat': AppRoutes.debugChat,
     'debug/notifications': AppRoutes.debugNotifications,
     'debug/tasks': AppRoutes.debugTasks,
@@ -79,7 +84,7 @@ class GalleryView extends GetView<GalleryController> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      bottomBarColor: AppColors.sand,
+      bottomBarColor: AppColors.violetTint,
       bottomBar: const _DemoTabBar(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -230,8 +235,8 @@ class GalleryView extends GetView<GalleryController> {
           _section('AppAvatar palette (person, group, ticket)'),
           const AvatarSamples(),
           _section('AppSpinner (xs 16, sm 20, md 24, lg 32)'),
-          _spinnerRow(AppColors.background, AppColors.accent),
-          _spinnerRow(AppColors.accent, AppColors.background),
+          _spinnerRow(AppColors.white, AppColors.primary),
+          _spinnerRow(AppColors.primary, AppColors.white),
           _section('Pull header (drag the list down)'),
           SizedBox(
             height: 220,
@@ -354,7 +359,7 @@ class _Swatch extends StatelessWidget {
       child: Text(
         name,
         style: AppText.caption.copyWith(
-          color: isDark ? AppColors.background : AppColors.ink,
+          color: isDark ? AppColors.white : AppColors.ink,
         ),
       ),
     );
@@ -383,7 +388,7 @@ class _Bar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Container(width: size, height: size, color: AppColors.accent),
+      Container(width: size, height: size, color: AppColors.primary),
       Text(label, style: AppText.caption),
     ],
   );
@@ -401,7 +406,7 @@ class _Round extends StatelessWidget {
     height: 56,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: AppColors.accentTint,
+      color: AppColors.primaryTint,
       borderRadius: BorderRadius.circular(radius),
     ),
     child: Text(label, style: AppText.caption),
@@ -420,7 +425,7 @@ class _Shadow extends StatelessWidget {
     height: 72,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: AppColors.background,
+      color: AppColors.white,
       borderRadius: AppRadius.cardAll,
       boxShadow: shadows,
       border: Border.all(color: AppColors.line),

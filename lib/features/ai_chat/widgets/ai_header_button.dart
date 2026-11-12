@@ -31,13 +31,13 @@ class AiHeaderButton extends StatelessWidget {
                 width: _circle,
                 height: _circle,
                 decoration: const BoxDecoration(
-                  color: AppColors.accentTint,
+                  color: AppColors.violetTint,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.auto_awesome_rounded,
                   size: 24,
-                  color: AppColors.accent,
+                  color: AppColors.violet,
                 ),
               ),
             ),

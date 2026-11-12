@@ -9,9 +9,9 @@ import '../theme/app_text.dart';
 /// The tint of a pill: the selected one is filled with the strong colour, the
 /// others are tinted.
 enum AppPillKind {
-  neutral(AppColors.sage, AppColors.ink, AppColors.ink),
-  accent(AppColors.accentTint, AppColors.accentInk, AppColors.accent),
-  sand(AppColors.sand, AppColors.accentInk, AppColors.accentInk),
+  neutral(AppColors.fill, AppColors.ink, AppColors.ink),
+  accent(AppColors.primaryTint, AppColors.primaryStrong, AppColors.primary),
+  violet(AppColors.violetTint, AppColors.violetStrong, AppColors.purple),
   success(AppColors.yesFill, AppColors.yesText, AppColors.yesDot),
   calm(AppColors.noFill, AppColors.noText, AppColors.muted);
 
@@ -167,7 +167,7 @@ class _PillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final kind = pill.kind;
     final isCompact = size == AppPillSize.compact;
-    final ink = isSelected ? AppColors.background : kind.ink;
+    final ink = isSelected ? AppColors.white : kind.ink;
     return Semantics(
       button: true,
       selected: isSelected,

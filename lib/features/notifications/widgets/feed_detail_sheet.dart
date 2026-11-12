@@ -126,7 +126,7 @@ class FeedSheetHeader extends StatelessWidget {
 
   static (String, AppPillKind) _priority(String priority) => switch (priority) {
     'high' => (NotificationTexts.priorityHigh, AppPillKind.accent),
-    'medium' => (NotificationTexts.priorityMedium, AppPillKind.sand),
+    'medium' => (NotificationTexts.priorityMedium, AppPillKind.violet),
     'resolved' => (NotificationTexts.priorityResolved, AppPillKind.success),
     _ => (NotificationTexts.priorityLow, AppPillKind.calm),
   };
@@ -361,7 +361,7 @@ class _ActionPill extends StatelessWidget {
           height: AppSpacing.minTapTarget,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
           decoration: BoxDecoration(
-            color: isDestructive ? AppColors.accentSoft : AppColors.sage,
+            color: isDestructive ? AppColors.primarySoft : AppColors.fill,
             borderRadius: AppRadius.pillAll,
           ),
           child: Row(

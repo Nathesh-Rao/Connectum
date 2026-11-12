@@ -131,12 +131,12 @@ class AppAvatar extends StatelessWidget {
               borderRadius: isSquare
                   ? const BorderRadius.all(Radius.circular(AppRadius.control))
                   : null,
-              color: isAccent ? AppColors.accent : AppColors.avatarBg,
+              color: isAccent ? AppColors.primary : AppColors.avatarBg,
             ),
             child: Text(
               _initials,
               style: isAccent
-                  ? AppText.title.copyWith(color: AppColors.background)
+                  ? AppText.title.copyWith(color: AppColors.white)
                   : AppText.readableStrong.copyWith(
                       color: AppColors.avatarText,
                     ),
@@ -161,7 +161,7 @@ class AppAvatar extends StatelessWidget {
                 color: presence == AppPresenceDot.online
                     ? AppColors.yesDot
                     : AppColors.noDot,
-                border: Border.all(color: AppColors.background, width: 2),
+                border: Border.all(color: AppColors.white, width: 2),
               ),
             ),
           ),

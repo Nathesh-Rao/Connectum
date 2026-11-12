@@ -75,7 +75,7 @@ class _AppRowHighlightState extends State<AppRowHighlight> {
               child: AnimatedContainer(
                 duration: AppDurations.fast,
                 curve: AppCurves.out,
-                color: _isPressed ? AppColors.accentTint : Colors.transparent,
+                color: _isPressed ? AppColors.primaryTint : Colors.transparent,
               ),
             ),
           ),

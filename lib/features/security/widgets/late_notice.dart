@@ -26,7 +26,7 @@ class LateNotice extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(AppSpacing.sm),
     decoration: const BoxDecoration(
-      color: AppColors.accentSoft,
+      color: AppColors.primarySoft,
       borderRadius: AppRadius.mdAll,
     ),
     child: Column(

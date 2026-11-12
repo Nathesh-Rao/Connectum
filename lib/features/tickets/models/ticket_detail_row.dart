@@ -50,7 +50,7 @@ class TicketDetailRow {
   static AppTone? priorityTone(String value) =>
       switch (value.trim().toLowerCase()) {
         'high' || 'urgent' || 'critical' => AppTones.red,
-        'medium' || 'normal' => AppTones.orange,
+        'medium' || 'normal' => AppTones.violet,
         'low' => AppTones.slate,
         _ => null,
       };

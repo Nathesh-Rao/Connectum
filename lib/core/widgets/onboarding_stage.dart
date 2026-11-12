@@ -7,7 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
 /// The box every onboarding illustration lives in: 340x270, scaled down (same
-/// aspect) when the width or height is short, centred otherwise, on the peach
+/// aspect) when the width or height is short, centred otherwise, on the soft blue
 /// glow band that bleeds to the screen edges. The slides are the pages of a
 /// PageView inside the box: [itemBuilder] returns the artwork of one slide.
 class OnboardingStage extends StatelessWidget {
@@ -109,21 +109,21 @@ class _BandPainter extends CustomPainter {
       size,
       const Offset(0.9, 0.06),
       const Offset(0.6, 0.7),
-      AppColors.apricot.withValues(alpha: 0.55),
+      AppColors.primaryBorder.withValues(alpha: 0.55),
     );
     _ellipse(
       canvas,
       size,
       const Offset(0.04, 0.94),
       const Offset(0.7, 0.7),
-      AppColors.peach.withValues(alpha: 0.95),
+      AppColors.primaryTintStrong.withValues(alpha: 0.95),
     );
     _ellipse(
       canvas,
       size,
       const Offset(0.5, 0.48),
       const Offset(0.8, 0.85),
-      AppColors.ivory,
+      AppColors.white,
     );
     for (final s in AppAmbient.onboardingSpheres[slide.clamp(0, 2)]) {
       _sphere(
@@ -162,8 +162,8 @@ class _BandPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            AppColors.apricot.withValues(alpha: 0.45),
-            AppColors.apricot.withValues(alpha: 0),
+            AppColors.primaryBorder.withValues(alpha: 0.45),
+            AppColors.primaryBorder.withValues(alpha: 0),
           ],
           stops: [(diameter / 2 - 6) / glowRadius, 1],
         ).createShader(Rect.fromCircle(center: center, radius: glowRadius)),
@@ -177,9 +177,9 @@ class _BandPainter extends CustomPainter {
           center: const Alignment(-0.32, -0.4),
           radius: 0.96,
           colors: [
-            AppColors.ivory,
-            AppColors.apricot,
-            AppColors.apricot.withValues(alpha: 0),
+            AppColors.white,
+            AppColors.primaryBorder,
+            AppColors.primaryBorder.withValues(alpha: 0),
           ],
           stops: const [0, 0.38, 0.72],
         ).createShader(box),

@@ -123,12 +123,12 @@ class AppPopupMenuCard extends StatelessWidget {
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: const BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         borderRadius: BorderRadius.all(Radius.circular(AppRadius.lg)),
         boxShadow: AppShadows.soft,
       ),
       child: Material(
-        color: AppColors.background,
+        color: AppColors.white,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadius.lg)),
           side: BorderSide(color: AppColors.line),
@@ -192,8 +192,8 @@ class _MenuRow extends StatelessWidget {
       onTap: item.isEnabled ? () => _onTap(context) : null,
       child: InkWell(
         onTap: item.isEnabled ? () => _onTap(context) : null,
-        highlightColor: AppColors.sage,
-        splashColor: AppColors.sage,
+        highlightColor: AppColors.fill,
+        splashColor: AppColors.fill,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: AppSpacing.popupMenuRow),
           child: Padding(
@@ -213,8 +213,8 @@ class _MenuRow extends StatelessWidget {
                     () => Switch(
                       value: value.value,
                       onChanged: item.isEnabled ? (_) => _onTap(context) : null,
-                      activeThumbColor: AppColors.background,
-                      activeTrackColor: AppColors.accent,
+                      activeThumbColor: AppColors.white,
+                      activeTrackColor: AppColors.primaryBright,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),

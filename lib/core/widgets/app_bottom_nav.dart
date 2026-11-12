@@ -46,7 +46,7 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         border: Border(top: BorderSide(color: AppColors.line)),
       ),
       child: Padding(
@@ -103,7 +103,7 @@ class _NavButtonState extends State<_NavButton> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.isActive ? AppColors.accent : AppColors.muted;
+    final color = widget.isActive ? AppColors.purple : AppColors.muted;
     final isStill = MediaQuery.disableAnimationsOf(context);
     final duration = isStill ? Duration.zero : _swap;
     final item = widget.item;
@@ -134,6 +134,25 @@ class _NavButtonState extends State<_NavButton> {
                     clipBehavior: Clip.none,
                     alignment: Alignment.center,
                     children: [
+                      Positioned.fill(
+                        child: AnimatedOpacity(
+                          opacity: widget.isActive ? 1 : 0,
+                          duration: duration,
+                          curve: AppCurves.out,
+                          child: const DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: AppColors.violetTint,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.navIndicatorGlow,
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                       TweenAnimationBuilder<double>(
                         key: ValueKey(widget.isActive),
                         tween: Tween<double>(
@@ -160,7 +179,7 @@ class _NavButtonState extends State<_NavButton> {
                             width: AppSpacing.navDot,
                             height: AppSpacing.navDot,
                             decoration: const BoxDecoration(
-                              color: AppColors.accent,
+                              color: AppColors.primaryBright,
                               shape: BoxShape.circle,
                             ),
                           ),

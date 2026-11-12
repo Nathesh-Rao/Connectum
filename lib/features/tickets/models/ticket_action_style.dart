@@ -25,7 +25,7 @@ class _Rule {
 const _rules = [
   _Rule(['reassign'], Icons.swap_horiz, AppTones.slate),
   _Rule(['reopen'], Icons.restart_alt, AppTones.blue),
-  _Rule(['escalate'], Icons.trending_up, AppTones.orange),
+  _Rule(['escalate'], Icons.trending_up, AppTones.violet),
   _Rule(['approve'], Icons.thumb_up_alt_outlined, AppTones.green),
   _Rule(['hold', 'pause'], Icons.pause_circle_outline, AppTones.slate),
   _Rule(
@@ -33,7 +33,7 @@ const _rules = [
     Icons.check_circle_outline,
     AppTones.green,
   ),
-  _Rule(['return', 'reject', 'revert'], Icons.undo, AppTones.orange),
+  _Rule(['return', 'reject', 'revert'], Icons.undo, AppTones.violet),
   _Rule(
     ['drop', 'cancel', 'delete', 'withdraw'],
     Icons.remove_circle_outline,

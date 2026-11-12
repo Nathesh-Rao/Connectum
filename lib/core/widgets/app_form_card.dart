@@ -14,7 +14,7 @@ import 'app_status_pill.dart';
 enum AppFormCardState { sent, waiting, failed }
 
 /// A submission as a card in a thread. Sent (mine) is aligned right with an
-/// orange strip and, when [onEdit] is given, a pencil; received is aligned
+/// blue strip and, when [onEdit] is given, a pencil; received is aligned
 /// left with a dark strip and the sender's name above it when [senderName] is
 /// set. It shows the first eight fields in two columns and "+N more" for the
 /// rest. [isFresh] makes it enter with a small spring (sent from the right,
@@ -138,7 +138,7 @@ class _AppFormCardState extends State<AppFormCard> {
             duration: AppDurations.base,
             curve: AppCurves.out,
             decoration: BoxDecoration(
-              color: _isFlashing ? AppColors.accentTint : AppColors.background,
+              color: _isFlashing ? AppColors.primaryTint : AppColors.white,
               borderRadius: AppRadius.cardAll,
               border: Border.all(color: AppColors.cardLine),
               boxShadow: AppShadows.card,
@@ -238,7 +238,7 @@ class _AppFormCardState extends State<AppFormCard> {
                   padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
                   child: Text(
                     widget.senderName!,
-                    style: AppText.label.copyWith(color: AppColors.accentInk),
+                    style: AppText.label.copyWith(color: AppColors.primaryStrong),
                   ),
                 ),
               card,
@@ -393,7 +393,7 @@ class _Strip extends StatelessWidget {
     return Container(
       height: AppFormCard._stripHeight,
       padding: const EdgeInsets.only(left: AppSpacing.sm, right: 6),
-      color: isSent ? AppColors.accent : AppColors.ink,
+      color: isSent ? AppColors.primary : AppColors.ink,
       child: Row(
         children: [
           Expanded(
@@ -402,7 +402,7 @@ class _Strip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppText.label.copyWith(
-                color: AppColors.background,
+                color: AppColors.white,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.1,
               ),
@@ -424,18 +424,18 @@ class _Strip extends StatelessWidget {
                       width: 26,
                       height: 26,
                       decoration: BoxDecoration(
-                        color: AppColors.background.withValues(alpha: 0.2),
+                        color: AppColors.white.withValues(alpha: 0.2),
                         borderRadius: const BorderRadius.all(
                           Radius.circular(AppRadius.segment),
                         ),
                         border: Border.all(
-                          color: AppColors.background.withValues(alpha: 0.6),
+                          color: AppColors.white.withValues(alpha: 0.6),
                         ),
                       ),
                       child: const Icon(
                         Icons.edit_outlined,
                         size: 14,
-                        color: AppColors.background,
+                        color: AppColors.white,
                       ),
                     ),
                   ),
@@ -463,13 +463,13 @@ class _Title extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: const BoxDecoration(
-              color: AppColors.accentTint,
+              color: AppColors.primaryTint,
               borderRadius: BorderRadius.all(Radius.circular(9)),
             ),
             child: const Icon(
               Icons.description_outlined,
               size: 16,
-              color: AppColors.accent,
+              color: AppColors.primaryBright,
             ),
           ),
           const SizedBox(width: 10),

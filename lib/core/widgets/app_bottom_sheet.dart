@@ -25,7 +25,7 @@ class AppBottomSheet {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.white,
       barrierColor: AppColors.sheetBackdrop,
       elevation: 0,
       shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
@@ -131,7 +131,7 @@ class _FixedSheetBody extends StatelessWidget {
       height: height,
       child: DecoratedBox(
         decoration: const BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.white,
           borderRadius: AppRadius.sheetTop,
         ),
         child: Padding(

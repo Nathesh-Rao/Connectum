@@ -28,6 +28,10 @@ import '../../features/debug_forms/debug_forms_binding.dart';
 import '../../features/debug_forms/debug_forms_view.dart';
 import '../../features/debug_formlogic/debug_formlogic_binding.dart';
 import '../../features/debug_formlogic/debug_formlogic_view.dart';
+import '../../features/debug_decor/debug_decor_binding.dart';
+import '../../features/debug_decor/debug_decor_view.dart';
+import '../../features/debug_palette/debug_palette_binding.dart';
+import '../../features/debug_palette/debug_palette_view.dart';
 import '../../features/debug_qr/debug_qr_binding.dart';
 import '../../features/debug_qr/debug_qr_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
@@ -97,6 +101,16 @@ class AppPages {
     );
   }
 
+  static GetPage<dynamic> _authenticationPage() {
+    final binding = AuthenticationBinding();
+    return _page(
+      AppRoutes.authentication,
+      () => AuthenticationView(controllerTag: binding.tag),
+      binding,
+      AppTransitionKind.push,
+    );
+  }
+
   static final pages = <GetPage<dynamic>>[
     _page(
       AppRoutes.splash,
@@ -110,12 +124,7 @@ class AppPages {
       OnboardingBinding(),
       AppTransitionKind.intro,
     ),
-    _page(
-      AppRoutes.authentication,
-      () => const AuthenticationView(),
-      AuthenticationBinding(),
-      AppTransitionKind.push,
-    ),
+    _authenticationPage(),
     _page(
       AppRoutes.verification,
       () => const VerificationView(),
@@ -294,6 +303,20 @@ class AppPages {
         AppRoutes.debugConnect,
         () => const DebugConnectView(),
         DebugConnectBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugPalette,
+        () => const DebugPaletteView(),
+        DebugPaletteBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugDecor,
+        () => const DebugDecorView(),
+        DebugDecorBinding(),
         AppTransitionKind.push,
       ),
     if (kDebugMode)

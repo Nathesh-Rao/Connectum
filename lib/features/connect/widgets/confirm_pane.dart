@@ -103,7 +103,7 @@ class _Note extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: const BoxDecoration(
-        color: AppColors.accentSoft,
+        color: AppColors.primarySoft,
         borderRadius: AppRadius.mdAll,
       ),
       child: AppHighlightText(text, values: values),
@@ -259,16 +259,16 @@ class _CategoryChip extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.accentTint : AppColors.background,
+            color: isSelected ? AppColors.primaryTint : AppColors.white,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
-              color: isSelected ? AppColors.accent : AppColors.inputBorder,
+              color: isSelected ? AppColors.primaryBright : AppColors.inputBorder,
             ),
           ),
           child: Text(
             label,
             style: AppText.readableStrong.copyWith(
-              color: isSelected ? AppColors.accentInk : AppColors.ink,
+              color: isSelected ? AppColors.primaryStrong : AppColors.ink,
             ),
           ),
         ),

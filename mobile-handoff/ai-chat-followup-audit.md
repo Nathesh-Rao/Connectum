@@ -87,3 +87,17 @@ Care threads:
 9. The form field values use the raw `label`/`value` of the message, as the doc's example shows. Grid sections are not in form messages, so they are not in the transcript.
 10. Care prompt: is the care system prompt of `askAboutThread` with a "Summarise the care thread ..." question what the BE wants for a one-tap summary? The question text is ours (`AiPrompt.careQuestion`).
 11. Care thread of the person themselves (`care-<me>`): the patient wording is used, as the web does; confirm `care.summary` accepts the person asking about their own thread.
+
+## Care threads: typed questions (12 Nov 2026)
+
+Source of the texts: `connectum/chat-app/features/connectumChat/services/workspaceAgent.js`, `askAboutThread` (lines 490-521), read from `origin/main` of the web repo.
+
+- **Verbatim rule.** The PATIENT and TEAM system texts and the shared rules are constants of `AiPrompt` (`carePatientOpening`, `careTeamOpening`, `careThreadIntro`, `careUnderstand`, `careNotRecorded`, `careFormat`) with a comment naming the web file. Do not paraphrase. The web's `FORMS AND NOTES, BY VISIT` block (`summarisePatientThread`) is not ported (no Dart port of the form logic): the forms are in the chat as `[form submission]` lines.
+- **Which call.** One-tap "Summarize this thread": `care.summary` (clipped: 8 fields per form, 160 characters per value, 500 messages). A typed question: `care.thread {person}` (existence, `not_found`, the `conversation` id), then the newest history pages of that conversation (`/history group care-<user>`, `before` paging, at most 10 pages, into SQLite like any history), then `care.summary` only for its `team` and the person's name. The transcript is built from SQLite.
+- **Patient or team.** `AiPrompt.isPatient(me, person)`: the signed-in username equals the thread person, ignoring case (the web's test). The patient answer carries the line "You see the parts of the conversation you have access to".
+- **Trimming.** 400 messages and 70,000 characters, header included (500 characters are kept for it). The oldest messages go first; the header says "only the newest N of M are shown: older messages were not read", also when the server still holds older pages.
+- **Errors.** `not_found` is matched by `error.code` only, never by text. Patient: "Your care conversation starts once your care team is connected with you. Please check again after that." Anyone else: "There is no shared care conversation with this person yet." (unknown user and no thread share one code and one wording). History that did not arrive: the server-timeout error.
+- **Typed answers** stay on the person's screen: no "Share in chat". They are single turns (no earlier questions are sent).
+- **Differs from the BE message.** `care.thread` returns only `{conversation, person}` (`sd_cmds_people.erl:38`, `CONNECTUM_API.md:925`). There are no messages, team or limits in it; 400 / 70,000 are the web client's `formatTranscript` limits. Visibility (a patient sees fewer forms) is applied by the server on the history and on `care.summary`.
+
+Open BE test: a patient (`care-<own username>`) with `care.thread`, `/history group care-<own>` and `care.summary`: confirm all three are allowed for the owner, that the history is already visibility-filtered, and that `not_found` carries the code before the first employee is connected.

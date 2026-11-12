@@ -21,6 +21,14 @@ class AiTranscript {
   static const maxMessages = 300;
   static const maxChars = 60000;
   static const minLines = 20;
+
+  /// A care thread read for a typed question: what the web gives
+  /// `formatTranscript` in `askAboutThread`, and room kept for the header so
+  /// the whole block stays within [careMaxChars].
+  static const careMaxMessages = 400;
+  static const careMaxChars = 70000;
+  static const headerReserve = 500;
+  static const careTitleChars = 80;
   static const lineChars = 600;
   static const replyChars = 60;
   static const valueChars = 200;
@@ -35,6 +43,10 @@ class AiTranscript {
     required DateTime? since,
     required String Function(String user) nameOf,
     String? Function(String submissionId)? statusOf,
+    int limitMessages = maxMessages,
+    int limitChars = maxChars,
+    int keepLines = minLines,
+    bool isCut = false,
   }) {
     final cutoff = since?.millisecondsSinceEpoch;
     final byId = {for (final m in all) m.msgId: m};
@@ -67,17 +79,23 @@ class AiTranscript {
       return AiTranscript('The $shape $title has no messages$from.', 0);
     }
 
-    var kept = list.length > maxMessages
-        ? list.sublist(list.length - maxMessages)
+    var kept = list.length > limitMessages
+        ? list.sublist(list.length - limitMessages)
         : list;
     var chars = kept.fold<int>(0, (n, e) => n + e.$2.length + 1);
-    while (chars > maxChars && kept.length > minLines) {
+    while (chars > limitChars && kept.length > keepLines) {
       chars -= kept.first.$2.length + 1;
       kept = kept.sublist(1);
+    }
+    if (kept.length == 1 && chars > limitChars) {
+      kept = [(kept.first.$1, _cut(kept.first.$2, limitChars - 1))];
     }
 
     final note = kept.length < list.length
         ? ' (only the newest ${kept.length} of ${list.length} are shown: '
+              'older messages were not read)'
+        : isCut
+        ? ' (only the newest ${kept.length} are shown: '
               'older messages were not read)'
         : ' (the whole conversation)';
     final n = kept.length;

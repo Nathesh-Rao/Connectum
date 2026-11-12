@@ -22,7 +22,7 @@ class ApprovalsView extends GetView<ApprovalsController> {
 
   /// One per filter, in the order of [ApprovalsController.filterLabels].
   static const _filterKinds = [
-    AppPillKind.sand,
+    AppPillKind.violet,
     AppPillKind.success,
     AppPillKind.accent,
     AppPillKind.calm,
@@ -76,7 +76,7 @@ class ApprovalsView extends GetView<ApprovalsController> {
                   ),
                   AppPill(
                     label: ApprovalsTexts.tabSent,
-                    kind: AppPillKind.sand,
+                    kind: AppPillKind.violet,
                   ),
                 ],
                 selected: c.selectedTab.value,

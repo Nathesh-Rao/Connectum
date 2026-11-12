@@ -87,13 +87,13 @@ class DeviceCard extends StatelessWidget {
             width: AppSpacing.avatarSmall,
             height: AppSpacing.avatarSmall,
             decoration: const BoxDecoration(
-              color: AppColors.accentTint,
+              color: AppColors.primaryTint,
               borderRadius: AppRadius.mdAll,
             ),
             child: Icon(
               DeviceFacts.isPhone(device) ? Icons.smartphone : Icons.laptop_mac,
               size: 18,
-              color: AppColors.accent,
+              color: AppColors.primaryBright,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

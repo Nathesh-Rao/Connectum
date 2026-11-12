@@ -77,9 +77,9 @@ class TicketStatusPill extends StatelessWidget {
       return _isLost(name) ? AppTones.red : AppTones.green;
     }
     if (name.contains('return') || name.contains('revert')) {
-      return AppTones.orange;
+      return AppTones.violet;
     }
-    return t.status == table.firstStatus ? AppTones.blue : AppTones.orange;
+    return t.status == table.firstStatus ? AppTones.blue : AppTones.violet;
   }
 
   static bool _isLost(String name) =>

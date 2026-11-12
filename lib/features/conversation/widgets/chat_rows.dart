@@ -20,7 +20,7 @@ class DayDivider extends StatelessWidget {
   );
 }
 
-/// "N new messages": a peach line with the count under it, placed at the
+/// "N new messages": a blue line with the count under it, placed at the
 /// first unread message when the conversation opened.
 class UnreadDivider extends StatelessWidget {
   const UnreadDivider({super.key, required this.label});
@@ -34,11 +34,11 @@ class UnreadDivider extends StatelessWidget {
       padding: const EdgeInsets.only(top: AppSpacing.xs),
       alignment: Alignment.center,
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.peach)),
+        border: Border(top: BorderSide(color: AppColors.primaryTintStrong)),
       ),
       child: Text(
         label,
-        style: AppText.caption.copyWith(color: AppColors.accentInk),
+        style: AppText.caption.copyWith(color: AppColors.primaryStrong),
       ),
     ),
   );

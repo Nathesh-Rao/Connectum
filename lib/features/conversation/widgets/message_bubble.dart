@@ -97,9 +97,9 @@ class MessageBubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isHighlighted
-              ? AppColors.peach
+              ? AppColors.primaryTintStrong
               : isMine
-              ? AppColors.accentTint
+              ? AppColors.bubbleOut
               : AppColors.bubbleIn,
           borderRadius: shape,
         ),
@@ -279,8 +279,8 @@ class _Body extends StatelessWidget {
 
 /// "Forwarded by `name`" above a forwarded message. The web shows only the
 /// forwarder; the " • from `author`" part is a small addition of ours, kept
-/// here so it is easy to remove. Drawn in [AppColors.accentInk], which reads
-/// on both the incoming grey and the outgoing peach bubble. No side bar: that
+/// here so it is easy to remove. Drawn in [AppColors.primaryStrong], which reads
+/// on both the incoming grey and the outgoing blue bubble. No side bar: that
 /// belongs to the reply quote.
 class ForwardBanner extends StatelessWidget {
   const ForwardBanner({
@@ -297,14 +297,14 @@ class ForwardBanner extends StatelessWidget {
     final from = originalFrom;
     final base = AppText.label.copyWith(
       fontSize: AppText.sizeReadable,
-      color: AppColors.accentInk,
+      color: AppColors.primaryStrong,
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.shortcut, size: 14, color: AppColors.accentInk),
+          const Icon(Icons.shortcut, size: 14, color: AppColors.primaryStrong),
           const SizedBox(width: AppSpacing.xxs),
           Flexible(
             child: Text.rich(
@@ -366,7 +366,7 @@ class _Quote extends StatelessWidget {
             AppSpacing.xxs,
           ),
           decoration: const BoxDecoration(
-            border: Border(left: BorderSide(color: AppColors.accent, width: 2)),
+            border: Border(left: BorderSide(color: AppColors.primaryBright, width: 2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,7 +375,7 @@ class _Quote extends StatelessWidget {
                 o == null ? 'Replied message' : o.sender,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.label.copyWith(color: AppColors.accentInk),
+                style: AppText.label.copyWith(color: AppColors.primaryStrong),
               ),
               AppMentionText(
                 text: text,

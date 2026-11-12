@@ -112,16 +112,16 @@ class _Chip extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: AppSpacing.chipHeight),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: isOn ? AppColors.accentTint : AppColors.background,
+        color: isOn ? AppColors.primaryTint : AppColors.white,
         borderRadius: AppRadius.controlAll,
         border: Border.all(
-          color: isOn ? AppColors.accent : AppColors.inputBorder,
+          color: isOn ? AppColors.primaryBright : AppColors.inputBorder,
         ),
       ),
       child: Text(
         label,
         style: AppText.readable.copyWith(
-          color: isOn ? AppColors.accentInk : AppColors.ink,
+          color: isOn ? AppColors.primaryStrong : AppColors.ink,
         ),
       ),
     ),

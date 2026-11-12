@@ -23,13 +23,13 @@ class AppAnimationPlaceholder extends StatelessWidget {
       height: height,
       alignment: Alignment.center,
       decoration: const BoxDecoration(
-        color: AppColors.accentTint,
+        color: AppColors.primaryTint,
         borderRadius: AppRadius.mdAll,
       ),
       child: Text(
         '[animation: $name]',
         textAlign: TextAlign.center,
-        style: AppText.label.copyWith(color: AppColors.accentInk),
+        style: AppText.label.copyWith(color: AppColors.primaryStrong),
       ),
     );
   }

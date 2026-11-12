@@ -124,7 +124,11 @@ class TicketActionSheet extends StatelessWidget {
           minHeight: AppSpacing.settingRowHeight,
           isSelected: f.reason.value == r,
           trailing: f.reason.value == r
-              ? const Icon(Icons.check, size: 18, color: AppColors.accent)
+              ? const Icon(
+                  Icons.check,
+                  size: 18,
+                  color: AppColors.primaryBright,
+                )
               : null,
           onTap: () => f.reason.value = r,
         ),
@@ -184,8 +188,8 @@ class TicketActionSheet extends StatelessWidget {
           Navigator.of(context).pop();
         },
       ),
+      onDispose: people.close,
     ).whenComplete(() {
-      people.close();
       final p = picked;
       if (p != null) c.picked(f, p);
     });
@@ -390,7 +394,7 @@ class _Files extends StatelessWidget {
                       const Icon(
                         Icons.attach_file,
                         size: 18,
-                        color: AppColors.accentInk,
+                        color: AppColors.primaryStrong,
                       ),
                       const SizedBox(width: AppSpacing.xxs),
                       Flexible(
@@ -399,7 +403,7 @@ class _Files extends StatelessWidget {
                               ? TicketsTexts.attach
                               : TicketsTexts.attachAnother,
                           style: AppText.readableStrong.copyWith(
-                            color: AppColors.accentInk,
+                            color: AppColors.primaryStrong,
                           ),
                         ),
                       ),
@@ -480,7 +484,7 @@ class _FileRow extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         borderRadius: AppRadius.controlAll,
         border: Border.all(
           color: state == FormFileState.failed

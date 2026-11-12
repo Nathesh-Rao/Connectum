@@ -77,6 +77,18 @@ class DebugAiView extends GetView<DebugAiController> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
+          const Text('Care thread question', style: AppText.bodyStrong),
+          const SizedBox(height: AppSpacing.xs),
+          Obx(
+            () => AppPillBar(
+              pills: [
+                for (final t in FakeCareThread.values) AppPill(label: t.name),
+              ],
+              selected: c.isCare.value ? c.careThread.value.index : -1,
+              onSelected: (i) => c.setCare(FakeCareThread.values[i]),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Obx(
             () => Wrap(
               spacing: AppSpacing.xs,

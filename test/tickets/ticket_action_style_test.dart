@@ -10,7 +10,7 @@ void main() {
     expect(actionStyleFor('SEND').icon, Icons.send_outlined);
     expect(actionStyleFor('Status update').icon, Icons.published_with_changes);
     expect(actionStyleFor('Complete').tone, AppTones.green);
-    expect(actionStyleFor('Return').tone, AppTones.orange);
+    expect(actionStyleFor('Return').tone, AppTones.violet);
     expect(actionStyleFor('Drop').tone, AppTones.red);
     expect(actionStyleFor('Withdraw').icon, Icons.remove_circle_outline);
     expect(actionStyleFor('Approve').icon, Icons.thumb_up_alt_outlined);

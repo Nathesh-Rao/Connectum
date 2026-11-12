@@ -94,7 +94,7 @@ class _Content extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: AppColors.white,
             borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
             border: Border.all(color: AppColors.line),
           ),
@@ -149,12 +149,12 @@ class _StatusLabel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     decoration: const BoxDecoration(
-      color: AppColors.accentTint,
+      color: AppColors.primaryTint,
       borderRadius: BorderRadius.all(Radius.circular(AppRadius.badge)),
     ),
     child: Text(
       text,
-      style: AppText.label.copyWith(color: AppColors.accentInk),
+      style: AppText.label.copyWith(color: AppColors.primaryStrong),
     ),
   );
 }
@@ -201,7 +201,7 @@ class _GridTable extends StatelessWidget {
                   ),
                   children: [
                     TableRow(
-                      decoration: const BoxDecoration(color: AppColors.sage),
+                      decoration: const BoxDecoration(color: AppColors.fill),
                       children: [
                         for (final c in grid.columns)
                           Padding(

@@ -216,7 +216,7 @@ class _RecentChip extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.white,
           border: Border.all(color: AppColors.line),
           borderRadius: AppRadius.pillAll,
         ),

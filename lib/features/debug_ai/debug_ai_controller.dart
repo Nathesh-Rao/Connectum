@@ -26,6 +26,10 @@ class DebugAiController extends GetxController {
   final isCare = false.obs;
   final isSendFailing = false.obs;
 
+  /// Which care thread a typed question reads (team, patient, long,
+  /// not_found), on the fake repository.
+  final careThread = FakeCareThread.team.obs;
+
   /// What "Share in chat" posted, in place of a chat.
   final posted = <String>[].obs;
   final setupState = AiSetupState.ready.obs;
@@ -72,6 +76,7 @@ class DebugAiController extends GetxController {
             : const [],
       )
       ..scenario = scenario.value
+      ..care = careThread.value
       ..failure = failure.value
       ..setupFailure = setupFailure.value
       ..isStreaming = isStreaming.value;
@@ -108,6 +113,12 @@ class DebugAiController extends GetxController {
 
   void toggleReal() {
     isReal.toggle();
+    apply();
+  }
+
+  void setCare(FakeCareThread value) {
+    careThread.value = value;
+    isCare.value = true;
     apply();
   }
 

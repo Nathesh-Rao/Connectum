@@ -26,11 +26,11 @@ class ViewfinderOverlay extends StatelessWidget {
         children: [
           TweenAnimationBuilder<Color?>(
             tween: ColorTween(
-              end: isSuccess ? AppColors.yesDot : AppColors.background,
+              end: isSuccess ? AppColors.yesDot : AppColors.white,
             ),
             duration: AppDurations.scanSuccess,
             builder: (_, color, _) => CustomPaint(
-              painter: _BracketPainter(color ?? AppColors.background),
+              painter: _BracketPainter(color ?? AppColors.white),
             ),
           ),
           Padding(
@@ -112,10 +112,10 @@ class _LinePainter extends CustomPainter {
     final y = (size.height - h) * t;
     Shader fade(double alpha) => LinearGradient(
       colors: [
-        AppColors.accent.withValues(alpha: 0),
-        AppColors.accent.withValues(alpha: alpha),
-        AppColors.accent.withValues(alpha: alpha),
-        AppColors.accent.withValues(alpha: 0),
+        AppColors.primaryBright.withValues(alpha: 0),
+        AppColors.primaryBright.withValues(alpha: alpha),
+        AppColors.primaryBright.withValues(alpha: alpha),
+        AppColors.primaryBright.withValues(alpha: 0),
       ],
       stops: const [0, 0.2, 0.8, 1],
     ).createShader(Rect.fromLTWH(0, y, size.width, h));
@@ -127,9 +127,9 @@ class _LinePainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.accent.withValues(alpha: 0),
-            AppColors.accent.withValues(alpha: 0.14),
-            AppColors.accent.withValues(alpha: 0),
+            AppColors.primaryBright.withValues(alpha: 0),
+            AppColors.primaryBright.withValues(alpha: 0.14),
+            AppColors.primaryBright.withValues(alpha: 0),
           ],
         ).createShader(glow),
     );

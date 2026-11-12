@@ -102,7 +102,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
                         _problem!,
                         textAlign: TextAlign.center,
                         style: AppText.readable.copyWith(
-                          color: AppColors.background,
+                          color: AppColors.white,
                         ),
                       ),
                     ),

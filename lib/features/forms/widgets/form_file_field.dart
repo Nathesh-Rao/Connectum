@@ -150,7 +150,7 @@ class _FileRow extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         borderRadius: AppRadius.controlAll,
         border: Border.all(
           color: state == FormFileState.failed

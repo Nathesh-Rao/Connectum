@@ -19,13 +19,13 @@ enum AppSpinnerSize {
   double get radius => extent / 2;
 }
 
-/// The small or inline loading indicator, orange by default. Pass [color] on a
-/// surface where orange would be invisible. Full pages use AppLoading.
+/// The small or inline loading indicator, blue by default. Pass [color] on a
+/// surface where blue would be invisible. Full pages use AppLoading.
 class AppSpinner extends StatelessWidget {
   const AppSpinner({
     super.key,
     this.size = AppSpinnerSize.md,
-    this.color = AppColors.accent,
+    this.color = AppColors.primaryBright,
     this.isStandalone = false,
   });
 

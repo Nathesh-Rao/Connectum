@@ -56,7 +56,7 @@ class EnterpriseSwitcherSheet extends StatelessWidget {
             _Note(
               '${c.waiting.value} ${c.waiting.value == 1 ? 'message' : 'messages'} waiting to send will go out when you return to {org}.',
               values: {'org': c.currentName},
-              color: AppColors.accentInk,
+              color: AppColors.primaryStrong,
             ),
           if (c.message.value != null)
             _Note(c.message.value!, color: AppColors.error),

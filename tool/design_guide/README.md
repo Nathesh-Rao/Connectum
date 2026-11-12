@@ -1,0 +1,1 @@
+Regenerates `design-guide-mobile/tokens/*.json|css`, `tokens/avatar-color-vectors.json` and `logo-loader/logo_polys.json` from the Dart source: `flutter test tool/design_guide/generate.dart` (run from the repo root; `test/core/avatar_color_vectors_test.dart` fails when the vectors drift).

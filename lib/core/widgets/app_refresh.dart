@@ -47,7 +47,7 @@ class AppRefresh extends StatelessWidget {
         child: isPulling
             ? CupertinoActivityIndicator.partiallyRevealed(
                 radius: radius,
-                color: AppColors.accent,
+                color: AppColors.primaryBright,
                 progress: (pulledExtent / refreshTriggerPullDistance).clamp(
                   0.0,
                   1.0,
@@ -55,7 +55,7 @@ class AppRefresh extends StatelessWidget {
               )
             : CupertinoActivityIndicator(
                 radius: radius,
-                color: AppColors.accent,
+                color: AppColors.primaryBright,
               ),
       ),
     );

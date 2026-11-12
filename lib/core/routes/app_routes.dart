@@ -32,6 +32,8 @@ class AppRoutes {
   static const debugForms = '/debug/forms';
   static const debugConnect = '/debug/connect';
   static const debugQr = '/debug/qr';
+  static const debugPalette = '/debug/palette';
+  static const debugDecor = '/debug/decor';
   static const debugChat = '/debug/chat';
   static const debugNotifications = '/debug/notifications';
   static const debugTasks = '/debug/tasks';

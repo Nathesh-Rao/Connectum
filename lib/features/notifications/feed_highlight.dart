@@ -46,7 +46,7 @@ class FeedHighlight {
   }) {
     final strong = base.copyWith(
       fontWeight: FontWeight.w700,
-      color: AppColors.accent,
+      color: AppColors.primary,
     );
     final tag = base.copyWith(
       fontWeight: FontWeight.w600,

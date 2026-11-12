@@ -128,35 +128,57 @@ class AiRepositoryImpl implements AiRepository {
     final String question;
     final int count;
     var isTruncated = false;
+    var isPatientView = false;
     if (request.isCare) {
       final person = request.carePerson!;
-      final summary = await _careSummary(person);
-      final stats = summary['stats'];
-      final forms = stats is Map && stats['forms'] is num
-          ? stats['forms'] as num
-          : 0;
-      final messages = stats is Map && stats['messages'] is num
-          ? stats['messages'] as num
-          : 0;
-      if (forms == 0 && messages == 0) {
-        throw const AiError(
-          AiErrorKind.noMessages,
-          'Nothing has been recorded in this thread yet.',
+      final isPatient = AiPrompt.isPatient(user, person);
+      isPatientView = isPatient;
+      if (request.isCareQuestion) {
+        final thread = await careThread(person);
+        if (thread.count == 0) {
+          throw const AiError(
+            AiErrorKind.noMessages,
+            'Nothing has been recorded in this thread yet.',
+          );
+        }
+        count = thread.count;
+        system = AiPrompt.careThreadSystem(
+          name: _nameOf(user),
+          now: now,
+          isPatient: isPatient,
+          team: thread.team,
+          transcript: thread.transcript,
         );
+        question = request.question!.trim();
+      } else {
+        final summary = await _careSummary(person, isPatient);
+        final stats = summary['stats'];
+        final forms = stats is Map && stats['forms'] is num
+            ? stats['forms'] as num
+            : 0;
+        final messages = stats is Map && stats['messages'] is num
+            ? stats['messages'] as num
+            : 0;
+        if (forms == 0 && messages == 0) {
+          throw const AiError(
+            AiErrorKind.noMessages,
+            'Nothing has been recorded in this thread yet.',
+          );
+        }
+        isTruncated = stats is Map && stats['truncated'] == true;
+        count = messages.toInt();
+        final card = summary['person'];
+        final name = card is Map && '${card['name'] ?? ''}'.isNotEmpty
+            ? '${card['name']}'
+            : person;
+        system = AiPrompt.careSystem(
+          name: _nameOf(user),
+          now: now,
+          isPatient: isPatient,
+          thread: CareSummaryText.toPlainText(summary, now: now),
+        );
+        question = AiPrompt.careQuestion(name);
       }
-      isTruncated = stats is Map && stats['truncated'] == true;
-      count = messages.toInt();
-      final card = summary['person'];
-      final name = card is Map && '${card['name'] ?? ''}'.isNotEmpty
-          ? '${card['name']}'
-          : person;
-      system = AiPrompt.careSystem(
-        name: _nameOf(user),
-        now: now,
-        isPatient: user.toLowerCase() == person.toLowerCase(),
-        thread: CareSummaryText.toPlainText(summary, now: now),
-      );
-      question = AiPrompt.careQuestion(name);
     } else {
       final since = request.range.since(now, date: request.date);
       final kind = ConversationRepository.kindOf(request.chatId);
@@ -207,18 +229,100 @@ class AiRepositoryImpl implements AiRepository {
       isFinal: true,
       messageCount: count,
       isTruncated: isTruncated,
+      isPatientView: isPatientView,
     );
   }
 
-  /// `care.summary {person}`; `not_found` says which of its two texts.
-  Future<Map<String, dynamic>> _careSummary(String person) async {
+  /// `care.summary {person}`: the clipped summary, for the one-tap summary.
+  Future<Map<String, dynamic>> _careSummary(
+    String person,
+    bool isPatient,
+  ) async {
     try {
       return await _socket.sdCall('care.summary', {'person': person});
     } on SocketCallError catch (e) {
-      if (e.code == 'not_found') {
-        throw AiError(AiErrorKind.careNotFound, e.message);
-      }
-      throw AiRelay.fromSocket(e);
+      throw _careError(e, isPatient);
+    }
+  }
+
+  /// `not_found` is told by its code only: the server's text is its own and
+  /// may be reworded (and one code carries two texts), so ours is used.
+  AiError _careError(SocketCallError e, bool isPatient) {
+    if (e.code == 'not_found') {
+      return AiError(
+        isPatient ? AiErrorKind.careNotStarted : AiErrorKind.careNotFound,
+      );
+    }
+    return AiRelay.fromSocket(e);
+  }
+
+  @override
+  Future<CareThread> careThread(String person) async {
+    final org = _store.orgId;
+    final me = _store.userId;
+    if (org == null || me == null) throw const AiError(AiErrorKind.notSetUp);
+    final isPatient = AiPrompt.isPatient(me, person);
+    final Map<String, dynamic> ref;
+    try {
+      ref = await _socket.sdCall('care.thread', {'person': person});
+    } on SocketCallError catch (e) {
+      throw _careError(e, isPatient);
+    }
+    final conversation = '${ref['conversation'] ?? ''}';
+    if (conversation.isEmpty) throw const AiError(AiErrorKind.failed);
+    final who = '${ref['person'] ?? person}';
+    // The team and the person's name come from care.summary (it is the only
+    // call that lists them); a failure there only leaves the roster out.
+    final card = _careCard(who);
+    final hasMore = await _messages.fetchRecent(
+      conversation,
+      atLeast: AiTranscript.careMaxMessages,
+    );
+    if (hasMore == null) throw const AiError(AiErrorKind.serverTimeout);
+    final cardData = await card;
+    final team = [
+      if (cardData['team'] is List)
+        for (final m in cardData['team'] as List) ?CareMember.tryParse(m),
+    ];
+    final p = cardData['person'];
+    final name = p is Map && '${p['name'] ?? ''}'.isNotEmpty
+        ? '${p['name']}'
+        : _nameOf(who);
+    final names = {
+      for (final m in team) m.username.toLowerCase(): m.label,
+      who.toLowerCase(): name,
+    };
+    final rows = await _messages.readFor(org, me, conversation);
+    final transcript = AiTranscript.build(
+      rows,
+      kind: 'group',
+      title: name.length > AiTranscript.careTitleChars
+          ? name.substring(0, AiTranscript.careTitleChars)
+          : name,
+      since: null,
+      nameOf: (u) => names[u.toLowerCase()] ?? _nameOf(u),
+      statusOf: statusOf,
+      limitMessages: AiTranscript.careMaxMessages,
+      limitChars: AiTranscript.careMaxChars - AiTranscript.headerReserve,
+      keepLines: 1,
+      isCut: hasMore,
+    );
+    return CareThread(
+      conversation: conversation,
+      person: who,
+      name: name,
+      transcript: transcript.text,
+      count: transcript.count,
+      team: team,
+      isPatient: isPatient,
+    );
+  }
+
+  Future<Map<String, dynamic>> _careCard(String person) async {
+    try {
+      return await _socket.sdCall('care.summary', {'person': person});
+    } on SocketCallError {
+      return const {};
     }
   }
 }

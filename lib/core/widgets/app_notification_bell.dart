@@ -102,7 +102,7 @@ class _AppNotificationBellState extends State<AppNotificationBell>
                     border: Border.all(
                       color: Color.lerp(
                         Colors.transparent,
-                        AppColors.apricot,
+                        AppColors.primaryBorder,
                         t,
                       )!,
                     ),
@@ -113,7 +113,7 @@ class _AppNotificationBellState extends State<AppNotificationBell>
                     decoration: BoxDecoration(
                       color: Color.lerp(
                         Colors.transparent,
-                        AppColors.accentTint,
+                        AppColors.primaryTint,
                         t,
                       ),
                       borderRadius: BorderRadius.circular(AppSpacing.bellPill),
@@ -170,9 +170,9 @@ class _BellCircle extends StatelessWidget {
       height: AppSpacing.bellCircle,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.apricot),
+        border: Border.all(color: AppColors.primaryBorder),
       ),
       child: const Icon(
         Icons.notifications_none,
@@ -198,7 +198,7 @@ class _CountBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: AppSpacing.bellBadge),
       padding: EdgeInsets.symmetric(horizontal: isWide ? 5 : 0),
       decoration: BoxDecoration(
-        color: AppColors.accent,
+        color: AppColors.primaryBright,
         borderRadius: BorderRadius.circular(AppSpacing.bellBadge),
       ),
       child: Center(

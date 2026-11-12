@@ -41,7 +41,7 @@ class DebugE2eView extends GetView<DebugE2eController> {
                     ? AppColors.noFill
                     : isPassed
                     ? AppColors.yesFill
-                    : AppColors.accentTint,
+                    : AppColors.primaryTint,
                 borderRadius: AppRadius.mdAll,
               ),
               child: Text(

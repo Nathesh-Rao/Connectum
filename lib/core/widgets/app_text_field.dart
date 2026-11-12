@@ -39,7 +39,7 @@ class AppTextField extends StatefulWidget {
     this.borderColor = AppColors.inputBorder,
     this.borderRadius = AppRadius.controlAll,
     this.helperText,
-    this.fillColor = AppColors.background,
+    this.fillColor = AppColors.white,
     this.hasFocusRing = true,
     this.textCapitalization = TextCapitalization.none,
     this.autocorrect = true,
@@ -100,7 +100,7 @@ class _AppTextFieldState extends State<AppTextField> {
     final borderColor = _hasError
         ? AppColors.error
         : _isFocused && widget.hasFocusRing
-        ? AppColors.accent
+        ? AppColors.primaryBright
         : widget.borderColor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,7 +155,7 @@ class _AppTextFieldState extends State<AppTextField> {
                 height: widget.textStyle.height,
                 forceStrutHeight: true,
               ),
-              cursorColor: AppColors.accent,
+              cursorColor: AppColors.primaryBright,
               decoration: InputDecoration(
                 isDense: true,
                 filled: false,

@@ -50,7 +50,7 @@ class FormView extends GetView<FormController> {
           padding: const EdgeInsets.only(top: AppSpacing.xs),
           child: DecoratedBox(
             decoration: const BoxDecoration(
-              color: AppColors.background,
+              color: AppColors.white,
               borderRadius: AppRadius.sheetTop,
             ),
             child: ClipRRect(
@@ -178,9 +178,9 @@ class _Banner extends StatelessWidget {
     ),
     padding: const EdgeInsets.all(AppSpacing.sm),
     decoration: BoxDecoration(
-      color: AppColors.accentSoft,
+      color: AppColors.primarySoft,
       borderRadius: AppRadius.controlAll,
-      border: Border.all(color: AppColors.peach),
+      border: Border.all(color: AppColors.primaryTintStrong),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -165,9 +165,9 @@ class _SelectMark extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isOn ? AppColors.accent : Colors.transparent,
+        color: isOn ? AppColors.primaryBright : Colors.transparent,
         border: Border.all(
-          color: isOn ? AppColors.accent : AppColors.cardMuted,
+          color: isOn ? AppColors.primaryBright : AppColors.cardMuted,
           width: 1.5,
         ),
       ),

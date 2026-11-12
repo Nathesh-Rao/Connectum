@@ -7,10 +7,11 @@ import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import '../theme/app_tones.dart';
 import 'app_form_card.dart';
+import 'app_bubble_surface.dart';
 
 // TUNE ME: primary action style
-/// True: the first action is solid orange with white content (the old look).
-/// False: a peach tint with strong orange content and a soft border.
+/// True: the first action is solid primary with white content.
+/// False: a soft blue tint with strong content and a soft border.
 const kSolidPrimaryAction = false;
 
 /// One thing to offer: [id] is what [AppActionBar.onTap] gets back.
@@ -37,8 +38,7 @@ enum AppActionLayout {
   full,
 }
 
-/// The actions of a record as buttons. The first is the primary (a stronger
-/// peach tint, or solid with [kSolidPrimaryAction]), the others are subtle
+/// The actions of a record as buttons. The first is the primary (a stronger/// blue tint, or solid with [kSolidPrimaryAction]), the others are subtle
 /// tints of their tone. Rows are one line with an ellipsis and
 /// grow with the text scale. On a card the actions past [maxVisible] sit in a
 /// two-column grid, the same one the details screen shows, folded behind a
@@ -246,12 +246,12 @@ class _ActionButton extends StatelessWidget {
     final isSolid = isPrimary && kSolidPrimaryAction;
     final isSoft = isPrimary && !kSolidPrimaryAction;
     final fill = isSolid
-        ? AppColors.accent
+        ? AppColors.primary
         : isSoft
         ? AppTones.primary.tint
         : item.tone.tint;
     final ink = isSolid
-        ? AppColors.background
+        ? AppColors.white
         : isSoft
         ? AppTones.primary.strong
         : item.tone.strong;
@@ -262,43 +262,46 @@ class _ActionButton extends StatelessWidget {
       excludeSemantics: true,
       child: Opacity(
         opacity: isOff ? 0.5 : 1,
-        child: Material(
-          color: fill,
-          shape: RoundedRectangleBorder(
-            borderRadius: AppRadius.controlAll,
-            side: isSoft
-                ? BorderSide(color: AppColors.accent.withValues(alpha: 0.35))
-                : BorderSide.none,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: AppActionBar.buttonHeight,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: AppSpacing.xs,
+        child: _surface(
+          isSolid: isSolid,
+          child: Material(
+            color: isSolid ? Colors.transparent : fill,
+            shape: RoundedRectangleBorder(
+              borderRadius: AppRadius.controlAll,
+              side: isSoft
+                  ? BorderSide(color: AppColors.primary.withValues(alpha: 0.35))
+                  : BorderSide.none,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppActionBar.buttonHeight,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(item.icon, size: AppActionBar._iconSize, color: ink),
-                    const SizedBox(width: AppSpacing.xxs),
-                    Flexible(
-                      child: Text(
-                        item.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.buttonSmall.copyWith(
-                          color: ink,
-                          fontWeight: isPrimary ? FontWeight.w600 : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(item.icon, size: AppActionBar._iconSize, color: ink),
+                      const SizedBox(width: AppSpacing.xxs),
+                      Flexible(
+                        child: Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.buttonSmall.copyWith(
+                            color: ink,
+                            fontWeight: isPrimary ? FontWeight.w600 : null,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -307,6 +310,11 @@ class _ActionButton extends StatelessWidget {
       ),
     );
   }
+
+  static Widget _surface({required bool isSolid, required Widget child}) =>
+      isSolid
+      ? AppBubbleSurface(borderRadius: AppRadius.controlAll, child: child)
+      : child;
 }
 
 /// The bottom strip of a card: a hairline, a tinted surface, the chevron

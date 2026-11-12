@@ -62,7 +62,7 @@ class _CardCirclesPainter extends CustomPainter {
           colors: [
             fade(AppColors.sphereHighlight),
             fade(AppColors.sphereMid),
-            fade(AppColors.accent),
+            fade(AppColors.primaryBright),
           ],
           stops: const [0, 0.38, 0.85],
         ).createShader(rect),

@@ -177,7 +177,7 @@ class _Result extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
-            color: value == null ? AppColors.accentTint : AppColors.yesFill,
+            color: value == null ? AppColors.primaryTint : AppColors.yesFill,
             borderRadius: AppRadius.mdAll,
           ),
           child: Text(lines, style: AppText.readable),

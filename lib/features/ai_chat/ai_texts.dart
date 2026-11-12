@@ -15,6 +15,12 @@ class AiTexts {
   static const careNote =
       "Up to the latest 500 messages and the person's forms";
   static const careTruncated = 'Older messages were left out.';
+  static const patientScope =
+      'You see the parts of the conversation you have access to';
+  static const askHint = 'Ask about this thread';
+  static const askHeading = 'Ask a question';
+  static const askSend = 'Send question';
+  static const questionLabel = 'Your question';
   static const summarizing = 'Summarizing…';
   static const caption = 'AI-generated, may contain mistakes';
   static const copied = 'Summary copied';
@@ -65,7 +71,8 @@ class AiTexts {
     AiErrorKind.modelUnavailable => 'AI model not available',
     AiErrorKind.badRequest => "The AI couldn't use that",
     AiErrorKind.emptyAnswer => 'No answer',
-    AiErrorKind.careNotFound => 'No summary',
+    AiErrorKind.careNotFound => 'No care conversation',
+    AiErrorKind.careNotStarted => 'No care conversation yet',
   };
 
   /// The classified web error behind a kind (`AiErrorText`), or null for
@@ -124,8 +131,14 @@ class AiTexts {
       AiErrorKind.agentGone =>
         'That AI agent no longer exists. Ask your administrator.',
       AiErrorKind.emptyAnswer => 'The assistant could not answer that.',
-      AiErrorKind.careNotFound =>
-        hasDetail ? detail : 'No shared conversation with that person.',
+      AiErrorKind.careNotFound => AiErrorText.classifyCareError(
+        'not_found',
+        isPatient: false,
+      )!.message,
+      AiErrorKind.careNotStarted => AiErrorText.classifyCareError(
+        'not_found',
+        isPatient: true,
+      )!.message,
       AiErrorKind.failed ||
       AiErrorKind.providerBusy ||
       AiErrorKind.badRequest when hasDetail => detail,

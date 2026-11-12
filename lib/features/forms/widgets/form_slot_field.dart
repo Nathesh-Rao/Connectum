@@ -229,13 +229,13 @@ class _Chip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
         color: isOn
-            ? AppColors.accentTint
+            ? AppColors.primaryTint
             : isTaken
-            ? AppColors.sage
-            : AppColors.background,
+            ? AppColors.fill
+            : AppColors.white,
         borderRadius: AppRadius.controlAll,
         border: Border.all(
-          color: isOn ? AppColors.accent : AppColors.inputBorder,
+          color: isOn ? AppColors.primaryBright : AppColors.inputBorder,
         ),
       ),
       child: Text(
@@ -244,7 +244,7 @@ class _Chip extends StatelessWidget {
           color: isTaken
               ? AppColors.muted
               : isOn
-              ? AppColors.accentInk
+              ? AppColors.primaryStrong
               : AppColors.ink,
           decoration: isTaken ? TextDecoration.lineThrough : null,
         ),

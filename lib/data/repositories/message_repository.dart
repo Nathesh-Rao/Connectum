@@ -1162,6 +1162,37 @@ class MessageRepository extends GetxService {
     }
   }
 
+  /// Pulls the newest pages of [convId] from the server into SQLite until
+  /// about [atLeast] messages arrived, the history ends, or [maxPages] pages
+  /// were read (50 messages a page). Returns whether older messages remain,
+  /// or null when offline or a page did not arrive. Nothing but the normal
+  /// history handling writes the rows.
+  Future<bool?> fetchRecent(
+    String convId, {
+    required int atLeast,
+    int maxPages = 10,
+  }) async {
+    if (_org == null || _me == null || !_socket.isOnline) return null;
+    var page = await _fetchHistory(convId);
+    if (page == null) return null;
+    var got = page.items.length;
+    // The newest page does not say `hasMore`: a full page means there may be
+    // older ones, and the oldest id of the page is where to go on from.
+    var more = page.items.length >= _historyPage;
+    String? before = more && page.items.isNotEmpty
+        ? idText(page.items.first['id'])
+        : null;
+    for (var pages = 1; more && got < atLeast && pages < maxPages; pages++) {
+      if (before == null || before.isEmpty) break;
+      final older = await _fetchHistory(convId, before: before);
+      if (older == null) return null;
+      got += older.items.length;
+      more = older.hasMore;
+      before = older.next;
+    }
+    return more;
+  }
+
   /// Loads the page of messages older than the oldest one held (or than the
   /// `next` the server gave last time, which also moves past a page that
   /// showed nothing). Null when offline, nothing is stored yet, or no answer.

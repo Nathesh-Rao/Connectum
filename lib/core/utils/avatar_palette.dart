@@ -33,21 +33,22 @@ class AvatarPalette {
   static const double backgroundSaturation = 0.75;
   static const double backgroundLightness = 0.94;
 
-  /// Well spaced and warm-brand friendly: no red (that is the error colour),
-  /// no muddy yellow-green.
+  /// Brand family (cyan, blue, indigo, violet, purple) plus teal, rose and
+  /// slate. No red (that is the error colour) and nothing between about 10
+  /// and 55 degrees (the warm range).
   static const hues = [
     AvatarHue('teal', 178, 0.45, 0.32),
-    AvatarHue('emerald', 150, 0.50, 0.32),
-    AvatarHue('olive', 98, 0.45, 0.32),
-    AvatarHue('deep amber', 34, 0.90, 0.32),
-    AvatarHue('clay', 18, 0.70, 0.40),
-    AvatarHue('rose', 338, 0.85, 0.40),
-    AvatarHue('magenta', 312, 0.75, 0.40),
-    AvatarHue('plum', 290, 0.70, 0.40),
-    AvatarHue('violet', 268, 0.60, 0.40),
-    AvatarHue('blue-violet', 246, 0.60, 0.40),
-    AvatarHue('slate blue', 214, 0.65, 0.36),
-    AvatarHue('sky cyan', 195, 0.80, 0.32),
+    AvatarHue('cyan', 195, 0.85, 0.30),
+    AvatarHue('sky blue', 207, 0.85, 0.32),
+    AvatarHue('blue', 218, 0.85, 0.36),
+    AvatarHue('cobalt', 228, 0.75, 0.38),
+    AvatarHue('indigo', 244, 0.60, 0.40),
+    AvatarHue('violet', 262, 0.60, 0.40),
+    AvatarHue('purple', 276, 0.60, 0.40),
+    AvatarHue('plum', 296, 0.55, 0.40),
+    AvatarHue('rose', 338, 0.75, 0.40),
+    AvatarHue('slate', 215, 0.25, 0.38),
+    AvatarHue('ocean', 200, 0.90, 0.30),
   ];
 
   static const neutral = AvatarColors(AppColors.avatarText, AppColors.avatarBg);

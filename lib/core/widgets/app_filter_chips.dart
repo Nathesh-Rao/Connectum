@@ -56,7 +56,7 @@ class AppFilterChips extends StatelessWidget {
                         border: Border(
                           bottom: BorderSide(
                             color: i == selected
-                                ? AppColors.accent
+                                ? AppColors.primaryBright
                                 : Colors.transparent,
                             width: 2,
                           ),
@@ -66,7 +66,7 @@ class AppFilterChips extends StatelessWidget {
                         duration: AppDurations.fast,
                         style: i == selected
                             ? AppText.segmentSelected.copyWith(
-                                color: AppColors.accentInk,
+                                color: AppColors.primaryStrong,
                               )
                             : AppText.segment,
                         child: Text(

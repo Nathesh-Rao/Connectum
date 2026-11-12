@@ -17,12 +17,12 @@ class DeviceLimitBanner extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.only(left: AppSpacing.page),
     decoration: const BoxDecoration(
-      color: AppColors.accentSoft,
+      color: AppColors.primarySoft,
       border: Border(bottom: BorderSide(color: AppColors.line)),
     ),
     child: Row(
       children: [
-        const Icon(Icons.lock_outline, size: 16, color: AppColors.accent),
+        const Icon(Icons.lock_outline, size: 16, color: AppColors.primaryBright),
         const SizedBox(width: AppSpacing.xs),
         const Expanded(
           child: Padding(

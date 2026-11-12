@@ -56,9 +56,9 @@ class _AppListRowState extends State<AppListRow> {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           decoration: BoxDecoration(
             color: _isPressed
-                ? AppColors.accentTint
+                ? AppColors.primaryTint
                 : widget.isSelected
-                ? AppColors.accentSoft
+                ? AppColors.primarySoft
                 : Colors.transparent,
             border: const Border(bottom: BorderSide(color: AppColors.line)),
           ),

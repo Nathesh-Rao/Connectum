@@ -64,7 +64,7 @@ class AppHighlightText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final highlight = style.copyWith(
-      color: AppColors.accent,
+      color: AppColors.primary,
       fontWeight: FontWeight.w600,
     );
     return Semantics(

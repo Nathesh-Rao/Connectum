@@ -67,7 +67,7 @@ class FormTypeChip extends StatelessWidget {
           width: AppSpacing.xl,
           height: AppSpacing.xl,
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: AppColors.white,
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.inputBorder),
           ),

@@ -16,6 +16,8 @@ import 'core/widgets/app_config_error.dart';
 import 'core/widgets/app_connectivity_scope.dart';
 import 'core/widgets/app_notices.dart';
 import 'data/socket/connectivity_service.dart';
+import 'demo/demo_mode.dart';
+import 'demo/demo_services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +28,13 @@ Future<void> main() async {
   }
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  runApp(ConnectumApp(connectivity: ConnectivityService()));
+  runApp(
+    ConnectumApp(
+      connectivity: DemoMode.isActive
+          ? DemoConnectivityService()
+          : ConnectivityService(),
+    ),
+  );
 }
 
 class ConnectumApp extends StatelessWidget {
@@ -51,7 +59,9 @@ class ConnectumApp extends StatelessWidget {
           child: AppNoticeHost(child: child ?? const SizedBox.shrink()),
         );
         // Sample data (SEED_UI, never in release) is marked on every screen.
-        return SeedUi.isActive ? SeedUi.withRibbon(app) : app;
+        return SeedUi.isActive && !DemoMode.isActive
+            ? SeedUi.withRibbon(app)
+            : app;
       },
     );
   }

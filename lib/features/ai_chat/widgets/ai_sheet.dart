@@ -10,6 +10,7 @@ import '../../../core/theme/app_tones.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_pill_bar.dart';
 import '../../../core/widgets/app_spinner.dart';
+import '../../../core/widgets/app_text_field.dart';
 import '../../../data/ai/ai_models.dart';
 import '../ai_summary_controller.dart';
 import '../ai_texts.dart';
@@ -28,13 +29,13 @@ class AiSheetTitle extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: const BoxDecoration(
-            color: AppColors.accentTint,
+            color: AppColors.violetTint,
             shape: BoxShape.circle,
           ),
           child: const Icon(
             Icons.auto_awesome_rounded,
             size: 20,
-            color: AppColors.accent,
+            color: AppColors.violet,
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -115,6 +116,19 @@ class _Menu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final summary = _summaryRow();
+    if (!controller.isCare) return summary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        summary,
+        const Divider(height: AppSpacing.md, color: AppColors.line),
+        _AskBox(controller: controller),
+      ],
+    );
+  }
+
+  Widget _summaryRow() {
     return InkWell(
       onTap: controller.openSetup,
       borderRadius: AppRadius.controlAll,
@@ -147,6 +161,58 @@ class _Menu extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The typed question of a care thread: one field and a send button.
+class _AskBox extends StatefulWidget {
+  const _AskBox({required this.controller});
+
+  final AiSummaryController controller;
+
+  @override
+  State<_AskBox> createState() => _AskBoxState();
+}
+
+class _AskBoxState extends State<_AskBox> {
+  final _text = TextEditingController();
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final q = _text.text;
+    if (q.trim().isEmpty) return;
+    _text.clear();
+    widget.controller.ask(q);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AiTexts.askHeading,
+          style: AppText.readable.copyWith(color: AppColors.muted),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        AppTextField(
+          controller: _text,
+          hint: AiTexts.askHint,
+          textInputAction: TextInputAction.send,
+          onSubmitted: (_) => _send(),
+          suffix: IconButton(
+            tooltip: AiTexts.askSend,
+            icon: const Icon(Icons.send_rounded, color: AppColors.violet),
+            onPressed: _send,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -339,12 +405,12 @@ class _Result extends StatelessWidget {
                 vertical: AppSpacing.xxs,
               ),
               decoration: const BoxDecoration(
-                color: AppColors.accentTint,
+                color: AppColors.violetTint,
                 borderRadius: AppRadius.pillAll,
               ),
               child: Text(
                 count == null ? range : '$range · $count messages',
-                style: AppText.caption.copyWith(color: AppColors.accentInk),
+                style: AppText.caption.copyWith(color: AppColors.primaryStrong),
               ),
             ),
           ),
@@ -355,6 +421,14 @@ class _Result extends StatelessWidget {
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
               AiTexts.careTruncated,
+              style: AppText.caption.copyWith(color: AppColors.muted),
+            ),
+          ),
+        if (c.isPatientView.value)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Text(
+              AiTexts.patientScope,
               style: AppText.caption.copyWith(color: AppColors.muted),
             ),
           ),
@@ -376,15 +450,17 @@ class _Result extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        Obx(
-          () => AppButton.primary(
-            label: 'Share in chat',
-            icon: Icons.send_rounded,
-            isCentered: true,
-            onPressed: c.isSharing.value ? null : () => _share(context),
+        if (!c.isAnswer) ...[
+          Obx(
+            () => AppButton.primary(
+              label: 'Share in chat',
+              icon: Icons.send_rounded,
+              isCentered: true,
+              onPressed: c.isSharing.value ? null : () => _share(context),
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.xs),
+        ],
         Row(
           children: [
             Expanded(
@@ -399,7 +475,7 @@ class _Result extends StatelessWidget {
               child: AppButton.secondary(
                 label: 'Regenerate',
                 icon: Icons.refresh_rounded,
-                onPressed: () => c.summarize(),
+                onPressed: () => c.retry(),
               ),
             ),
           ],
@@ -430,9 +506,13 @@ class _Problem extends StatelessWidget {
       AiErrorKind.providerUnreachable => (
         Icons.wifi_off_rounded,
         'Retry',
-        () => c.summarize(),
+        () => c.retry(),
       ),
-      AiErrorKind.careNotFound => (Icons.person_off_outlined, 'Close', onClose),
+      AiErrorKind.careNotFound || AiErrorKind.careNotStarted => (
+        Icons.person_off_outlined,
+        'Close',
+        onClose,
+      ),
       AiErrorKind.noMessages || AiErrorKind.tooLarge when c.isCare => (
         Icons.chat_bubble_outline_rounded,
         'Close',
@@ -451,7 +531,7 @@ class _Problem extends StatelessWidget {
       AiErrorKind.providerBusy => (
         Icons.hourglass_empty_rounded,
         'Try again',
-        () => c.summarize(),
+        () => c.retry(),
       ),
       AiErrorKind.timeout ||
       AiErrorKind.failed ||
@@ -459,7 +539,7 @@ class _Problem extends StatelessWidget {
       AiErrorKind.emptyAnswer => (
         Icons.error_outline_rounded,
         'Retry',
-        () => c.summarize(),
+        () => c.retry(),
       ),
       _ => (Icons.lock_outline_rounded, 'Close', onClose),
     };
@@ -499,10 +579,10 @@ class _StateBlock extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: const BoxDecoration(
-              color: AppColors.accentTint,
+              color: AppColors.violetTint,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 26, color: AppColors.accent),
+            child: Icon(icon, size: 26, color: AppColors.violet),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),

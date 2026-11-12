@@ -24,7 +24,7 @@ class AppProgressBar extends StatelessWidget {
           value: v,
           minHeight: AppSpacing.progressHeight,
           backgroundColor: AppColors.line,
-          color: AppColors.accent,
+          color: AppColors.primaryBright,
         ),
       ),
     ),

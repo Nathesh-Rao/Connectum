@@ -62,10 +62,10 @@ class _Chip extends StatelessWidget {
             vertical: AppSpacing.xxs / 2,
           ),
           decoration: BoxDecoration(
-            color: r.isMine ? AppColors.accentSoft : AppColors.bubbleIn,
+            color: r.isMine ? AppColors.primarySoft : AppColors.bubbleIn,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
-              color: r.isMine ? AppColors.accent : AppColors.line,
+              color: r.isMine ? AppColors.primaryBright : AppColors.line,
             ),
           ),
           child: Row(
@@ -76,7 +76,7 @@ class _Chip extends StatelessWidget {
               Text(
                 '${r.count}',
                 style: AppText.caption.copyWith(
-                  color: r.isMine ? AppColors.accentInk : AppColors.muted,
+                  color: r.isMine ? AppColors.primaryStrong : AppColors.muted,
                 ),
               ),
             ],

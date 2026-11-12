@@ -27,7 +27,7 @@ class ProfileIdentityCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.ivory,
+        color: AppColors.surfaceSubtle,
         borderRadius: AppRadius.cardAll,
         border: Border.all(color: AppColors.line),
       ),
@@ -64,7 +64,7 @@ class ProfileIdentityCard extends StatelessWidget {
                       const Icon(
                         Icons.apartment_outlined,
                         size: 16,
-                        color: AppColors.accentInk,
+                        color: AppColors.primaryStrong,
                       ),
                       const SizedBox(width: AppSpacing.xxs),
                       Expanded(

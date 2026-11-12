@@ -80,7 +80,7 @@ class DocumentCard extends StatelessWidget {
           width: AppSpacing.attachmentWidth,
           padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(color: AppColors.cardLine),
           ),
@@ -176,11 +176,11 @@ class _ActionButton extends StatelessWidget {
             key: ValueKey(state),
             child: switch (state) {
               DocumentButtonState.idle => const _Round(
-                color: AppColors.accent,
+                color: AppColors.primaryBright,
                 child: Icon(
                   Icons.file_download_outlined,
                   size: 22,
-                  color: AppColors.background,
+                  color: AppColors.white,
                 ),
               ),
               DocumentButtonState.downloading => _Ring(
@@ -189,7 +189,7 @@ class _ActionButton extends StatelessWidget {
               ),
               DocumentButtonState.done => const _OpenPill(),
               DocumentButtonState.failed => const _Round(
-                color: AppColors.background,
+                color: AppColors.white,
                 borderColor: AppColors.error,
                 child: Icon(Icons.refresh, size: 22, color: AppColors.error),
               ),
@@ -233,16 +233,16 @@ class _OpenPill extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: AppColors.accentTint,
+      color: AppColors.primaryTint,
       borderRadius: BorderRadius.circular(AppRadius.pill),
       border: Border.all(color: AppColors.tileCurrentBorder),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.check, size: 14, color: AppColors.accentInk),
+        const Icon(Icons.check, size: 14, color: AppColors.primaryStrong),
         const SizedBox(width: AppSpacing.xxs),
-        Text('Open', style: AppText.label.copyWith(color: AppColors.accentInk)),
+        Text('Open', style: AppText.label.copyWith(color: AppColors.primaryStrong)),
       ],
     ),
   );
@@ -270,16 +270,16 @@ class _Ring extends StatelessWidget {
             child: CircularProgressIndicator(
               value: progress > 0 ? progress : null,
               strokeWidth: 3,
-              color: AppColors.accent,
-              backgroundColor: AppColors.accentTint,
+              color: AppColors.primaryBright,
+              backgroundColor: AppColors.primaryTint,
             ),
           ),
           progress > 0
               ? Text(
                   '${(progress * 100).round()}%',
-                  style: AppText.label.copyWith(color: AppColors.accentInk),
+                  style: AppText.label.copyWith(color: AppColors.primaryStrong),
                 )
-              : const Icon(Icons.close, size: 16, color: AppColors.accentInk),
+              : const Icon(Icons.close, size: 16, color: AppColors.primaryStrong),
         ],
       ),
     ),

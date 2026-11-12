@@ -48,7 +48,7 @@ class _SubmissionTileState extends State<SubmissionTile> {
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: AppColors.white,
               borderRadius: const BorderRadius.all(
                 Radius.circular(AppRadius.lg),
               ),
@@ -64,14 +64,14 @@ class _SubmissionTileState extends State<SubmissionTile> {
                       vertical: 3,
                     ),
                     decoration: const BoxDecoration(
-                      color: AppColors.accentTint,
+                      color: AppColors.primaryTint,
                       borderRadius: BorderRadius.all(
                         Radius.circular(AppRadius.badge),
                       ),
                     ),
                     child: Text(
                       card.status!,
-                      style: AppText.label.copyWith(color: AppColors.accentInk),
+                      style: AppText.label.copyWith(color: AppColors.primaryStrong),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),

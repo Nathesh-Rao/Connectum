@@ -7,7 +7,7 @@ import '../theme/app_spacing.dart';
 class AppQrLoading extends StatelessWidget {
   const AppQrLoading({super.key});
 
-  static const asset = 'assets/lottie/qr_loading.json';
+  static const asset = 'assets/lottie/qr_loading_blue.json';
   static const _stillFrame = AlwaysStoppedAnimation<double>(0.5);
 
   @override

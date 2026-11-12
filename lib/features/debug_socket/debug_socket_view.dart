@@ -43,7 +43,7 @@ class DebugSocketView extends GetView<DebugSocketController> {
                 ),
                 Switch(
                   value: c.connectivity.simulateOffline.value,
-                  activeThumbColor: AppColors.accent,
+                  activeThumbColor: AppColors.primaryBright,
                   onChanged: (v) => c.connectivity.simulateOffline.value = v,
                 ),
               ],

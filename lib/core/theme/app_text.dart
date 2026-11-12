@@ -80,7 +80,7 @@ class AppText {
     fontSize: sizeButton,
     fontWeight: FontWeight.w600,
     height: heightControl,
-    color: AppColors.background,
+    color: AppColors.white,
   );
 
   static const input = TextStyle(
@@ -212,7 +212,7 @@ class AppText {
     fontSize: sizeReadable,
     fontWeight: FontWeight.w600,
     height: heightControl,
-    color: AppColors.background,
+    color: AppColors.white,
   );
 
   static const kicker = TextStyle(
@@ -256,7 +256,7 @@ class AppText {
     fontSize: 12,
     fontWeight: FontWeight.w700,
     height: 1.2,
-    color: AppColors.background,
+    color: AppColors.white,
   );
 
   /// Label of the compact pill (Chats filters).
@@ -339,7 +339,7 @@ class AppText {
     fontSize: sizeCaption,
     fontWeight: FontWeight.w700,
     height: 1.5,
-    color: AppColors.accent,
+    color: AppColors.primary,
   );
 
   static const action = TextStyle(
@@ -347,7 +347,7 @@ class AppText {
     fontSize: sizeCaption,
     fontWeight: FontWeight.w500,
     height: 1.5,
-    color: AppColors.accentInk,
+    color: AppColors.primaryStrong,
   );
 
   static const copiedLabel = TextStyle(

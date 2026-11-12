@@ -1283,7 +1283,7 @@ class ConversationController extends GetxController
     if (SeedUi.isActive && tag.url.startsWith('/uploads/seed-')) {
       return tag.url == '/uploads/seed-photo.jpg' ||
               tag.url == '/uploads/seed-e2e-photo.e2e'
-          ? const AssetImage('assets/images/connectum_logo.png')
+          ? const AssetImage('assets/images/connectum_logo_blue.png')
           : null;
     }
     if (tag.isEncrypted || tag.isUnreadable) {

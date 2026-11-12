@@ -317,13 +317,13 @@ class _ResultPane extends StatelessWidget {
                   width: AppSpacing.checkBadge,
                   height: AppSpacing.checkBadge,
                   decoration: const BoxDecoration(
-                    color: AppColors.accentTint,
+                    color: AppColors.primaryTint,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.people_outline,
                     size: 28,
-                    color: AppColors.accent,
+                    color: AppColors.primaryBright,
                   ),
                 ),
         ),

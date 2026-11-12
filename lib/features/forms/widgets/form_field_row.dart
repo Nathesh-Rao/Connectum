@@ -20,7 +20,7 @@ import 'form_payment_field.dart';
 import 'form_slot_field.dart';
 import 'form_type_chip.dart';
 
-/// One field: its label (with a red-orange star when required), the control
+/// One field: its label (with a red star when required), the control
 /// for its type, and its error under it. Shown only while its condition holds.
 class FormFieldRow extends StatelessWidget {
   const FormFieldRow({
@@ -69,7 +69,7 @@ class FormFieldRow extends StatelessWidget {
                   if (f.isRequired)
                     const TextSpan(
                       text: ' *',
-                      style: TextStyle(color: AppColors.accent),
+                      style: TextStyle(color: AppColors.error),
                     ),
                 ],
               ),
@@ -237,7 +237,7 @@ class FormFieldRow extends StatelessWidget {
       trailing: IgnorePointer(
         child: Switch(
           value: isOn,
-          activeThumbColor: AppColors.accent,
+          activeThumbColor: AppColors.primaryBright,
           onChanged: (_) {},
         ),
       ),

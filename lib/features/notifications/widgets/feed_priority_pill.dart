@@ -15,7 +15,7 @@ class FeedPriorityPill extends StatelessWidget {
 
   static (String, AppTone)? of(String priority) => switch (priority) {
     'high' => (NotificationTexts.priorityHigh, AppTones.red),
-    'medium' => (NotificationTexts.priorityMedium, AppTones.orange),
+    'medium' => (NotificationTexts.priorityMedium, AppTones.violet),
     'resolved' => (NotificationTexts.priorityResolved, AppTones.green),
     _ => null,
   };
@@ -41,7 +41,7 @@ class FeedPriorityPill extends StatelessWidget {
           children: [
             Text(
               label,
-              style: AppText.label.copyWith(color: tone.solid, height: 1),
+              style: AppText.label.copyWith(color: tone.strong, height: 1),
             ),
           ],
         ),

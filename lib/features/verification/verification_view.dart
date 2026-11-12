@@ -15,6 +15,7 @@ import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_text_field.dart';
+import '../../demo/demo_mode.dart';
 import 'verification_controller.dart';
 
 class VerificationView extends GetView<VerificationController> {
@@ -72,6 +73,12 @@ class VerificationView extends GetView<VerificationController> {
                     style: AppText.heroCopyStrong,
                     textAlign: TextAlign.center,
                   ),
+                  if (DemoMode.isActive)
+                    const Text(
+                      'Demo: any code works, try ${DemoMode.otpHint}',
+                      style: AppText.heroCopy,
+                      textAlign: TextAlign.center,
+                    ),
                   const AppFlexGap(flex: 77, min: 24, max: 96),
                   const Text('Verification code', style: AppText.fieldLabel),
                   const SizedBox(height: AppSpacing.sm),

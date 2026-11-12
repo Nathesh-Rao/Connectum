@@ -13,7 +13,7 @@ import 'app_highlight_text.dart';
 enum AppNoticeVariant {
   info(Icons.info_outline, AppColors.muted),
   success(Icons.check_circle_outline, AppColors.yesDot),
-  warning(Icons.warning_amber_rounded, AppColors.accent),
+  warning(Icons.warning_amber_rounded, AppColors.violet),
   error(Icons.error_outline, AppColors.error);
 
   const AppNoticeVariant(this.icon, this.color);
@@ -166,7 +166,7 @@ class _Card extends StatelessWidget {
         bottom: AppSpacing.xxs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         borderRadius: AppRadius.cardAll,
         border: Border.all(color: AppColors.line),
         boxShadow: AppShadows.soft,
@@ -213,7 +213,7 @@ class _Card extends StatelessWidget {
                         child: Text(
                           actionLabel!,
                           style: AppText.readableStrong.copyWith(
-                            color: AppColors.accent,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),

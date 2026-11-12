@@ -14,7 +14,7 @@ class AppSuccessAnimation extends StatefulWidget {
     this.size = AppSpacing.successAnimation,
   });
 
-  static const asset = 'assets/lottie/state_success.json';
+  static const asset = 'assets/lottie/state_success_blue.json';
   static const holdFrame = 49.0;
 
   final double size;
@@ -66,10 +66,10 @@ class _AppSuccessAnimationState extends State<AppSuccessAnimation>
               width: AppSpacing.checkBadge,
               height: AppSpacing.checkBadge,
               decoration: const BoxDecoration(
-                color: AppColors.accentTint,
+                color: AppColors.primaryTint,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check, size: 32, color: AppColors.accent),
+              child: const Icon(Icons.check, size: 32, color: AppColors.primaryBright),
             ),
           ),
         ),

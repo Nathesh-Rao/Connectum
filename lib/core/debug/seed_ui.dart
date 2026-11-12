@@ -18,6 +18,7 @@ import '../../data/repositories/e2e_repository.dart';
 import '../../features/chats/models/chat_person.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
+import '../../demo/demo_mode.dart';
 import 'seed_sample_forms.dart';
 
 /// Debug-only fixture for UI checks: run with --dart-define=SEED_UI=1 and the
@@ -29,8 +30,9 @@ class SeedUi {
 
   static const _requested = String.fromEnvironment('SEED_UI') == '1';
 
-  /// Debug builds only.
-  static bool get isActive => kDebugMode && _requested;
+  /// Never in release: SEED_UI=1, or the offline demo (DEMO_MODE=true).
+  static bool get isActive =>
+      !kReleaseMode && (_requested || DemoMode.isActive);
 
   /// A corner ribbon on every screen while sample data is on.
   static Widget withRibbon(Widget child) => Directionality(
@@ -54,7 +56,7 @@ class SeedUi {
                   child: Text(
                     'SAMPLE DATA',
                     style: AppText.label.copyWith(
-                      color: AppColors.background,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w700,
                       decoration: TextDecoration.none,
                     ),
@@ -72,7 +74,7 @@ class SeedUi {
   static const sampleEnterpriseName = 'Agile Labs';
 
   static IdentityInfo? identity() {
-    if (!isActive) return null;
+    if (!isActive || DemoMode.isActive) return null;
     const names = [
       ('Agile Labs', 'CMYD-Z063'),
       ('Agile Space', 'WR4Q-BHSK'),

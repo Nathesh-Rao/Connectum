@@ -137,7 +137,7 @@ class _Cell extends StatelessWidget {
         height: AppSpacing.minTapTarget,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isMine ? AppColors.accentTint : Colors.transparent,
+          color: isMine ? AppColors.primaryTint : Colors.transparent,
           borderRadius: AppRadius.pillAll,
         ),
         child: child,

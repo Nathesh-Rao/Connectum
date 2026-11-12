@@ -139,7 +139,7 @@ class _Preview extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: AppText.fontFamily,
                         fontSize: AppText.sizeReadable,
-                        color: AppColors.taupe,
+                        color: AppColors.slateLight,
                       ),
                     ),
                   )
@@ -169,7 +169,7 @@ class _Preview extends StatelessWidget {
                           notice,
                           textAlign: TextAlign.center,
                           style: AppText.readable.copyWith(
-                            color: AppColors.background,
+                            color: AppColors.white,
                           ),
                         ),
                       ),
@@ -207,13 +207,13 @@ class _TorchButton extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isOn
-                    ? AppColors.accent
+                    ? AppColors.primaryBright
                     : AppColors.scrim.withValues(alpha: 0.6),
               ),
               child: Icon(
                 isOn ? Icons.flash_on : Icons.flash_off,
                 size: 20,
-                color: AppColors.background,
+                color: AppColors.white,
               ),
             ),
           ),
@@ -233,7 +233,7 @@ class _CameraProblem extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     return ColoredBox(
-      color: AppColors.sage,
+      color: AppColors.fill,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(

@@ -39,14 +39,14 @@ class WorkspaceRow extends StatelessWidget {
                 height: AppSpacing.avatar,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
+                  color: AppColors.primarySoft,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.peach),
+                  border: Border.all(color: AppColors.primaryTintStrong),
                 ),
                 child: AppPngIcon(
                   asset: AppIcons.home.workSpace,
                   size: 22,
-                  color: AppColors.accent,
+                  color: AppColors.primaryBright,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

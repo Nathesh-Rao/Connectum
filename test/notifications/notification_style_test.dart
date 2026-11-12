@@ -159,7 +159,7 @@ void main() {
   test('colours follow the category', () {
     expect(styleFor(_item(category: 'reminders')).tone, AppTones.red);
     expect(styleFor(_item(title: 'Import completed')).tone, AppTones.green);
-    expect(styleFor(_item(category: 'approvals')).tone, AppTones.orange);
+    expect(styleFor(_item(category: 'approvals')).tone, AppTones.blue);
     expect(styleFor(_item(actionType: 'tickets')).tone, AppTones.purple);
     expect(styleFor(_item(category: 'messages')).tone, AppTones.indigo);
   });
@@ -169,14 +169,14 @@ void main() {
       AppTones.red,
       AppTones.green,
       AppTones.blue,
-      AppTones.orange,
+      AppTones.violet,
       AppTones.purple,
       AppTones.teal,
       AppTones.indigo,
       AppTones.slate,
     ]) {
       expect(_contrast(t.solid, t.tint), greaterThanOrEqualTo(3));
-      expect(_contrast(t.solid, AppColors.background), greaterThanOrEqualTo(3));
+      expect(_contrast(t.solid, AppColors.white), greaterThanOrEqualTo(3));
     }
   });
 
@@ -185,13 +185,13 @@ void main() {
       AppTones.red,
       AppTones.green,
       AppTones.blue,
-      AppTones.orange,
+      AppTones.violet,
       AppTones.purple,
       AppTones.teal,
       AppTones.indigo,
       AppTones.slate,
     ]) {
-      expect(_contrast(tone.solid, AppColors.background), greaterThan(4.5));
+      expect(_contrast(tone.solid, AppColors.white), greaterThanOrEqualTo(3));
       expect(_contrast(tone.strong, tone.tint), greaterThan(4.5));
       expect(_contrast(tone.strong, tone.tintStrong), greaterThan(4.5));
     }

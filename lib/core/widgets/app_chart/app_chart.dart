@@ -85,7 +85,7 @@ class _AppChartState extends State<AppChart>
         width: double.infinity,
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.white,
           borderRadius: AppRadius.cardAll,
           border: Border.all(color: AppColors.line),
         ),
@@ -305,7 +305,7 @@ class _AppChartState extends State<AppChart>
             ),
             child: Text(
               hit.text,
-              style: AppText.caption.copyWith(color: AppColors.background),
+              style: AppText.caption.copyWith(color: AppColors.white),
             ),
           ),
         );
@@ -733,7 +733,7 @@ class _ColumnPainter extends CustomPainter {
           ..strokeJoin = StrokeJoin.round,
       );
       for (final c in points) {
-        canvas.drawCircle(c, 4.2, Paint()..color = AppColors.background);
+        canvas.drawCircle(c, 4.2, Paint()..color = AppColors.white);
         canvas.drawCircle(c, 3, Paint()..color = color);
       }
     }

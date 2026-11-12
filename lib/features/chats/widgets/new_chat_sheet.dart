@@ -99,7 +99,7 @@ class NewChatSheet extends StatelessWidget {
                 leading: const Icon(
                   Icons.group_add_outlined,
                   size: 22,
-                  color: AppColors.accent,
+                  color: AppColors.primaryBright,
                 ),
                 trailing: const Icon(
                   Icons.chevron_right,

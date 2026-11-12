@@ -50,7 +50,7 @@ class ScrollToLatestButton extends StatelessWidget {
                       width: AppSpacing.scrollButton,
                       height: AppSpacing.scrollButton,
                       decoration: const BoxDecoration(
-                        color: AppColors.background,
+                        color: AppColors.white,
                         shape: BoxShape.circle,
                         boxShadow: AppShadows.card,
                       ),

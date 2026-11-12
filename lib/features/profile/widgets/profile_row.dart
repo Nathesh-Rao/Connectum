@@ -30,7 +30,7 @@ class ProfileGroup extends StatelessWidget {
         Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: AppColors.white,
             borderRadius: AppRadius.cardAll,
             border: Border.all(color: AppColors.line),
           ),
@@ -144,10 +144,10 @@ class ProfileActionRow extends StatelessWidget {
                   width: AppSpacing.avatarSmall,
                   height: AppSpacing.avatarSmall,
                   decoration: const BoxDecoration(
-                    color: AppColors.accentTint,
+                    color: AppColors.primaryTint,
                     borderRadius: AppRadius.controlAll,
                   ),
-                  child: Icon(icon, size: 20, color: AppColors.accentInk),
+                  child: Icon(icon, size: 20, color: AppColors.primaryStrong),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(

@@ -84,6 +84,7 @@ class AiSummaryRequest {
     this.date,
     this.agent,
     this.carePerson,
+    this.question,
   });
 
   final String chatId;
@@ -96,7 +97,81 @@ class AiSummaryRequest {
   /// `care.summary` and the range is not used.
   final String? carePerson;
 
+  /// A typed question about a care thread: it is answered from the whole
+  /// thread (`care.thread`), not the one-tap `care.summary`. Null for the
+  /// one-tap summary and in any other chat.
+  final String? question;
+
   bool get isCare => carePerson != null;
+
+  bool get isCareQuestion => isCare && (question?.trim().isNotEmpty ?? false);
+}
+
+/// One person on a care thread's team (`care.summary` `team`).
+class CareMember {
+  const CareMember({
+    required this.username,
+    required this.name,
+    this.roles = const [],
+  });
+
+  final String username;
+  final String name;
+  final List<String> roles;
+
+  String get label => name.isEmpty ? username : name;
+
+  static CareMember? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final username = '${raw['username'] ?? ''}';
+    if (username.isEmpty) return null;
+    final list = raw['roles'];
+    final role = raw['role'];
+    final roles = <String>[
+      if (list is List)
+        for (final r in list) '$r',
+    ].where((r) => r.isNotEmpty).toList();
+    if (roles.isEmpty && role is String && role.isNotEmpty) roles.add(role);
+    return CareMember(
+      username: username,
+      name: '${raw['name'] ?? ''}',
+      roles: roles,
+    );
+  }
+}
+
+/// A care thread read for a typed question (`care.thread`, then its history):
+/// the conversation, the team and the chat as the model reads it.
+class CareThread {
+  const CareThread({
+    required this.conversation,
+    required this.person,
+    required this.name,
+    required this.transcript,
+    required this.count,
+    this.team = const [],
+    this.isPatient = false,
+  });
+
+  /// `care.thread`'s `conversation` (`group:care-<username>`).
+  final String conversation;
+
+  /// `care.thread`'s `person`.
+  final String person;
+
+  /// The person's display name.
+  final String name;
+
+  /// The `THE GROUP CHAT, IN ORDER` block, within the limits
+  /// ([AiTranscript.careMaxMessages] and [AiTranscript.careMaxChars]).
+  final String transcript;
+
+  /// Messages in [transcript]; 0 when the thread holds nothing.
+  final int count;
+  final List<CareMember> team;
+
+  /// The person asking is the person the thread is about.
+  final bool isPatient;
 }
 
 /// One event of a summary. The server does not stream, so the repository
@@ -107,6 +182,7 @@ class AiSummaryChunk {
     this.isFinal = false,
     this.messageCount,
     this.isTruncated = false,
+    this.isPatientView = false,
   });
 
   final String text;
@@ -117,6 +193,10 @@ class AiSummaryChunk {
 
   /// A care thread's older messages were left out (`stats.truncated`).
   final bool isTruncated;
+
+  /// The answer is for the person the thread is about, who sees only the
+  /// parts of the thread they have access to.
+  final bool isPatientView;
 }
 
 enum AiErrorKind {
@@ -153,8 +233,13 @@ enum AiErrorKind {
   badRequest,
   emptyAnswer,
 
-  /// `care.summary` said `not_found`: the error's message says which.
-  careNotFound;
+  /// `care.summary` / `care.thread` said `not_found` (matched by code only,
+  /// never by the server's text) to someone who is not the person.
+  careNotFound,
+
+  /// The same `not_found` to the person the thread is about: the thread
+  /// starts once the care team is connected.
+  careNotStarted;
 
   const AiErrorKind({this.isSetupProblem = false});
 

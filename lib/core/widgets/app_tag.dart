@@ -23,12 +23,12 @@ class AppTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ink = switch (tone) {
-      AppTagTone.accent => AppColors.accentInk,
+      AppTagTone.accent => AppColors.primaryStrong,
       AppTagTone.done => AppColors.yesText,
       AppTagTone.neutral => AppColors.noText,
     };
     final fill = switch (tone) {
-      AppTagTone.accent => AppColors.accentTint,
+      AppTagTone.accent => AppColors.primaryTint,
       AppTagTone.done => AppColors.yesFill,
       AppTagTone.neutral => AppColors.noFill,
     };

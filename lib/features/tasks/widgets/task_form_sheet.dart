@@ -220,7 +220,7 @@ class _Segments extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: i == selected
-                          ? AppColors.accentTint
+                          ? AppColors.primaryTint
                           : Colors.transparent,
                       borderRadius: const BorderRadius.all(
                         Radius.circular(AppRadius.segment),

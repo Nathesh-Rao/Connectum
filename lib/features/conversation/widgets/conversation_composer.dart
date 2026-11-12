@@ -240,12 +240,12 @@ class ComposerSendButton extends StatelessWidget {
             height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isActive ? AppColors.accent : AppColors.cardChip,
+              color: isActive ? AppColors.primaryBright : AppColors.cardChip,
             ),
             child: Icon(
               Icons.arrow_upward,
               size: 18,
-              color: isActive ? AppColors.background : AppColors.cardMuted,
+              color: isActive ? AppColors.white : AppColors.cardMuted,
             ),
           ),
         ),
@@ -293,7 +293,7 @@ class _ReplyBar extends StatelessWidget {
                   Radius.circular(AppRadius.control),
                 ),
                 border: Border(
-                  left: BorderSide(color: AppColors.accent, width: 3),
+                  left: BorderSide(color: AppColors.primaryBright, width: 3),
                 ),
               ),
               child: Row(
@@ -305,7 +305,7 @@ class _ReplyBar extends StatelessWidget {
                         Text(
                           m.isMine ? 'You' : m.sender,
                           style: AppText.label.copyWith(
-                            color: AppColors.accentInk,
+                            color: AppColors.primaryStrong,
                           ),
                         ),
                         AppMentionText(

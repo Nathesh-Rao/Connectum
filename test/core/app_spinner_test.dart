@@ -35,7 +35,7 @@ void main() {
 
     testWidgets('applies the colour', (tester) async {
       await tester.pumpWidget(
-        _host(const AppSpinner(color: AppColors.background)),
+        _host(const AppSpinner(color: AppColors.white)),
       );
       expect(
         tester
@@ -43,7 +43,7 @@ void main() {
               find.byType(CupertinoActivityIndicator),
             )
             .color,
-        AppColors.background,
+        AppColors.white,
       );
     });
 

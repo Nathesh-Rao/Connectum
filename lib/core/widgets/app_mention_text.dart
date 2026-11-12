@@ -6,7 +6,7 @@ import '../utils/mention_text.dart';
 /// Message text with `@name` drawn as a tag, as on the web. A known person
 /// is drawn as `@` and the display name (the username is the semantics
 /// label); a tag of me is deeper blue, bold and underlined. No background: the blue
-/// reads on both bubbles (incoming grey, outgoing peach). Anyone unknown stays the text it was typed
+/// reads on both bubbles (incoming grey, outgoing blue). Anyone unknown stays the text it was typed
 /// as. Used wherever message text shows: bubbles, quotes, the reply bar.
 class AppMentionText extends StatelessWidget {
   const AppMentionText({

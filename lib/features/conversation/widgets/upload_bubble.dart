@@ -34,7 +34,7 @@ class UploadBubble extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xxs),
         decoration: const BoxDecoration(
-          color: AppColors.accentTint,
+          color: AppColors.primaryTint,
           borderRadius: BorderRadius.all(Radius.circular(AppRadius.bubble)),
         ),
         child: ClipRRect(
@@ -51,7 +51,7 @@ class UploadBubble extends StatelessWidget {
                     fit: BoxFit.cover,
                     cacheWidth: 2 * AppSpacing.attachmentWidth.toInt(),
                     errorBuilder: (context, _, _) =>
-                        const ColoredBox(color: AppColors.sage),
+                        const ColoredBox(color: AppColors.fill),
                   )
                 else
                   _FileFace(name: upload.file.name, size: upload.file.bytes),
@@ -82,7 +82,7 @@ class _FileFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.sage,
+    color: AppColors.fill,
     child: Padding(
       padding: const EdgeInsets.all(AppSpacing.sm),
       child: Column(
@@ -135,7 +135,7 @@ class _Progress extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: AppColors.scrim,
                 ),
-                child: Icon(Icons.close, size: 18, color: AppColors.background),
+                child: Icon(Icons.close, size: 18, color: AppColors.white),
               ),
             ),
           ),
@@ -177,7 +177,7 @@ class _Failed extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
-            style: AppText.readable.copyWith(color: AppColors.background),
+            style: AppText.readable.copyWith(color: AppColors.white),
           ),
           const SizedBox(height: AppSpacing.xs),
           Row(
@@ -217,7 +217,7 @@ class _Action extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Text(
               label,
-              style: AppText.label.copyWith(color: AppColors.background),
+              style: AppText.label.copyWith(color: AppColors.white),
             ),
           ),
         ),

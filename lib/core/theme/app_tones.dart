@@ -13,10 +13,10 @@ class AppTone {
   final Color strong;
 
   Color get tint =>
-      Color.alphaBlend(solid.withValues(alpha: 0.13), AppColors.background);
+      Color.alphaBlend(solid.withValues(alpha: 0.13), AppColors.white);
 
   Color get tintStrong =>
-      Color.alphaBlend(solid.withValues(alpha: 0.20), AppColors.background);
+      Color.alphaBlend(solid.withValues(alpha: 0.20), AppColors.white);
 }
 
 /// The default palette of the notification icons and priority pills, by
@@ -26,13 +26,16 @@ class AppTones {
 
   static const red = AppTone(Color(0xFFC62828), Color(0xFF8E1B1B));
   static const green = AppTone(Color(0xFF15803D), Color(0xFF115E2D));
-  static const blue = AppTone(Color(0xFF1A5FB4), Color(0xFF124585));
-  static const orange = AppTone(Color(0xFFB45309), Color(0xFF8A3F08));
-  static const purple = AppTone(Color(0xFF7C3AED), Color(0xFF5B21B6));
+  static const blue = AppTone(AppColors.primaryBright, AppColors.primaryStrong);
+  static const violet = AppTone(AppColors.violet, AppColors.violetStrong);
+  static const purple = AppTone(AppColors.purple, Color(0xFF4A2897));
   static const teal = AppTone(Color(0xFF0F766E), Color(0xFF0B5651));
-  static const indigo = AppTone(Color(0xFF4F46E5), Color(0xFF3730A3));
+  static const indigo = AppTone(AppColors.primaryStrong, Color(0xFF001F5C));
 
-  /// The primary (orange) as a tone: the soft style of a main action.
-  static const primary = AppTone(AppColors.accent, AppColors.accentInk);
+  /// The primary as a tone: the soft style of a main action.
+  static const primary = AppTone(
+    AppColors.primaryBright,
+    AppColors.primaryStrong,
+  );
   static const slate = AppTone(Color(0xFF475569), Color(0xFF334155));
 }

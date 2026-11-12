@@ -22,7 +22,12 @@ import 'authentication_controller.dart';
 import 'widgets/option_picker_sheet.dart';
 
 class AuthenticationView extends GetView<AuthenticationController> {
-  const AuthenticationView({super.key});
+  const AuthenticationView({super.key, this.controllerTag});
+
+  final String? controllerTag;
+
+  @override
+  String? get tag => controllerTag;
 
   @override
   Widget build(BuildContext context) {

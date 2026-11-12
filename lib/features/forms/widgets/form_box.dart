@@ -38,7 +38,7 @@ class FormBox extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: isReadOnly ? AppColors.sage : AppColors.background,
+        color: isReadOnly ? AppColors.fill : AppColors.white,
         borderRadius: AppRadius.controlAll,
         border: Border.all(
           color: hasError

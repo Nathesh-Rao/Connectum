@@ -40,12 +40,12 @@ class AppFilterTabs extends StatelessWidget {
           labelPadding: const EdgeInsets.only(right: AppSpacing.xl),
           indicatorSize: TabBarIndicatorSize.label,
           indicator: const UnderlineTabIndicator(
-            borderSide: BorderSide(color: AppColors.accent, width: 2),
+            borderSide: BorderSide(color: AppColors.primaryBright, width: 2),
           ),
           dividerColor: Colors.transparent,
           overlayColor: const WidgetStatePropertyAll(Colors.transparent),
           splashFactory: NoSplash.splashFactory,
-          labelColor: AppColors.accentInk,
+          labelColor: AppColors.primaryStrong,
           unselectedLabelColor: AppColors.muted,
           labelStyle: AppText.segmentSelected,
           unselectedLabelStyle: AppText.segment,
@@ -65,7 +65,7 @@ class AppFilterTabs extends StatelessWidget {
                           vertical: 1,
                         ),
                         decoration: const BoxDecoration(
-                          color: AppColors.accentTint,
+                          color: AppColors.primaryTint,
                           borderRadius: BorderRadius.all(
                             Radius.circular(AppRadius.badge),
                           ),
@@ -73,7 +73,7 @@ class AppFilterTabs extends StatelessWidget {
                         child: Text(
                           tab.count > 99 ? '99+' : '${tab.count}',
                           style: AppText.caption.copyWith(
-                            color: AppColors.accentInk,
+                            color: AppColors.primaryStrong,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

@@ -89,7 +89,7 @@ void main() {
       matching: find.byWidgetPredicate((w) {
         if (w is! Container) return false;
         final d = w.decoration;
-        return d is BoxDecoration && d.color == AppColors.accentTint;
+        return d is BoxDecoration && d.color == AppColors.primaryTint;
       }),
     );
     expect(tinted, findsNothing);

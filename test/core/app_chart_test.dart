@@ -294,10 +294,10 @@ void main() {
       return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
     }
 
-    expect(AppChartColors.series.first, AppChartColors.orange);
+    expect(AppChartColors.series.first, AppChartColors.blue);
     for (final c in AppChartColors.series) {
-      expect(ratio(c, AppColors.background), greaterThanOrEqualTo(3));
-      expect(ratio(c, AppColors.surface), greaterThanOrEqualTo(3));
+      expect(ratio(c, AppColors.white), greaterThanOrEqualTo(3));
+      expect(ratio(c, AppColors.surfaceSubtle), greaterThanOrEqualTo(3));
     }
   });
 

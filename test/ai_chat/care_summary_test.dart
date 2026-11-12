@@ -358,7 +358,7 @@ void main() {
       },
     );
 
-    test('not_found shows the two server texts', () async {
+    test('not_found is matched by code and shows our words', () async {
       for (final text in [
         'No such user.',
         'No shared conversation with that person.',
@@ -370,11 +370,14 @@ void main() {
           throwsA(
             isA<AiError>()
                 .having((e) => e.kind, 'kind', AiErrorKind.careNotFound)
-                .having((e) => e.message, 'message', text),
+                .having((e) => e.message, 'message', isNull),
           ),
         );
         expect(r.socket.count('assistant.relay'), 0);
-        expect(AiTexts.errorText(AiErrorKind.careNotFound, detail: text), text);
+        expect(
+          AiTexts.errorText(AiErrorKind.careNotFound, detail: text),
+          'There is no shared care conversation with this person yet.',
+        );
       }
     });
 
@@ -451,7 +454,7 @@ void main() {
     });
 
     test(
-      'the controller shows not_found with its own text and nothing else',
+      'the controller shows not_found with our words, not the server text',
       () async {
         final r = Rig();
         r.socket.answers['care.summary'] = const SocketCallError(
@@ -464,7 +467,10 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
         expect(c.phase.value, AiPhase.error);
         expect(c.error.value, AiErrorKind.careNotFound);
-        expect(c.errorText(c.error.value!, c.errorDetail), 'No such user.');
+        expect(
+          c.errorText(c.error.value!, c.errorDetail),
+          'There is no shared care conversation with this person yet.',
+        );
       },
     );
 

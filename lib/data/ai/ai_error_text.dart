@@ -121,6 +121,26 @@ class AiErrorText {
     return m is String ? m : '';
   }
 
+  static const _careNotFound =
+      'There is no shared care conversation with this person yet.';
+  static const _careNotStarted =
+      'Your care conversation starts once your care team is connected with you. Please check again after that.';
+
+  /// `not_found` of `care.summary` / `care.thread`, told by its [code] only:
+  /// the server's text is its own, may be reworded, and one code carries
+  /// two texts (no such user, no shared conversation) that cannot be told
+  /// apart, so the words are ours. [isPatient]: the person asking is the
+  /// person the thread is about. Null for any other code.
+  static AiErrorInfo? classifyCareError(
+    String? code, {
+    required bool isPatient,
+  }) {
+    if (code != 'not_found') return null;
+    return isPatient
+        ? const AiErrorInfo('care_not_started', _careNotStarted)
+        : const AiErrorInfo('care_not_found', _careNotFound);
+  }
+
   /// An error of the server's own relay (the `sd` envelope's `code`), with the
   /// error's own [message] for a code that is not listed.
   static AiErrorInfo classifyRelayError(String? code, [String? message]) {

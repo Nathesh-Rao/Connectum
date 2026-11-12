@@ -80,6 +80,14 @@ class AiSummaryController extends GetxController {
 
   /// A care summary left older messages out.
   final isTruncated = false.obs;
+
+  /// The answer is for the person the thread is about: a line says they
+  /// see only the parts of the thread they have access to.
+  final isPatientView = false.obs;
+
+  /// The typed question being answered, or null for the one-tap summary.
+  String? _question;
+  bool get isAnswer => _question != null;
   final error = Rxn<AiErrorKind>();
   String? errorDetail;
   final date = Rxn<DateTime>();
@@ -152,6 +160,7 @@ class AiSummaryController extends GetxController {
 
   void reset() {
     _stop();
+    _question = null;
     _forgetShare();
     phase.value = AiPhase.menu;
     text.value = '';
@@ -179,14 +188,30 @@ class AiSummaryController extends GetxController {
 
   /// Summarises. An encrypted chat is refused before anything is read, built
   /// or sent.
-  Future<AiSummarizeResult> summarize() async {
+  Future<AiSummarizeResult> summarize() => _start(null);
+
+  /// A typed question about a care thread, answered from the whole thread.
+  /// An empty question does nothing; other chats have no questions.
+  Future<AiSummarizeResult> ask(String question) {
+    final q = question.trim();
+    if (!isCare || q.isEmpty) return Future.value(AiSummarizeResult.busy);
+    return _start(q);
+  }
+
+  /// Runs the last request again (Regenerate, Retry).
+  Future<AiSummarizeResult> retry() => _start(_question);
+
+  Future<AiSummarizeResult> _start(String? question) async {
     if (isEncrypted()) return AiSummarizeResult.blocked;
     if (phase.value == AiPhase.loading) return AiSummarizeResult.busy;
+    _question = question;
     final id = ++_run;
     _stop();
     final picked = range.value;
     final day = date.value;
-    usedLabel.value = isCare
+    usedLabel.value = question != null
+        ? AiTexts.questionLabel
+        : isCare
         ? 'Whole thread'
         : picked == AiRange.date && day != null
         ? 'From ${day.year}-${day.month.toString().padLeft(2, '0')}-'
@@ -194,6 +219,7 @@ class AiSummaryController extends GetxController {
         : picked.label;
     messageCount.value = null;
     isTruncated.value = false;
+    isPatientView.value = false;
     text.value = '';
     error.value = null;
     _forgetShare();
@@ -212,6 +238,7 @@ class AiSummaryController extends GetxController {
           date: date.value,
           agent: agent.value,
           carePerson: carePerson,
+          question: question,
         ),
       );
     } on Object {
@@ -224,6 +251,7 @@ class AiSummaryController extends GetxController {
         text.value = chunk.text;
         messageCount.value = chunk.messageCount ?? messageCount.value;
         isTruncated.value = chunk.isTruncated;
+        isPatientView.value = chunk.isPatientView;
         if (chunk.isFinal) phase.value = AiPhase.result;
       },
       onError: (Object e) {
@@ -283,7 +311,9 @@ class AiSummaryController extends GetxController {
   String get sharePreview =>
       AiSummaryMessageFormat.build(AiAnswer.plain(text.value)).join('\n\n');
 
-  bool get canShare => phase.value == AiPhase.result && !isSharing.value;
+  /// A typed answer stays on this person's screen (the web never posts it).
+  bool get canShare =>
+      phase.value == AiPhase.result && !isSharing.value && !isAnswer;
 
   /// Posts the summary, one message per part and in order. Parts already sent
   /// are never sent again: a retry carries on with the first one that failed.

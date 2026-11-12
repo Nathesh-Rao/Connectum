@@ -46,7 +46,7 @@ class AppInviteCard extends StatelessWidget {
         bottom: AppSpacing.xxs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.accentSoft,
+        color: AppColors.primarySoft,
         borderRadius: AppRadius.cardAll,
         border: Border.all(color: AppColors.line),
       ),
@@ -56,12 +56,12 @@ class AppInviteCard extends StatelessWidget {
             width: AppSpacing.avatarSmall,
             height: AppSpacing.avatarSmall,
             decoration: const BoxDecoration(
-              color: AppColors.accentTint,
+              color: AppColors.primaryTint,
               borderRadius: AppRadius.mdAll,
             ),
             child: isLoading
                 ? const Center(child: AppSpinner(size: AppSpinnerSize.sm))
-                : Icon(icon, size: 18, color: AppColors.accent),
+                : Icon(icon, size: 18, color: AppColors.primaryBright),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -92,7 +92,7 @@ class AppInviteCard extends StatelessWidget {
                         child: Text(
                           actionLabel!,
                           style: AppText.readableStrong.copyWith(
-                            color: AppColors.accent,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),

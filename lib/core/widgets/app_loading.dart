@@ -19,7 +19,7 @@ class AppLoading extends StatelessWidget {
 
   const AppLoading.large({super.key}) : size = AppLoadingSize.large;
 
-  static const asset = 'assets/lottie/loading.json';
+  static const asset = 'assets/lottie/loading_blue.json';
   static const _stillFrame = AlwaysStoppedAnimation<double>(0.5);
 
   final AppLoadingSize size;

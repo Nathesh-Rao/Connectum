@@ -50,7 +50,7 @@ class TaskTile extends StatelessWidget {
                 child: Icon(
                   task.isHigh ? Icons.flag : Icons.radio_button_unchecked,
                   size: 18,
-                  color: task.isHigh ? AppColors.accent : AppColors.muted,
+                  color: task.isHigh ? AppColors.primaryBright : AppColors.muted,
                   semanticLabel: task.isHigh ? 'High priority' : null,
                 ),
               ),

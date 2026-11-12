@@ -30,7 +30,7 @@ class EnterpriseTile extends StatelessWidget {
       width: AppSpacing.tileSize,
       height: AppSpacing.tileSize,
       decoration: BoxDecoration(
-        color: isCurrent ? AppColors.accentTint : palette.background,
+        color: isCurrent ? AppColors.primaryTint : palette.background,
         borderRadius: const BorderRadius.all(Radius.circular(AppRadius.tile)),
         border: Border.all(
           color: isCurrent ? AppColors.tileCurrentBorder : palette.border,
@@ -39,7 +39,7 @@ class EnterpriseTile extends StatelessWidget {
       child: Icon(
         _tileIcons[index % _tileIcons.length],
         size: 22,
-        color: isCurrent ? AppColors.accent : palette.foreground,
+        color: isCurrent ? AppColors.primaryBright : palette.foreground,
       ),
     );
   }
@@ -54,10 +54,10 @@ class EnterpriseCurrentCheck extends StatelessWidget {
       width: 23,
       height: 23,
       decoration: const BoxDecoration(
-        color: AppColors.accentTint,
+        color: AppColors.primaryTint,
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.check, size: 13, color: AppColors.accent),
+      child: const Icon(Icons.check, size: 13, color: AppColors.primaryBright),
     );
   }
 }

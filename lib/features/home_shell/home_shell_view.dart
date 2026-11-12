@@ -30,7 +30,7 @@ class HomeShellView extends GetView<HomeShellController> {
     final media = MediaQuery.of(context);
     final navHeight = AppBottomNav.heightFor(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.white,
       resizeToAvoidBottomInset: false,
       body: Obx(() {
         if (c.isRetired.value) {

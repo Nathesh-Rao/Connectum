@@ -75,7 +75,7 @@ enum OnboardingLottieFile {
   final FilterQuality? filterQuality;
   final RenderCache? renderCache;
 
-  String get asset => 'assets/lottie/$name.json';
+  String get asset => 'assets/lottie/${name}_blue.json';
 }
 
 /// Plays `entry` once, then loops `idle`, from frame 0 each time the slide
@@ -106,7 +106,7 @@ class OnboardingLottie extends StatefulWidget {
 
 class _OnboardingLottieState extends State<OnboardingLottie>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late final AnimationController _controller = AnimationController(vsync: this);
+  late final AnimationController _controller;
   final _loaded = ValueNotifier<LottieComposition?>(null);
   final _hasFailed = ValueNotifier<bool>(false);
 
@@ -122,6 +122,7 @@ class _OnboardingLottieState extends State<OnboardingLottie>
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(vsync: this);
     WidgetsBinding.instance.addObserver(this);
     OnboardingLottie.load(widget.file).then(
       _onLoaded,

@@ -1,3 +1,5 @@
+import 'ai_models.dart';
+
 /// The question and the system prompt of a chat summary, word for word from
 /// `reference/ai-chat/MOBILE_AI_IN_CHAT_FOLLOWUP.md` (sections 3.1 and 3.2).
 /// They are the web's own text: do not tidy them, so both clients behave alike.
@@ -65,55 +67,110 @@ class AiPrompt {
       'the next steps with who owns each. Keep it short and in the order '
       'things happened where that matters.';
 
-  /// The care thread prompt: the web's `askAboutThread` system text
-  /// (`workspaceAgent.js`) word for word, then the house style guide and the
-  /// thread as `care.summary` gives it, converted to text. [isPatient] is
-  /// the person the thread is about asking about their own.
+  /// Is [me] the person the care thread is about (asking about their own
+  /// thread)? The web's test in `askAboutThread`: the usernames, ignoring
+  /// case. The one place that decides PATIENT or TEAM wording.
+  static bool isPatient(String me, String person) {
+    final a = me.trim().toLowerCase();
+    return a.isNotEmpty && a == person.trim().toLowerCase();
+  }
+
+  // The care thread texts below are copied word for word from the web's
+  // `askAboutThread` (connectum/chat-app/features/connectumChat/services/
+  // workspaceAgent.js, lines 503-513). The BE asked for them to stay
+  // verbatim: do not paraphrase or tidy them.
+
+  /// PATIENT version: the person asking is the person the thread is about.
+  static String carePatientOpening(String name, DateTime now) =>
+      'You answer questions about the care thread of $name for the '
+      'PATIENT themselves, in simple, kind, plain words (no medical '
+      'jargon without a short explanation). Today is ${dateString(now)}. '
+      'Explain what has been recorded about their own care and what '
+      'the team said. Never give a diagnosis, treatment change or '
+      'medical advice of your own; for anything that needs a '
+      'clinical answer, say the care team is the right one to ask.';
+
+  /// TEAM version: anyone else on the thread.
+  static String careTeamOpening(String name, DateTime now) =>
+      "You answer questions about ONE patient's shared care thread for "
+      '$name. Today is ${dateString(now)}.';
+
+  static const careThreadIntro =
+      "The thread is a group chat that was created with the patient's "
+      'record: the team talks in it and every form submitted for the '
+      'patient is posted in it. Both are given below. Answer ONLY from '
+      'them: use the exact values, say who recorded or said it and when, '
+      'and give dates in order when asked for a history.';
+
+  static const careUnderstand =
+      'Understand the question before answering: a question about a '
+      'medicine, vital, test, result, visit, bill or payment is answered '
+      'from the forms; a question about what someone said, asked, decided '
+      'or why is answered from the chat messages. Follow-ups ("and the '
+      'dose?", "who did that?") refer to the earlier questions.';
+
+  static const careNotRecorded =
+      'If something is not in the thread, say it is not recorded there. '
+      'Never guess a diagnosis, name, number, date or reason, never add '
+      "medical advice of your own, and if the transcript was cut say so. "
+      "A question that is not about this thread: politely say you can "
+      "only answer about this patient's thread.";
+
+  static const careFormat =
+      'Be brief and direct: lead with the answer, then the supporting '
+      'detail. Format the answer in Markdown, because it is shown in a '
+      'styled card: **bold** the key values (a medicine and dose, a '
+      "vital, a date), use a '- ' bullet list for several items, a '### ' "
+      'heading per visit when you summarise several visits, and a '
+      'Markdown table when comparing the same measure across visits. No '
+      'other decoration.';
+
+  static String _careHead(String name, DateTime now, bool isPatient) => [
+    isPatient ? carePatientOpening(name, now) : careTeamOpening(name, now),
+    careThreadIntro,
+    careUnderstand,
+    careNotRecorded,
+    careFormat,
+    styleGuide,
+  ].join('\n\n');
+
+  /// The one-tap care summary prompt: the system text, the house style guide
+  /// and the thread as `care.summary` gives it, converted to text.
+  /// [isPatient] is the person the thread is about asking about their own.
   static String careSystem({
     required String name,
     required DateTime now,
     required bool isPatient,
     required String thread,
-  }) {
-    final date = dateString(now);
-    final opening = isPatient
-        ? 'You answer questions about the care thread of $name for the '
-              'PATIENT themselves, in simple, kind, plain words (no medical '
-              'jargon without a short explanation). Today is $date. '
-              'Explain what has been recorded about their own care and what '
-              'the team said. Never give a diagnosis, treatment change or '
-              'medical advice of your own; for anything that needs a '
-              'clinical answer, say the care team is the right one to ask.'
-        : "You answer questions about ONE patient's shared care thread for "
-              '$name. Today is $date.';
-    return [
-      opening,
-      "The thread is a group chat that was created with the patient's "
-          'record: the team talks in it and every form submitted for the '
-          'patient is posted in it. Both are given below. Answer ONLY from '
-          'them: use the exact values, say who recorded or said it and when, '
-          'and give dates in order when asked for a history.',
-      'Understand the question before answering: a question about a '
-          'medicine, vital, test, result, visit, bill or payment is answered '
-          'from the forms; a question about what someone said, asked, decided '
-          'or why is answered from the chat messages. Follow-ups ("and the '
-          'dose?", "who did that?") refer to the earlier questions.',
-      'If something is not in the thread, say it is not recorded there. '
-          'Never guess a diagnosis, name, number, date or reason, never add '
-          "medical advice of your own, and if the transcript was cut say so. "
-          "A question that is not about this thread: politely say you can "
-          "only answer about this patient's thread.",
-      'Be brief and direct: lead with the answer, then the supporting '
-          'detail. Format the answer in Markdown, because it is shown in a '
-          'styled card: **bold** the key values (a medicine and dose, a '
-          "vital, a date), use a '- ' bullet list for several items, a '### ' "
-          'heading per visit when you summarise several visits, and a '
-          'Markdown table when comparing the same measure across visits. No '
-          'other decoration.',
-      styleGuide,
-      'THE THREAD, FORMS AND GROUP CHAT IN ORDER\n$thread',
-    ].join('\n\n');
-  }
+  }) =>
+      '${_careHead(name, now, isPatient)}\n\n'
+      'THE THREAD, FORMS AND GROUP CHAT IN ORDER\n$thread';
+
+  /// A typed question about a care thread: the same system text, then the
+  /// team (`TEAM`, as the web lists it) and the whole group chat as
+  /// `care.thread` and its history give it (`THE GROUP CHAT, IN ORDER`).
+  /// The web's extra `FORMS AND NOTES, BY VISIT` block is left out: the forms
+  /// are in the chat as `[form submission]` lines.
+  static String careThreadSystem({
+    required String name,
+    required DateTime now,
+    required bool isPatient,
+    required List<CareMember> team,
+    required String transcript,
+  }) =>
+      '${_careHead(name, now, isPatient)}\n\n'
+      'TEAM\n${_roster(team)}\n\n'
+      'THE GROUP CHAT, IN ORDER\n$transcript';
+
+  static String _roster(List<CareMember> team) => team.isEmpty
+      ? '(not listed)'
+      : team
+            .map(
+              (m) =>
+                  '- ${m.label}'
+                  '${m.roles.isEmpty ? '' : ' (${m.roles.join(', ')})'}',
+            )
+            .join('\n');
 
   /// JavaScript's `Date.toDateString()`: `Wed Nov 11 2026`.
   static String dateString(DateTime d) {

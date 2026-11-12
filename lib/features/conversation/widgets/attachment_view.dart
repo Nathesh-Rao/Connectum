@@ -63,7 +63,7 @@ class _Picture extends StatelessWidget {
             width: AppSpacing.attachmentWidth,
             height: AppSpacing.attachmentHeight,
             child: ColoredBox(
-              color: AppColors.sage,
+              color: AppColors.fill,
               child: isLoading
                   ? const Center(
                       child: AppSpinner(
@@ -184,7 +184,7 @@ class AttachmentViewer extends StatelessWidget {
                   child: Icon(
                     Icons.broken_image_outlined,
                     size: 40,
-                    color: AppColors.background,
+                    color: AppColors.white,
                   ),
                 ),
               ),
@@ -204,7 +204,7 @@ class AttachmentViewer extends StatelessWidget {
                 child: const SizedBox(
                   width: AppSpacing.iconButton,
                   height: AppSpacing.iconButton,
-                  child: Icon(Icons.close, color: AppColors.background),
+                  child: Icon(Icons.close, color: AppColors.white),
                 ),
               ),
             ),
