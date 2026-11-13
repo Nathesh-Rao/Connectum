@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../../demo/demo_mode.dart';
-
 class AppConfig {
   AppConfig._();
 
@@ -21,16 +19,27 @@ class AppConfig {
       if (url.isNotEmpty) Uri.parse(url).host,
   };
 
-  /// Null when the build is configured; otherwise what is wrong. Debug builds
-  /// may run unconfigured or on plain http/ws.
-  static String? validate() {
-    if (kDebugMode || DemoMode.isActive) return null;
-    if (baseUrl.isEmpty || wsUrl.isEmpty) {
+  /// Host that dev builds may call over plain http/ws (the BE dev machine).
+  static const devHost = String.fromEnvironment(
+    'DEV_HOST',
+    defaultValue: '10.0.2.113',
+  );
+
+  /// Null when the build is configured; otherwise what is wrong. Only release
+  /// builds are strict: debug and profile builds may run unconfigured or on
+  /// plain http/ws.
+  static String? validate({
+    bool isRelease = kReleaseMode,
+    String base = baseUrl,
+    String ws = wsUrl,
+  }) {
+    if (!isRelease) return null;
+    if (base.isEmpty || ws.isEmpty) {
       return 'BASE_URL and WS_URL were not set for this build.';
     }
     final isSecure =
-        Uri.tryParse(baseUrl)?.scheme == 'https' &&
-        Uri.tryParse(wsUrl)?.scheme == 'wss';
+        Uri.tryParse(base)?.scheme == 'https' &&
+        Uri.tryParse(ws)?.scheme == 'wss';
     return isSecure ? null : 'BASE_URL must be https and WS_URL must be wss.';
   }
 }

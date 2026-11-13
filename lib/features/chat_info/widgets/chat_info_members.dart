@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -20,6 +21,7 @@ class ChatInfoMembers extends StatefulWidget {
     required this.hasSearch,
     required this.onOpen,
     this.onAddPeople,
+    this.pictureOf,
   });
 
   final List<ChatInfoMember> members;
@@ -28,6 +30,7 @@ class ChatInfoMembers extends StatefulWidget {
 
   /// Only given to the group's owner (it already exists in the app).
   final VoidCallback? onAddPeople;
+  final String? Function(String username)? pictureOf;
 
   @override
   State<ChatInfoMembers> createState() => _ChatInfoMembersState();
@@ -86,6 +89,7 @@ class _ChatInfoMembersState extends State<ChatInfoMembers> {
                   _MemberRow(
                     member: shown[i],
                     hasDivider: i > 0,
+                    pictureOf: widget.pictureOf,
                     onTap: shown[i].isMe ? null : () => widget.onOpen(shown[i]),
                   ),
               ],
@@ -102,8 +106,10 @@ class _MemberRow extends StatelessWidget {
     required this.member,
     required this.hasDivider,
     required this.onTap,
+    this.pictureOf,
   });
 
+  final String? Function(String username)? pictureOf;
   final ChatInfoMember member;
   final bool hasDivider;
   final VoidCallback? onTap;
@@ -129,11 +135,21 @@ class _MemberRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              AppAvatar(
-                name: m.name,
-                kind: AppAvatarKind.person,
-                size: AppSpacing.avatarSmall,
-              ),
+              if (pictureOf == null)
+                AppAvatar(
+                  name: m.name,
+                  kind: AppAvatarKind.person,
+                  size: AppSpacing.avatarSmall,
+                )
+              else
+                Obx(
+                  () => AppAvatar(
+                    name: m.name,
+                    kind: AppAvatarKind.person,
+                    picture: pictureOf!(m.user),
+                    size: AppSpacing.avatarSmall,
+                  ),
+                ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(

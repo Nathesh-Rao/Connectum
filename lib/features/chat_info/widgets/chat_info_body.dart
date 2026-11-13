@@ -27,6 +27,7 @@ class ChatInfoBody extends StatelessWidget {
     this.onAddPeople,
     this.onOpenMember,
     this.onRefresh,
+    this.pictureOf,
   });
 
   static const avatarSize = 72.0;
@@ -37,6 +38,7 @@ class ChatInfoBody extends StatelessWidget {
   final VoidCallback? onAddPeople;
   final ValueChanged<ChatInfoMember>? onOpenMember;
   final Future<void> Function()? onRefresh;
+  final String? Function(String username)? pictureOf;
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +94,7 @@ class ChatInfoBody extends StatelessWidget {
             hasSearch: d.hasSearch,
             onOpen: onOpenMember ?? (_) {},
             onAddPeople: d.canAddPeople ? onAddPeople : null,
+            pictureOf: pictureOf,
           )
         else if (d.hasMembersGap)
           const _Note("The member list isn't saved on this phone yet."),

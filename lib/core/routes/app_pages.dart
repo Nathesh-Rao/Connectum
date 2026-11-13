@@ -11,6 +11,10 @@ import '../../features/chat_info/chat_info_view.dart';
 import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_ai/debug_ai_binding.dart';
+import '../../features/debug_photo_crop/debug_photo_crop_binding.dart';
+import '../../features/debug_photo_crop/debug_photo_crop_view.dart';
+import '../../features/profile_photo/profile_photo_crop_binding.dart';
+import '../../features/profile_photo/profile_photo_crop_view.dart';
 import '../../features/debug_ai/debug_ai_view.dart';
 import '../../features/debug_assets/debug_assets_binding.dart';
 import '../../features/debug_chat/debug_chat_binding.dart';
@@ -28,8 +32,16 @@ import '../../features/debug_forms/debug_forms_binding.dart';
 import '../../features/debug_forms/debug_forms_view.dart';
 import '../../features/debug_formlogic/debug_formlogic_binding.dart';
 import '../../features/debug_formlogic/debug_formlogic_view.dart';
+import '../../features/debug_auth/debug_auth_binding.dart';
+import '../../features/debug_auth/debug_auth_view.dart';
 import '../../features/debug_decor/debug_decor_binding.dart';
 import '../../features/debug_decor/debug_decor_view.dart';
+import '../../features/debug_onboarding/debug_onboarding_binding.dart';
+import '../../features/debug_onboarding/debug_onboarding_view.dart';
+import '../../features/debug_onboarding_anim/debug_onboarding_anim_binding.dart';
+import '../../features/debug_onboarding_anim/debug_onboarding_anim_view.dart';
+import '../../features/debug_logo_intro/debug_logo_intro_binding.dart';
+import '../../features/debug_logo_intro/debug_logo_intro_view.dart';
 import '../../features/debug_palette/debug_palette_binding.dart';
 import '../../features/debug_palette/debug_palette_view.dart';
 import '../../features/debug_qr/debug_qr_binding.dart';
@@ -248,6 +260,18 @@ class AppPages {
         AppTransitionKind.push,
       ),
       _page(
+        AppRoutes.photoCrop,
+        () => const ProfilePhotoCropView(),
+        ProfilePhotoCropBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugPhotoCrop,
+        () => const DebugPhotoCropView(),
+        DebugPhotoCropBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
         AppRoutes.debugAi,
         () => const DebugAiView(),
         DebugAiBinding(),
@@ -307,6 +331,13 @@ class AppPages {
       ),
     if (kDebugMode)
       _page(
+        AppRoutes.debugLogoIntro,
+        () => const DebugLogoIntroView(),
+        DebugLogoIntroBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
         AppRoutes.debugPalette,
         () => const DebugPaletteView(),
         DebugPaletteBinding(),
@@ -317,6 +348,27 @@ class AppPages {
         AppRoutes.debugDecor,
         () => const DebugDecorView(),
         DebugDecorBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugOnboarding,
+        () => const DebugOnboardingView(),
+        DebugOnboardingBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugOnboardingAnim,
+        () => const DebugOnboardingAnimView(),
+        DebugOnboardingAnimBinding(),
+        AppTransitionKind.push,
+      ),
+    if (kDebugMode)
+      _page(
+        AppRoutes.debugAuth,
+        () => const DebugAuthView(),
+        DebugAuthBinding(),
         AppTransitionKind.push,
       ),
     if (kDebugMode)

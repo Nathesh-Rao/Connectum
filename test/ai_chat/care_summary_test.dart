@@ -147,6 +147,9 @@ Only the most recent entries are included.''';
 
 class _NoMessages extends Fake implements MessageRepository {
   @override
+  Future<bool> hasEncryptedHistory(String convId) async => false;
+
+  @override
   Future<List<Message>> readFor(String org, String user, String convId) =>
       throw StateError('a care summary reads no local messages');
 }
@@ -204,6 +207,7 @@ class Rig {
     setup: AiSetupCache(repo),
     chatId: 'group:care-$person',
     title: () => 'Ravi Kumar',
+    isEncrypted: () => false,
     isOnline: () => true,
     post: (t) async {
       posted?.add(t);
@@ -421,13 +425,7 @@ void main() {
       await expectLater(
         r.ask(),
         throwsA(
-          isA<AiError>()
-              .having((e) => e.kind, 'kind', AiErrorKind.noMessages)
-              .having(
-                (e) => e.message,
-                'message',
-                'Nothing has been recorded in this thread yet.',
-              ),
+          isA<AiError>().having((e) => e.kind, 'kind', AiErrorKind.careEmpty),
         ),
       );
       expect(r.socket.count('assistant.relay'), 0);
@@ -480,6 +478,7 @@ void main() {
         setup: AiSetupCache(r.repo),
         chatId: 'dm:ana',
         title: () => 'Ana',
+        isEncrypted: () => false,
         isOnline: () => true,
         post: (_) async => SendResult.queued,
         isAdmin: () => false,

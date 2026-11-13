@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import '../e2e/e2e_texts.dart';
 import '../models/message.dart';
 import 'ai_prompt.dart';
 
@@ -8,9 +7,9 @@ import 'ai_prompt.dart';
 /// (`chatReader.js`, section 3.3 of `reference/ai-chat/MOBILE_AI_IN_CHAT_FOLLOWUP.md`).
 /// The time is the viewer's local time.
 ///
-/// An end-to-end message enters as the text this phone opened, never as the
-/// envelope. One that cannot be opened is a line with the lock wording the
-/// chat shows (the web does the same); one still being opened is left out.
+/// An end-to-end message never enters (AI is blocked in encrypted chats): the
+/// build drops any row flagged encrypted, as a second line behind the
+/// repository's refusal.
 class AiTranscript {
   const AiTranscript(this.text, this.count);
 
@@ -23,12 +22,15 @@ class AiTranscript {
 
   bool get isEmpty => count == 0;
 
+  /// Normal (unencrypted) chats: the web's limits, confirmed by the BE
+  /// (13 Nov 2026): 300 messages / 60,000 characters, oldest dropped first.
   static const maxMessages = 300;
   static const maxChars = 60000;
   static const minLines = 20;
 
-  /// A care thread read for a typed question: what the web gives
-  /// `formatTranscript` in `askAboutThread`, and room kept for the header so
+  /// A care thread read for a typed question: the BE's limits for the care
+  /// transcript (13 Nov 2026), 400 messages / 70,000 characters, oldest
+  /// dropped first, and room kept for the header so
   /// the whole block stays within [careMaxChars].
   static const careMaxMessages = 400;
   static const careMaxChars = 70000;
@@ -54,7 +56,10 @@ class AiTranscript {
     bool isCut = false,
   }) {
     final cutoff = since?.millisecondsSinceEpoch;
-    final byId = {for (final m in all) m.msgId: m};
+    final byId = {
+      for (final m in all)
+        if (!m.isEncrypted) m.msgId: m,
+    };
     final list = <(Message, String)>[];
     final sorted =
         all
@@ -62,7 +67,7 @@ class AiTranscript {
               (m) =>
                   !m.isDeleted &&
                   m.ts > 0 &&
-                  !m.isDecrypting &&
+                  !m.isEncrypted &&
                   (cutoff == null || m.ts >= cutoff),
             )
             .toList()
@@ -132,11 +137,7 @@ class AiTranscript {
     return name.isEmpty ? 'someone' : name;
   }
 
-  /// The text of a message for the model: the unreadable wording instead of
-  /// an envelope.
-  static String _readable(Message m) => m.isEncryptedUnsupported
-      ? E2eTexts.unreadableFor(m.unreadableCode)
-      : m.text;
+  static String _readable(Message m) => m.text;
 
   static String _body(Message m, String? Function(String)? statusOf) {
     if (m.kind != 'form') return _cut(_flat(_readable(m)), lineChars);

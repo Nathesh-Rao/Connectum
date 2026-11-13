@@ -5,8 +5,10 @@ import '../theme/app_icons.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
+import '../theme/app_motion.dart';
 import '../utils/avatar_palette.dart';
 import 'app_png_icon.dart';
+import 'avatar_image.dart';
 
 enum AppPresenceDot { none, online, offline }
 
@@ -25,6 +27,7 @@ class AppAvatar extends StatelessWidget {
     this.size = AppSpacing.avatar,
     this.kind,
     this.image,
+    this.picture,
     this.isSquare = false,
     this.isAccent = false,
     this.presence = AppPresenceDot.none,
@@ -36,6 +39,13 @@ class AppAvatar extends StatelessWidget {
 
   /// A person's picture, drawn instead of the letter when given.
   final ImageProvider? image;
+
+  /// The person's picture address (`/uploads/..`, `asset:..`, `memory:..`),
+  /// drawn over the initials. While it loads, when it fails and when it is
+  /// null the initials and the colour from the name show, unchanged. Only a
+  /// person (a circle) or a plain avatar takes it; a group and a ticket keep
+  /// their icon.
+  final String? picture;
   final bool isSquare;
 
   /// White initials on the accent colour, in the larger title size (profile).
@@ -117,6 +127,43 @@ class AppAvatar extends StatelessWidget {
     );
   }
 
+  Widget _withPicture(Widget base) {
+    final provider = kind == null || kind == AppAvatarKind.person
+        ? AvatarImages.providerFor(picture)
+        : null;
+    if (provider == null) return base;
+    final isRound = kind != null || !isSquare;
+    final photo = Image(
+      image: provider,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      excludeFromSemantics: true,
+      frameBuilder: (context, child, frame, isSync) => AnimatedOpacity(
+        opacity: frame == null ? 0 : 1,
+        duration: isSync ? Duration.zero : AppDurations.fast,
+        child: child,
+      ),
+      errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+    );
+    return Stack(
+      children: [
+        base,
+        Positioned.fill(
+          child: isRound
+              ? ClipOval(child: photo)
+              : ClipRRect(
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(AppRadius.control),
+                  ),
+                  child: photo,
+                ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final kind = this.kind;
@@ -142,14 +189,15 @@ class AppAvatar extends StatelessWidget {
                     ),
             ),
           );
-    if (presence == AppPresenceDot.none) return avatar;
+    final shown = _withPicture(avatar);
+    if (presence == AppPresenceDot.none) return shown;
     return SizedBox(
       width: size,
       height: size,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          avatar,
+          shown,
           Positioned(
             right: -1,
             bottom: -1,

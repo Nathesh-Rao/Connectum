@@ -176,7 +176,7 @@ class DebugConnectController extends GetxController {
     final target = ConnectLinkParser.parse(link).value;
     if (target == null) return;
     links.keep(target);
-    Get.toNamed<void>(route);
+    Get.toNamed(route);
   }
 
   void openInviteSheet() {
@@ -417,9 +417,9 @@ class DebugConnectController extends GetxController {
     referrerResult.value = lines.join('\n');
   }
 
-  void openWelcome() => Get.toNamed<void>(AppRoutes.onboarding);
+  void openWelcome() => Get.toNamed(AppRoutes.onboarding);
 
-  void openSignIn() => Get.toNamed<void>(AppRoutes.authentication);
+  void openSignIn() => Get.toNamed(AppRoutes.authentication);
 
   @override
   void onClose() {

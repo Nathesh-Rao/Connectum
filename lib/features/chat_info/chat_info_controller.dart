@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
+import '../../data/repositories/people_avatars.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
@@ -30,6 +31,7 @@ class ChatInfoController extends GetxController {
     required this.tickets,
     required this.store,
     required this.connectivity,
+    this.avatars,
   });
 
   final String conversationId;
@@ -41,6 +43,12 @@ class ChatInfoController extends GetxController {
   final TicketRepository tickets;
   final SessionStore store;
   final ConnectivityService connectivity;
+
+  /// People's pictures for the member list; null in tests.
+  final PeopleAvatars? avatars;
+
+  /// A person's picture address, or null. Reads an Rx value.
+  String? pictureOf(String username) => avatars?.urlOf(username);
 
   final isTicketLoading = false.obs;
   final hasTicketGap = false.obs;
@@ -151,10 +159,10 @@ class ChatInfoController extends GetxController {
 
   void openTicket() {
     final id = ticketId;
-    if (id != null) Get.toNamed<void>(AppRoutes.ticketOf(id));
+    if (id != null) Get.toNamed(AppRoutes.ticketOf(id));
   }
 
-  void addPeople() => Get.toNamed<void>(
+  void addPeople() => Get.toNamed(
     AppRoutes.newGroup,
     arguments: ConversationRepository.targetOf(conversationId),
   );

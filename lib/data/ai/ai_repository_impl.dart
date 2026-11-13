@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../repositories/conversation_repository.dart';
+import '../models/message.dart';
 import '../repositories/message_repository.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
@@ -123,6 +124,7 @@ class AiRepositoryImpl implements AiRepository {
     if (org == null || user == null || agent == null) {
       throw const AiError(AiErrorKind.notSetUp);
     }
+    await _refuseEncrypted(request.chatId);
     final now = _now();
     final String system;
     final String question;
@@ -135,12 +137,7 @@ class AiRepositoryImpl implements AiRepository {
       isPatientView = isPatient;
       if (request.isCareQuestion) {
         final thread = await careThread(person);
-        if (thread.count == 0) {
-          throw const AiError(
-            AiErrorKind.noMessages,
-            'Nothing has been recorded in this thread yet.',
-          );
-        }
+        if (thread.count == 0) throw _careEmpty(isPatient);
         count = thread.count;
         system = AiPrompt.careThreadSystem(
           name: _nameOf(user),
@@ -159,12 +156,7 @@ class AiRepositoryImpl implements AiRepository {
         final messages = stats is Map && stats['messages'] is num
             ? stats['messages'] as num
             : 0;
-        if (forms == 0 && messages == 0) {
-          throw const AiError(
-            AiErrorKind.noMessages,
-            'Nothing has been recorded in this thread yet.',
-          );
-        }
+        if (forms == 0 && messages == 0) throw _careEmpty(isPatient);
         isTruncated = stats is Map && stats['truncated'] == true;
         count = messages.toInt();
         final card = summary['person'];
@@ -182,8 +174,8 @@ class AiRepositoryImpl implements AiRepository {
     } else {
       final since = request.range.since(now, date: request.date);
       final kind = ConversationRepository.kindOf(request.chatId);
-      await _messages.settleDecrypt();
       final rows = await _messages.readFor(org, user, request.chatId);
+      _refuseEncryptedRows(rows);
       final transcript = AiTranscript.build(
         rows,
         kind: kind,
@@ -234,6 +226,23 @@ class AiRepositoryImpl implements AiRepository {
     );
   }
 
+  /// AI is blocked in end-to-end chats: nothing is read, built or sent.
+  Future<void> _refuseEncrypted(String chatId) async {
+    if (await _messages.hasEncryptedHistory(chatId)) {
+      throw const AiError(AiErrorKind.encrypted);
+    }
+  }
+
+  void _refuseEncryptedRows(List<Message> rows) {
+    if (rows.any((m) => m.isEncrypted)) {
+      throw const AiError(AiErrorKind.encrypted);
+    }
+  }
+
+  /// The thread exists but holds nothing yet (an empty `care.summary`).
+  AiError _careEmpty(bool isPatient) =>
+      AiError(isPatient ? AiErrorKind.careEmptyPatient : AiErrorKind.careEmpty);
+
   /// `care.summary {person}`: the clipped summary, for the one-tap summary.
   Future<Map<String, dynamic>> _careSummary(
     String person,
@@ -271,6 +280,7 @@ class AiRepositoryImpl implements AiRepository {
     }
     final conversation = '${ref['conversation'] ?? ''}';
     if (conversation.isEmpty) throw const AiError(AiErrorKind.failed);
+    await _refuseEncrypted(conversation);
     final who = '${ref['person'] ?? person}';
     // The team and the person's name come from care.summary (it is the only
     // call that lists them); a failure there only leaves the roster out.
@@ -280,6 +290,7 @@ class AiRepositoryImpl implements AiRepository {
       atLeast: AiTranscript.careMaxMessages,
     );
     if (hasMore == null) throw const AiError(AiErrorKind.serverTimeout);
+    await _refuseEncrypted(conversation);
     final cardData = await card;
     final team = [
       if (cardData['team'] is List)
@@ -293,8 +304,8 @@ class AiRepositoryImpl implements AiRepository {
       for (final m in team) m.username.toLowerCase(): m.label,
       who.toLowerCase(): name,
     };
-    await _messages.settleDecrypt();
     final rows = await _messages.readFor(org, me, conversation);
+    _refuseEncryptedRows(rows);
     final transcript = AiTranscript.build(
       rows,
       kind: 'group',

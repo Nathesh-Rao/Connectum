@@ -19,6 +19,9 @@ class _Messages extends Fake implements MessageRepository {
   int settled = 0;
 
   @override
+  Future<bool> hasEncryptedHistory(String convId) async => false;
+
+  @override
   Future<void> settleDecrypt() async => settled++;
 
   @override
@@ -635,6 +638,33 @@ void main() {
       );
       expect(t.text.length, lessThan(AiTranscript.maxChars + 400));
       expect(t.count, greaterThanOrEqualTo(AiTranscript.minLines));
+    });
+
+    test('the limits are the BE answer: 300 / 60 000 and 400 / 70 000', () {
+      expect(AiTranscript.maxMessages, 300);
+      expect(AiTranscript.maxChars, 60000);
+      expect(AiTranscript.careMaxMessages, 400);
+      expect(AiTranscript.careMaxChars, 70000);
+    });
+
+    test('the lines kept never exceed 60 000 characters, oldest dropped', () {
+      final rows = [
+        for (var i = 1; i <= 300; i++) msg('$i', 'w' * 590 + '$i', i * 1000),
+      ];
+      final t = AiTranscript.build(
+        rows,
+        kind: 'dm',
+        title: 'Ana',
+        since: null,
+        nameOf: nameOf,
+      );
+      final lines = t.text.split('\n').skip(1).toList();
+      final chars = lines.fold<int>(0, (n, l) => n + l.length + 1);
+      expect(chars, lessThanOrEqualTo(AiTranscript.maxChars));
+      expect(lines.length, t.count);
+      expect(t.count, lessThan(300));
+      expect(lines.last, endsWith('300'));
+      expect(t.text, contains('older messages were not read'));
     });
 
     test('the web example, character for character', () {

@@ -376,7 +376,7 @@ class NewGroupController extends GetxController {
       Get.back<void>();
       return;
     }
-    await Get.offNamed<void>(AppRoutes.conversationOf('group:$groupName'));
+    await Get.offNamed(AppRoutes.conversationOf('group:$groupName'));
   }
 
   // ---- sample states (SEED_UI) -----------------------------------------------

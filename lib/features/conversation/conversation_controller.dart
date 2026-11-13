@@ -47,6 +47,7 @@ import '../../data/repositories/typing_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
 import '../../core/widgets/app_avatar.dart';
+import '../../data/repositories/people_avatars.dart';
 import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
 import '../../core/widgets/app_notices.dart';
 import '../../data/models/ticket.dart';
@@ -91,6 +92,7 @@ class ConversationController extends GetxController
     required this.newTicketDetail,
     required this.aiRepository,
     required this.aiSetup,
+    this.avatars,
   });
 
   static const maxLength = 2000;
@@ -101,6 +103,12 @@ class ConversationController extends GetxController
   static const _flashFor = Duration(milliseconds: 1600);
 
   final String conversationId;
+
+  /// People's pictures for mentions; null in tests.
+  final PeopleAvatars? avatars;
+
+  /// A person's picture address, or null. Reads an Rx value: call it in Obx.
+  String? pictureOf(String username) => avatars?.urlOf(username);
   final MessageRepository messages;
   final ConversationRepository conversations;
   final PresenceRepository presence;
@@ -129,6 +137,7 @@ class ConversationController extends GetxController
     setup: aiSetup,
     chatId: conversationId,
     title: () => title,
+    isEncrypted: () => isLocked.value || isBlocked.value,
     isOnline: () => connectivity.hasNetwork.value,
     post: (text) => messages.sendText(conversationId, text),
     isAdmin: () => commands.isAdmin.value,

@@ -232,6 +232,19 @@ class ConversationRepository extends GetxService {
     changed.forEach(_receipts.add);
   }
 
+  /// Sets the picture on the direct chat row with [username] (null clears it)
+  /// and refreshes the list.
+  Future<void> setPeerAvatar(String username, String? url) async {
+    final org = _session.orgId;
+    final user = _session.userId;
+    if (org == null || user == null) return;
+    await _db.update(
+      'UPDATE conversations SET avatar = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+      [url, org, user, 'dm:${username.toLowerCase()}'],
+    );
+    await reload();
+  }
+
   /// The titles of the record conversations I am in, the ones I may rename and
   /// the ones their form keeps out of the main list, from `record.names`. Kept
   /// per conversation, so they show offline. A failed call keeps what is stored.

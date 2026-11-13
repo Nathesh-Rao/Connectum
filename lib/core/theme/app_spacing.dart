@@ -38,6 +38,7 @@ class AppSpacing {
   static const double handleWidth = 34;
   static const double handleHeight = 4;
   static const double minTapTarget = 44;
+  static const double methodButtonHeight = 48;
   static const double chipHeight = 40;
   static const double checkBadge = 64;
   static const double stateImage = 160;

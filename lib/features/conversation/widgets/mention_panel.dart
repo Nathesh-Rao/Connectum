@@ -18,11 +18,15 @@ class MentionPanel extends StatelessWidget {
     required this.rows,
     required this.onPick,
     required this.onClose,
+    this.pictureOf,
   });
 
   final RxList<MentionPerson> rows;
   final ValueChanged<MentionPerson> onPick;
   final VoidCallback onClose;
+
+  /// A person's picture address by username; read inside the Obx.
+  final String? Function(String username)? pictureOf;
 
   @override
   Widget build(BuildContext context) => AnimatedSize(
@@ -69,6 +73,7 @@ class MentionPanel extends StatelessWidget {
                         children: [
                           AppAvatar(
                             name: p.label,
+                            picture: pictureOf?.call(p.username),
                             size: AppSpacing.avatarSmall,
                           ),
                           const SizedBox(width: AppSpacing.sm),

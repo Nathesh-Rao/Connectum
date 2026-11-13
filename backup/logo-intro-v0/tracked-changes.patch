@@ -1,0 +1,249 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 873562e..ac4b92b 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -61,7 +61,7 @@
+ - Release: `flutter build appbundle --release --dart-define=BASE_URL=https://connectum.app --dart-define=WS_URL=wss://connectum.app/ws`. Never `flutter install` / `flutter run --release` onto the dev phone (a release-signed install over the debug one forces an uninstall and deletes its encryption keys).
+ 
+ ## Before release
+-- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket`, `/debug/assets` and `/gallery` routes (with `lib/features/gallery/widgets/avatar_samples.dart`, the avatar palette sample, and the AppSpinner and pull-header samples in `gallery_view.dart`) and `lib/core/debug/seed_ui.dart` (`SEED_UI=1` fixture: debug builds only, in-memory sample enterprises and about 13 sample chats, `SEED_ROWS=300` adds generated rows; turn it on with `--dart-define=SEED_UI=1`, best without `BASE_URL`); remove the `/debug/connect` route and `lib/features/debug_connect/`; remove the `/debug/e2e` route, `lib/features/debug_e2e/` (including `hand_on_vectors.dart`), `assets/debug/e2e-rewrap-vectors.json` and its `pubspec.yaml` asset entry and the `mobile-handoff/e2e-vectors.json` entry under `assets:` in `pubspec.yaml` (Flutter cannot bundle an asset for debug only; `lib/data/e2e/` stays); remove the "Remove this device" and "Register this phone" buttons on the `/debug/e2e` screen (they go with the route); remove the "Show device limit sheet (sample devices)" button on the same screen (it goes with the route; the sheet itself, `lib/features/security/widgets/device_limit_sheet.dart`, stays); document and accept, or change, "decrypted text stored unencrypted on the device" (the `plaintext` column of `messages` and the decrypted `last_text` of `conversations`; the envelope is kept as received); check backups: `android:allowBackup="false"` with `fullBackupContent` (`res/xml/backup_rules.xml`) and `dataExtractionRules` (`res/xml/data_extraction_rules.xml`) excluding database, sharedpref, file, root and external; iOS: the databases folder is flagged `isExcludedFromBackup` (`AppDatabase._open` via the `connectum/device` channel) and every `FlutterSecureStorage` uses `first_unlock_this_device` (the Keychain is not restored onto another device), and inspect a release build's merged manifest to confirm; remove `lib/core/debug/seed_connect.dart` and the debug-only "Simulate scan" chips/button in `lib/features/connect/widgets/scanner_pane.dart` (`_SimulateScan`); remove the `/debug/qr` route, `lib/features/debug_qr/` and `lib/core/debug/seed_qr.dart` (sample QR data and `QrSampleRepository`; the real `QrRepository` implementation replaces it); remove the `/debug/tasks` route, `lib/features/debug_tasks/` and `lib/core/debug/seed_tasks.dart` (sample tasks and requests answered in place of the server, injected events; also the `SeedTasks` branches in `task_repository.dart`, `approval_repository.dart` and `task_people_controller.dart`); remove the `/debug/tickets` route, `lib/features/debug_tickets/`, `lib/core/debug/seed_tickets.dart` (the captured `status.*` replies answer in place of the server; also the `SeedTickets` branches in `ticket_repository.dart` and `task_people_controller.dart`), `assets/debug/tickets/` and its `pubspec.yaml` asset entry; remove the `/debug/chat` route and `lib/features/debug_chat/` (sample messages for mentions, forwards, edits, quotes, day separators; also the Chat info page variants and ticket card action samples in `debug_chat_samples.dart`); remove the `/debug/notifications` route and `lib/features/debug_notifications/` (sample feed items, local notification test); remove the `/debug/commands` route, `lib/features/debug_commands/` and `lib/core/debug/seed_commands.dart` (the `#` commands doc catalogue as a fixture, fake suggestions with latency, stale-reply, `unknown_command` and `usage` simulators; no server calls); remove the `/debug/ai` route and `lib/features/debug_ai/` (the in-chat AI on `FakeAiRepository`, or the real one with its "Real server" switch: setup states, dialogs, every answer and error; keep `fake_ai_repository.dart` for tests); the real `AiRepositoryImpl` is already the default in `initial_binding.dart` (contract in `mobile-handoff/ai-chat-audit.md`); remove the `/debug/palette` route and `lib/features/debug_palette/` (every colour token with contrast, buttons including the wave primary button and FAB samples in `button_samples.dart`, pills, avatars, chart series, notification tiles, action buttons); remove the `/debug/decor` route and `lib/features/debug_decor/` (every onboarding, auth and state decoration with its tokens, and text contrast over them); remove the temporary `notifyflow:` logs (`debugPrint` lines in `local_notification_service.dart`, `feed_repository.dart` `onEvent`, and `socket_service.dart` `onInit` / `didChangeAppLifecycleState`); remove the debug-only `REACT frame` / `REACT event` prints in `socket_service.dart` (`sendCommand`) and `message_repository.dart` (`_onReaction`).
++- Remove `NSAllowsLocalNetworking` from `ios/Runner/Info.plist` and the debug-only `android/app/src/debug/res/xml/network_security_config.xml`; confirm release is https/wss only (`AppConfig.validate`); remove the `/debug/socket`, `/debug/assets` and `/gallery` routes (with `lib/features/gallery/widgets/avatar_samples.dart`, the avatar palette sample, and the AppSpinner and pull-header samples in `gallery_view.dart`) and `lib/core/debug/seed_ui.dart` (`SEED_UI=1` fixture: debug builds only, in-memory sample enterprises and about 13 sample chats, `SEED_ROWS=300` adds generated rows; turn it on with `--dart-define=SEED_UI=1`, best without `BASE_URL`); remove the `/debug/connect` route and `lib/features/debug_connect/`; remove the `/debug/e2e` route, `lib/features/debug_e2e/` (including `hand_on_vectors.dart`), `assets/debug/e2e-rewrap-vectors.json` and its `pubspec.yaml` asset entry and the `mobile-handoff/e2e-vectors.json` entry under `assets:` in `pubspec.yaml` (Flutter cannot bundle an asset for debug only; `lib/data/e2e/` stays); remove the "Remove this device" and "Register this phone" buttons on the `/debug/e2e` screen (they go with the route); remove the "Show device limit sheet (sample devices)" button on the same screen (it goes with the route; the sheet itself, `lib/features/security/widgets/device_limit_sheet.dart`, stays); document and accept, or change, "decrypted text stored unencrypted on the device" (the `plaintext` column of `messages` and the decrypted `last_text` of `conversations`; the envelope is kept as received); check backups: `android:allowBackup="false"` with `fullBackupContent` (`res/xml/backup_rules.xml`) and `dataExtractionRules` (`res/xml/data_extraction_rules.xml`) excluding database, sharedpref, file, root and external; iOS: the databases folder is flagged `isExcludedFromBackup` (`AppDatabase._open` via the `connectum/device` channel) and every `FlutterSecureStorage` uses `first_unlock_this_device` (the Keychain is not restored onto another device), and inspect a release build's merged manifest to confirm; remove `lib/core/debug/seed_connect.dart` and the debug-only "Simulate scan" chips/button in `lib/features/connect/widgets/scanner_pane.dart` (`_SimulateScan`); remove the `/debug/qr` route, `lib/features/debug_qr/` and `lib/core/debug/seed_qr.dart` (sample QR data and `QrSampleRepository`; the real `QrRepository` implementation replaces it); remove the `/debug/tasks` route, `lib/features/debug_tasks/` and `lib/core/debug/seed_tasks.dart` (sample tasks and requests answered in place of the server, injected events; also the `SeedTasks` branches in `task_repository.dart`, `approval_repository.dart` and `task_people_controller.dart`); remove the `/debug/tickets` route, `lib/features/debug_tickets/`, `lib/core/debug/seed_tickets.dart` (the captured `status.*` replies answer in place of the server; also the `SeedTickets` branches in `ticket_repository.dart` and `task_people_controller.dart`), `assets/debug/tickets/` and its `pubspec.yaml` asset entry; remove the `/debug/chat` route and `lib/features/debug_chat/` (sample messages for mentions, forwards, edits, quotes, day separators; also the Chat info page variants and ticket card action samples in `debug_chat_samples.dart`); remove the `/debug/notifications` route and `lib/features/debug_notifications/` (sample feed items, local notification test); remove the `/debug/commands` route, `lib/features/debug_commands/` and `lib/core/debug/seed_commands.dart` (the `#` commands doc catalogue as a fixture, fake suggestions with latency, stale-reply, `unknown_command` and `usage` simulators; no server calls); remove the `/debug/ai` route and `lib/features/debug_ai/` (the in-chat AI on `FakeAiRepository`, or the real one with its "Real server" switch: setup states, dialogs, every answer and error; keep `fake_ai_repository.dart` for tests); the real `AiRepositoryImpl` is already the default in `initial_binding.dart` (contract in `mobile-handoff/ai-chat-audit.md`); remove the `/debug/logo-intro` route and `lib/features/debug_logo_intro/` (replay, scrubber, speed and background toggles for `LogoIntro`, next to the old LogoLoader), then the `/debug/palette` route and `lib/features/debug_palette/` (every colour token with contrast, buttons including the wave primary button and FAB samples in `button_samples.dart`, pills, avatars, chart series, notification tiles, action buttons); remove the `/debug/decor` route and `lib/features/debug_decor/` (every onboarding, auth and state decoration with its tokens, and text contrast over them); remove the temporary `notifyflow:` logs (`debugPrint` lines in `local_notification_service.dart`, `feed_repository.dart` `onEvent`, and `socket_service.dart` `onInit` / `didChangeAppLifecycleState`); remove the debug-only `REACT frame` / `REACT event` prints in `socket_service.dart` (`sendCommand`) and `message_repository.dart` (`_onReaction`).
+ - Remove the offline demo: `lib/demo/` and `test/demo/`, then the `DemoMode` branches in `lib/main.dart`, `lib/core/routes/initial_binding.dart`, `lib/core/config/app_config.dart`, `lib/core/debug/seed_ui.dart` (`isActive`, `identity`), `lib/core/debug/seed_messages.dart` (`send`), `lib/features/profile/profile_controller.dart` (`logOut`) and `lib/features/verification/verification_view.dart` (the OTP hint). `--dart-define=DEMO_MODE=true` runs the app with no server (debug and profile builds only, never release).
+ - App Store export compliance: Info.plist deliberately has no `ITSAppUsesNonExemptEncryption` (own end-to-end encryption); the team answers the App Store Connect export-compliance questions.
+ - Icon: made from the 1206x1305 web logo (`connectum.app/connectum-logo.png`, speckle cleaned, white background); sources in `branding/icon/`, regenerate with `dart run flutter_launcher_icons`, then `git checkout ios/Runner.xcodeproj/project.pbxproj` (the tool edits it). `ic_launcher_round.png` and `branding/play_store_icon_512.png` came from a Pillow script outside the repo. Follow-ups: themed (monochrome) icon layer, a branded native splash (Android 12 splash icon, iOS LaunchImage is a 1x1 placeholder), a vector or higher-res logo source.
+diff --git a/android/app/src/main/res/drawable-hdpi/splash_logo.png b/android/app/src/main/res/drawable-hdpi/splash_logo.png
+index 6df7473..323f566 100644
+Binary files a/android/app/src/main/res/drawable-hdpi/splash_logo.png and b/android/app/src/main/res/drawable-hdpi/splash_logo.png differ
+diff --git a/android/app/src/main/res/drawable-mdpi/splash_logo.png b/android/app/src/main/res/drawable-mdpi/splash_logo.png
+index 7536936..49eaa0c 100644
+Binary files a/android/app/src/main/res/drawable-mdpi/splash_logo.png and b/android/app/src/main/res/drawable-mdpi/splash_logo.png differ
+diff --git a/android/app/src/main/res/drawable-xhdpi/splash_logo.png b/android/app/src/main/res/drawable-xhdpi/splash_logo.png
+index 3ff1b87..377e621 100644
+Binary files a/android/app/src/main/res/drawable-xhdpi/splash_logo.png and b/android/app/src/main/res/drawable-xhdpi/splash_logo.png differ
+diff --git a/android/app/src/main/res/drawable-xxhdpi/splash_logo.png b/android/app/src/main/res/drawable-xxhdpi/splash_logo.png
+index f3581c4..9ead013 100644
+Binary files a/android/app/src/main/res/drawable-xxhdpi/splash_logo.png and b/android/app/src/main/res/drawable-xxhdpi/splash_logo.png differ
+diff --git a/android/app/src/main/res/drawable-xxxhdpi/splash_logo.png b/android/app/src/main/res/drawable-xxxhdpi/splash_logo.png
+index 231f023..7bb9713 100644
+Binary files a/android/app/src/main/res/drawable-xxxhdpi/splash_logo.png and b/android/app/src/main/res/drawable-xxxhdpi/splash_logo.png differ
+diff --git a/android/app/src/main/res/values-v31/styles.xml b/android/app/src/main/res/values-v31/styles.xml
+index 851eeac..826ff7a 100644
+--- a/android/app/src/main/res/values-v31/styles.xml
++++ b/android/app/src/main/res/values-v31/styles.xml
+@@ -3,5 +3,6 @@
+     <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+         <item name="android:windowBackground">@drawable/launch_background</item>
+         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
++        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+     </style>
+ </resources>
+diff --git a/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png b/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png
+index 7536936..49eaa0c 100644
+Binary files a/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png and b/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png differ
+diff --git a/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png b/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png
+index 3ff1b87..377e621 100644
+Binary files a/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png and b/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png differ
+diff --git a/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png b/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png
+index f3581c4..9ead013 100644
+Binary files a/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png and b/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png differ
+diff --git a/ios/Runner/Base.lproj/LaunchScreen.storyboard b/ios/Runner/Base.lproj/LaunchScreen.storyboard
+index ecf33ad..d4130c4 100755
+--- a/ios/Runner/Base.lproj/LaunchScreen.storyboard
++++ b/ios/Runner/Base.lproj/LaunchScreen.storyboard
+@@ -32,6 +32,6 @@
+         </scene>
+     </scenes>
+     <resources>
+-        <image name="LaunchImage" width="148" height="154"/>
++        <image name="LaunchImage" width="89" height="92"/>
+     </resources>
+ </document>
+diff --git a/lib/core/routes/app_pages.dart b/lib/core/routes/app_pages.dart
+index 03dcb15..9d0f6f9 100644
+--- a/lib/core/routes/app_pages.dart
++++ b/lib/core/routes/app_pages.dart
+@@ -30,6 +30,8 @@ import '../../features/debug_formlogic/debug_formlogic_binding.dart';
+ import '../../features/debug_formlogic/debug_formlogic_view.dart';
+ import '../../features/debug_decor/debug_decor_binding.dart';
+ import '../../features/debug_decor/debug_decor_view.dart';
++import '../../features/debug_logo_intro/debug_logo_intro_binding.dart';
++import '../../features/debug_logo_intro/debug_logo_intro_view.dart';
+ import '../../features/debug_palette/debug_palette_binding.dart';
+ import '../../features/debug_palette/debug_palette_view.dart';
+ import '../../features/debug_qr/debug_qr_binding.dart';
+@@ -305,6 +307,13 @@ class AppPages {
+         DebugConnectBinding(),
+         AppTransitionKind.push,
+       ),
++    if (kDebugMode)
++      _page(
++        AppRoutes.debugLogoIntro,
++        () => const DebugLogoIntroView(),
++        DebugLogoIntroBinding(),
++        AppTransitionKind.push,
++      ),
+     if (kDebugMode)
+       _page(
+         AppRoutes.debugPalette,
+diff --git a/lib/core/routes/app_routes.dart b/lib/core/routes/app_routes.dart
+index 04de3c4..62f40e4 100644
+--- a/lib/core/routes/app_routes.dart
++++ b/lib/core/routes/app_routes.dart
+@@ -33,6 +33,7 @@ class AppRoutes {
+   static const debugConnect = '/debug/connect';
+   static const debugQr = '/debug/qr';
+   static const debugPalette = '/debug/palette';
++  static const debugLogoIntro = '/debug/logo-intro';
+   static const debugDecor = '/debug/decor';
+   static const debugChat = '/debug/chat';
+   static const debugNotifications = '/debug/notifications';
+diff --git a/lib/features/gallery/gallery_view.dart b/lib/features/gallery/gallery_view.dart
+index e48c0dd..6afbd2b 100644
+--- a/lib/features/gallery/gallery_view.dart
++++ b/lib/features/gallery/gallery_view.dart
+@@ -72,6 +72,7 @@ class GalleryView extends GetView<GalleryController> {
+     'debug/socket': AppRoutes.debugSocket,
+     'debug/assets': AppRoutes.debugAssets,
+     'debug/palette': AppRoutes.debugPalette,
++    'debug/logo-intro': AppRoutes.debugLogoIntro,
+     'debug/decor': AppRoutes.debugDecor,
+     'debug/chat': AppRoutes.debugChat,
+     'debug/notifications': AppRoutes.debugNotifications,
+diff --git a/lib/features/splash/splash_controller.dart b/lib/features/splash/splash_controller.dart
+index 5188864..5222312 100644
+--- a/lib/features/splash/splash_controller.dart
++++ b/lib/features/splash/splash_controller.dart
+@@ -9,6 +9,10 @@ import '../../core/widgets/logo_loader/logo_loader.dart';
+ import '../../data/repositories/session_repository.dart';
+ import '../../data/session_store.dart';
+ 
++/// TUNE ME: true plays the LogoIntro on the splash (one shot, then holds the
++/// final frame); false is the previous LogoLoader flow.
++const bool kSplashUsesLogoIntro = true;
++
+ class SplashController extends GetxController with WidgetsBindingObserver {
+   SplashController({
+     required this.session,
+@@ -17,6 +21,7 @@ class SplashController extends GetxController with WidgetsBindingObserver {
+     this.resolveRoute,
+     this.navigate,
+     this.shouldReduceMotion,
++    this.usesLogoIntro = kSplashUsesLogoIntro,
+   });
+ 
+   // TUNE ME: splash timing
+@@ -24,6 +29,7 @@ class SplashController extends GetxController with WidgetsBindingObserver {
+   static const extraRun = Duration(milliseconds: 2000);
+   static const endDelay = Duration(milliseconds: 300);
+   static const reducedMotionDelay = Duration(milliseconds: 300);
++  static const introHold = Duration(milliseconds: 500);
+ 
+   static const onboardingSeenKey = 'onboarding.seen';
+ 
+@@ -36,7 +42,10 @@ class SplashController extends GetxController with WidgetsBindingObserver {
+   final void Function(String route)? navigate;
+   final bool Function()? shouldReduceMotion;
+ 
++  final bool usesLogoIntro;
++
+   final loader = LogoLoaderController();
++  final _introDone = Completer<void>();
+ 
+   final _timers = <Timer>{};
+   bool _isStarted = false;
+@@ -79,10 +88,23 @@ class SplashController extends GetxController with WidgetsBindingObserver {
+     }
+   }
+ 
++  /// The LogoIntro calls this when its animation ended (or at once with reduced motion).
++  void onIntroCompleted() {
++    if (!_introDone.isCompleted) _introDone.complete();
++  }
++
+   /// The whole splash sequence. Runs once per controller.
+   Future<void> run() async {
+     if (_isStarted || _isClosed) return;
+     _isStarted = true;
++    if (usesLogoIntro) {
++      final work = _work();
++      await _introDone.future;
++      await _delay(introHold);
++      final route = await work;
++      _finish(route);
++      return;
++    }
+     final reduce =
+         shouldReduceMotion?.call() ??
+         WidgetsBinding
+diff --git a/lib/features/splash/splash_view.dart b/lib/features/splash/splash_view.dart
+index 4ef1994..8699729 100644
+--- a/lib/features/splash/splash_view.dart
++++ b/lib/features/splash/splash_view.dart
+@@ -2,16 +2,30 @@ import 'package:flutter/material.dart';
+ import 'package:get/get.dart';
+ 
+ import '../../core/theme/app_spacing.dart';
++import '../../core/widgets/logo_intro/logo_intro.dart';
+ import '../../core/widgets/app_ambient_backdrop.dart';
+ import '../../core/widgets/app_scaffold.dart';
+ import '../../core/widgets/logo_loader/logo_loader.dart';
+ import 'splash_controller.dart';
+ 
++// TUNE ME: LogoIntro width on the Flutter splash (dp).
++const double kSplashLogoIntroWidth = 240;
++
+ class SplashView extends GetView<SplashController> {
+   const SplashView({super.key});
+ 
+   @override
+   Widget build(BuildContext context) {
++    if (controller.usesLogoIntro) {
++      return AppScaffold(
++        body: Center(
++          child: LogoIntro(
++            width: kSplashLogoIntroWidth,
++            onCompleted: controller.onIntroCompleted,
++          ),
++        ),
++      );
++    }
+     return AppScaffold(
+       ambient: AppAmbientVariant.splash,
+       body: Center(
+diff --git a/test/core/color_allowlist.txt b/test/core/color_allowlist.txt
+index ab3028f..9446804 100644
+--- a/test/core/color_allowlist.txt
++++ b/test/core/color_allowlist.txt
+@@ -2,3 +2,4 @@
+ hard-coded|lib/core/widgets/onboarding_stage.dart|black and transparent alpha mask stops of a ShaderMask, never painted as a colour
+ hard-coded|lib/core/widgets/app_ambient_backdrop.dart|transparent alpha mask stop of a ShaderMask, never painted as a colour
+ hard-coded|lib/core/widgets/logo_loader/logo_data.dart|generated from the logo (the brand blue); never edited by hand
++hard-coded|lib/core/widgets/logo_intro/logo_intro_data.dart|generated artwork colours from the logo SVG; never edited by hand
+diff --git a/test/splash/splash_controller_test.dart b/test/splash/splash_controller_test.dart
+index b692f09..3f2ee3e 100644
+--- a/test/splash/splash_controller_test.dart
++++ b/test/splash/splash_controller_test.dart
+@@ -70,6 +70,7 @@ Future<_Run> _launch(
+       resolveRoute: work ?? () async => '/done',
+       navigate: (r) => run.routes.add(r),
+       shouldReduceMotion: () => isReduced,
++      usesLogoIntro: false,
+     ),
+   );
+   run = _Run(tester, controller);
+@@ -228,6 +229,7 @@ void main() {
+         resolveRoute: () async => '/done',
+         navigate: (_) {},
+         shouldReduceMotion: () => false,
++        usesLogoIntro: false,
+       ),
+     );
+     await tester.pumpWidget(const MaterialApp(home: SplashView()));
+diff --git a/tool/logo/README.md b/tool/logo/README.md
+index 2ed5cfd..e501b8f 100644
+--- a/tool/logo/README.md
++++ b/tool/logo/README.md
+@@ -1 +1,3 @@
+ Recolours `lib/core/widgets/logo_loader/logo_data.dart` from `design/brand/connectum_logo_blue.svg` (verifies same geometry first): `python3 tool/logo/recolor_logo_data.py [svg] [--check]`.
++
++Generates `lib/core/widgets/logo_intro/logo_intro_data.dart` from `design/brand/connectum_logo_animated.svg` (the 57 C parts and the wordmark; prints the start-order table and fails if the expected big/top parts change): `python3 tool/logo/generate_logo_intro_data.py [svg] [out] [--check]`.

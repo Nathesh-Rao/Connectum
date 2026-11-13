@@ -513,6 +513,11 @@ class _Problem extends StatelessWidget {
         'Close',
         onClose,
       ),
+      AiErrorKind.careEmpty || AiErrorKind.careEmptyPatient => (
+        Icons.chat_bubble_outline_rounded,
+        'Close',
+        onClose,
+      ),
       AiErrorKind.noMessages || AiErrorKind.tooLarge when c.isCare => (
         Icons.chat_bubble_outline_rounded,
         'Close',

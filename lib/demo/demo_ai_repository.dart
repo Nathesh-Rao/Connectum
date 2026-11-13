@@ -15,8 +15,17 @@ class DemoAiRepository extends FakeAiRepository {
     FakeAiScenario.short,
   ];
 
+  /// Care questions in turn: an answer, the empty thread, no thread yet.
+  static const _careTurns = [
+    FakeCareThread.team,
+    FakeCareThread.empty,
+    FakeCareThread.notFound,
+  ];
+  int _careAsked = 0;
+
   @override
   Stream<AiSummaryChunk> summarize(AiSummaryRequest request) {
+    if (request.isCare) care = _careTurns[_careAsked++ % _careTurns.length];
     scenario = _turns[summarizeCalls % _turns.length];
     return super.summarize(request);
   }

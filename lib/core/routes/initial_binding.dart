@@ -5,10 +5,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../data/api/api_client.dart';
 import '../../data/attachment_cache.dart';
+import '../config/app_config.dart';
 import '../debug/seed_ui.dart';
 import '../../data/db/app_database.dart';
 import '../../data/e2e/e2e_key_store.dart';
@@ -31,7 +33,12 @@ import '../../features/notifications/notification_router.dart';
 import '../../data/repositories/form_file_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/repositories/message_repository.dart';
+import '../../data/profile_photo/profile_photo_picker.dart';
+import '../../data/repositories/people_avatars.dart';
 import '../../data/repositories/presence_repository.dart';
+import '../../data/repositories/profile_photo_repository.dart';
+import '../widgets/avatar_image.dart';
+import '../../demo/demo_profile_photo_picker.dart';
 import '../../data/repositories/qr_repository.dart';
 import '../../data/repositories/typing_repository.dart';
 import '../../data/repositories/session_repository.dart';
@@ -80,6 +87,9 @@ class InitialBinding extends Bindings {
     );
     final db = Get.put(AppDatabase(), permanent: true);
     final api = Get.put(ApiClient(store), permanent: true);
+    if (!kReleaseMode && !isDemo && AppConfig.isConfigured) {
+      unawaited(_logEnvironment(api));
+    }
     Get.put(connectivity, permanent: true);
     final socket = Get.put(
       isDemo
@@ -176,6 +186,18 @@ class InitialBinding extends Bindings {
       AttachmentCache(attachments.dio),
       permanent: true,
     );
+    AvatarImages.cache = attachmentCache;
+    Get.put(PeopleAvatars(db, store, socket, conversations), permanent: true);
+    Get.put<ProfilePhotoRepository>(
+      isDemo
+          ? FakeProfilePhotoRepository(register: AvatarImages.registerMemory)
+          : ProfilePhotoRepositoryImpl(attachments.dio, store, socket),
+      permanent: true,
+    );
+    Get.put<ProfilePhotoPicker>(
+      isDemo ? DemoProfilePhotoPicker() : ImageProfilePhotoPicker(),
+      permanent: true,
+    );
     // Decrypted documents made for the viewer last run do not outlive it.
     unawaited(attachmentCache.clearOpenTmp());
     final session = Get.put(
@@ -207,4 +229,11 @@ class InitialBinding extends Bindings {
       unawaited(SeedTickets.start());
     }
   }
+}
+
+Future<void> _logEnvironment(ApiClient api) async {
+  try {
+    final data = await api.version(const Duration(seconds: 4));
+    debugPrint('server: ${data['environment']} ${data['release']}');
+  } catch (_) {}
 }

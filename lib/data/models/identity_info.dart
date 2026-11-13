@@ -50,6 +50,7 @@ class IdentityInfo {
     this.connectumId = '',
     this.name = '',
     this.username = '',
+    this.hasPassword = false,
   });
 
   final String token;
@@ -58,6 +59,7 @@ class IdentityInfo {
   final String connectumId;
   final String name;
   final String username;
+  final bool hasPassword;
   final List<EnterpriseMembership> enterprises;
 
   bool get isExpired =>
@@ -67,6 +69,7 @@ class IdentityInfo {
     List<EnterpriseMembership>? enterprises,
     int? expiresTs,
     String? connectumId,
+    bool? hasPassword,
   }) => IdentityInfo(
     token: token,
     email: email,
@@ -75,6 +78,7 @@ class IdentityInfo {
     connectumId: connectumId ?? this.connectumId,
     name: name,
     username: username,
+    hasPassword: hasPassword ?? this.hasPassword,
   );
 
   static List<EnterpriseMembership> parseEnterprises(Object? raw) =>
@@ -98,6 +102,7 @@ class IdentityInfo {
       connectumId: idText(identity['connectumId']),
       name: idText(identity['name']),
       username: idText(identity['username']),
+      hasPassword: identity['hasPassword'] == true,
       enterprises: parseEnterprises(data['enterprises']),
     );
   }
@@ -108,6 +113,7 @@ class IdentityInfo {
     'connectumId': connectumId,
     'name': name,
     'username': username,
+    'hasPassword': hasPassword,
     'enterprises': enterprises.map((e) => e.toJson()).toList(),
   };
 
@@ -119,6 +125,7 @@ class IdentityInfo {
         connectumId: idText(j['connectumId']),
         name: idText(j['name']),
         username: idText(j['username']),
+        hasPassword: j['hasPassword'] == true,
         enterprises: parseEnterprises(j['enterprises']),
       );
 }

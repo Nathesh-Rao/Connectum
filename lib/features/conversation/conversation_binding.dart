@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../../data/repositories/people_avatars.dart';
+
 import '../../core/routes/home_reload.dart';
 import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
@@ -51,6 +53,7 @@ class ConversationBinding extends Bindings {
         tickets: Get.find<TicketRepository>(),
         aiRepository: Get.find<AiRepository>(),
         aiSetup: Get.find<AiSetupCache>(),
+        avatars: Get.find<PeopleAvatars>(),
         newTicketDetail: (ticketId) => TicketDetailController(
           ticketId: ticketId,
           tickets: Get.find<TicketRepository>(),

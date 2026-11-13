@@ -1,5 +1,8 @@
 import 'package:get/get.dart';
 
+import '../../data/profile_photo/profile_photo_picker.dart';
+import '../../data/repositories/people_avatars.dart';
+import '../../data/repositories/profile_photo_repository.dart';
 import '../../data/repositories/qr_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
@@ -17,6 +20,9 @@ class ProfileBinding extends Bindings {
         connectivity: Get.find<ConnectivityService>(),
         switcher: Get.find<EnterpriseSwitcherController>(),
         qr: Get.find<QrRepository>(),
+        avatars: Get.find<PeopleAvatars>(),
+        photos: Get.find<ProfilePhotoRepository>(),
+        picker: Get.find<ProfilePhotoPicker>(),
       ),
     );
   }

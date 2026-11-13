@@ -38,6 +38,13 @@ enum FakeCareThread {
 
   /// `care.thread` says `not_found` to the patient: no thread yet.
   patientNotFound,
+
+  /// An employee has joined but nothing is recorded: `care.summary` is empty
+  /// (a team member reading).
+  empty,
+
+  /// The same, for the patient.
+  patientEmpty,
 }
 
 const _team = [
@@ -192,19 +199,27 @@ class FakeAiRepository implements AiRepository {
     if (request != null && request.isCare) {
       isPatientView =
           care == FakeCareThread.patient ||
-          care == FakeCareThread.patientNotFound;
-      if (request.isCareQuestion) {
-        try {
-          await careThread(request.carePerson!);
-        } on AiError catch (e) {
-          if (!out.isClosed) {
-            out.addError(e);
-            await out.close();
-          }
-          return;
+          care == FakeCareThread.patientNotFound ||
+          care == FakeCareThread.patientEmpty;
+      try {
+        final thread = request.isCareQuestion
+            ? await careThread(request.carePerson!)
+            : _thread(request.carePerson!);
+        if (thread.count == 0) {
+          throw AiError(
+            thread.isPatient
+                ? AiErrorKind.careEmptyPatient
+                : AiErrorKind.careEmpty,
+          );
         }
-        if (out.isClosed) return;
+      } on AiError catch (e) {
+        if (!out.isClosed) {
+          out.addError(e);
+          await out.close();
+        }
+        return;
       }
+      if (out.isClosed) return;
     }
     if (scenario == FakeAiScenario.failure) {
       out.addError(AiError(failure));
@@ -240,8 +255,24 @@ class FakeAiRepository implements AiRepository {
   Future<CareThread> careThread(String person) async {
     careThreadCalls++;
     await Future<void>.delayed(delay);
-    final isPatient = care == FakeCareThread.patient;
+    return _thread(person);
+  }
+
+  /// What `care.thread` / `care.summary` say for [care] (the one-tap summary
+  /// reads the same state without the thread call).
+  CareThread _thread(String person) {
+    final isPatient =
+        care == FakeCareThread.patient || care == FakeCareThread.patientEmpty;
     return switch (care) {
+      FakeCareThread.empty || FakeCareThread.patientEmpty => CareThread(
+        conversation: 'group:care-$person',
+        person: person,
+        name: 'Ravi Kumar',
+        transcript: '',
+        count: 0,
+        team: _team,
+        isPatient: isPatient,
+      ),
       FakeCareThread.notFound => throw const AiError(AiErrorKind.careNotFound),
       FakeCareThread.patientNotFound => throw const AiError(
         AiErrorKind.careNotStarted,

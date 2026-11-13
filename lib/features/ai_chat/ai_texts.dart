@@ -34,6 +34,19 @@ class AiTexts {
   static const posted = 'Summary posted';
   static const postFailed = "Couldn't post the summary";
 
+  static const encryptedTitle = 'AI not available in encrypted chats';
+  static const encryptedText =
+      "The AI assistant isn't available in end-to-end encrypted chats. "
+      'Nothing from this chat was read or sent.';
+
+  static const careEmptyTitle = 'Nothing recorded yet';
+  static const careEmptyText =
+      'Nothing has been recorded in this thread yet. Come back once the care '
+      'team has added something.';
+  static const careEmptyPatientText =
+      'Nothing has been recorded in your care conversation yet. Once your '
+      'care team adds something, you can ask about it here.';
+
   static const setupTitle = "AI isn't set up yet";
 
   /// The web's words (`workspaceAgent.js`, `no_agent`); an administrator is
@@ -68,6 +81,8 @@ class AiTexts {
     AiErrorKind.emptyAnswer => 'No answer',
     AiErrorKind.careNotFound => 'No care conversation',
     AiErrorKind.careNotStarted => 'No care conversation yet',
+    AiErrorKind.careEmpty || AiErrorKind.careEmptyPatient => careEmptyTitle,
+    AiErrorKind.encrypted => encryptedTitle,
   };
 
   /// The classified web error behind a kind (`AiErrorText`), or null for
@@ -134,6 +149,9 @@ class AiTexts {
         'not_found',
         isPatient: true,
       )!.message,
+      AiErrorKind.careEmpty => careEmptyText,
+      AiErrorKind.careEmptyPatient => careEmptyPatientText,
+      AiErrorKind.encrypted => encryptedText,
       AiErrorKind.failed ||
       AiErrorKind.providerBusy ||
       AiErrorKind.badRequest when hasDetail => detail,

@@ -196,37 +196,6 @@ void main() {
         expect(has(colors, 0x6A, 0x3F, 0xD4), isTrue, reason: '$name purple');
       }
     });
-
-    test('the onboarding copies have no violet, purple or warm colour', () {
-      for (final name in [
-        'onboarding_enterprises',
-        'onboarding_network',
-        'onboarding_security',
-      ]) {
-        final colors = blueColors(name);
-        expect(colors, isNotEmpty);
-        final violet = colors.where((c) {
-          final hsl = HSLColor.fromColor(
-            Color.from(
-              alpha: 1,
-              red: c[0].toDouble().clamp(0, 1),
-              green: c[1].toDouble().clamp(0, 1),
-              blue: c[2].toDouble().clamp(0, 1),
-            ),
-          );
-          return hsl.hue >= 245 && hsl.hue <= 330 && hsl.saturation > 0.1;
-        });
-        expect(violet, isEmpty, reason: '$name has violet or purple');
-        expect(colors.where(_isWarm), isEmpty, reason: '$name has warm');
-      }
-    });
-
-    test('the code loads the _blue copies of the onboarding files', () {
-      final lottie = File(
-        'lib/core/widgets/onboarding_lottie.dart',
-      ).readAsStringSync();
-      expect(lottie, contains("_blue.json"));
-    });
   });
 
   group('goldens', () {

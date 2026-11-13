@@ -15,6 +15,7 @@ class AppRoutes {
   static const workspace = '/workspace';
   static const form = '/form';
   static const profile = '/profile';
+  static const photoCrop = '/profile/photo-crop';
   static const notifications = '/notifications';
   static const security = '/security';
   static const newGroup = '/new-group';
@@ -33,13 +34,18 @@ class AppRoutes {
   static const debugConnect = '/debug/connect';
   static const debugQr = '/debug/qr';
   static const debugPalette = '/debug/palette';
+  static const debugLogoIntro = '/debug/logo-intro';
   static const debugDecor = '/debug/decor';
+  static const debugOnboarding = '/debug/onboarding';
+  static const debugOnboardingAnim = '/debug/onboarding-anim';
+  static const debugAuth = '/debug/auth';
   static const debugChat = '/debug/chat';
   static const debugNotifications = '/debug/notifications';
   static const debugTasks = '/debug/tasks';
   static const debugTickets = '/debug/tickets';
   static const debugCommands = '/debug/commands';
   static const debugAi = '/debug/ai';
+  static const debugPhotoCrop = '/debug/photo-crop';
 
   static String ticketOf(int id) => '/tickets/$id';
 

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../data/repositories/conversation_repository.dart';
+import '../../data/repositories/people_avatars.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
@@ -20,6 +21,7 @@ class ChatInfoBinding extends Bindings {
         tickets: Get.find<TicketRepository>(),
         store: Get.find<SessionStore>(),
         connectivity: Get.find<ConnectivityService>(),
+        avatars: Get.find<PeopleAvatars>(),
       ),
       tag: id,
     );

@@ -1,0 +1,1 @@
+Regenerates the native splash logo at `LOGO_SCALE` (0.6) of the original 148 x 154 dp: Android `splash_logo.png`, the Android 12+ `splash_icon.png` (288 dp canvas, `windowSplashScreenAnimatedIcon`) and the iOS LaunchImage 1x/2x/3x. Needs Pillow: `python3 tool/splash/make_splash.py`.

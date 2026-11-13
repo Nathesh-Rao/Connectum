@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../demo/demo_mode.dart';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -10,12 +11,19 @@ import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
+import '../../core/widgets/app_notice_card.dart';
+import '../../core/widgets/app_notices.dart';
+import '../../core/widgets/avatar_image.dart';
 import '../../core/utils/app_settings.dart';
+import '../../data/profile_photo/profile_photo_picker.dart';
+import '../../data/repositories/people_avatars.dart';
+import '../../data/repositories/profile_photo_repository.dart';
 import '../../data/repositories/qr_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../chats/enterprise_switcher_controller.dart';
+import '../password/password_sheet.dart';
 import '../qr/qr_sheet.dart';
 
 class ProfileController extends GetxController {
@@ -25,6 +33,9 @@ class ProfileController extends GetxController {
     required this.connectivity,
     required this.switcher,
     required this.qr,
+    required this.avatars,
+    required this.photos,
+    required this.picker,
   });
 
   final SessionStore store;
@@ -32,7 +43,15 @@ class ProfileController extends GetxController {
   final ConnectivityService connectivity;
   final EnterpriseSwitcherController switcher;
   final QrRepository qr;
+  final PeopleAvatars avatars;
+  final ProfilePhotoRepository photos;
+  final ProfilePhotoPicker picker;
 
+  /// True while a new picture is being sent or the old one removed.
+  final isPhotoBusy = false.obs;
+
+  /// 0 to 1 while a picture is uploading, null otherwise.
+  final photoProgress = Rxn<double>();
   final isCopied = false.obs;
   final isLoggingOut = false.obs;
   final version = RxnString();
@@ -84,10 +103,106 @@ class ProfileController extends GetxController {
     _copiedTimer = Timer(AppDurations.copiedHold, () => isCopied.value = false);
   }
 
+  /// The own picture's address, or null. Reads an Rx value: call it in Obx.
+  String? get picture => avatars.urlOf(username);
+
+  bool get hasPhoto => picture != null;
+
+  /// Picks a picture, lets the person crop it, then uploads it. The new
+  /// picture shows at once; a failure puts the old one back.
+  Future<void> changePhoto(PhotoSource source) async {
+    if (isPhotoBusy.value) return;
+    try {
+      final picked = await picker.pick(source);
+      if (picked == null || isClosed) return;
+      // Untyped: GetX builds a GetPageRoute<dynamic>, which a typed
+      // pushNamed<Uint8List> cannot accept.
+      final result = await Get.toNamed(
+        AppRoutes.photoCrop,
+        arguments: {'bytes': picked},
+      );
+      if (isClosed || result is! Uint8List) return;
+      await _replace(
+        () => photos.upload(
+          result,
+          onProgress: (p) => photoProgress.value = p,
+          cancel: CancelToken(),
+        ),
+        shown: AvatarImages.registerMemory(result),
+      );
+    } on PhotoPickException catch (e) {
+      if (!isClosed) _pickFailed(e);
+    } catch (e) {
+      debugPrint('changePhoto failed: ${e.runtimeType}');
+      if (!isClosed) {
+        AppNotices.show(
+          "Couldn't open the photo editor. Try again.",
+          variant: AppNoticeVariant.error,
+        );
+      }
+    }
+  }
+
+  Future<void> removePhoto() => _replace(photos.remove, shown: null);
+
+  /// Shows [shown] as the own picture, runs [work] and keeps the answer; any
+  /// failure restores what was there and says why.
+  Future<void> _replace(
+    Future<Object?> Function() work, {
+    String? shown,
+  }) async {
+    final name = username;
+    final previous = avatars.urlOf(name);
+    isPhotoBusy.value = true;
+    photoProgress.value = shown == null ? null : 0;
+    try {
+      await avatars.set(name, shown);
+      final result = await work();
+      if (result is String) await avatars.set(name, result);
+    } on ProfilePhotoException catch (e) {
+      await avatars.set(name, previous);
+      AppNotices.show(
+        e.message,
+        variant: e.error == ProfilePhotoError.network
+            ? AppNoticeVariant.warning
+            : AppNoticeVariant.error,
+      );
+    } catch (e) {
+      debugPrint('photo update failed: ${e.runtimeType}');
+      await avatars.set(name, previous);
+      AppNotices.show(
+        "Couldn't update your photo. Try again.",
+        variant: AppNoticeVariant.error,
+      );
+    } finally {
+      if (!isClosed) {
+        isPhotoBusy.value = false;
+        photoProgress.value = null;
+      }
+    }
+  }
+
+  void _pickFailed(PhotoPickException e) {
+    final isDenied =
+        e.error == PhotoPickError.cameraDenied ||
+        e.error == PhotoPickError.libraryDenied;
+    AppNotices.show(
+      isDenied ? '${e.message} Turn it on in Settings to continue.' : e.message,
+      variant: isDenied ? AppNoticeVariant.warning : AppNoticeVariant.error,
+      actionLabel: isDenied ? 'Open Settings' : null,
+      onAction: isDenied ? AppSettings.open : null,
+    );
+  }
+
   void prepareSwitcher() => switcher.prepare();
 
   Future<void> openQr(BuildContext context) =>
       QrSheet.show(context, repository: qr);
+
+  bool get hasPassword => store.identity.value?.hasPassword ?? false;
+
+  Future<void> openPassword(BuildContext context) =>
+      PasswordSheet.show(context, hasPassword: hasPassword);
 
   void openSecurity() => Get.toNamed(AppRoutes.security);
 

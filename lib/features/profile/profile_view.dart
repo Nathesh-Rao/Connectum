@@ -13,6 +13,7 @@ import '../chats/widgets/enterprise_switcher_sheet.dart';
 import 'profile_controller.dart';
 import 'widgets/logout_sheet.dart';
 import 'widgets/profile_identity_card.dart';
+import 'widgets/profile_photo_sheet.dart';
 import 'widgets/profile_row.dart';
 
 class ProfileView extends GetView<ProfileController> {
@@ -26,6 +27,17 @@ class ProfileView extends GetView<ProfileController> {
       child: EnterpriseSwitcherSheet(controller: controller.switcher),
     );
   }
+
+  Future<void> _openPhotoSheet(BuildContext context) =>
+      AppBottomSheet.show<void>(
+        context,
+        title: 'Profile photo',
+        child: ProfilePhotoSheet(
+          hasPhoto: controller.hasPhoto,
+          onPick: controller.changePhoto,
+          onRemove: controller.removePhoto,
+        ),
+      );
 
   Future<void> _confirmLogOut(BuildContext context) async {
     final unsent = await controller.unsentCount();
@@ -85,6 +97,13 @@ class ProfileView extends GetView<ProfileController> {
                       username: c.username,
                       organisation: c.organisation,
                       isOnline: c.isOnline,
+                      picture: c.picture,
+                      progress: c.isPhotoBusy.value
+                          ? (c.photoProgress.value ?? 0)
+                          : null,
+                      onPhotoTap: c.isPhotoBusy.value
+                          ? null
+                          : () => _openPhotoSheet(context),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     ProfileGroup(
@@ -122,6 +141,14 @@ class ProfileView extends GetView<ProfileController> {
                           title: 'Switch enterprise',
                           subtitle: c.organisation,
                           onTap: () => _openSwitcher(context),
+                        ),
+                        ProfileActionRow(
+                          icon: Icons.lock_outline,
+                          title: 'Password',
+                          subtitle: c.hasPassword
+                              ? 'Change or remove your password'
+                              : 'Sign in without waiting for a code',
+                          onTap: () => c.openPassword(context),
                         ),
                         ProfileActionRow(
                           icon: Icons.shield_outlined,

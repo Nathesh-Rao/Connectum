@@ -66,6 +66,7 @@ class ChatInfoView extends GetView<ChatInfoController> {
                 onOpenTicket: c.openTicket,
                 onAddPeople: c.addPeople,
                 onOpenMember: c.openMember,
+                pictureOf: c.pictureOf,
                 onRename: () {
                   final renamer = c.renamer;
                   if (renamer == null) return;

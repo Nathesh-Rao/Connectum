@@ -1185,6 +1185,7 @@ class SeedUi {
       Conversation(
         convId: 'dm:priya',
         kind: 'dm',
+        avatar: 'asset:assets/debug/avatars/demo_1.png',
         title: 'Priya Sharma',
         lastText: "The new flow looks great. Let's ship it!",
         lastTs: ago(const Duration(minutes: 2)),
@@ -1242,6 +1243,7 @@ class SeedUi {
       Conversation(
         convId: 'dm:arjun',
         kind: 'dm',
+        avatar: 'asset:assets/debug/avatars/demo_2.png',
         title: 'Arjun Mehta',
         lastText: 'Can you take a look at the proposal?',
         lastTs: ago(const Duration(minutes: 28)),
@@ -1260,6 +1262,7 @@ class SeedUi {
       Conversation(
         convId: 'dm:meera',
         kind: 'dm',
+        avatar: 'asset:assets/debug/avatars/demo_3.png',
         title: 'Meera Iyer',
         lastText: 'Clinical examination - Ortho',
         lastTs: ago(const Duration(hours: 3)),

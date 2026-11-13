@@ -42,6 +42,7 @@ AppAvatar conversationAvatarFor(
   return AppAvatar(
     name: spec.name,
     kind: spec.kind,
+    picture: c.kind == 'dm' ? c.avatar : null,
     size: size,
     presence: presence,
   );

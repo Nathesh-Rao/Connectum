@@ -4,18 +4,34 @@ import 'api_client.dart';
 class ApiMessages {
   ApiMessages._();
 
+  /// Wrong or unset password: one message, so it never says which part was
+  /// wrong (the server answers the same either way).
+  static const wrongPassword =
+      'That email and password do not match. You can sign in with an emailed code instead.';
+
+  static const passwordLocked =
+      'Too many wrong passwords. Use an emailed code, or try again in a few minutes.';
+
+  static String ofPasswordSignIn(ApiException e) => switch (e.code) {
+    'invalid_credentials' => wrongPassword,
+    'rate_limited' => passwordLocked,
+    _ => of(e),
+  };
+
   static String of(Object error) {
     if (error is! ApiException) {
       return 'Something went wrong. Please try again.';
     }
     return switch (error.code) {
+      'network' when error.status == 503 =>
+        'The server is restarting or busy. Wait a few seconds and try again.',
       'network' || 'bad_response' =>
         "Can't reach the server. Check your connection and try again.",
       'no_account' => 'There is no account for that email. Create one first.',
       'otp_invalid' =>
         error.message.isNotEmpty ? error.message : "That code isn't right.",
       'otp_locked' => 'Too many wrong codes. Ask for a new code.',
-      'rate_limited' => 'Too many tries. Wait a few minutes and try again.',
+      'rate_limited' => 'Too many attempts. Wait a minute and try again.',
       'invalid' =>
         error.message.isNotEmpty ? error.message : 'Check what you entered.',
       'exists' => 'An account with that email already exists. Sign in instead.',

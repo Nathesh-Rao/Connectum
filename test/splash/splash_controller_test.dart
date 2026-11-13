@@ -70,6 +70,7 @@ Future<_Run> _launch(
       resolveRoute: work ?? () async => '/done',
       navigate: (r) => run.routes.add(r),
       shouldReduceMotion: () => isReduced,
+      usesLogoIntro: false,
     ),
   );
   run = _Run(tester, controller);
@@ -228,6 +229,7 @@ void main() {
         resolveRoute: () async => '/done',
         navigate: (_) {},
         shouldReduceMotion: () => false,
+        usesLogoIntro: false,
       ),
     );
     await tester.pumpWidget(const MaterialApp(home: SplashView()));

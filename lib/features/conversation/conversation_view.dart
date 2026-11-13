@@ -68,7 +68,7 @@ class ConversationView extends GetView<ConversationController> {
                 status: isReady ? c.status : null,
                 avatar: conversationAvatarFor(conv, presence: c.presenceDot),
                 isEncrypted: c.isLocked.value || c.isBlocked.value,
-                onInfoTap: () => Get.toNamed<void>(
+                onInfoTap: () => Get.toNamed(
                   AppRoutes.chatInfoOf(c.conversationId),
                   arguments: c.isLocked.value || c.isBlocked.value,
                 ),

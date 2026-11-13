@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/data/app_countries.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_ambient_backdrop.dart';
@@ -184,24 +185,105 @@ class _Fields extends StatelessWidget {
           );
         }),
         const SizedBox(height: AppSpacing.xl),
-        Obx(
-          () => AppButton.primary(
-            label: c.mode.value == 0 ? 'Sign in' : 'Send me a code',
+        Obx(() {
+          final wait = c.retryIn.value;
+          return AppButton.primary(
+            label: c.mode.value != 0
+                ? 'Send me a code'
+                : wait > 0
+                ? 'Try again in ${wait}s'
+                : 'Sign in',
             icon: Icons.chevron_right,
             isLoading: c.isBusy.value,
-            onPressed: c.submit,
-          ),
-        ),
+            onPressed: wait > 0 ? null : c.submit,
+          );
+        }),
         const SizedBox(height: AppSpacing.md),
-        const Center(
-          child: Text(
-            "We'll email you a one-time verification code.",
-            style: AppText.caption,
-            textAlign: TextAlign.center,
+        Obx(
+          () => Center(
+            child: Text(
+              c.mode.value == 0 && c.isPasswordMode.value
+                  ? 'Forgot it? Sign in with an emailed code.'
+                  : "We'll email you a one-time verification code.",
+              style: AppText.caption,
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
+        Obx(() {
+          if (c.mode.value != 0) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(
+              top: AppSpacing.md,
+              bottom: AppSpacing.sm,
+            ),
+            child: Center(child: _MethodButton(controller: c)),
+          );
+        }),
       ],
     );
+  }
+}
+
+/// Offers the sign-in method that is not the current one.
+class _MethodButton extends StatelessWidget {
+  const _MethodButton({required this.controller});
+
+  final AuthenticationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final isReduced = MediaQuery.disableAnimationsOf(context);
+    return Obx(() {
+      final isPassword = c.isPasswordMode.value;
+      final label = isPassword
+          ? 'Sign in with email code'
+          : 'Sign in with password';
+      return AnimatedSwitcher(
+        duration: isReduced ? Duration.zero : AppDurations.fast,
+        child: Semantics(
+          key: ValueKey<bool>(isPassword),
+          button: true,
+          label: label,
+          excludeSemantics: true,
+          onTap: () => c.setPasswordMode(!isPassword),
+          child: InkWell(
+            borderRadius: AppRadius.controlAll,
+            onTap: () => c.setPasswordMode(!isPassword),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.methodButtonHeight,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPassword ? Icons.mail_outline : Icons.vpn_key_outlined,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodyStrong.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -273,16 +355,21 @@ class _SignInForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'A secure code. No password to remember.',
-          style: AppText.readable,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        _EmailField(controller: controller, isSignIn: true),
-      ],
+    final c = controller;
+    return AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _EmailField(controller: c, isSignIn: true),
+          Obx(() {
+            if (!c.isPasswordMode.value) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: _PasswordField(controller: c),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
@@ -496,11 +583,56 @@ class _EmailField extends StatelessWidget {
             ? const Text('@', style: AppText.leadingGlyph)
             : const _FieldIcon(Icons.mail_outline),
         keyboardType: TextInputType.emailAddress,
-        textInputAction: isSignIn ? TextInputAction.done : TextInputAction.next,
-        onSubmitted: isSignIn ? (_) => c.submit() : null,
-        autofillHints: const [AutofillHints.email],
+        textInputAction: isSignIn && !c.isPasswordMode.value
+            ? TextInputAction.done
+            : TextInputAction.next,
+        onSubmitted: isSignIn && !c.isPasswordMode.value
+            ? (_) => c.submit()
+            : null,
+        autofillHints: isSignIn && c.isPasswordMode.value
+            ? const [AutofillHints.username, AutofillHints.email]
+            : const [AutofillHints.email],
         errorText: c.errorFor('email'),
         onChanged: (_) => c.changed('email'),
+      ),
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  const _PasswordField({required this.controller});
+
+  final AuthenticationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    return Obx(
+      () => AppTextField(
+        controller: c.password,
+        focusNode: c.focus['password'],
+        label: 'Password',
+        hint: 'Your password',
+        leading: const _FieldIcon(Icons.lock_outline),
+        obscureText: c.isPasswordHidden.value,
+        autocorrect: false,
+        keyboardType: TextInputType.visiblePassword,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => c.submit(),
+        autofillHints: const [AutofillHints.password],
+        errorText: c.errorFor('password'),
+        onChanged: (_) => c.changed('password'),
+        suffix: IconButton(
+          tooltip: c.isPasswordHidden.value ? 'Show password' : 'Hide password',
+          icon: Icon(
+            c.isPasswordHidden.value
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            size: 20,
+            color: AppColors.muted,
+          ),
+          onPressed: c.togglePasswordHidden,
+        ),
       ),
     );
   }

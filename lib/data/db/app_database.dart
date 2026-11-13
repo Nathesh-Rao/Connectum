@@ -25,7 +25,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 13;
+  static const _version = 14;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -149,6 +149,14 @@ class AppDatabase {
     12: [],
     // The AI consent table is gone: AI stays blocked in encrypted chats.
     13: ['DROP TABLE IF EXISTS ai_consent'],
+    // People's pictures from `profile` events and people lists: the own one
+    // and everyone who is not in a direct chat row.
+    14: [
+      '''CREATE TABLE people_avatars(
+        org_id TEXT NOT NULL, user_id TEXT NOT NULL, username TEXT NOT NULL,
+        avatar TEXT NOT NULL,
+        PRIMARY KEY(org_id, user_id, username))''',
+    ],
   };
 
   static const _scopedTables = [
@@ -162,6 +170,7 @@ class AppDatabase {
     'form_recents',
     'outbox',
     'sync_cursor',
+    'people_avatars',
   ];
 
   Database? _db;

@@ -5,9 +5,29 @@ import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
+import '../../core/widgets/logo_intro/logo_intro.dart';
 import '../../core/widgets/logo_loader/logo_loader.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
+
+// TUNE ME: splash logo intro.
+/// True plays the LogoIntro once and holds its final frame; false is the
+/// previous LogoLoader flow (400 ms start, 2 s extra, stop, 300 ms).
+const bool kSplashUsesLogoIntro = true;
+
+/// Playback speed of the intro (1 = as authored).
+const double kSplashIntroSpeed = 1.25;
+
+/// Seconds on the authored timeline when the name has landed; the splash may
+/// leave [kSplashHold] after that, at the earliest.
+const double kSplashFinishAt = IntroTiming.last + 0.3;
+const Duration kSplashHold = Duration(milliseconds: 400);
+
+/// Side of the LogoIntro square, dp. The camera ends at scale 0.92 and the
+/// lockup (the name is its widest part, 1007 of the 1200 units) takes 0.772 of
+/// this side: 252 dp gives about 195 dp, 54 % of a 360 dp phone. The icon is
+/// 603 units wide (127 dp).
+const double kSplashLogoSize = 252;
 
 class SplashController extends GetxController with WidgetsBindingObserver {
   SplashController({
@@ -17,6 +37,7 @@ class SplashController extends GetxController with WidgetsBindingObserver {
     this.resolveRoute,
     this.navigate,
     this.shouldReduceMotion,
+    this.usesLogoIntro = kSplashUsesLogoIntro,
   });
 
   // TUNE ME: splash timing
@@ -36,7 +57,10 @@ class SplashController extends GetxController with WidgetsBindingObserver {
   final void Function(String route)? navigate;
   final bool Function()? shouldReduceMotion;
 
+  final bool usesLogoIntro;
+
   final loader = LogoLoaderController();
+  final _introDone = Completer<void>();
 
   final _timers = <Timer>{};
   bool _isStarted = false;
@@ -79,6 +103,11 @@ class SplashController extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  /// The LogoIntro calls this when its authored time reaches [kSplashFinishAt].
+  void onIntroCompleted() {
+    if (!_introDone.isCompleted) _introDone.complete();
+  }
+
   /// The whole splash sequence. Runs once per controller.
   Future<void> run() async {
     if (_isStarted || _isClosed) return;
@@ -91,6 +120,17 @@ class SplashController extends GetxController with WidgetsBindingObserver {
             .accessibilityFeatures
             .disableAnimations;
     final work = _work();
+    if (usesLogoIntro) {
+      if (reduce) {
+        _finish(await work);
+        return;
+      }
+      // Ready AND (finished + hold): whichever is later.
+      await _introDone.future;
+      await _delay(kSplashHold);
+      _finish(await work);
+      return;
+    }
     if (reduce) {
       final hold = _delay(reducedMotionDelay);
       final route = await work;

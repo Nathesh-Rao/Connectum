@@ -71,6 +71,7 @@ flutter:
     - assets/debug/e2e-attachment-vectors.json
     - assets/debug/e2e-rewrap-vectors.json
     - assets/debug/tickets/
+    - assets/debug/avatars/
     - assets/form_logic/form-logic-host-shim.js
     - assets/form_logic/form-logic.bundle.js
     - assets/form_logic/form-logic-conformance.json

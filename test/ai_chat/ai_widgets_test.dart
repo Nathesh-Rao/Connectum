@@ -34,12 +34,14 @@ AiSummaryController make(
   FakeAiRepository fake, {
   bool isOnline = true,
   bool isAdmin = false,
+  bool isEncrypted = false,
   Future<SendResult> Function(String)? post,
 }) => AiSummaryController(
   ai: fake,
   setup: AiSetupCache(fake),
   chatId: 'dm:ana',
   title: () => 'Ana',
+  isEncrypted: () => isEncrypted,
   isOnline: () => isOnline,
   post: post ?? (_) async => SendResult.queued,
   isAdmin: () => isAdmin,
@@ -91,7 +93,7 @@ void main() {
       await tester.tap(find.text(AiTexts.summarize));
       await tester.pumpAndSettle();
       expect(find.text('Last 7 days'), findsOneWidget);
-        await tester.tap(find.text('Last 7 days'));
+      await tester.tap(find.text('Last 7 days'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Summarize'));
       await tester.tap(find.text('Summarize'));
@@ -486,6 +488,7 @@ void main() {
         setup: AiSetupCache(FakeAiRepository()),
         chatId: 'group:care-ravi',
         title: () => 'Ravi',
+        isEncrypted: () => false,
         isOnline: () => true,
         post: (_) async => SendResult.queued,
         isAdmin: () => false,
@@ -505,6 +508,7 @@ void main() {
       setup: AiSetupCache(fake),
       chatId: 'group:care-ravi',
       title: () => 'Ravi',
+      isEncrypted: () => false,
       isOnline: () => true,
       post: (_) async => SendResult.queued,
       isAdmin: () => false,
@@ -534,6 +538,40 @@ void main() {
       expect(fake.lastRequest!.carePerson, 'ravi');
       expect(find.text('Share in chat'), findsOneWidget);
     });
+
+    for (final (state, text) in [
+      (FakeCareThread.empty, AiTexts.careEmptyText),
+      (FakeCareThread.patientEmpty, AiTexts.careEmptyPatientText),
+      (FakeCareThread.notFound, AiTexts.errorText(AiErrorKind.careNotFound)),
+      (
+        FakeCareThread.patientNotFound,
+        AiTexts.errorText(AiErrorKind.careNotStarted),
+      ),
+    ]) {
+      testWidgets('${state.name}: a calm state with its own words and Close', (
+        tester,
+      ) async {
+        final fake = FakeAiRepository(delay: const Duration(milliseconds: 10))
+          ..care = state;
+        final c = care(fake);
+        await c.onSheetOpened();
+        var closed = 0;
+        await tester.pumpWidget(
+          host(AiSheet(controller: c, onClose: () => closed++)),
+        );
+        await tester.tap(find.text('Summarize this thread'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Summarize'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle();
+        expect(find.text(text), findsOneWidget);
+        expect(find.text('Close'), findsOneWidget);
+        expect(find.text('Share in chat'), findsNothing);
+        await tester.tap(find.text('Close'));
+        expect(closed, 1);
+      });
+    }
 
     testWidgets('a chat sheet is unchanged: range and no thread note', (
       tester,

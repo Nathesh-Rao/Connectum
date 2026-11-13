@@ -66,4 +66,11 @@ class AuthValidators {
     }
     return (value: full, error: _mobile.hasMatch(full) ? null : mobileError);
   }
+
+  /// Sign-in only checks that something was typed (the server decides).
+  static String? password(String value) {
+    if (value.isEmpty) return 'Enter your password.';
+    if (value.length > 128) return 'That password is too long.';
+    return null;
+  }
 }

@@ -56,6 +56,53 @@ class AvatarSamples extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text('Picture states', style: AppText.bodyStrong),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        const Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.sm,
+          children: [
+            _PictureState(
+              'picture',
+              AppAvatar(
+                name: 'Asha Rao',
+                kind: AppAvatarKind.person,
+                picture: 'asset:assets/debug/avatars/demo_1.png',
+              ),
+            ),
+            _PictureState(
+              'none',
+              AppAvatar(name: 'Asha Rao', kind: AppAvatarKind.person),
+            ),
+            _PictureState(
+              'broken',
+              AppAvatar(
+                name: 'Asha Rao',
+                kind: AppAvatarKind.person,
+                picture: 'asset:assets/debug/avatars/missing.png',
+              ),
+            ),
+            _PictureState(
+              'plain',
+              AppAvatar(
+                name: 'Asha Rao',
+                picture: 'asset:assets/debug/avatars/demo_2.png',
+              ),
+            ),
+            _PictureState(
+              'group',
+              AppAvatar(
+                name: 'Design',
+                kind: AppAvatarKind.group,
+                picture: 'asset:assets/debug/avatars/demo_3.png',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
         for (final name in names)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -81,4 +128,21 @@ class AvatarSamples extends StatelessWidget {
       ],
     );
   }
+}
+
+class _PictureState extends StatelessWidget {
+  const _PictureState(this.label, this.avatar);
+
+  final String label;
+  final Widget avatar;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      avatar,
+      const SizedBox(height: AppSpacing.xxs),
+      Text(label, style: AppText.readable),
+    ],
+  );
 }

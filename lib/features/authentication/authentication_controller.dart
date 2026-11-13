@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../core/data/app_countries.dart';
@@ -43,10 +46,12 @@ class AuthenticationController extends GetxController {
   final country = TextEditingController();
   final state = TextEditingController();
   final city = TextEditingController();
+  final password = TextEditingController();
 
   final focus = <String, FocusNode>{
     for (final key in [
       'email',
+      'password',
       'org',
       'name',
       'setupMobile',
@@ -61,6 +66,15 @@ class AuthenticationController extends GetxController {
 
   /// +1 when the tab changed towards a higher index, -1 towards a lower one.
   int direction = 1;
+
+  /// Sign in with a password instead of an emailed code (the web's default
+  /// is the code).
+  final isPasswordMode = false.obs;
+  final isPasswordHidden = true.obs;
+
+  /// Seconds left of a lockout the server gave a time for; the button waits.
+  final retryIn = 0.obs;
+  Timer? _retryTimer;
 
   final isBusy = false.obs;
   final isMoreOpen = false.obs;
@@ -95,6 +109,25 @@ class AuthenticationController extends GetxController {
       });
     });
   }
+
+  void setPasswordMode(bool isPassword) {
+    if (isPassword == isPasswordMode.value) return;
+    isPasswordMode.value = isPassword;
+    formError.value = null;
+    serverErrors.clear();
+    password.clear();
+    isPasswordHidden.value = true;
+    touched.remove('password');
+    revision.value++;
+    if (isPassword) {
+      final key = email.text.trim().isEmpty ? 'email' : 'password';
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => focus[key]?.requestFocus(),
+      );
+    }
+  }
+
+  void togglePasswordHidden() => isPasswordHidden.toggle();
 
   void selectTab(int index) {
     if (index == mode.value) return;
@@ -154,6 +187,7 @@ class AuthenticationController extends GetxController {
 
   String? _check(String key) => switch (key) {
     'email' => AuthValidators.email(email.text),
+    'password' => AuthValidators.password(password.text),
     'org' => AuthValidators.enterpriseName(orgName.text),
     'name' => AuthValidators.personName(ownerName.text),
     'setupMobile' => AuthValidators.mobile(
@@ -171,7 +205,7 @@ class AuthenticationController extends GetxController {
   };
 
   List<String> get _activeKeys => switch (mode.value) {
-    0 => ['email'],
+    0 => ['email', if (isPasswordMode.value) 'password'],
     1 => ['org', 'name', 'email', 'setupMobile'],
     _ => ['username', 'email', if (isMoreOpen.value) 'regMobile'],
   };
@@ -191,7 +225,7 @@ class AuthenticationController extends GetxController {
   }
 
   Future<void> submit() async {
-    if (isBusy.value) return;
+    if (isBusy.value || retryIn.value > 0) return;
     submitAttempted.value = true;
     formError.value = null;
     serverErrors.clear();
@@ -228,6 +262,8 @@ class AuthenticationController extends GetxController {
     } else if (e.code == 'invalid_mobile') {
       serverErrors[mode.value == 1 ? 'setupMobile' : 'regMobile'] =
           AuthValidators.mobileError;
+    } else if (mode.value == 0 && isPasswordMode.value) {
+      formError.value = ApiMessages.ofPasswordSignIn(e);
     } else if (e.code == 'no_account' && mode.value == 0 && invite.hasInvite) {
       // An invited person with a new email goes on to create the account.
       selectTab(2);
@@ -241,6 +277,7 @@ class AuthenticationController extends GetxController {
   }
 
   Future<void> _signIn() async {
+    if (isPasswordMode.value) return _passwordSignIn();
     final result = await auth.startLogin(email.text.trim());
     switch (result.kind) {
       case LoginStartKind.trusted:
@@ -250,6 +287,37 @@ class AuthenticationController extends GetxController {
       case LoginStartKind.codeSent:
         _openVerification(AuthFlow.login, null, 30);
     }
+  }
+
+  /// Ends where the code sign-in ends: the identity is stored and the
+  /// enterprise list opens. The password is never kept; it is cleared after
+  /// a refusal (the email stays) and after a success.
+  Future<void> _passwordSignIn() async {
+    try {
+      await auth.loginWithPassword(email.text.trim(), password.text);
+    } on ApiException catch (e) {
+      if (e.code == 'invalid_credentials' || e.code == 'rate_limited') {
+        password.clear();
+        submitAttempted.value = false;
+        touched.remove('password');
+        revision.value++;
+      }
+      if (e.code == 'rate_limited') _startRetry(e.retryAfterSeconds);
+      rethrow;
+    }
+    password.clear();
+    TextInput.finishAutofillContext();
+    Get.offAllNamed(AppRoutes.enterprises);
+  }
+
+  void _startRetry(int? seconds) {
+    _retryTimer?.cancel();
+    if (seconds == null || seconds <= 0) return;
+    retryIn.value = seconds;
+    _retryTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      retryIn.value--;
+      if (retryIn.value <= 0) t.cancel();
+    });
   }
 
   Map<String, dynamic> _setupBody() => {
@@ -342,6 +410,7 @@ class AuthenticationController extends GetxController {
 
   @override
   void onClose() {
+    _retryTimer?.cancel();
     AppNotices.hide(_loginNoticeKey);
     invite.detach();
     for (final c in [
@@ -354,6 +423,7 @@ class AuthenticationController extends GetxController {
       country,
       state,
       city,
+      password,
     ]) {
       c.dispose();
     }

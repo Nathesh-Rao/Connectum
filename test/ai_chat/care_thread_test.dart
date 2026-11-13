@@ -47,6 +47,9 @@ class _Rows extends Fake implements MessageRepository {
   int settled = 0;
 
   @override
+  Future<bool> hasEncryptedHistory(String convId) async => false;
+
+  @override
   Future<void> settleDecrypt() async => settled++;
 
   @override
@@ -223,8 +226,65 @@ void main() {
       await expectLater(
         r.ask(question: 'q'),
         throwsA(
-          isA<AiError>().having((e) => e.kind, 'kind', AiErrorKind.noMessages),
+          isA<AiError>().having((e) => e.kind, 'kind', AiErrorKind.careEmpty),
         ),
+      );
+      expect(r.socket.count('assistant.relay'), 0);
+    });
+
+    test(
+      'the patient gets the patient wording of "nothing recorded"',
+      () async {
+        final r = _Rig(user: 'ravi', rows: const []);
+        await expectLater(
+          r.ask(question: 'q'),
+          throwsA(
+            isA<AiError>().having(
+              (e) => e.kind,
+              'kind',
+              AiErrorKind.careEmptyPatient,
+            ),
+          ),
+        );
+        expect(r.socket.count('assistant.relay'), 0);
+      },
+    );
+
+    test('an EMPTY care.summary after the first employee joined is a friendly '
+        'state, for the one-tap summary too', () async {
+      for (final (user, kind) in [
+        ('me', AiErrorKind.careEmpty),
+        ('ravi', AiErrorKind.careEmptyPatient),
+      ]) {
+        final r = _Rig(user: user);
+        r.socket.answers['care.summary'] = {
+          'person': {'name': 'Ravi Kumar', 'username': 'ravi'},
+          'team': [],
+          'stats': {'forms': 0, 'messages': 0, 'truncated': false},
+          'latest': [],
+          'timeline': [],
+        };
+        await expectLater(
+          r.ask(),
+          throwsA(isA<AiError>().having((e) => e.kind, 'kind', kind)),
+        );
+        expect(r.socket.count('assistant.relay'), 0);
+      }
+    });
+
+    test('the words: team and patient, no error title', () {
+      expect(AiTexts.errorTitle(AiErrorKind.careEmpty), 'Nothing recorded yet');
+      expect(
+        AiTexts.errorTitle(AiErrorKind.careEmptyPatient),
+        'Nothing recorded yet',
+      );
+      expect(
+        AiTexts.errorText(AiErrorKind.careEmpty),
+        contains('in this thread yet'),
+      );
+      expect(
+        AiTexts.errorText(AiErrorKind.careEmptyPatient),
+        contains('your care conversation'),
       );
     });
 
@@ -422,6 +482,35 @@ void main() {
         f.careThread('ravi'),
         throwsA(
           isA<AiError>().having((e) => e.kind, 'k', AiErrorKind.careNotStarted),
+        ),
+      );
+    });
+
+    test('empty and patientEmpty give an empty thread', () async {
+      final f = FakeAiRepository(delay: Duration.zero)
+        ..care = FakeCareThread.empty;
+      expect((await f.careThread('ravi')).count, 0);
+      const request = AiSummaryRequest(
+        chatId: 'group:care-ravi',
+        title: 'Ravi',
+        range: AiRange.everything,
+        carePerson: 'ravi',
+      );
+      await expectLater(
+        f.summarize(request).single,
+        throwsA(
+          isA<AiError>().having((e) => e.kind, 'k', AiErrorKind.careEmpty),
+        ),
+      );
+      f.care = FakeCareThread.patientEmpty;
+      await expectLater(
+        f.summarize(request).single,
+        throwsA(
+          isA<AiError>().having(
+            (e) => e.kind,
+            'k',
+            AiErrorKind.careEmptyPatient,
+          ),
         ),
       );
     });

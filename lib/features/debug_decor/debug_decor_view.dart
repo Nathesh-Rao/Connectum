@@ -19,8 +19,8 @@ class DebugDecorView extends GetView<DebugDecorController> {
 
   static const _elements = <(String, String, List<(String, Color)>)>[
     (
-      'Onboarding band (OnboardingStage)',
-      'onboarding_stage.dart',
+      'Onboarding band (OnboardingArtStage)',
+      'onboarding_art_stage.dart',
       [
         ('primaryBorder 55 %', AppColors.primaryBorder),
         ('primaryTintStrong 95 %', AppColors.primaryTintStrong),

@@ -88,6 +88,7 @@ class ConversationComposer extends StatelessWidget {
             rows: c.mentionRows,
             onPick: c.pickMention,
             onClose: c.closeMentions,
+            pictureOf: c.pictureOf,
           ),
           Obx(
             () => _ReplyBar(

@@ -239,7 +239,18 @@ enum AiErrorKind {
 
   /// The same `not_found` to the person the thread is about: the thread
   /// starts once the care team is connected.
-  careNotStarted;
+  careNotStarted,
+
+  /// The thread exists (an employee has joined) but nothing is recorded yet:
+  /// `care.summary` came back empty. A friendly state, not an error.
+  careEmpty,
+
+  /// The same for the person the thread is about.
+  careEmptyPatient,
+
+  /// An end-to-end encrypted chat: AI is blocked on mobile (the BE decision
+  /// is unchanged). Nothing was read, built or sent.
+  encrypted;
 
   const AiErrorKind({this.isSetupProblem = false});
 

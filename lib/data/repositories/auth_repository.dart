@@ -79,6 +79,7 @@ class AuthRepository extends GetxService {
     final data = await _api.post(
       '/login/start',
       body: {'email': email, 'trust': ?trust},
+      shouldRetry: true,
     );
     if (data['trusted'] == true && data['token'] != null) {
       await _acceptIdentity(data, email);
@@ -103,6 +104,28 @@ class AuthRepository extends GetxService {
       '/login/verify',
       body: {'email': email, 'otp': otp, 'deviceId': await _store.deviceId()},
     );
+    return _finishLogin(data, email);
+  }
+
+  /// Password sign-in (`login/password`): the same answer, and the same path
+  /// after it, as the code sign-in. A wrong or unset password is one
+  /// `invalid_credentials` error; too many wrong tries is `rate_limited`.
+  Future<IdentityInfo> loginWithPassword(String email, String password) async {
+    final data = await _api.post(
+      '/login/password',
+      body: {
+        'email': email,
+        'password': password,
+        'deviceId': await _store.deviceId(),
+      },
+    );
+    return _finishLogin(data, email);
+  }
+
+  Future<IdentityInfo> _finishLogin(
+    Map<String, dynamic> data,
+    String email,
+  ) async {
     final trust = data['trust'];
     if (trust is String && trust.isNotEmpty) {
       await _store.saveTrust(email, trust);
@@ -110,10 +133,58 @@ class AuthRepository extends GetxService {
     return _acceptIdentity(data, email);
   }
 
+  // ---- a password of one's own ------------------------------------------------
+
+  /// Emails a code to the account's own email; it confirms setting or
+  /// removing the password.
+  Future<LoginStart> startPasswordChange() async {
+    final data = await _api.post(
+      '/account/password/start',
+      bearer: _identityToken(),
+    );
+    if (data['sent'] == false) {
+      return LoginStart(
+        LoginStartKind.throttled,
+        retryAfter: intOf(data['retryAfter']),
+      );
+    }
+    return LoginStart(
+      LoginStartKind.codeSent,
+      expiresInSec: data['expiresInSec'] == null
+          ? 300
+          : intOf(data['expiresInSec']),
+    );
+  }
+
+  Future<void> setPassword(String otp, String newPassword) async {
+    await _api.post(
+      '/account/password/set',
+      body: {'otp': otp, 'newPassword': newPassword},
+      bearer: _identityToken(),
+    );
+    await _rememberHasPassword(true);
+  }
+
+  Future<void> removePassword(String otp) async {
+    await _api.post(
+      '/account/password/remove',
+      body: {'otp': otp},
+      bearer: _identityToken(),
+    );
+    await _rememberHasPassword(false);
+  }
+
+  Future<void> _rememberHasPassword(bool value) async {
+    final current = _store.identity.value;
+    if (current != null) {
+      await _store.saveIdentity(current.copyWith(hasPassword: value));
+    }
+  }
+
   // ---- set up an enterprise -----------------------------------------------------
 
   Future<LoginStart> startSetup(Map<String, dynamic> body) async {
-    final data = await _api.post('/setup/start', body: body);
+    final data = await _api.post('/setup/start', body: body, shouldRetry: true);
     if (data['sent'] == false) {
       return LoginStart(
         LoginStartKind.throttled,
@@ -166,7 +237,7 @@ class AuthRepository extends GetxService {
   // ---- create account -----------------------------------------------------------
 
   Future<void> startRegister(Map<String, dynamic> body) async {
-    await _api.post('/register/start', body: body);
+    await _api.post('/register/start', body: body, shouldRetry: true);
   }
 
   Future<IdentityInfo> verifyRegister(String email, String otp) async {
@@ -225,6 +296,7 @@ class AuthRepository extends GetxService {
       connectumId: idText(identity['connectumId']).isEmpty
           ? null
           : idText(identity['connectumId']),
+      hasPassword: identity['hasPassword'] == true,
     );
     await _store.saveIdentity(next);
     return next;

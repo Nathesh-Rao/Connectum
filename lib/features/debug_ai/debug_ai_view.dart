@@ -113,17 +113,6 @@ class DebugAiView extends GetView<DebugAiController> {
               ],
             ),
           ),
-          Obx(
-            () => c.isE2e.value
-                ? Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.sm),
-                    child: SelectableText(
-                      DebugAiController.e2eSample,
-                      style: AppText.caption,
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
           const SizedBox(height: AppSpacing.sm),
           const Text('Dialogs', style: AppText.bodyStrong),
           const SizedBox(height: AppSpacing.xs),

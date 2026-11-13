@@ -1,4 +1,8 @@
 # One line per exception: <path>|<reason>. Start empty of hue exceptions.
-hard-coded|lib/core/widgets/onboarding_stage.dart|black and transparent alpha mask stops of a ShaderMask, never painted as a colour
 hard-coded|lib/core/widgets/app_ambient_backdrop.dart|transparent alpha mask stop of a ShaderMask, never painted as a colour
 hard-coded|lib/core/widgets/logo_loader/logo_data.dart|generated from the logo (the brand blue); never edited by hand
+hard-coded|lib/core/widgets/logo_intro/logo_intro_data.dart|generated artwork colours from the design tool (the logo's piece colours); never edited by hand
+hard-coded|lib/core/widgets/onboarding_art/onboarding_art_palette.dart|authored artwork colours
+hard-coded|lib/core/widgets/onboarding_art/generated/shield_art_data.dart|authored artwork colours, generated from the HTML art
+hard-coded|lib/core/widgets/onboarding_art/generated/network_art_data.dart|authored artwork colours, generated from the HTML art
+hard-coded|lib/core/widgets/onboarding_art/generated/buildings_art_data.dart|authored artwork colours, generated from the HTML art

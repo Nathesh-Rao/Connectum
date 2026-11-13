@@ -41,6 +41,46 @@ class DemoAuthRepository extends AuthRepository {
   @override
   Future<IdentityInfo> verifyLogin(String email, String otp) => _accept(email);
 
+  /// `demo1234` signs in with any email; anything else is the same
+  /// `invalid_credentials` the server answers.
+  @override
+  Future<IdentityInfo> loginWithPassword(String email, String password) async {
+    await Future<void>.delayed(_delay);
+    if (password != 'demo1234') {
+      throw const ApiException(
+        'invalid_credentials',
+        'That email and password do not match. You can sign in with an emailed code instead.',
+        status: 401,
+      );
+    }
+    return _accept(email);
+  }
+
+  @override
+  Future<LoginStart> startPasswordChange() async {
+    await Future<void>.delayed(_delay);
+    return const LoginStart(LoginStartKind.codeSent);
+  }
+
+  @override
+  Future<void> setPassword(String otp, String newPassword) async {
+    await Future<void>.delayed(_delay);
+    await _remember(true);
+  }
+
+  @override
+  Future<void> removePassword(String otp) async {
+    await Future<void>.delayed(_delay);
+    await _remember(false);
+  }
+
+  Future<void> _remember(bool value) async {
+    final current = _store.identity.value;
+    if (current != null) {
+      await _store.saveIdentity(current.copyWith(hasPassword: value));
+    }
+  }
+
   @override
   Future<IdentityInfo> verifyRegister(String email, String otp) =>
       _accept(email);

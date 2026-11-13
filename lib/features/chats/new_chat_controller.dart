@@ -186,7 +186,7 @@ class NewChatController extends GetxController {
 
   void openNewGroup() {
     Get.back<void>();
-    Get.toNamed<void>(AppRoutes.newGroup);
+    Get.toNamed(AppRoutes.newGroup);
   }
 
   @override

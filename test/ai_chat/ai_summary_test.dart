@@ -21,6 +21,7 @@ class Rig {
     this.isOnline = true,
     Future<SendResult> Function(String)? post,
     this.isAdmin = false,
+    this.isEncrypted = false,
   }) : fake = setup == null
            ? FakeAiRepository(scenario: scenario, delay: _fast)
            : FakeAiRepository(setup: setup, scenario: scenario, delay: _fast) {
@@ -29,6 +30,7 @@ class Rig {
       setup: AiSetupCache(fake),
       chatId: 'dm:ana',
       title: () => 'Ana',
+      isEncrypted: () => isEncrypted,
       isOnline: () => isOnline,
       post: post ?? (_) async => SendResult.queued,
       isAdmin: () => isAdmin,
@@ -39,6 +41,7 @@ class Rig {
   late final AiSummaryController c;
   bool isOnline;
   bool isAdmin;
+  bool isEncrypted;
 }
 
 class _ChartRepository extends FakeAiRepository {
@@ -401,6 +404,7 @@ void main() {
         setup: AiSetupCache(fake),
         chatId: 'dm:ana',
         title: () => 'Ana',
+        isEncrypted: () => false,
         isOnline: () => true,
         post: (t) async {
           posted.add(t);
@@ -439,6 +443,7 @@ void main() {
         setup: AiSetupCache(fake),
         chatId: 'dm:ana',
         title: () => 'Ana',
+        isEncrypted: () => false,
         isOnline: () => true,
         post: (t) async => SendResult.queued,
         isAdmin: () => false,

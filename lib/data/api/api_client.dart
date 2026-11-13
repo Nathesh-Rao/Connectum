@@ -34,26 +34,42 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient(this._session) {
-    _dio = Dio(
-      BaseOptions(
-        baseUrl: AppConfig.isConfigured
-            ? AppConfig.apiBase
-            : 'http://unconfigured.invalid',
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
-        contentType: Headers.jsonContentType,
-      ),
-    );
-    (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
-      final client = HttpClient();
-      if (kDebugMode) {
-        client.badCertificateCallback = (_, host, _) =>
-            AppConfig.trustedHosts.contains(host);
-      }
-      return client;
-    };
+  ApiClient(
+    this._session, {
+    Dio? dio,
+    this.retryDelays = const [
+      Duration(milliseconds: 500),
+      Duration(milliseconds: 1500),
+    ],
+  }) {
+    _dio =
+        dio ??
+        Dio(
+          BaseOptions(
+            baseUrl: AppConfig.isConfigured
+                ? AppConfig.apiBase
+                : 'http://unconfigured.invalid',
+            connectTimeout: const Duration(seconds: 30),
+            receiveTimeout: const Duration(seconds: 30),
+            contentType: Headers.jsonContentType,
+          ),
+        );
+    final adapter = _dio.httpClientAdapter;
+    if (adapter is IOHttpClientAdapter) {
+      adapter.createHttpClient = () {
+        final client = HttpClient();
+        if (kDebugMode) {
+          client.badCertificateCallback = (_, host, _) =>
+              AppConfig.trustedHosts.contains(host);
+        }
+        return client;
+      };
+    }
   }
+
+  /// Waits between the tries of an idempotent call that met a restarting
+  /// server (503 or a dropped connection): two retries by default.
+  final List<Duration> retryDelays;
 
   final SessionStore _session;
   late final Dio _dio;
@@ -66,13 +82,36 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? query,
     String? bearer,
-  }) => _send('GET', path, query: query, bearer: bearer);
+    Duration? timeout,
+    bool shouldRetry = true,
+  }) => _send(
+    'GET',
+    path,
+    query: query,
+    bearer: bearer,
+    timeout: timeout,
+    shouldRetry: shouldRetry,
+  );
 
+  /// A POST is never retried unless the caller says the call is safe to
+  /// repeat (`shouldRetry`: only the sign-in start calls).
   Future<Map<String, dynamic>> post(
     String path, {
     Object? body,
     String? bearer,
-  }) => _send('POST', path, body: body ?? <String, dynamic>{}, bearer: bearer);
+    bool shouldRetry = false,
+  }) => _send(
+    'POST',
+    path,
+    body: body ?? <String, dynamic>{},
+    bearer: bearer,
+    shouldRetry: shouldRetry,
+  );
+
+  bool _isRestart(DioException e) =>
+      e.response?.statusCode == 503 ||
+      e.type == DioExceptionType.connectionError ||
+      e.error is SocketException;
 
   Future<Map<String, dynamic>> _send(
     String method,
@@ -80,53 +119,86 @@ class ApiClient {
     Object? body,
     Map<String, dynamic>? query,
     String? bearer,
+    Duration? timeout,
+    bool shouldRetry = false,
   }) async {
-    final isSessionCall = bearer == null && _session.token != null;
+    var tries = 0;
+    while (true) {
+      try {
+        return await _attempt(
+          method,
+          path,
+          body: body,
+          query: query,
+          bearer: bearer,
+          timeout: timeout,
+        );
+      } on DioException catch (e) {
+        if (shouldRetry && _isRestart(e) && tries < retryDelays.length) {
+          await Future<void>.delayed(retryDelays[tries++]);
+          continue;
+        }
+        throw _toException(e, bearer);
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _attempt(
+    String method,
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    String? bearer,
+    Duration? timeout,
+  }) async {
     final token = bearer ?? _session.token;
-    try {
-      final response = await _dio.request<Object?>(
-        path,
-        data: body,
-        queryParameters: query,
-        options: Options(
-          method: method,
-          headers: token == null ? null : {'Authorization': 'Bearer $token'},
-        ),
-      );
-      return _unwrap(response.data, response.statusCode);
-    } on DioException catch (e) {
-      final data = e.response?.data;
-      final status = e.response?.statusCode;
-      final retryAfter = int.tryParse(
-        e.response?.headers.value('retry-after') ?? '',
-      );
-      if (data is Map && data['ok'] == false) {
-        final error = ApiException(
-          '${(data['error'] as Map?)?['code'] ?? 'error'}',
-          '${(data['error'] as Map?)?['message'] ?? ''}',
-          status: status,
-          details:
-              (data['error'] as Map?)?['details'] ??
-              (retryAfter == null ? null : {'retryAfter': retryAfter}),
-        );
-        if (isSessionCall && error.isUnauthorized) _unauthorized.add(null);
-        throw error;
-      }
-      if (isSessionCall && status == 401) _unauthorized.add(null);
-      if (status == 429) {
-        throw ApiException(
-          'rate_limited',
-          '',
-          status: status,
-          details: retryAfter == null ? null : {'retryAfter': retryAfter},
-        );
-      }
-      throw ApiException(
-        'network',
-        e.message ?? 'Network error',
+    final response = await _dio.request<Object?>(
+      path,
+      data: body,
+      queryParameters: query,
+      options: Options(
+        method: method,
+        headers: token == null ? null : {'Authorization': 'Bearer $token'},
+        sendTimeout: timeout,
+        receiveTimeout: timeout,
+      ),
+    );
+    return _unwrap(response.data, response.statusCode);
+  }
+
+  ApiException _toException(DioException e, String? bearer) {
+    final isSessionCall = bearer == null && _session.token != null;
+    final data = e.response?.data;
+    final status = e.response?.statusCode;
+    final retryAfter = int.tryParse(
+      e.response?.headers.value('retry-after') ?? '',
+    );
+    if (data is Map && data['ok'] == false) {
+      final error = ApiException(
+        '${(data['error'] as Map?)?['code'] ?? 'error'}',
+        '${(data['error'] as Map?)?['message'] ?? ''}',
         status: status,
+        details:
+            (data['error'] as Map?)?['details'] ??
+            (retryAfter == null ? null : {'retryAfter': retryAfter}),
+      );
+      if (isSessionCall && error.isUnauthorized) _unauthorized.add(null);
+      return error;
+    }
+    if (isSessionCall && status == 401) _unauthorized.add(null);
+    if (status == 429) {
+      return ApiException(
+        'rate_limited',
+        '',
+        status: status,
+        details: retryAfter == null ? null : {'retryAfter': retryAfter},
       );
     }
+    return ApiException(
+      'network',
+      e.message ?? 'Network error',
+      status: status,
+    );
   }
 
   Map<String, dynamic> _unwrap(Object? data, int? status) {
@@ -147,6 +219,9 @@ class ApiClient {
   );
 
   Future<Map<String, dynamic>> session() => get('/session');
+
+  Future<Map<String, dynamic>> version(Duration timeout) =>
+      get('/version', timeout: timeout, shouldRetry: false);
 
   Future<void> logout() async {
     await post('/logout');
