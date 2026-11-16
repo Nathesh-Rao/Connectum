@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:connectum/core/routes/app_routes.dart';
+import 'package:connectum/core/routes/deep_link_service.dart';
 import 'package:connectum/core/routes/invite_service.dart';
 import 'package:connectum/core/widgets/onboarding_art/onboarding_art.dart';
 import 'package:connectum/core/widgets/onboarding_art_stage.dart';
+import 'package:connectum/data/repositories/auth_repository.dart';
 import 'package:connectum/data/session_store.dart';
 import 'package:connectum/features/onboarding/onboarding_binding.dart';
 import 'package:connectum/features/onboarding/onboarding_controller.dart';
@@ -25,13 +27,24 @@ class _SpyStore implements SessionStore {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
-class _FakeInvite implements InviteService {
+class _Unused {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+class _FakeAuth extends _Unused implements AuthRepository {}
+
+class _FakeLinks extends _Unused implements DeepLinkService {}
+
+class _FakeInvite extends InviteService {
+  _FakeInvite() : super(_FakeAuth(), _SpyStore(), _FakeLinks());
+  @override
+  // ignore: must_call_super
+  void onInit() {}
   @override
   void attach() {}
   @override
   void detach() {}
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
 /// The real controller, with the invite sheet replaced by a counter.
@@ -74,6 +87,18 @@ Set<OnboardingArtKind> _kinds(WidgetTester t) => {
     w.kind,
 };
 
+/// testWidgets that gives FlutterError.onError back before the framework checks it.
+void _t(String name, Future<void> Function(WidgetTester) body) {
+  testWidgets(name, (tester) async {
+    final previous = FlutterError.onError;
+    try {
+      await body(tester);
+    } finally {
+      FlutterError.onError = previous;
+    }
+  });
+}
+
 void main() {
   setUpAll(_loadFonts);
 
@@ -96,10 +121,8 @@ void main() {
     Size size = const Size(411, 900),
     bool reducedMotion = false,
   }) async {
-    final previous = FlutterError.onError;
     FlutterError.onError = (d) =>
         errors.add(d.exceptionAsString().split('\n').first);
-    addTearDown(() => FlutterError.onError = previous);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -132,16 +155,14 @@ void main() {
     await _settle(tester);
   }
 
-  testWidgets('the binding still builds the controller from the store', (
-    tester,
-  ) async {
+  _t('the binding still builds the controller from the store', (tester) async {
     Get.put<SessionStore>(store);
     Get.put<InviteService>(_FakeInvite());
     OnboardingBinding().dependencies();
     expect(Get.find<OnboardingController>(), isNotNull);
   });
 
-  testWidgets('swiping shows network, buildings, shield and the copy follows', (
+  _t('swiping shows network, buildings, shield and the copy follows', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -172,9 +193,7 @@ void main() {
     expect(errors, isEmpty);
   });
 
-  testWidgets('Continue steps through the pages and the dots jump', (
-    tester,
-  ) async {
+  _t('Continue steps through the pages and the dots jump', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Continue'));
     await _settle(tester, 12);
@@ -185,9 +204,7 @@ void main() {
     expect(store.writes, isEmpty);
   });
 
-  testWidgets('Get Started writes the completed flag and opens login', (
-    tester,
-  ) async {
+  _t('Get Started writes the completed flag and opens login', (tester) async {
     await pumpApp(tester);
     controller.goTo(2);
     await _settle(tester, 12);
@@ -197,7 +214,7 @@ void main() {
     expect(find.text('LOGIN'), findsOneWidget);
   });
 
-  testWidgets('Skip writes the flag and opens login', (tester) async {
+  _t('Skip writes the flag and opens login', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Skip'));
     await _settle(tester, 14);
@@ -205,9 +222,7 @@ void main() {
     expect(find.text('LOGIN'), findsOneWidget);
   });
 
-  testWidgets('the invite row opens the invite sheet and nothing else', (
-    tester,
-  ) async {
+  _t('the invite row opens the invite sheet and nothing else', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Have an invite code or link?'));
     await tester.pump(_step);
@@ -217,9 +232,7 @@ void main() {
   });
 
   for (final width in [320.0, 360.0, 411.0, 800.0]) {
-    testWidgets('the art slot is full width at ${width.toInt()} dp', (
-      tester,
-    ) async {
+    _t('the art slot is full width at ${width.toInt()} dp', (tester) async {
       await pumpApp(tester, size: Size(width, width < 700 ? 900 : 1280));
       final stage = tester.getRect(find.byType(OnboardingArtStage));
       expect(stage.left, closeTo(0, 0.01));
@@ -242,7 +255,7 @@ void main() {
     (const Size(320, 568), 34.0),
     (const Size(360, 640), 0.0),
   ]) {
-    testWidgets('overflow at ${size.width.toInt()}x${size.height.toInt()}: '
+    _t('overflow at ${size.width.toInt()}x${size.height.toInt()}: '
         'at most $allowed, the art slot itself fits', (tester) async {
       await pumpApp(tester, size: size);
       final overflow = RegExp(r'overflowed by ([\d.]+) pixels');
@@ -261,9 +274,7 @@ void main() {
     });
   }
 
-  testWidgets('only the active page animates; the others are muted', (
-    tester,
-  ) async {
+  _t('only the active page animates; the others are muted', (tester) async {
     await pumpApp(tester);
     expect(_states(tester), hasLength(1));
     expect(_states(tester).single.isTicking, isTrue);
@@ -292,9 +303,7 @@ void main() {
     expect(_states(tester).single.isTicking, isTrue);
   });
 
-  testWidgets('app pause mutes the ticker and resume restarts it', (
-    tester,
-  ) async {
+  _t('app pause mutes the ticker and resume restarts it', (tester) async {
     await pumpApp(tester);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump(_step);
@@ -306,7 +315,7 @@ void main() {
     expect(_states(tester).single.isTicking, isTrue);
   });
 
-  testWidgets('a covered route mutes the ticker', (tester) async {
+  _t('a covered route mutes the ticker', (tester) async {
     await pumpApp(tester);
     Get.toNamed<void>(AppRoutes.authentication);
     await _settle(tester, 12);
@@ -318,7 +327,7 @@ void main() {
     expect(_states(tester).single.isTicking, isTrue);
   });
 
-  testWidgets('reduced motion shows the static frame and creates no ticker', (
+  _t('reduced motion shows the static frame and creates no ticker', (
     tester,
   ) async {
     await pumpApp(tester, reducedMotion: true);
