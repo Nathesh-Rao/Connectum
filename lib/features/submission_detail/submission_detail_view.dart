@@ -6,6 +6,7 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/utils/chat_time.dart';
+import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_key_value_row.dart';
 import '../../core/widgets/app_offline_bar.dart';
@@ -131,7 +132,15 @@ class _Content extends StatelessWidget {
                 ),
               for (final g in d.grids) _GridTable(grid: g),
               const SizedBox(height: AppSpacing.md),
-              _Footer(card: d, isEditable: c.canEdit, onEdit: c.edit),
+              _Footer(
+                card: d,
+                isEditable: c.canEdit,
+                onEdit: c.edit,
+                canDelete: c.canDelete,
+                isDeleting: c.isDeleting.value,
+                onDelete: () =>
+                    c.delete(() => confirmDeleteSubmission(context, d)),
+              ),
             ],
           ),
         ),
@@ -239,24 +248,76 @@ class _Footer extends StatelessWidget {
     required this.card,
     required this.isEditable,
     required this.onEdit,
+    required this.canDelete,
+    required this.isDeleting,
+    required this.onDelete,
   });
 
   final FormCardData card;
   final bool isEditable;
   final VoidCallback onEdit;
+  final bool canDelete;
+  final bool isDeleting;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    if (isEditable) {
-      return AppButton.text(
-        label: 'Edit submission',
-        tone: AppTextButtonTone.accent,
-        onPressed: onEdit,
-      );
-    }
-    return Text(
-      card.isPending ? 'Waiting to send' : 'Read-only · ${card.by}',
-      style: AppText.caption,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isEditable)
+          AppButton.text(
+            label: card.canResubmit ? 'Fix and send again' : 'Edit submission',
+            tone: AppTextButtonTone.accent,
+            onPressed: onEdit,
+          )
+        else if (!canDelete)
+          Text(
+            card.isPending ? 'Waiting to send' : 'Read-only · ${card.by}',
+            style: AppText.caption,
+          ),
+        if (canDelete)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: AppButton.secondary(
+              label: 'Delete submission',
+              isDanger: true,
+              onPressed: isDeleting ? null : onDelete,
+            ),
+          ),
+      ],
     );
   }
+}
+
+Future<bool> confirmDeleteSubmission(
+  BuildContext context,
+  FormCardData d,
+) async {
+  final isSure = await AppBottomSheet.show<bool>(
+    context,
+    title: 'Delete this submission?',
+    child: Builder(
+      builder: (sheet) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${d.caption} #${d.id} will be removed. Its history stays.',
+            style: AppText.readable,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppButton.secondary(
+            label: 'Delete',
+            isDanger: true,
+            onPressed: () => Navigator.of(sheet).pop(true),
+          ),
+          AppButton.text(
+            label: 'Cancel',
+            onPressed: () => Navigator.of(sheet).pop(false),
+          ),
+        ],
+      ),
+    ),
+  );
+  return isSure ?? false;
 }

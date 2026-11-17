@@ -1,4 +1,5 @@
 import 'package:connectum/data/models/conversation.dart';
+import 'package:connectum/data/models/record_state.dart';
 import 'package:connectum/data/models/ticket.dart';
 import 'package:connectum/data/repositories/conversation_repository.dart';
 import 'package:connectum/data/repositories/ticket_repository.dart';
@@ -31,8 +32,8 @@ class _Tickets extends Fake implements TicketRepository {
   Ticket? known(int id) => ticket;
 
   @override
-  ({Ticket ticket, bool isAdmin, bool? inPool})? stateOf(int id) =>
-      ticket == null ? null : (ticket: ticket!, isAdmin: false, inPool: null);
+  RecordState? stateOf(int id) =>
+      ticket == null ? null : const RecordState(items: []);
 
   @override
   Future<void> ensure(int id) async => reads++;
@@ -127,20 +128,12 @@ void main() {
       by: 'bob',
       ts: 0,
       tstruct: 'help_ticket',
-      values: const {
-        'status': 'Open',
-        'title': 'Printer',
-        'assigned to': 'ana',
-      },
+      holder: 'ana',
+      values: const {'status': 'Open', 'title': 'Printer'},
       form: const TicketForm(
         key: 'help_ticket',
         caption: 'Help ticket',
-        table: TicketTable(
-          field: 'status',
-          assignee: 'assigned to',
-          subject: 'title',
-          statuses: [TicketStatus('Open')],
-        ),
+        table: TicketTable(field: 'status', statuses: [TicketStatus('Open')]),
       ),
     );
     d = c.data!;

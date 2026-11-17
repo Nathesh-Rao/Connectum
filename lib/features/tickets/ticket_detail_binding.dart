@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 
 import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/group_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 import 'ticket_detail_controller.dart';
@@ -16,7 +15,6 @@ class TicketDetailBinding extends Bindings {
       TicketDetailController(
         ticketId: id,
         tickets: Get.find<TicketRepository>(),
-        people: Get.find<GroupRepository>(),
         files: Get.find<FormFileRepository>(),
         connectivity: Get.find<ConnectivityService>(),
       ),

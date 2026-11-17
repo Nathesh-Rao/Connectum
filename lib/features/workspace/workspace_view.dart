@@ -16,6 +16,12 @@ import '../../core/theme/app_colors.dart';
 import '../../data/models/form_card.dart';
 import '../conversation/widgets/chat_rows.dart';
 import '../conversation/widgets/conversation_header.dart';
+import '../submission_detail/submission_detail_view.dart'
+    show confirmDeleteSubmission;
+import '../tickets/models/card_menu.dart';
+import '../tickets/widgets/record_card_actions.dart';
+import '../tickets/widgets/record_menu_rows.dart';
+import '../tickets/widgets/ticket_action_sheet.dart';
 import 'widgets/workspace_composer.dart';
 import 'widgets/workspace_welcome.dart';
 import 'workspace_controller.dart';
@@ -54,6 +60,8 @@ class WorkspaceView extends GetView<WorkspaceController> {
             child: Obx(
               () => AppStateView(
                 state: c.viewState.value,
+                errorMessage: "Couldn't load your workspace.",
+                onRetry: c.retry,
                 child: _Feed(controller: c),
               ),
             ),
@@ -111,7 +119,7 @@ class _Feed extends StatelessWidget {
                     padding: EdgeInsets.only(top: AppSpacing.lg),
                     child: Center(
                       child: Text(
-                        'Forms you submit show up here.',
+                        'Forms you submit and records sent to you show up here.',
                         style: AppText.readable,
                       ),
                     ),
@@ -135,7 +143,12 @@ class _Feed extends StatelessWidget {
           if (card == null) {
             return DayDivider(key: ValueKey(row.key), label: row.label);
           }
-          return _Card(key: ValueKey(row.key), controller: c, card: card);
+          return _Card(
+            key: ValueKey(row.key),
+            controller: c,
+            card: card,
+            isReceived: row.isReceived,
+          );
         },
       );
     });
@@ -143,10 +156,16 @@ class _Feed extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({super.key, required this.controller, required this.card});
+  const _Card({
+    super.key,
+    required this.controller,
+    required this.card,
+    required this.isReceived,
+  });
 
   final WorkspaceController controller;
   final FormCardData card;
+  final bool isReceived;
 
   @override
   Widget build(BuildContext context) {
@@ -157,20 +176,79 @@ class _Card extends StatelessWidget {
         padding: const EdgeInsets.only(top: AppSpacing.bubbleGap),
         child: AppFormCard(
           data: card,
-          isSent: true,
+          isSent: !isReceived,
+          senderName: isReceived ? card.by : null,
           state: state,
           problem: state == AppFormCardState.failed ? c.problemOf(card) : null,
           stripLabel: c.stripLabelOf(card),
           note: c.noteOf(card),
+          actions: c.recordIdOf(card) != null
+              ? RecordCardActions(
+                  recordId: c.recordIdOf(card)!,
+                  tickets: c.tickets,
+                  onAction: (context, id) {
+                    final detail = c.detailOf(card);
+                    if (detail != null) {
+                      TicketActionSheet.show(context, detail, id);
+                    }
+                  },
+                )
+              : null,
           isHighlighted: c.highlighted.contains(card.id),
-          onTap: () => c.tap(card),
-          onEdit: c.canEdit(card) ? () => c.edit(card) : null,
+          onTap: () => c.tap(card, isReceived: isReceived),
+          onEdit: !isReceived && c.canEdit(card) ? () => c.edit(card) : null,
           onLongPress: state == AppFormCardState.failed || c.isDraft(card)
               ? () => _FailedSheet.show(context, c, card)
+              : c.recordIdOf(card) != null
+              ? () => _RecordSheet.show(context, c, card)
               : null,
         ),
       );
     });
+  }
+}
+
+/// The menu of a card: the same list as in a chat (see `CardMenu`), read
+/// when it opens, never while cards are drawn.
+class _RecordSheet {
+  _RecordSheet._();
+
+  static Future<void> show(
+    BuildContext context,
+    WorkspaceController c,
+    FormCardData card,
+  ) {
+    c.openRecordMenu(card);
+    return AppBottomSheet.show<void>(
+      context,
+      title: 'Record',
+      child: Builder(
+        builder: (sheet) => RecordMenuRows(
+          tickets: c.tickets,
+          recordId: c.recordIdOf(card),
+          itemsFor: (state) => c.cardMenuOf(card, state),
+          onPick: (item) {
+            final root = Navigator.of(sheet, rootNavigator: true).context;
+            Navigator.of(sheet).pop();
+            switch (item.id) {
+              case CardMenuItem.edit:
+                c.edit(card);
+              case CardMenuItem.history:
+                c.openHistory(card);
+              case CardMenuItem.delete:
+                c.deleteCard(card, () => confirmDeleteSubmission(root, card));
+              default:
+                if (item.isRecordAction) {
+                  final detail = c.detailOf(card);
+                  if (detail != null) {
+                    TicketActionSheet.show(root, detail, item.recordActionId);
+                  }
+                }
+            }
+          },
+        ),
+      ),
+    );
   }
 }
 

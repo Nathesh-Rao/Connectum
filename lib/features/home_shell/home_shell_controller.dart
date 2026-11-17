@@ -19,6 +19,8 @@ import '../../data/notifications/local_notification_service.dart';
 import '../notifications/notification_router.dart';
 import '../notifications/widgets/notification_permission_sheet.dart';
 import '../security/security_controller.dart';
+import '../smart_view/models/smart_view_entry.dart';
+import '../smart_view/smart_view_controller.dart';
 import '../security/widgets/security_sheets.dart';
 
 class HomeShellController extends GetxController
@@ -29,13 +31,15 @@ class HomeShellController extends GetxController
     required this.links,
     required this.notifications,
     required this.notificationRouter,
+    required this.smartView,
   });
 
   static const tabRoutes = [
     AppRoutes.chats,
     AppRoutes.aiAgents,
     AppRoutes.submissions,
-    AppRoutes.profile,
+    AppRoutes.smartView,
+    AppRoutes.inbox,
   ];
 
   final ConversationRepository conversations;
@@ -43,14 +47,19 @@ class HomeShellController extends GetxController
   final DeepLinkService links;
   final LocalNotificationService notifications;
   final NotificationRouter notificationRouter;
+  final SmartViewController smartView;
 
   final index = 0.obs;
   final hasUnread = false.obs;
 
+  /// A form (its name) My Submissions should show only; set by `#tstruct`,
+  /// read and cleared by the Submissions screen.
+  final submissionsForm = RxnString();
+
   /// True once a reload is replacing this home: the content is unmounted
   /// before the controllers behind it are closed.
   final isRetired = false.obs;
-  final isBuilt = <bool>[true, false, false, false];
+  final isBuilt = <bool>[true, false, false, false, false];
   int previous = 0;
   late final AnimationController crossfade = AnimationController(
     vsync: this,
@@ -69,6 +78,9 @@ class HomeShellController extends GetxController
       index.value = start;
       previous = start;
       isBuilt[start] = true;
+      if (start == smartViewTab) {
+        unawaited(smartView.enter(const SmartViewEntry.tab()));
+      }
     }
     ever(conversations.conversations, (_) => _updateDot());
     ever(SeedUi.chatsState, (_) => _updateDot());
@@ -193,12 +205,38 @@ class HomeShellController extends GetxController
     );
   }
 
-  void select(int next) {
-    if (next == index.value) return;
-    previous = index.value;
-    isBuilt[next] = true;
-    index.value = next;
-    crossfade.forward(from: 0);
+  /// `#tstruct <name>`: leaves the open chat and shows My Submissions of that
+  /// form.
+  void openSubmissionsOf(String formName) {
+    submissionsForm.value = formName;
+    Get.until((r) => tabRoutes.contains(r.settings.name));
+    select(_submissionsTab);
+  }
+
+  static const _submissionsTab = 2;
+  static const smartViewTab = 3;
+
+  /// `#view`, `#view <name>`: leaves the open chat, shows the Smart view tab
+  /// and tells it how it was entered. Nothing is stacked: a second call on the
+  /// tab only updates it.
+  void openSmartView(SmartViewEntry entry) {
+    Get.until((r) => tabRoutes.contains(r.settings.name));
+    select(smartViewTab, entry: entry);
+  }
+
+  void select(int next, {SmartViewEntry? entry}) {
+    final isSmart = next == smartViewTab;
+    final isMoving = next != index.value;
+    if (isMoving) {
+      previous = index.value;
+      isBuilt[next] = true;
+      index.value = next;
+      crossfade.forward(from: 0);
+      smartView.setActive(isSmart);
+    }
+    if (isSmart && (isMoving || entry != null)) {
+      unawaited(smartView.enter(entry ?? const SmartViewEntry.tab()));
+    }
   }
 
   @override

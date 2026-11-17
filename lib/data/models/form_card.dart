@@ -5,6 +5,7 @@ import 'form_entry.dart';
 import 'form_submission.dart';
 import 'ids.dart';
 import 'message.dart';
+import 'ticket.dart';
 
 /// A submission as one card or one detail page: where it came from (a form
 /// message or a cached submission) does not matter to the widgets.
@@ -22,7 +23,7 @@ class FormCardData {
     this.hasResult = false,
     this.status,
     this.canResubmit = false,
-    this.isTicket = false,
+    this.isReadOnly = false,
   });
 
   final String id;
@@ -43,9 +44,8 @@ class FormCardData {
   /// A declined submission the approver allowed to be fixed and sent again.
   final bool canResubmit;
 
-  /// The form has a status field (the message says `ticket: true`): the card
-  /// opens the ticket.
-  final bool isTicket;
+  /// `form.readonly`: a record's history row, never a record itself.
+  final bool isReadOnly;
 
   bool get isPending => id.startsWith('temp-');
 
@@ -74,6 +74,15 @@ class FormCardData {
       !isAwaitingApproval &&
       !canResubmit &&
       (status ?? '').toLowerCase() != 'rejected' &&
+      (status ?? '').toLowerCase() != 'approved';
+
+  /// The web's Delete: mine, sent, and not waiting for approval or approved
+  /// (a declined one may always be deleted).
+  bool canDelete(String me) =>
+      by.toLowerCase() == me.toLowerCase() &&
+      !isForwarded &&
+      !isPending &&
+      !isAwaitingApproval &&
       (status ?? '').toLowerCase() != 'approved';
 
   /// The pencil of a declined card: fix it and send it again.
@@ -145,7 +154,38 @@ class FormCardData {
       hasResult: form['result'] != null,
       status: status,
       canResubmit: canResubmit,
-      isTicket: form['ticket'] == true,
+      isReadOnly: form['readonly'] == true,
+    );
+  }
+
+  /// A record that came from `records.mine`, drawn like a submission card.
+  /// The status field and its hidden companions are not shown as values.
+  static FormCardData fromTicket(Ticket t) {
+    final hidden = t.table?.headerFields ?? const <String>{};
+    final order = [
+      ...?t.form?.fields.keys,
+      for (final k in t.values.keys)
+        if (!(t.form?.fields.containsKey(k) ?? false)) k,
+    ];
+    final entries = <FormEntry>[];
+    for (final key in order) {
+      if (hidden.contains(key) || !t.values.containsKey(key)) continue;
+      final entry = FormEntry.parse(
+        key,
+        t.form?.labelOf(key) ?? FormEntry.humanize(key),
+        t.values[key],
+      );
+      if (entry != null) entries.add(entry);
+    }
+    return FormCardData(
+      id: '${t.id}',
+      caption: t.caption,
+      structure: t.tstruct,
+      scope: t.scope,
+      by: t.by,
+      ts: t.editedTs > 0 ? t.editedTs : t.ts,
+      entries: entries,
+      status: t.recordStatus.isEmpty ? null : t.recordStatus,
     );
   }
 

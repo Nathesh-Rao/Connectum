@@ -1,0 +1,19 @@
+{
+  "label": "smartview.views: an unrelated colleague sees none",
+  "as": "cara (unrelated colleague)",
+  "command": "smartview.views",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.views",
+    "data": {
+      "canPublish": false,
+      "mine": [],
+      "shared": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

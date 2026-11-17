@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
@@ -21,6 +22,7 @@ import '../../data/models/conversation.dart';
 import '../../data/commands/command_line.dart';
 import '../../data/commands/command_reply.dart';
 import '../../data/models/hash_command.dart';
+import '../../core/debug/records_log.dart';
 import '../../data/models/ids.dart';
 import '../../data/models/form_card.dart';
 import '../../core/widgets/app_form_card.dart';
@@ -42,6 +44,7 @@ import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/presence_repository.dart';
+import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/typing_repository.dart';
 import '../../data/session_store.dart';
@@ -50,10 +53,13 @@ import '../../core/widgets/app_avatar.dart';
 import '../../data/repositories/people_avatars.dart';
 import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
 import '../../core/widgets/app_notices.dart';
-import '../../data/models/ticket.dart';
+import '../../data/models/record_state.dart';
 import '../../data/repositories/ticket_repository.dart';
-import '../tickets/models/ticket_actions.dart';
+import '../tickets/models/card_menu.dart';
+import '../tickets/models/record_card_rule.dart';
+import '../tickets/models/record_history_card.dart';
 import '../tickets/ticket_detail_controller.dart';
+import '../tickets/tickets_texts.dart';
 import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
 import '../../data/ai/care_summary_text.dart';
@@ -79,6 +85,7 @@ class ConversationController extends GetxController
     required this.presence,
     required this.typing,
     required this.submissions,
+    required this.smartView,
     required this.formOptions,
     required this.connectivity,
     required this.shell,
@@ -114,6 +121,7 @@ class ConversationController extends GetxController
   final PresenceRepository presence;
   final TypingRepository typing;
   final SubmissionRepository submissions;
+  final SmartViewRepository smartView;
   final FormOptionsRepository formOptions;
   final ConnectivityService connectivity;
   final HomeShellController? shell;
@@ -154,6 +162,11 @@ class ConversationController extends GetxController
     prompt,
     activeConvId: conversationId,
     applyDraft: _applyDraft,
+    submissions: submissions,
+    smartView: smartView,
+    shell: shell,
+    chatConvId: kind == 'dm' || kind == 'group' ? conversationId : null,
+    chatTitle: () => title,
   );
 
   /// The forms button's sheet. A form is posted into this conversation only
@@ -441,6 +454,7 @@ class ConversationController extends GetxController
   bool isSentForm(FormCardData d) => d.by.toLowerCase() == me;
 
   bool canEditForm(Message m, FormCardData d) =>
+      !RecordHistoryCard.isCard(d) &&
       m.status != MessageStatus.failed &&
       m.status != MessageStatus.pending &&
       m.status != MessageStatus.sending &&
@@ -515,33 +529,103 @@ class ConversationController extends GetxController
 
   final _ticketDetails = <int, TicketDetailController>{};
 
-  /// What I may do with the ticket on a card, from the last known state of
-  /// the ticket (the same rules as the ticket screen). Empty for a card that
-  /// is not a ticket, still waiting to be sent, or not mine to act on.
-  List<TicketAction> ticketActionsOf(FormCardData d) {
-    final id = d.isTicket && !d.isPending ? idNumber(d.id) : null;
-    if (id == null) return const [];
-    final state = tickets.stateOf(id);
-    if (state == null) return const [];
-    return TicketActions.of(
-      state.ticket,
-      tickets.me,
-      isAdmin: state.isAdmin,
-      inPool: state.inPool,
+  /// The record id of a form card, by the web's rule: the form carries a
+  /// numeric `submissionId` and is not read-only and not a data-source
+  /// result. Nothing is asked of the server here: the status line and the
+  /// menu come from `record.actions`, read when the menu or the record opens.
+  /// A record's history card is read-only; it opens the record named in its
+  /// own "Record" field instead (see [openForm]).
+  int? recordIdOf(FormCardData d) {
+    final rule = RecordCardRule.of(d);
+    _logCard(d, idNumber(d.id), rule.isRecord, rule.rule);
+    return rule.id;
+  }
+
+  void _logCard(FormCardData d, int? id, bool isRecord, String rule) {
+    if (!kDebugMode) return;
+    RecordsLog.card(
+      conversation: conversationId,
+      messageId: id,
+      structure: d.structure,
+      isRecord: isRecord,
+      rule: rule,
     );
   }
 
-  /// Reads the ticket of a visible card once in a while (shared, short
-  /// cache).
-  void ensureTicket(FormCardData d) {
-    final id = d.isTicket && !d.isPending ? idNumber(d.id) : null;
-    if (id != null) unawaited(tickets.ensure(id));
+  /// What I may do with the record on a card: the items of `record.actions`
+  /// from its last read (the same menu as the record screen). Empty until the
+  /// menu or the record was opened, for a card that is not a record, and when
+  /// the server offers nothing.
+  List<RecordActionItem> ticketActionsOf(FormCardData d) {
+    final id = recordIdOf(d);
+    if (id == null) return const [];
+    return tickets.itemsOf(id);
+  }
+
+  /// "Ticket #id" on a record card, once something showed the record has a
+  /// status.
+  String? recordMarkerOf(FormCardData d) {
+    final id = recordIdOf(d);
+    if (id == null) return null;
+    if (tickets.liveOf(id).value.status.isEmpty) return null;
+    return '${TicketsTexts.ticketMarker} #${d.id}';
+  }
+
+  /// The web offers Save, Pin and Mark as unread in direct chats, groups and
+  /// the general room (Pin not there); never in a team chat.
+  bool get isMarkable => kind == 'dm' || kind == 'group' || kind == 'global';
+  bool get isPinnable => kind == 'dm' || kind == 'group';
+
+  /// The rows of a settled form or record card's menu, from what
+  /// `record.actions` said (null until it was read). The same gating as the
+  /// submission detail screen for Edit, Fix and send again, and Delete.
+  List<CardMenuItem> cardMenuOf(Message m, FormCardData d, RecordState? state) {
+    final isSettled = !m.isLocalTemp && m.status != MessageStatus.failed;
+    final isHistoryRow = RecordHistoryCard.isCard(d);
+    final recordId = recordIdOf(d);
+    return CardMenu.build(
+      canReply: canReply && isSettled && !m.isDeleted,
+      canForward: canForward(m),
+      canCopy: !m.isDeleted && m.text.trim().isNotEmpty,
+      isMarkable: isMarkable && isSettled,
+      isPinnable: isPinnable,
+      isMine: m.isMine,
+      record: recordId == null ? null : state,
+      canEdit: isSettled && !isHistoryRow && canEditForm(m, d),
+      isFix: d.canFix(me),
+      canOpenHistory: recordId != null && isSentForm(d),
+      canDelete: isSettled && !isHistoryRow && d.canDelete(me),
+    );
+  }
+
+  /// Asks, then deletes the submission on the server (online only). A
+  /// refusal shows as a notice and the card stays.
+  Future<void> deleteRecordCard(
+    FormCardData d,
+    Future<bool> Function() confirm,
+  ) async {
+    if (!d.canDelete(me) || !await confirm()) return;
+    final problem = await submissions.deleteSubmission(d.id);
+    _say(problem ?? 'Submission deleted');
+  }
+
+  /// The record's own screen, where its history is.
+  void openHistory(FormCardData d) {
+    final id = recordIdOf(d);
+    if (id != null) Get.toNamed(AppRoutes.ticketOf(id));
+  }
+
+  /// The menu of a record card opened: reads `record.actions` (cached 60 s).
+  void openRecordMenu(Message m) {
+    final d = formCardOf(m);
+    final id = d == null ? null : recordIdOf(d);
+    if (id != null) unawaited(tickets.ensureMenu(id));
   }
 
   /// The controller the status sheet works on for the ticket on [d].
   TicketDetailController? ticketDetailOf(FormCardData d) {
-    final id = idNumber(d.id);
-    if (!d.isTicket || id == null) return null;
+    final id = recordIdOf(d);
+    if (id == null) return null;
     return _ticketDetails.putIfAbsent(id, () {
       final c = newTicketDetail(id);
       c.onInit();
@@ -550,7 +634,14 @@ class ConversationController extends GetxController
   }
 
   void openForm(Message m, FormCardData d) {
-    final ticketId = d.isTicket ? idNumber(d.id) : null;
+    if (RecordHistoryCard.isCard(d)) {
+      // Read-only: its submissionId is the history row. The record is the
+      // card's own "Record" field.
+      final record = RecordHistoryCard.recordIdOf(d);
+      if (record != null) Get.toNamed(AppRoutes.ticketOf(record));
+      return;
+    }
+    final ticketId = recordIdOf(d);
     if (ticketId != null) {
       Get.toNamed(AppRoutes.ticketOf(ticketId));
       return;

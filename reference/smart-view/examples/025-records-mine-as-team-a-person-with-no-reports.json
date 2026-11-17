@@ -1,0 +1,23 @@
+{
+  "label": "records.mine as team: a person with no reports",
+  "as": "ann (author)",
+  "command": "records.mine",
+  "request": {
+    "as": "team",
+    "limit": 2,
+    "offset": 0
+  },
+  "reply": {
+    "action": "records.mine",
+    "data": {
+      "hasMore": false,
+      "next": null,
+      "reports": 0,
+      "structures": {},
+      "submissions": [],
+      "total": 0
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

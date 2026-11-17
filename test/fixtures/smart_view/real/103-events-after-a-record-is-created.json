@@ -1,0 +1,32 @@
+{
+  "label": "events after a record is created",
+  "as": "(events pushed to each person's WebSocket)",
+  "command": null,
+  "request": null,
+  "reply": null,
+  "events": {
+    "ann (author)": [
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 72,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833275334
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      }
+    ],
+    "bob (colleague)": [],
+    "cara (unrelated colleague)": []
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "label": "records.summary: a person who may read none of them",
+  "as": "cara (unrelated colleague)",
+  "command": "records.summary",
+  "request": {
+    "ids": [
+      41,
+      43
+    ]
+  },
+  "reply": {
+    "action": "records.summary",
+    "data": {
+      "omitted": 2,
+      "summaries": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

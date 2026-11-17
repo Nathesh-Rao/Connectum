@@ -1,0 +1,10 @@
+{
+  "_section": "MOBILE_SMART_VIEW.md §2.4 records.mine. The document gives only this request example; the response is described in prose ({submissions, structures, total, hasMore, next}; for as:team also reports and team:{members, via}), so no response is copied here.",
+  "command": "records.mine",
+  "request": {
+    "as": "with",
+    "limit": 100,
+    "offset": 0
+  },
+  "note": "Reconstructed in stage 1 from the BE document, revision 1. SUPERSEDED by the real captures in real/019-* to 029-* (records.mine as with, involved, raised, team, all) where one exists (BE document revision 2, origin/dev a5f28fca, 16 Nov 2026). Kept, not deleted."
+}

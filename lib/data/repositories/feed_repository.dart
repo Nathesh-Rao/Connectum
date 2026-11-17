@@ -7,6 +7,7 @@ import '../../features/notifications/models/feed_item.dart';
 import '../../features/notifications/models/feed_reducer.dart';
 import '../e2e/e2e_models.dart';
 import '../models/ids.dart';
+import '../../core/debug/records_log.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
@@ -153,12 +154,32 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
     FeedItem? after,
     int limit = pageSize,
   }) async {
-    final data = await _socket.sdCall('feed.list', {
+    final args = <String, dynamic>{
       'priority': priority,
       if (isUnreadOnly) 'unreadOnly': true,
       'limit': limit,
       if (after != null) ...{'before': after.ts, 'beforeId': after.id},
-    });
+    };
+    final Map<String, dynamic> data;
+    try {
+      data = await _socket.sdCall('feed.list', args);
+    } on SocketCallError catch (e) {
+      RecordsLog.call(
+        'feed.list',
+        args,
+        org: _store.orgId ?? '-',
+        user: _store.userId ?? '-',
+        error: e.code,
+      );
+      rethrow;
+    }
+    RecordsLog.call(
+      'feed.list',
+      args,
+      org: _store.orgId ?? '-',
+      user: _store.userId ?? '-',
+      reply: data,
+    );
     counts.value = FeedCounts.tryParse(data['counts']) ?? counts.value;
     final raw = data['notifications'];
     final page = <FeedItem>[

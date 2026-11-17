@@ -1,0 +1,89 @@
+{
+  "label": "smartview.attrs: after saving (mine true)",
+  "as": "ann (author)",
+  "command": "smartview.attrs",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.attrs",
+    "data": {
+      "attrs": {
+        "charts": [
+          {
+            "agg": "count",
+            "caption": "Tickets by stage",
+            "chart": "donut",
+            "column": "",
+            "groupBy": "stage"
+          }
+        ],
+        "hyperlinks": [],
+        "kind": "structure",
+        "kpis": [
+          {
+            "agg": "count",
+            "caption": "Tickets",
+            "column": ""
+          },
+          {
+            "agg": "sum",
+            "caption": "Total hours",
+            "column": "hours"
+          }
+        ],
+        "metadata": [
+          {
+            "caption": "Title",
+            "field": "title",
+            "filter": true,
+            "hide": false,
+            "key": true,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Character"
+          },
+          {
+            "caption": "Stage",
+            "field": "stage",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Character"
+          },
+          {
+            "caption": "Hours",
+            "field": "hours",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Numeric"
+          },
+          {
+            "caption": "Due",
+            "field": "due",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Date"
+          }
+        ],
+        "name": "tickets",
+        "updatedBy": "svcapcpw1ann",
+        "updatedTs": 1794833237353
+      },
+      "canConfigure": true,
+      "canDefault": false,
+      "mine": true
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

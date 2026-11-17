@@ -1,0 +1,19 @@
+{
+  "label": "smartview.view.unshare: not a view of the caller's",
+  "as": "ann (author)",
+  "command": "smartview.view.unshare",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "id": "nope"
+  },
+  "reply": {
+    "action": "smartview.view.unshare",
+    "error": {
+      "code": "not_found",
+      "message": "No such shared view of yours."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

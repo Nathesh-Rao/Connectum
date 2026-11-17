@@ -1,0 +1,23 @@
+{
+  "label": "submissions.list: a structure that does not exist",
+  "as": "ann (author)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "nothing_here",
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": false,
+      "limit": 500,
+      "offset": 0,
+      "structures": {},
+      "submissions": [],
+      "total": 0
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

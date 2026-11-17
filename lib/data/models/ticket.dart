@@ -1,10 +1,17 @@
 import 'ids.dart';
+import 'record_state.dart';
 
 List<String> _strings(Object? raw) => [
   if (raw is List)
     for (final s in raw)
       if (idText(s).isNotEmpty) idText(s),
 ];
+
+String _plain(Object? v) {
+  if (v is List) return v.map(_plain).where((x) => x.isNotEmpty).join(', ');
+  if (v is Map || v is bool) return '';
+  return idText(v).trim();
+}
 
 /// One status of a form's table.
 class TicketStatus {
@@ -14,104 +21,13 @@ class TicketStatus {
   final bool isFinal;
 }
 
-/// One thing a person can do to a ticket, as the form defines it. All words
-/// are data: nothing looks at a name.
-class TicketAction {
-  const TicketAction({
-    required this.name,
-    this.who = const [],
-    this.from = const [],
-    this.to = '',
-    this.assign = 'keep',
-    this.percent = 'none',
-    this.reason = 'none',
-    this.remarks = 'none',
-    this.attachments = 'none',
-    this.reasons = const [],
-    this.push = false,
-  });
-
-  final String name;
-
-  /// admin | assignee | raiser | pool.
-  final List<String> who;
-
-  /// Empty = any status that is not final.
-  final List<String> from;
-  final String to;
-
-  /// pick | keep | raiser | previous | self.
-  final String assign;
-
-  /// none | set | hundred.
-  final String percent;
-
-  /// none | optional | required.
-  final String reason;
-  final String remarks;
-  final String attachments;
-  final List<String> reasons;
-  final bool push;
-
-  bool get asksReason => reason == 'optional' || reason == 'required';
-  bool get asksRemarks => remarks == 'optional' || remarks == 'required';
-  bool get asksSendTo => assign == 'pick';
-  bool get asksPercent => percent == 'set';
-  bool get asksFiles => attachments == 'optional' || attachments == 'required';
-
-  static TicketAction? tryParse(Object? raw) {
-    if (raw is! Map) return null;
-    final name = idText(raw['name']);
-    if (name.isEmpty) return null;
-    String word(String key, String fallback) {
-      final v = idText(raw[key]);
-      return v.isEmpty ? fallback : v;
-    }
-
-    final attachments = raw['attachments'];
-    return TicketAction(
-      name: name,
-      who: _strings(raw['who']),
-      from: _strings(raw['from']),
-      to: idText(raw['to']),
-      assign: word('assign', 'keep'),
-      percent: word('percent', 'none'),
-      reason: word('reason', 'none'),
-      remarks: word('remarks', 'none'),
-      attachments: attachments is Map
-          ? idText(attachments['mode'])
-          : word('attachments', 'none'),
-      reasons: _strings(raw['reasons']),
-      push: raw['push'] == true,
-    );
-  }
-}
-
-/// `structures[form].status`: where a ticket stands and what can be done.
+/// `structures[form].status`: only the field and the statuses. The first
+/// status is where a record starts; any status can move to any other.
 class TicketTable {
-  const TicketTable({
-    required this.field,
-    this.assignee,
-    this.completion,
-    this.subject,
-    this.pool,
-    this.statuses = const [],
-    this.editableIn = const [],
-    this.actions = const [],
-  });
+  const TicketTable({required this.field, this.statuses = const []});
 
   final String field;
-  final String? assignee;
-  final String? completion;
-
-  /// The field a ticket is titled by; null when the form has none.
-  final String? subject;
-
-  /// The field naming the group a ticket waits for.
-  final String? pool;
   final List<TicketStatus> statuses;
-  final List<String> editableIn;
-  final List<TicketAction> actions;
 
   /// The status a new record starts at.
   String get firstStatus => statuses.isEmpty ? '' : statuses.first.name;
@@ -123,38 +39,26 @@ class TicketTable {
     return false;
   }
 
-  /// Fields shown in the header, not as record values.
-  Set<String> get headerFields => {field, ?assignee, ?completion, ?subject};
+  /// Fields shown in the header, not as record values: the status and the four
+  /// hidden fields the server keeps beside it.
+  Set<String> get headerFields => {
+    field,
+    '${field}_completion',
+    '${field}_comments',
+    '${field}_files',
+    '${field}_hours',
+  };
 
   static TicketTable? tryParse(Object? raw) {
     if (raw is! Map) return null;
     final field = idText(raw['field']);
     if (field.isEmpty) return null;
-    String? optional(String key) {
-      final v = idText(raw[key]);
-      return v.isEmpty ? null : v;
-    }
-
-    final statuses = raw['statuses'];
-    final actions = raw['actions'];
+    final statuses = _strings(raw['statuses']);
+    final finals = _strings(raw['final']).toSet();
     return TicketTable(
       field: field,
-      assignee: optional('assignee'),
-      completion: optional('completion'),
-      subject: optional('subject'),
-      pool: optional('pool'),
       statuses: [
-        if (statuses is List)
-          for (final s in statuses)
-            if (s is Map && idText(s['name']).isNotEmpty)
-              TicketStatus(idText(s['name']), isFinal: s['final'] == true)
-            else if (s is String && s.isNotEmpty)
-              TicketStatus(s),
-      ],
-      editableIn: _strings(raw['editableIn']),
-      actions: [
-        if (actions is List)
-          for (final a in actions) ?TicketAction.tryParse(a),
+        for (final s in statuses) TicketStatus(s, isFinal: finals.contains(s)),
       ],
     );
   }
@@ -208,7 +112,9 @@ class TicketForm {
   }
 }
 
-/// One ticket: the record and, when the reply carried it, its form.
+/// One record with a status: the submission and, when the reply carried it,
+/// its form. `holder`, `assignor` and `completion` come with the submission
+/// in `records.mine`; `record.actions` is the full, current state.
 class Ticket {
   const Ticket({
     required this.id,
@@ -220,6 +126,11 @@ class Ticket {
     this.host,
     this.scope = '',
     this.recordStatus = '',
+    this.holder = '',
+    this.assignor = '',
+    this.completion = 0,
+    this.participants = const [],
+    this.editedTs = 0,
     this.form,
   });
 
@@ -234,33 +145,37 @@ class Ticket {
 
   /// The record's own `status` (`pending` while it waits for approval).
   final String recordStatus;
+
+  /// Who it is with now; empty until the server says.
+  final String holder;
+  final String assignor;
+
+  /// 0 to 100.
+  final int completion;
+  final List<String> participants;
+  final int editedTs;
   final TicketForm? form;
 
   TicketTable? get table => form?.table;
 
-  /// The reply named a status table for this form: it is a ticket.
-  bool get isTicket => table != null;
+  /// The form has a status field.
+  bool get hasStatus => table != null;
 
   String get caption => form?.caption ?? tstruct;
 
   /// Saved, but not a record yet: it waits for someone to approve it.
-  bool get isAwaitingApproval {
-    if (recordStatus.toLowerCase() == 'pending') return true;
-    final t = table;
-    if (t == null) return false;
-    final raw = idText(values[t.field]).trim().toLowerCase();
-    return raw == 'pending' &&
-        !t.statuses.any((s) => s.name.toLowerCase() == raw);
-  }
+  bool get isAwaitingApproval => recordStatus.toLowerCase() == 'pending';
 
   String get ref => '$caption #$id';
 
-  /// The subject, or `<caption> #<id>` when empty.
+  /// The first filled value of the form, or `<caption> #<id>` when empty.
   String get title {
-    final field = table?.subject;
-    if (field != null) {
-      final text = idText(values[field]).trim();
-      if (text.isNotEmpty) return text;
+    final t = table;
+    final order = form?.fields.keys ?? values.keys;
+    for (final key in order) {
+      if (t != null && t.headerFields.contains(key)) continue;
+      final text = _plain(values[key]);
+      if (text.isNotEmpty && text.length <= 80) return text;
     }
     return ref;
   }
@@ -277,52 +192,42 @@ class Ticket {
 
   /// Who it is with (a username); the person who raised it when no one is
   /// named.
-  String get withWhom {
-    final field = table?.assignee;
-    if (field != null) {
-      final text = idText(values[field]).trim();
-      if (text.isNotEmpty) return text;
-    }
-    return by;
-  }
-
-  /// 0 to 100.
-  int get completion {
-    final field = table?.completion;
-    if (field == null) return 0;
-    return intOf(values[field]).clamp(0, 100);
-  }
-
-  /// A group is named for the ticket to wait for.
-  bool get hasPool {
-    final field = table?.pool;
-    if (field == null) return false;
-    final v = values[field];
-    if (v is List) return v.isNotEmpty;
-    return idText(v).trim().isNotEmpty;
-  }
+  String get withWhom => holder.isNotEmpty ? holder : by;
 
   bool isRaisedBy(String user) => by.toLowerCase() == user.toLowerCase();
   bool isWith(String user) => withWhom.toLowerCase() == user.toLowerCase();
 
-  /// The ticket after an update answered with its new state.
-  Ticket applying(TicketUpdateResult r) {
+  /// The ticket after `record.status` / `record.send` answered with a patch.
+  Ticket applying(RecordPatch r) {
     final t = table;
-    if (t == null) return this;
-    return copyWith(
+    return Ticket(
+      id: id,
+      by: by,
+      ts: ts,
+      tstruct: tstruct,
       values: {
         ...values,
-        t.field: r.status,
-        if (t.assignee != null) t.assignee!: r.assignee,
-        if (t.completion != null) t.completion!: r.completion,
+        if (t != null && r.status.isNotEmpty) t.field: r.status,
       },
+      branch: branch,
+      host: host,
+      scope: scope,
       recordStatus: '',
+      holder: r.holder.isEmpty ? holder : r.holder,
+      assignor: r.assignor ?? assignor,
+      completion: r.completion ?? completion,
+      participants: participants,
+      editedTs: editedTs,
+      form: form,
     );
   }
 
   Ticket copyWith({
     Map<String, dynamic>? values,
     String? recordStatus,
+    String? holder,
+    String? assignor,
+    int? completion,
     TicketForm? form,
   }) => Ticket(
     id: id,
@@ -334,6 +239,11 @@ class Ticket {
     host: host,
     scope: scope,
     recordStatus: recordStatus ?? this.recordStatus,
+    holder: holder ?? this.holder,
+    assignor: assignor ?? this.assignor,
+    completion: completion ?? this.completion,
+    participants: participants,
+    editedTs: editedTs,
     form: form ?? this.form,
   );
 
@@ -355,22 +265,48 @@ class Ticket {
       host: raw['host'] == null ? null : idText(raw['host']),
       scope: idText(raw['scope']),
       recordStatus: idText(raw['status']),
+      holder: idText(raw['holder']),
+      assignor: idText(raw['assignor']),
+      completion: intOf(raw['completion']).clamp(0, 100),
+      participants: _strings(raw['participants']),
+      editedTs: intOf(raw['editedTs']),
       form: forms[tstruct],
     );
   }
 }
 
-/// A `status.mine` reply.
+/// A `records.mine` reply.
 class TicketPage {
   const TicketPage({
     required this.tickets,
     required this.forms,
     required this.total,
     required this.hasMore,
+    this.received = 0,
+    this.next,
   });
 
   final List<Ticket> tickets;
+
+  /// How many rows the reply held, readable or not: paging continues from
+  /// `offset + received` (`next` is null for `with` and `involved`).
+  final int received;
+
+  /// The position the server says to continue from. Real for `raised` and
+  /// `team`; always null for `with` and `involved`.
+  final int? next;
+
+  /// Where the next page of list [as] starts, given the offset of this one:
+  /// `offset + received` for `with` and `involved` (the web does the same),
+  /// the server's `next` for `raised` (it scans more rows than it returns).
+  int nextOffset(String as, int offset) =>
+      (as == 'raised' || as == 'team') && next != null
+      ? next!
+      : offset + received;
   final Map<String, TicketForm> forms;
+
+  /// Real for `with` and `involved`; for `raised` the server only counts the
+  /// rows of this page, so the screen never shows it there.
   final int total;
   final bool hasMore;
 
@@ -386,149 +322,10 @@ class TicketPage {
       forms: forms,
       total: data['total'] == null ? tickets.length : intOf(data['total']),
       hasMore: data['hasMore'] == true,
+      received: rows is List ? rows.length : 0,
+      next: data['next'] == null ? null : intOf(data['next']),
     );
   }
-}
-
-/// A `status.get` reply.
-class TicketDetail {
-  const TicketDetail({
-    required this.ticket,
-    required this.isAdmin,
-    this.inPool,
-  });
-
-  final Ticket ticket;
-  final bool isAdmin;
-
-  /// Whether this person is in the group the ticket waits for; null when the
-  /// server did not say.
-  final bool? inPool;
-
-  static TicketDetail? tryParse(Map<String, dynamic> data) {
-    final forms = TicketForm.parseAll(data['structures']);
-    final ticket = Ticket.tryParse(data['submission'], forms);
-    if (ticket == null) return null;
-    return TicketDetail(
-      ticket: ticket,
-      isAdmin: data['isAdmin'] == true,
-      inPool: data['inPool'] is bool ? data['inPool'] as bool : null,
-    );
-  }
-}
-
-/// A file of a history record.
-class TicketFile {
-  const TicketFile({required this.id, required this.name});
-
-  final String id;
-  final String name;
-}
-
-/// One step of `status.history`.
-class TicketHistoryEntry {
-  const TicketHistoryEntry({
-    required this.id,
-    required this.by,
-    required this.ts,
-    required this.action,
-    this.isByAdmin = false,
-    this.fromStatus = '',
-    this.toStatus = '',
-    this.remarks = '',
-    this.reason = '',
-    this.percent = '',
-    this.sentTo = '',
-    this.files = const [],
-  });
-
-  final int id;
-  final String by;
-  final int ts;
-  final String action;
-  final bool isByAdmin;
-  final String fromStatus;
-  final String toStatus;
-  final String remarks;
-  final String reason;
-  final String percent;
-  final String sentTo;
-  final List<TicketFile> files;
-
-  static TicketHistoryEntry? tryParse(Object? raw) {
-    if (raw is! Map) return null;
-    final v = raw['values'] is Map ? raw['values'] as Map : const {};
-    String text(String key) => idText(v[key]).trim();
-    final files = <TicketFile>[];
-    final rawFiles = raw['files'] ?? v['Files'] ?? v['files'];
-    if (rawFiles is List) {
-      for (final f in rawFiles) {
-        if (f is Map) {
-          final id = idText(f['id']);
-          final name = idText(f['name']);
-          if (id.isNotEmpty || name.isNotEmpty) {
-            files.add(TicketFile(id: id, name: name.isEmpty ? id : name));
-          }
-        } else if (idText(f).isNotEmpty) {
-          files.add(TicketFile(id: idText(f), name: idText(f)));
-        }
-      }
-    }
-    return TicketHistoryEntry(
-      id: intOf(raw['id']),
-      by: idText(raw['by']),
-      ts: intOf(raw['ts']),
-      action: text('Action'),
-      isByAdmin: text('ByAdmin').toLowerCase() == 'yes',
-      fromStatus: text('FromStatus'),
-      toStatus: text('ToStatus'),
-      remarks: text('Remarks'),
-      reason: text('Reason'),
-      percent: text('Percent'),
-      sentTo: text('SentTo'),
-      files: files,
-    );
-  }
-
-  /// Oldest first, as the server sends it.
-  static List<TicketHistoryEntry> parseAll(Map<String, dynamic> data) {
-    final rows = data['history'];
-    return [
-      if (rows is List)
-        for (final r in rows) ?TicketHistoryEntry.tryParse(r),
-    ];
-  }
-}
-
-/// The ok answer of `status.update`.
-class TicketUpdateResult {
-  const TicketUpdateResult({
-    required this.status,
-    required this.assignee,
-    required this.completion,
-    this.record,
-    this.ticket,
-    this.isRepeated = false,
-  });
-
-  final String status;
-  final String assignee;
-  final int completion;
-  final int? record;
-  final int? ticket;
-
-  /// The server answered a retry with the first result.
-  final bool isRepeated;
-
-  static TicketUpdateResult parse(Map<String, dynamic> data) =>
-      TicketUpdateResult(
-        status: idText(data['status']),
-        assignee: idText(data['assignee']),
-        completion: intOf(data['completion']).clamp(0, 100),
-        record: idNumber(data['record']),
-        ticket: idNumber(data['ticket']),
-        isRepeated: data['repeated'] == true,
-      );
 }
 
 /// The live event `ticket_assigned {id, tstruct, action, by}`.

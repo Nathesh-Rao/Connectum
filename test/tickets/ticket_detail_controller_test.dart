@@ -1,8 +1,11 @@
 import 'dart:async';
 
-import 'package:connectum/data/models/ticket.dart';
+import 'package:connectum/data/models/record_state.dart';
+import 'package:connectum/data/records/record_commands.dart';
 import 'package:connectum/data/repositories/ticket_repository.dart';
 import 'package:connectum/data/socket/socket_service.dart';
+import 'package:connectum/features/tickets/models/ticket_input.dart';
+import 'package:connectum/features/tickets/ticket_action_form.dart';
 import 'package:connectum/features/tickets/ticket_detail_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,7 +13,7 @@ import '../support/fake_socket.dart';
 import 'ticket_fixtures.dart';
 
 Future<void> _settle() async {
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 6; i++) {
     await Future<void>.delayed(Duration.zero);
   }
 }
@@ -23,35 +26,40 @@ void main() {
   late TicketRepository repo;
   late TicketDetailController c;
 
-  Map<String, dynamic> ok(String status) => {
-    'assignee': 'ana',
-    'byAdmin': false,
-    'completion': 30,
-    'record': 39,
-    'status': status,
-    'ticket': 38,
+  Map<String, dynamic> actions({Map<String, dynamic> extra = const {}}) => {
+    ...fixtureData('record_actions'),
+    ...extra,
   };
 
-  Future<void> start() async {
-    socket.answers['status.mine'] = fixtureData('status_mine_with');
-    socket.answers['status.get'] = fixtureData('status_get');
-    socket.answers['status.history'] = fixtureData('status_history');
-    await repo.mine(as: 'with');
+  Future<void> start({Map<String, dynamic> extra = const {}}) async {
+    socket.answers[RecordCmd.get] = {
+      'submission': {
+        'id': 24,
+        'tstruct': 'help_ticket',
+        'by': 'ana',
+        'values': {'title': 'Printer', 'stage': 'Open'},
+      },
+    };
+    socket.answers[RecordCmd.actions] = actions(extra: extra);
+    socket.answers[RecordCmd.history] = fixtureData('submission_history');
     c = TicketDetailController(
-      ticketId: 38,
+      ticketId: 24,
       tickets: repo,
-      people: FakeGroups(),
       files: FakeFiles(),
       connectivity: FakeConnectivity(),
+      busyDelay: Duration.zero,
+      coolDown: const Duration(milliseconds: 40),
     )..onInit();
     await _settle();
   }
 
-  TicketAction action(String name) =>
-      c.actions.firstWhere((a) => a.name == name);
+  TicketActionForm statusForm({String to = 'In progress'}) =>
+      c.newForm(RecordActionItem.status)
+        ..statusPick.value = to
+        ..percent.value = 30;
 
-  Map<String, dynamic> lastUpdate() =>
-      socket.calls.lastWhere((x) => x.action == 'status.update').args;
+  Map<String, dynamic> lastStatus() =>
+      socket.calls.lastWhere((x) => x.action == RecordCmd.status).args;
 
   setUp(() {
     socket = FakeSocket()..goOnline();
@@ -64,157 +72,300 @@ void main() {
     repo.onClose();
   });
 
-  test(
-    'the assignee sees her actions; the payload carries expected and a request id',
-    () async {
+  test('the record, its actions and its history are read on open', () async {
+    await start();
+    expect(c.viewState.value.name, 'content');
+    expect(c.items.map((i) => i.id), ['send', 'status']);
+    expect(c.status, 'Open');
+    expect(c.history.value!.events, hasLength(4));
+    expect(c.holders, ['ana']);
+  });
+
+  group('status', () {
+    test('the payload carries expected and a request id', () async {
       await start();
-      expect(c.actions.map((a) => a.name), contains('Status update'));
-      final form = c.newForm(action('Status update'))..percent.value = 30;
-      socket.answers['status.update'] = ok('In progress');
-      expect(await c.submit(form), isTrue);
-      final args = lastUpdate();
-      expect(args['id'], 38);
-      expect(args['action'], 'Status update');
-      expect(args['expected'], {'status': 'Open', 'assignee': 'ana'});
+      socket.answers[RecordCmd.status] = fixtureData('record_status_ok');
+      final form = statusForm()
+        ..commentsText.value = 'Called'
+        ..hoursText.value = '2.5';
+      expect(await c.submit(form), ActionResult.done);
+      final args = lastStatus();
+      expect(args['id'], 24);
+      expect(args['status'], 'In progress');
       expect(args['percent'], 30);
-      expect(args['requestId'], isA<String>());
+      expect(args['comments'], 'Called');
+      expect(args['hours'], '2.5');
+      expect(args['expected'], {'status': 'Open', 'holder': 'ana'});
       expect((args['requestId'] as String).length, greaterThan(20));
+      expect((args['requestId'] as String).length, lessThanOrEqualTo(100));
       expect(form.requestId, isNull);
       expect(c.isBusy.value, isFalse);
-    },
-  );
+    });
 
-  test('a lost answer: the retry carries the same request id', () async {
-    await start();
-    final form = c.newForm(action('Status update'));
-    socket.answers['status.update'] = const SocketCallError('timeout');
-    expect(await c.submit(form), isFalse);
-    final first = lastUpdate()['requestId'];
-    expect(form.requestId, first);
-    expect(c.isBusy.value, isFalse);
-
-    socket.answers['status.update'] = {...ok('In progress'), 'repeated': true};
-    expect(await c.submit(form), isTrue);
-    expect(lastUpdate()['requestId'], first);
-    expect(socket.count('status.update'), 2);
-    expect(form.requestId, isNull);
-  });
-
-  test('a new press on a new form is a new request id', () async {
-    await start();
-    socket.answers['status.update'] = ok('In progress');
-    await c.submit(c.newForm(action('Status update')));
-    final first = lastUpdate()['requestId'];
-    await c.submit(c.newForm(action('Status update')));
-    expect(lastUpdate()['requestId'], isNot(first));
-  });
-
-  test(
-    'airplane mode right after the tap: not_connected keeps the id too',
-    () async {
+    test('after an action the record and its history are read again', () async {
       await start();
-      final form = c.newForm(action('Status update'));
-      socket.goOffline();
-      expect(await c.submit(form), isFalse);
-      expect(socket.count('status.update'), 0);
-      socket.goOnline();
-      socket.answers['status.update'] = ok('In progress');
-      expect(await c.submit(form), isTrue);
-      expect(socket.count('status.update'), 1);
-    },
-  );
-
-  test(
-    'stale: told verbatim, the ticket is read again, next send is a new id',
-    () async {
-      await start();
-      final form = c.newForm(action('Status update'));
-      socket.answers['status.update'] = const SocketCallError(
-        'stale',
-        'This ticket was updated by someone else. Reload to see the latest.',
-      );
-      final reads = socket.count('status.get');
-      expect(await c.submit(form), isFalse);
-      final first = lastUpdate()['requestId'];
+      final actionsBefore = socket.count(RecordCmd.actions);
+      final historyBefore = socket.count(RecordCmd.history);
+      socket.answers[RecordCmd.status] = fixtureData('record_status_ok');
+      await c.submit(statusForm());
       await _settle();
-      expect(socket.count('status.get'), greaterThan(reads));
-      expect(form.requestId, isNull);
-      socket.answers['status.update'] = ok('In progress');
-      await c.submit(form);
-      expect(lastUpdate()['requestId'], isNot(first));
-    },
-  );
+      expect(socket.count(RecordCmd.actions), greaterThan(actionsBefore));
+      expect(socket.count(RecordCmd.history), greaterThan(historyBefore));
+    });
 
-  test('forbidden reads again; busy and rate_limited keep the id', () async {
-    await start();
-    final form = c.newForm(action('Status update'));
-    socket.answers['status.update'] = const SocketCallError(
-      'rate_limited',
-      'Too many commands -- slow down and retry.',
+    test('a lost answer: the retry carries the same request id', () async {
+      await start();
+      final form = statusForm();
+      socket.answers[RecordCmd.status] = const SocketCallError('timeout');
+      expect(await c.submit(form), ActionResult.failed);
+      final first = lastStatus()['requestId'];
+      expect(form.requestId, first);
+      expect(c.isBusy.value, isFalse);
+
+      socket.answers[RecordCmd.status] = {
+        ...fixtureData('record_status_ok'),
+        'repeated': true,
+      };
+      expect(await c.submit(form), ActionResult.done);
+      expect(lastStatus()['requestId'], first);
+      expect(socket.count(RecordCmd.status), 2);
+      expect(form.requestId, isNull);
+    });
+
+    test('a new intent is a new request id', () async {
+      await start();
+      socket.answers[RecordCmd.status] = fixtureData('record_status_ok');
+      await c.submit(statusForm());
+      final first = lastStatus()['requestId'];
+      await c.submit(statusForm(to: 'Done'));
+      expect(lastStatus()['requestId'], isNot(first));
+    });
+
+    test(
+      'stale: the input stays, the record is read again, a new id next',
+      () async {
+        await start();
+        final form = statusForm()..commentsText.value = 'Mine';
+        socket.answers[RecordCmd.status] = const SocketCallError(
+          'stale',
+          'This record was updated by someone else. Reload to see the latest.',
+        );
+        final before = socket.count(RecordCmd.actions);
+        expect(await c.submit(form), ActionResult.failed);
+        await _settle();
+        expect(form.commentsText.value, 'Mine');
+        expect(form.statusPick.value, 'In progress');
+        expect(form.error.value, contains('updated by someone else'));
+        expect(form.requestId, isNull);
+        expect(socket.count(RecordCmd.actions), greaterThan(before));
+      },
     );
-    await c.submit(form);
-    final kept = form.requestId;
-    expect(kept, isNotNull);
-    socket.answers['status.update'] = const SocketCallError('busy', 'Busy.');
-    await c.submit(form);
-    expect(form.requestId, kept);
-    socket.answers['status.update'] = const SocketCallError(
-      'forbidden',
-      'You cannot do this on this ticket.',
+
+    test('busy: one automatic retry, same request id, then success', () async {
+      await start();
+      var n = 0;
+      socket.answers[RecordCmd.status] = (Map<String, dynamic> a) {
+        if (++n == 1) {
+          throw const SocketCallError(
+            'busy',
+            'This record is being updated. Try again in a moment.',
+          );
+        }
+        return fixtureData('record_status_ok');
+      };
+      final form = statusForm();
+      expect(await c.submit(form), ActionResult.done);
+      final ids = [
+        for (final x in socket.calls)
+          if (x.action == RecordCmd.status) x.args['requestId'],
+      ];
+      expect(ids, hasLength(2));
+      expect(ids.first, ids.last);
+    });
+
+    test('busy twice: the notice stays and the request id is kept', () async {
+      await start();
+      socket.answers[RecordCmd.status] = const SocketCallError(
+        'busy',
+        'This record is being updated. Try again in a moment.',
+      );
+      final form = statusForm();
+      expect(await c.submit(form), ActionResult.failed);
+      expect(socket.count(RecordCmd.status), 2);
+      expect(form.requestId, isNotNull);
+      expect(form.error.value, contains('Try again in a moment'));
+    });
+
+    test(
+      'rate_limited: the buttons wait a little, nothing is retried',
+      () async {
+        await start();
+        socket.answers[RecordCmd.status] = const SocketCallError(
+          'rate_limited',
+          'Too many commands.',
+        );
+        final form = statusForm();
+        expect(await c.submit(form), ActionResult.failed);
+        expect(c.isCooling.value, isTrue);
+        expect(await c.submit(form), ActionResult.failed);
+        expect(socket.count(RecordCmd.status), 1);
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        expect(c.isCooling.value, isFalse);
+      },
     );
-    final reads = socket.count('status.get');
-    await c.submit(form);
-    await _settle();
-    expect(form.requestId, isNull);
-    expect(socket.count('status.get'), greaterThan(reads));
+
+    test('not_found: the record is gone and the lists refresh', () async {
+      await start();
+      var refreshed = 0;
+      final sub = repo.refreshes.listen((_) => refreshed++);
+      socket.answers[RecordCmd.status] = const SocketCallError(
+        'not_found',
+        'No such record.',
+      );
+      expect(await c.submit(statusForm()), ActionResult.gone);
+      expect(c.isGone.value, isTrue);
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(refreshed, 1);
+      await sub.cancel();
+    });
+
+    test('forbidden shows the server text and reads again', () async {
+      await start();
+      socket.answers[RecordCmd.status] = const SocketCallError(
+        'forbidden',
+        'Only the person it is with can do this.',
+      );
+      final before = socket.count(RecordCmd.actions);
+      final form = statusForm();
+      expect(await c.submit(form), ActionResult.failed);
+      await _settle();
+      expect(form.error.value, 'Only the person it is with can do this.');
+      expect(socket.count(RecordCmd.actions), greaterThan(before));
+    });
+
+    test('invalid shows the message and nothing else', () async {
+      await start();
+      socket.answers[RecordCmd.status] = const SocketCallError(
+        'invalid',
+        'It is already Open.',
+      );
+      final form = statusForm(to: 'Open');
+      final before = socket.count(RecordCmd.actions);
+      expect(await c.submit(form), ActionResult.failed);
+      await _settle();
+      expect(form.error.value, 'It is already Open.');
+      expect(socket.count(RecordCmd.actions), before);
+    });
+
+    test('a required field from record.actions blocks the send', () async {
+      await start(extra: {'commentsRequired': true});
+      final form = statusForm();
+      expect(await c.submit(form), ActionResult.failed);
+      expect(form.error.value, 'Add your comments.');
+      expect(socket.count(RecordCmd.status), 0);
+    });
+
+    test('a disabled item never sends and shows its why', () async {
+      await start(
+        extra: {
+          'items': [
+            {
+              'id': 'status',
+              'label': 'Update status',
+              'enabled': false,
+              'why': 'This record is waiting for approval.',
+            },
+          ],
+        },
+      );
+      final form = statusForm();
+      expect(await c.submit(form), ActionResult.failed);
+      expect(form.error.value, 'This record is waiting for approval.');
+      expect(socket.count(RecordCmd.status), 0);
+    });
   });
 
-  test('not_found: the ticket is gone', () async {
-    await start();
-    socket.answers['status.update'] = const SocketCallError(
+  group('send', () {
+    test('via user carries the person and the expected state', () async {
+      await start();
+      socket.answers[RecordCmd.send] = fixtureData('record_send_ok');
+      final form = c.newForm(RecordActionItem.send)
+        ..person.value = const RecordPerson(username: 'ben', name: 'Ben Iyer')
+        ..reasonText.value = 'Needs the technician';
+      expect(await c.submit(form), ActionResult.done);
+      final args = socket.calls
+          .lastWhere((x) => x.action == RecordCmd.send)
+          .args;
+      expect(args['via'], 'user');
+      expect(args['person'], 'ben');
+      expect(args['reason'], 'Needs the technician');
+      expect(args['expected'], {'status': 'Open', 'holder': 'ana'});
+      expect(args['requestId'], isA<String>());
+      expect(c.ticket.value!.holder, 'ben');
+    });
+
+    test('nobody chosen: nothing is sent', () async {
+      await start();
+      final form = c.newForm(RecordActionItem.send);
+      expect(await c.submit(form), ActionResult.failed);
+      expect(form.error.value, RecordValidation.sendToRequired);
+      expect(socket.count(RecordCmd.send), 0);
+    });
+
+    test('stale on send keeps the sheet and its input', () async {
+      await start();
+      socket.answers[RecordCmd.send] = const SocketCallError(
+        'stale',
+        'This record was updated by someone else. Reload to see the latest.',
+      );
+      final form = c.newForm(RecordActionItem.send)
+        ..via.value = 'initiator'
+        ..remarksText.value = 'please';
+      expect(await c.submit(form), ActionResult.failed);
+      expect(form.remarksText.value, 'please');
+      expect(form.via.value, 'initiator');
+    });
+  });
+
+  test('the record gone on open shows the gone state', () async {
+    socket.answers[RecordCmd.get] = const SocketCallError(
       'not_found',
-      'No such ticket.',
+      'No such record.',
     );
-    await c.submit(c.newForm(action('Status update')));
+    socket.answers[RecordCmd.actions] = const SocketCallError(
+      'not_found',
+      'No such record.',
+    );
+    socket.answers[RecordCmd.history] = const SocketCallError(
+      'not_found',
+      'No such record.',
+    );
+    c = TicketDetailController(
+      ticketId: 24,
+      tickets: repo,
+      files: FakeFiles(),
+      connectivity: FakeConnectivity(),
+    )..onInit();
+    await _settle();
     expect(c.isGone.value, isTrue);
   });
 
-  test('a double tap sends one update; the spinner always ends', () async {
-    await start();
-    final gate = Completer<void>();
-    socket.held['status.update'] = gate.future;
-    socket.answers['status.update'] = ok('In progress');
-    final form = c.newForm(action('Status update'));
-    final a = c.submit(form);
-    final b = c.submit(form);
-    expect(c.isBusy.value, isTrue);
-    gate.complete();
-    expect(await b, isFalse);
-    expect(await a, isTrue);
-    expect(socket.count('status.update'), 1);
-    expect(c.isBusy.value, isFalse);
-  });
-
   test(
-    'required remarks and reason block the send before the network',
+    'an event during a read asks for one more read, not two at once',
     () async {
       await start();
-      final form = c.newForm(action('Return'));
-      expect(await c.submit(form), isFalse);
-      expect(socket.count('status.update'), 0);
-      expect(form.error.value, isNotNull);
-    },
-  );
-
-  test(
-    'the ticket list of another person does not leak into this one',
-    () async {
-      await start();
-      expect(repo.known(38), isNotNull);
-      expect(repo.withTotal.value, 4);
-      store.switchTo('someone-else');
-      expect(repo.known(38), isNull);
-      expect(repo.withTotal.value, 0);
+      final gate = Completer<void>();
+      socket.held[RecordCmd.actions] = gate.future;
+      final before = socket.count(RecordCmd.actions);
+      unawaited(c.reload());
+      unawaited(c.reload());
+      unawaited(c.reload());
+      await _settle();
+      expect(socket.count(RecordCmd.actions) - before, 1);
+      socket.held.remove(RecordCmd.actions);
+      gate.complete();
+      await _settle();
+      expect(socket.count(RecordCmd.actions) - before, 2);
     },
   );
 }

@@ -1,0 +1,39 @@
+{
+  "label": "smartview.share: to a person who cannot open the source (noAccess lists them; the share is kept)",
+  "as": "ann (author)",
+  "command": "smartview.share",
+  "request": {
+    "kind": "structure",
+    "name": "private_t",
+    "to": [
+      {
+        "type": "user",
+        "id": "svcapcpw1bob"
+      }
+    ],
+    "view": {
+      "id": "pv",
+      "name": "Private view",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "smartview.share",
+    "data": {
+      "noAccess": [
+        "Bob Iyer"
+      ],
+      "views": true
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "label": "submissions.list: a restricted structure read by a colleague",
+  "as": "bob (colleague)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "private_t",
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": false,
+      "limit": 500,
+      "offset": 0,
+      "structures": {},
+      "submissions": [],
+      "total": 0
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

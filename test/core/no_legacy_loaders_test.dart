@@ -18,19 +18,15 @@ void main() {
     expect(hits, isEmpty);
   });
 
-  test(
-    'CupertinoActivityIndicator is used only in AppSpinner and AppRefresh',
-    () {
-      final hits = [
-        for (final f in _dartFiles('lib'))
-          if (f.readAsStringSync().contains('CupertinoActivityIndicator') &&
-              !f.path.endsWith('app_spinner.dart') &&
-              !f.path.endsWith('app_refresh.dart'))
-            f.path,
-      ];
-      expect(hits, isEmpty);
-    },
-  );
+  test('CupertinoActivityIndicator is used only in AppSpinner', () {
+    final hits = [
+      for (final f in _dartFiles('lib'))
+        if (f.readAsStringSync().contains('CupertinoActivityIndicator') &&
+            !f.path.endsWith('app_spinner.dart'))
+          f.path,
+    ];
+    expect(hits, isEmpty);
+  });
 
   test('no RefreshIndicator in lib', () {
     final hits = [

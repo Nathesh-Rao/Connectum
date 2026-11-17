@@ -1,0 +1,40 @@
+{
+ "action": "record.actions",
+ "data": {
+  "assignor": null,
+  "commentsRequired": false,
+  "completion": null,
+  "completionRequired": false,
+  "filesRequired": false,
+  "final": [
+   "Done"
+  ],
+  "hasRules": false,
+  "holder": "ana",
+  "hours": null,
+  "hoursRequired": false,
+  "initiator": "ana",
+  "isAdmin": false,
+  "items": [
+   {
+    "enabled": true,
+    "id": "send",
+    "label": "Send"
+   },
+   {
+    "enabled": true,
+    "id": "status",
+    "label": "Update status"
+   }
+  ],
+  "status": "Open",
+  "statuses": [
+   "Open",
+   "In progress",
+   "Done"
+  ]
+ },
+ "ok": true,
+ "reqId": "ana-2",
+ "type": "sd"
+}

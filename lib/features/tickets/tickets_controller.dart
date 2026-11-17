@@ -32,8 +32,10 @@ class TicketList {
   int seq = 0;
 }
 
-/// The Tickets section of the Tasks screen: "With me" and "Raised by me",
-/// each read with `status.mine`, and a filter by form. The list of forms is
+/// The Tickets section of the Tasks screen: "With me", "Raised by me" and
+/// "Involved", each read with `records.mine` (pages are read until `hasMore`
+/// is false; a page can be shorter than the limit), and a filter by form that
+/// works on what is already read (the server has none). The list of forms is
 /// the distinct structures in the replies. Tickets are a third list: they
 /// never mix with the To-do tasks or the approvals.
 class TicketsController extends GetxController {
@@ -42,9 +44,12 @@ class TicketsController extends GetxController {
   final TicketRepository tickets;
   final ConnectivityService connectivity;
 
-  static const tabs = ['with', 'raised'];
+  static const tabs = ['with', 'raised', 'involved'];
 
-  /// 0 = with me, 1 = raised by me.
+  /// A guard on the paging loop: 50 pages of 100.
+  static const maxPages = 50;
+
+  /// 0 = with me, 1 = raised by me, 2 = involved.
   final selectedTab = 0.obs;
   final lists = {for (final t in tabs) t: TicketList()};
 
@@ -70,30 +75,74 @@ class TicketsController extends GetxController {
 
   // ---- reading ---------------------------------------------------------------
 
+  bool _isRefreshing = false;
+  bool _wantsAgain = false;
+
+  /// Every tab again. One refresh at a time: events that arrive during one
+  /// ask for a single further round after it.
   Future<void> refreshAll() async {
-    await Future.wait([for (final as in tabs) load(as)]);
+    if (_isRefreshing) {
+      _wantsAgain = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      do {
+        _wantsAgain = false;
+        await Future.wait([for (final as in tabs) load(as)]);
+      } while (_wantsAgain);
+    } finally {
+      _isRefreshing = false;
+    }
   }
 
-  /// The first page of a tab, replacing what is shown. [isQuiet]: a refresh
-  /// behind the screen never turns a list into an error.
+  /// A tab, replacing what is shown: the first page, then every next page
+  /// while the server says `hasMore`. [isQuiet]: a refresh behind the screen
+  /// never turns a list into an error. An empty list shows the first page as
+  /// soon as it is read; a list that already has rows is replaced once, when
+  /// every page is in, so rows do not jump.
   Future<void> load(String as, {bool isQuiet = true}) async {
     final list = lists[as]!;
     final seq = ++list.seq;
     if (list.items.isEmpty && list.viewState.value != AppViewState.content) {
       list.viewState.value = AppViewState.loading;
     }
+    final isFirstRead = list.items.isEmpty;
+    final read = <Ticket>[];
+    var count = 0;
+    var hasMore = false;
     try {
-      final page = await tickets.mine(as: as);
-      if (seq != list.seq) return;
-      _show(list, page.tickets);
-      list.loaded = page.tickets.length;
-      list.hasMore.value = page.hasMore;
+      for (var pages = 0; pages < maxPages; pages++) {
+        final page = await tickets.mine(as: as, offset: count);
+        if (seq != list.seq) return;
+        count = page.nextOffset(as, count);
+        read.addAll(
+          TicketReducer.appended(read, page.tickets).skip(read.length),
+        );
+        hasMore = page.hasMore && page.tickets.isNotEmpty;
+        if (isFirstRead && pages == 0) {
+          _show(list, read);
+          list.viewState.value = list.items.isEmpty
+              ? AppViewState.empty
+              : AppViewState.content;
+        }
+        if (!hasMore) break;
+        if (isFirstRead) list.items.assignAll(read);
+      }
+      _show(list, read);
+      list.loaded = count;
+      list.hasMore.value = hasMore;
       list.viewState.value = list.items.isEmpty
           ? AppViewState.empty
           : AppViewState.content;
     } on SocketCallError catch (e) {
       if (seq != list.seq) return;
-      if (list.items.isNotEmpty) {
+      if (read.isNotEmpty && isFirstRead) {
+        list.loaded = count;
+        list.hasMore.value = true;
+        list.viewState.value = AppViewState.content;
+        if (!isQuiet) _tell(CallProblem.of(e), retry: () => loadMore(as));
+      } else if (list.items.isNotEmpty) {
         list.viewState.value = AppViewState.content;
         if (!isQuiet) _tell(CallProblem.of(e), retry: () => load(as));
       } else {
@@ -134,7 +183,8 @@ class TicketsController extends GetxController {
     });
   }
 
-  /// "Show more": the next rows after the ones already held.
+  /// "Show more": only when a page failed half way; the next rows after the
+  /// ones already held.
   Future<void> loadMore(String as) async {
     final list = lists[as]!;
     if (list.isLoadingMore.value || !list.hasMore.value) return;
@@ -142,7 +192,7 @@ class TicketsController extends GetxController {
     try {
       final page = await tickets.mine(as: as, offset: list.loaded);
       list.items.assignAll(TicketReducer.appended(list.items, page.tickets));
-      list.loaded += page.tickets.length;
+      list.loaded = page.nextOffset(as, list.loaded);
       list.hasMore.value = page.hasMore;
     } on SocketCallError catch (e) {
       _tell(CallProblem.of(e), retry: () => loadMore(as));

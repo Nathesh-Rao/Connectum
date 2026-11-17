@@ -1,0 +1,108 @@
+{
+  "label": "smartview.views.save: the whole list is replaced",
+  "as": "ann (author)",
+  "command": "smartview.views.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "views": [
+      {
+        "id": "__default",
+        "name": "Default View",
+        "search": "",
+        "filters": [],
+        "sort": {
+          "col": "due",
+          "dir": "desc"
+        },
+        "groupBy": [],
+        "hidden": [],
+        "order": [],
+        "widths": {},
+        "kpis": true,
+        "charts": true
+      },
+      {
+        "id": "v1",
+        "name": "Open by stage",
+        "search": "",
+        "filters": [
+          {
+            "col": "stage",
+            "op": "not",
+            "value": "Closed"
+          }
+        ],
+        "sort": {
+          "col": "due",
+          "dir": "asc"
+        },
+        "groupBy": [
+          "stage"
+        ],
+        "hidden": [
+          "hours"
+        ],
+        "order": [],
+        "widths": {
+          "title": 320
+        },
+        "kpis": true,
+        "charts": true
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.views.save",
+    "data": {
+      "views": [
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "__default",
+          "kpis": true,
+          "name": "Default View",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "desc"
+          },
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [
+            "stage"
+          ],
+          "hidden": [
+            "hours"
+          ],
+          "id": "v1",
+          "kpis": true,
+          "name": "Open by stage",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "asc"
+          },
+          "widths": {
+            "title": 320
+          }
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

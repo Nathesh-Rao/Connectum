@@ -1,0 +1,24 @@
+{
+  "label": "smartview.views.save: a view without a name refused",
+  "as": "ann (author)",
+  "command": "smartview.views.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "views": [
+      {
+        "id": "q",
+        "name": ""
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.views.save",
+    "error": {
+      "code": "invalid",
+      "message": "A view needs a name of 1 to 40 characters."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

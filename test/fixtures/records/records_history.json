@@ -1,0 +1,70 @@
+{
+ "action": "records.history",
+ "data": {
+  "events": [
+   {
+    "asAdmin": false,
+    "by": "ben",
+    "caption": "Ticket",
+    "completion": "100",
+    "files": [],
+    "final": true,
+    "fromStatus": "In progress",
+    "id": 28,
+    "op": "status",
+    "record": 24,
+    "structure": "help_ticket",
+    "toStatus": "Done",
+    "ts": 1794393439452
+   },
+   {
+    "asAdmin": false,
+    "by": "ben",
+    "caption": "Ticket",
+    "completion": "30",
+    "files": [],
+    "final": false,
+    "fromStatus": "Open",
+    "id": 27,
+    "op": "status",
+    "record": 24,
+    "remarks": "Technician called",
+    "structure": "help_ticket",
+    "toStatus": "In progress",
+    "ts": 1794393439347
+   },
+   {
+    "asAdmin": false,
+    "by": "ana",
+    "caption": "Ticket",
+    "files": [],
+    "fromHolder": "ana",
+    "id": 26,
+    "op": "sent",
+    "reason": "Needs the technician",
+    "record": 24,
+    "status": "Open",
+    "structure": "help_ticket",
+    "to": [
+     "ben"
+    ],
+    "ts": 1794393439294,
+    "value": "",
+    "via": "user"
+   },
+   {
+    "by": "ana",
+    "caption": "Ticket",
+    "id": 25,
+    "op": "created",
+    "record": 24,
+    "structure": "help_ticket",
+    "ts": 1794393439191
+   }
+  ],
+  "more": false
+ },
+ "ok": true,
+ "reqId": "cadmin-11",
+ "type": "sd"
+}

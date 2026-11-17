@@ -1,0 +1,150 @@
+{
+  "label": "submissions.list: the author's list after one record was sent and its status updated",
+  "as": "ann (author)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "requests",
+    "limit": 5,
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": false,
+      "limit": 5,
+      "offset": 0,
+      "structures": {
+        "requests": {
+          "caption": "Requests",
+          "fields": {
+            "amount": "Amount",
+            "stage": "Stage",
+            "stage_comments": "Stage comments",
+            "stage_completion": "Stage completion",
+            "stage_files": "Stage files",
+            "stage_hours": "Stage hours",
+            "title": "Title"
+          },
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          }
+        }
+      },
+      "submissions": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 49,
+          "labels": {},
+          "scope": "global",
+          "ts": 1794833219643,
+          "tstruct": "requests",
+          "values": {
+            "amount": 500,
+            "stage": "Open",
+            "title": "Request 5"
+          }
+        },
+        {
+          "actedBy": "svcapcpw1ann",
+          "actionSeq": 1,
+          "assignor": "svcapcpw1ann",
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "editedTs": 1794833234736,
+          "files": {},
+          "holder": "svcapcpw1bob",
+          "host": null,
+          "id": 47,
+          "labels": {},
+          "participants": [
+            "svcapcpw1ann",
+            "svcapcpw1bob"
+          ],
+          "scope": "global",
+          "ts": 1794833219353,
+          "tstruct": "requests",
+          "values": {
+            "stage": "Open",
+            "title": "Request 4 (edited)"
+          }
+        },
+        {
+          "actedBy": "svcapcpw1ann",
+          "actionSeq": 1,
+          "assignor": "svcapcpw1ann",
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "editedTs": 1794833226178,
+          "files": {},
+          "holder": "svcapcpw1bob",
+          "host": null,
+          "id": 45,
+          "labels": {},
+          "participants": [
+            "svcapcpw1ann",
+            "svcapcpw1bob"
+          ],
+          "scope": "global",
+          "ts": 1794833219069,
+          "tstruct": "requests",
+          "values": {
+            "amount": 300,
+            "stage": "Open",
+            "title": "Request 3"
+          }
+        },
+        {
+          "actedBy": "svcapcpw1bob",
+          "actionSeq": 2,
+          "assignor": "svcapcpw1ann",
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "completion": 30,
+          "editedTs": 1794833231113,
+          "files": {},
+          "holder": "svcapcpw1bob",
+          "host": null,
+          "id": 41,
+          "labels": {},
+          "participants": [
+            "svcapcpw1ann",
+            "svcapcpw1bob"
+          ],
+          "scope": "global",
+          "ts": 1794833218512,
+          "tstruct": "requests",
+          "values": {
+            "amount": 100,
+            "stage": "In progress",
+            "stage_comments": "started",
+            "stage_completion": 30,
+            "title": "Request 1"
+          }
+        }
+      ],
+      "total": 4
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// The real captured replies, in `assets/debug/tickets/`.
+/// The real captured replies of the record flow, in
+/// `test/fixtures/records/` (from the BE's `tools/postman/examples.json`).
 Map<String, dynamic> fixture(String name) {
-  final file = File('assets/debug/tickets/$name.json');
+  final file = File('test/fixtures/records/$name.json');
   final reply = jsonDecode(file.readAsStringSync()) as Map;
   return reply.cast<String, dynamic>();
 }

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:connectum/core/theme/app_colors.dart';
 import 'package:connectum/core/widgets/app_refresh.dart';
 import 'package:connectum/core/widgets/app_spinner.dart';
+import 'package:connectum/core/widgets/app_spinner/app_spinner_double.dart';
 
 Widget _host(Widget child, {bool disableAnimations = false}) => MaterialApp(
   home: MediaQuery(
@@ -34,9 +35,7 @@ void main() {
     });
 
     testWidgets('applies the colour', (tester) async {
-      await tester.pumpWidget(
-        _host(const AppSpinner(color: AppColors.white)),
-      );
+      await tester.pumpWidget(_host(const AppSpinner(color: AppColors.white)));
       expect(
         tester
             .widget<CupertinoActivityIndicator>(
@@ -99,11 +98,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       expect(calls, 1);
-      expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
+      expect(find.byType(AppSpinnerDouble), findsOneWidget);
       done.complete();
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
       expect(calls, 1);
-      expect(find.byType(CupertinoActivityIndicator), findsNothing);
+      expect(find.byType(AppSpinnerDouble), findsNothing);
     });
 
     testWidgets('a short pull does not refresh', (tester) async {

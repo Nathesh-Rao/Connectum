@@ -1,0 +1,2 @@
+# Files under lib/ allowed to build a refresh control themselves, with the reason.
+# Format: path | reason. Starts empty: every screen goes through AppRefresh.

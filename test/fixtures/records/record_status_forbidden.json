@@ -1,0 +1,10 @@
+{
+ "action": "record.status",
+ "error": {
+  "code": "forbidden",
+  "message": "Only the person it is with can do this."
+ },
+ "ok": false,
+ "reqId": "ana-7",
+ "type": "sd"
+}

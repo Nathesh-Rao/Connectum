@@ -1,0 +1,24 @@
+{
+  "label": "smartview.shares: the share to a person who cannot open it says canOpen false",
+  "as": "ann (author)",
+  "command": "smartview.shares",
+  "request": {
+    "kind": "structure",
+    "name": "private_t"
+  },
+  "reply": {
+    "action": "smartview.shares",
+    "data": {
+      "shares": [
+        {
+          "canOpen": false,
+          "id": "svcapcpw1bob",
+          "name": "Bob Iyer",
+          "type": "user"
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,141 +1,239 @@
-import '../../../data/models/ticket.dart';
+import '../../../data/models/record_state.dart';
+import '../../../data/records/record_commands.dart';
 import '../../../data/socket/call_problem.dart';
 
-/// What the person filled in for one action.
-class TicketActionInput {
-  const TicketActionInput({
-    this.reason = '',
-    this.remarks = '',
-    this.sendTo = '',
-    this.percent = 0,
+/// What the person filled in on the status sheet.
+class StatusInput {
+  const StatusInput({
+    this.status = '',
+    this.comments = '',
+    this.percent,
+    this.hours = '',
     this.files = const [],
   });
 
-  final String reason;
-  final String remarks;
-  final String sendTo;
-  final int percent;
+  final String status;
+  final String comments;
+
+  /// Null = not given.
+  final int? percent;
+
+  /// As typed ("2.5"); empty = not given.
+  final String hours;
 
   /// Ids of files the server already holds.
   final List<String> files;
 }
 
-/// Checks an input against what its action asks for. Null = good to send.
-class TicketValidation {
-  TicketValidation._();
+/// What the person filled in on the send sheet.
+class SendInput {
+  const SendInput({
+    this.via = '',
+    this.person = '',
+    this.value = '',
+    this.reason = '',
+    this.remarks = '',
+    this.files = const [],
+  });
 
-  static const reasonRequired = 'Say why.';
-  static const remarksRequired = 'Add a remark.';
-  static const sendToRequired = 'Choose who to send it to.';
-  static const percentRange = 'Completion is 0 to 100.';
+  static const viaUser = 'user';
+  static const viaDesignation = 'designation';
+  static const viaCategory = 'category';
+  static const viaInitiator = 'initiator';
+  static const viaAssignor = 'assignor';
+
+  final String via;
+  final String person;
+  final String value;
+  final String reason;
+  final String remarks;
+  final List<String> files;
+}
+
+/// The phone's own checks. They use the BE's wording; the server stays the
+/// judge and nothing here blocks on a rule only the server knows.
+class RecordValidation {
+  RecordValidation._();
+
+  static const commentsRequired = 'Add your comments.';
+  static const completionRequired = 'Enter the completion.';
+  static const hoursRequired = 'Enter the hours worked.';
   static const fileRequired = 'Attach a file.';
+  static const statusRequired = 'Choose one of the statuses of this record.';
+  static const completionRange = 'Completion is 0 to 100.';
+  static const completionDown = 'Completion cannot go down.';
+  static const hoursRange =
+      'Hours worked must be a number from 0 to 24, with at most two decimals.';
+  static const commentsLong = 'Comments are at most 1,000 characters.';
+  static const sendToRequired = 'Choose who to send it to.';
+  static const textLong = 'Reason and remarks are at most 1,000 characters.';
+  static const tooManyFiles = 'Attach at most 10 files.';
 
-  static String? check(TicketAction a, TicketActionInput i) {
-    if (a.reason == 'required' && i.reason.trim().isEmpty) {
-      return reasonRequired;
+  static final _hours = RegExp(r'^\d+([.,]\d{1,2})?$');
+
+  /// The hours as a number, or null when [text] is not 0 to 24 with at most
+  /// two decimals.
+  static double? hoursOf(String text) {
+    final t = text.trim();
+    if (!_hours.hasMatch(t)) return null;
+    final v = double.tryParse(t.replaceAll(',', '.'));
+    return v == null || v < 0 || v > RecordLimits.maxHours ? null : v;
+  }
+
+  /// The first thing wrong with a status update; null = good to send.
+  static String? status(RecordState s, StatusInput i) {
+    if (i.status.isEmpty || !s.statuses.contains(i.status)) {
+      return statusRequired;
     }
-    if (a.asksReason &&
-        a.reasons.isNotEmpty &&
-        i.reason.trim().isNotEmpty &&
-        !a.reasons.contains(i.reason)) {
-      return reasonRequired;
+    if (i.comments.length > RecordLimits.maxText) return commentsLong;
+    if (s.isCommentsRequired && i.comments.trim().isEmpty) {
+      return commentsRequired;
     }
-    if (a.remarks == 'required' && i.remarks.trim().isEmpty) {
-      return remarksRequired;
+    final p = i.percent;
+    if (p != null && (p < 0 || p > 100)) return completionRange;
+    if (s.isCompletionRequired && p == null) return completionRequired;
+    if (p != null && !s.isAdmin && s.completion != null && p < s.completion!) {
+      return completionDown;
     }
-    if (a.asksSendTo && i.sendTo.trim().isEmpty) return sendToRequired;
-    if (a.asksPercent && (i.percent < 0 || i.percent > 100)) {
-      return percentRange;
+    if (i.hours.trim().isNotEmpty && hoursOf(i.hours) == null) {
+      return hoursRange;
     }
-    if (a.attachments == 'required' && i.files.isEmpty) return fileRequired;
+    if (s.isHoursRequired && i.hours.trim().isEmpty) return hoursRequired;
+    if (i.files.length > RecordLimits.maxFiles) return tooManyFiles;
+    if (s.isFilesRequired && i.files.isEmpty) return fileRequired;
+    return null;
+  }
+
+  /// The first thing wrong with a send; null = good to send.
+  static String? send(SendInput i) {
+    final needsPerson = i.via == SendInput.viaUser;
+    final needsValue =
+        i.via == SendInput.viaDesignation || i.via == SendInput.viaCategory;
+    if (i.via.isEmpty ||
+        (needsPerson && i.person.trim().isEmpty) ||
+        (needsValue && i.value.trim().isEmpty)) {
+      return sendToRequired;
+    }
+    if (i.reason.length > RecordLimits.maxText ||
+        i.remarks.length > RecordLimits.maxText) {
+      return textLong;
+    }
+    if (i.files.length > RecordLimits.maxFiles) return tooManyFiles;
     return null;
   }
 }
 
-/// The `status.update` arguments.
-class TicketPayload {
-  TicketPayload._();
+/// The `record.status` and `record.send` arguments. Only what was given goes
+/// in. A retry of the same press passes the same [requestId]; a new press
+/// makes a new one.
+class RecordPayload {
+  RecordPayload._();
 
-  /// [expectedStatus] and [expectedAssignee] are exactly what the screen
-  /// showed. Only the inputs the action asks for go in. A retry of the same
-  /// press passes the same [requestId].
-  static Map<String, dynamic> build({
+  static Map<String, dynamic> status({
     required int id,
-    required TicketAction action,
-    required TicketActionInput input,
+    required StatusInput input,
     required String requestId,
-    required String expectedStatus,
-    required String expectedAssignee,
+    Map<String, dynamic> expected = const {},
+  }) {
+    final comments = input.comments.trim();
+    final hours = input.hours.trim();
+    return {
+      'id': id,
+      'status': input.status,
+      if (comments.isNotEmpty) 'comments': comments,
+      if (input.percent != null) 'percent': input.percent!.clamp(0, 100),
+      if (hours.isNotEmpty) 'hours': hours.replaceAll(',', '.'),
+      if (input.files.isNotEmpty) 'files': input.files,
+      if (expected.isNotEmpty) 'expected': expected,
+      'requestId': requestId,
+    };
+  }
+
+  static Map<String, dynamic> send({
+    required int id,
+    required SendInput input,
+    required String requestId,
+    Map<String, dynamic> expected = const {},
   }) {
     final reason = input.reason.trim();
     final remarks = input.remarks.trim();
     return {
       'id': id,
-      'action': action.name,
-      'expected': {'status': expectedStatus, 'assignee': expectedAssignee},
+      'via': input.via,
+      if (input.via == SendInput.viaUser) 'person': input.person.trim(),
+      if (input.via == SendInput.viaDesignation ||
+          input.via == SendInput.viaCategory)
+        'value': input.value.trim(),
+      if (reason.isNotEmpty) 'reason': reason,
+      if (remarks.isNotEmpty) 'remarks': remarks,
+      if (input.files.isNotEmpty) 'files': input.files,
+      if (expected.isNotEmpty) 'expected': expected,
       'requestId': requestId,
-      if (action.asksReason && reason.isNotEmpty) 'reason': reason,
-      if (action.asksRemarks && remarks.isNotEmpty) 'remarks': remarks,
-      if (action.asksSendTo) 'sendTo': input.sendTo.trim(),
-      if (action.asksPercent) 'percent': input.percent.clamp(0, 100),
-      if (action.asksFiles && input.files.isNotEmpty) 'files': input.files,
     };
   }
 }
 
-/// What the screen does with a failed or finished `status.update`.
+/// What the screen does with a failed or finished record action. Decided by
+/// the error `code`, never by its message.
 class TicketOutcome {
   const TicketOutcome._({
     this.isSuccess = false,
     this.shouldReload = false,
-    this.shouldRemoveRow = false,
+    this.shouldLeave = false,
     this.shouldKeepRequestId = false,
     this.canRetry = false,
-    this.shouldKeepForm = false,
+    this.shouldRetryOnce = false,
+    this.shouldBackOff = false,
   });
 
   /// Done (a repeat of an update the server already made counts).
   final bool isSuccess;
 
-  /// Read the ticket (and its history) again.
+  /// Read the record (`record.actions` and the history) again.
   final bool shouldReload;
 
-  /// The ticket is gone.
-  final bool shouldRemoveRow;
+  /// The record is gone or no longer visible: close the screen and refresh
+  /// the list.
+  final bool shouldLeave;
 
-  /// A retry is the same update: it reuses the request id.
+  /// A retry is the same intent: it reuses the request id.
   final bool shouldKeepRequestId;
 
   /// A manual Retry button is offered.
   final bool canRetry;
 
-  /// What the person typed stays, to submit again.
-  final bool shouldKeepForm;
+  /// `busy`: one automatic retry after a short wait, same request id.
+  final bool shouldRetryOnce;
+
+  /// `rate_limited` (no `retryAfter`): wait a little before a retry.
+  final bool shouldBackOff;
 
   static const success = TicketOutcome._(isSuccess: true);
 
   static TicketOutcome of(CallProblem p) => switch (p.kind) {
     CallProblemKind.duplicate => success,
-    CallProblemKind.stale => const TicketOutcome._(
-      shouldReload: true,
-      shouldKeepForm: true,
+    CallProblemKind.stale => const TicketOutcome._(shouldReload: true),
+    CallProblemKind.notFound => const TicketOutcome._(shouldLeave: true),
+    CallProblemKind.busy => const TicketOutcome._(
+      canRetry: true,
+      shouldKeepRequestId: true,
+      shouldRetryOnce: true,
     ),
-    CallProblemKind.notFound => const TicketOutcome._(shouldRemoveRow: true),
-    CallProblemKind.busy ||
-    CallProblemKind.rateLimited ||
+    CallProblemKind.rateLimited => const TicketOutcome._(
+      canRetry: true,
+      shouldKeepRequestId: true,
+      shouldBackOff: true,
+    ),
     CallProblemKind.offline => const TicketOutcome._(
       canRetry: true,
       shouldKeepRequestId: true,
-      shouldKeepForm: true,
     ),
     CallProblemKind.unknownOutcome => const TicketOutcome._(
       shouldReload: true,
       canRetry: true,
       shouldKeepRequestId: true,
-      shouldKeepForm: true,
     ),
-    CallProblemKind.forbidden || CallProblemKind.invalid =>
-      const TicketOutcome._(shouldReload: true, shouldKeepForm: true),
-    _ => const TicketOutcome._(shouldKeepForm: true),
+    CallProblemKind.forbidden => const TicketOutcome._(shouldReload: true),
+    _ => const TicketOutcome._(),
   };
 }

@@ -44,7 +44,11 @@ In debug and profile builds the app calls it once at startup (4 s timeout, failu
 
 ## Not available yet
 
-Push (the backend has none), event injection, a reset endpoint, seeded direct-chat messages, ticket/record forms with actions, approvals, attachments (file storage profile not verified), E2E test chats (server mode not verified), and the mock AI at a private address (needs `CONNECTUM_API_ALLOW_PRIVATE=1`, not verified).
+Push (the backend has none), event injection, a reset endpoint, seeded direct-chat messages, seeded records (see below), approvals, attachments (file storage profile not verified), E2E test chats (server mode not verified), and the mock AI at a private address (needs `CONNECTUM_API_ALLOW_PRIVATE=1`, not verified).
+
+## Records and tickets on dev
+
+The record flow is live on dev (`records.mine`, `record.*`, `submission.history`; WebSocket only). Dev has **no seeded records, tickets, statuses or approvals** (`seed.mjs` does not create them), so Tickets shows empty lists there. Use `--dart-define=DEMO_MODE=true` (or `/debug/tickets`) for the full flow offline, or ask the BE for seeds (the list is in `records-and-tickets.md`, "Open items for the BE"). Dev's rate limit is 200 commands per 10 s (30 by default).
 
 ## Rules for automated tests
 
@@ -60,4 +64,4 @@ Push (the backend has none), event injection, a reset endpoint, seeded direct-ch
 2. When `dev.connectum.app` (DNS, TLS) will exist.
 3. Dev values of `CHAT_RATE_LIMIT_MAX`, `CONNECTUM_E2E` and `CONNECTUM_API_ALLOW_PRIVATE`.
 4. Whether the dev instance has a file storage profile (attachments).
-5. `origin/dev` docs have moved tickets to `RECORD_ACTIONS.md` (`records.mine` replaces `status.mine`, `task.fetch` replaces `task.get`, `INBOX_TASKS_AND_TICKETS.md`): is this live on the deployed dev, and when must the app move? Our `reference/` copies and code still use the old names until the sync is applied and reviewed.
+5. ~~Is the record flow live on dev?~~ Answered 13 Nov: yes (PR #752, release `061ed545`); `status.*` is gone (`unknown_action`) and `task.get` stays (there is no `task.fetch`). The app uses the record flow only: `mobile-handoff/records-and-tickets.md`.

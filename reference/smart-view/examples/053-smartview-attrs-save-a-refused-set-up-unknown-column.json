@@ -1,0 +1,77 @@
+{
+  "label": "smartview.attrs.save: a refused set-up (unknown column)",
+  "as": "ann (author)",
+  "command": "smartview.attrs.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "metadata": [
+      {
+        "field": "title",
+        "caption": "Title",
+        "type": "Character",
+        "hide": false,
+        "key": true,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "stage",
+        "caption": "Stage",
+        "type": "Character",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "hours",
+        "caption": "Hours",
+        "type": "Numeric",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "due",
+        "caption": "Due",
+        "type": "Date",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      }
+    ],
+    "hyperlinks": [],
+    "kpis": [
+      {
+        "caption": "x",
+        "agg": "sum",
+        "column": "nope"
+      }
+    ],
+    "charts": [
+      {
+        "caption": "Tickets by stage",
+        "chart": "donut",
+        "groupBy": "stage",
+        "agg": "count",
+        "column": ""
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.attrs.save",
+    "error": {
+      "code": "invalid",
+      "message": "KPIs, line 1: \"nope\" is not in the metadata. Add it there first."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

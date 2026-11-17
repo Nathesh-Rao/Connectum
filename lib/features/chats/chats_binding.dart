@@ -6,6 +6,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../data/repositories/message_repository.dart';
+import '../../data/repositories/people_avatars.dart';
 import '../../data/repositories/presence_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
@@ -51,6 +52,7 @@ class ChatsBinding extends Bindings {
         shell: Get.find<HomeShellController>(),
         switcher: switcher,
         newChat: newChat,
+        avatars: Get.find<PeopleAvatars>(),
       ),
     );
   }

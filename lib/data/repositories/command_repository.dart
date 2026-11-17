@@ -32,6 +32,9 @@ enum HashKind {
   rows,
   confirm,
   soon,
+  form,
+  records,
+  smartView,
   success,
   notice,
 }
@@ -84,6 +87,8 @@ class HashResult {
       kind == HashKind.rows ||
       kind == HashKind.success ||
       kind == HashKind.soon ||
+      kind == HashKind.form ||
+      kind == HashKind.records ||
       kind == HashKind.notice;
 }
 
@@ -108,6 +113,8 @@ class CommandRepository extends GetxService {
   static const escapeNotice =
       'Messages starting with ## go to the general room, which is not available in the app.';
   static const comingSoon = 'This command is coming soon in the app.';
+  static const noStructure =
+      'Please provide the structure name, e.g. #tstruct-add leave-request.';
   static const noPerson = 'No such person.';
   static const noGroup = 'No such group.';
 
@@ -126,6 +133,10 @@ class CommandRepository extends GetxService {
   final MessageRepository _messages;
   final ConversationRepository _conversations;
   final Duration _replyWait;
+
+  /// The choices after `#view `, built from the source list by Smart View
+  /// (`/cmdcomplete` does not know `#view`). Set once by the app's binding.
+  Future<List<CommandSuggestion>> Function(String typed)? sourceSuggester;
 
   final catalog = <HashCommand>[].obs;
   final categories = <CommandCategory>[].obs;
@@ -191,7 +202,10 @@ class CommandRepository extends GetxService {
 
   Future<void> _load() async {
     if (SeedUi.isActive) {
-      if (catalog.isEmpty) catalog.assignAll(SeedUi.commands());
+      if (catalog.isEmpty) {
+        final demo = SeedUi.commands();
+        catalog.assignAll([...demo, ...CommandMenu.localEntries(demo)]);
+      }
       return;
     }
     final org = _store.orgId ?? '';
@@ -375,6 +389,31 @@ class CommandRepository extends GetxService {
         return const HashResult(HashKind.soon, comingSoon);
       case CommandMode.screen:
         return _screen(handler.target, parsed);
+      case CommandMode.form:
+      case CommandMode.records:
+        final name = parsed.rest.trim();
+        if (name.isEmpty) return const HashResult(HashKind.usage, noStructure);
+        return HashResult(
+          handler.mode == CommandMode.form ? HashKind.form : HashKind.records,
+          '',
+          '',
+          '',
+          '',
+          const [],
+          const [],
+          name,
+        );
+      case CommandMode.smartView:
+        return HashResult(
+          HashKind.smartView,
+          '',
+          '',
+          '',
+          '',
+          const [],
+          const [],
+          parsed.rest.trim(),
+        );
       case CommandMode.draft:
         return _draft(cmd, parsed, handler.target);
       case CommandMode.line:

@@ -1,0 +1,20 @@
+{
+  "label": "smartview.attrs: a source the person cannot open (attrs null)",
+  "as": "bob (colleague)",
+  "command": "smartview.attrs",
+  "request": {
+    "kind": "structure",
+    "name": "private_t"
+  },
+  "reply": {
+    "action": "smartview.attrs",
+    "data": {
+      "attrs": null,
+      "canConfigure": true,
+      "canDefault": false,
+      "mine": false
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

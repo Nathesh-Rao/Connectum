@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../forms/models/form_launch.dart';
 import '../../data/models/form_card.dart';
@@ -35,6 +36,30 @@ class SubmissionDetailController extends GetxController {
   bool get canEdit {
     final c = card.value;
     return c != null && (c.canEdit(me) || c.canFix(me));
+  }
+
+  final isDeleting = false.obs;
+
+  bool get canDelete => card.value?.canDelete(me) ?? false;
+
+  /// Asks first (the sheet is [confirm]), then deletes on the server and
+  /// closes. A refusal shows as a notice and the card stays.
+  Future<void> delete(Future<bool> Function() confirm) async {
+    final c = card.value;
+    if (c == null || isDeleting.value || !c.canDelete(me)) return;
+    if (!await confirm()) return;
+    isDeleting.value = true;
+    try {
+      final problem = await submissions.deleteSubmission(submissionId);
+      if (problem != null) {
+        AppNotices.warning(problem);
+        return;
+      }
+      AppNotices.success('Submission deleted');
+      Get.back<void>();
+    } finally {
+      isDeleting.value = false;
+    }
   }
 
   /// The form again, filled in with what was saved (or resubmitted when the

@@ -11,6 +11,14 @@ import '../../core/widgets/app_state_view.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../../data/models/form_card.dart';
+import '../../data/models/ids.dart';
+import '../../data/repositories/smart_view_repository.dart';
+import '../../data/repositories/ticket_repository.dart';
+import '../../data/repositories/workspace_repository.dart';
+import '../../data/models/record_state.dart';
+import '../tickets/models/card_menu.dart';
+import '../tickets/models/record_card_rule.dart';
+import '../tickets/ticket_detail_controller.dart';
 import '../../data/commands/command_line.dart';
 import '../../data/commands/command_reply.dart';
 import '../../data/models/hash_command.dart';
@@ -41,6 +49,10 @@ class WorkspaceController extends GetxController {
     required this.shell,
     required this.commands,
     required this.messages,
+    required this.workspace,
+    required this.tickets,
+    required this.newTicketDetail,
+    this.smartView,
   });
 
   final SubmissionRepository submissions;
@@ -50,8 +62,16 @@ class WorkspaceController extends GetxController {
   final HomeShellController? shell;
   final CommandRepository commands;
   final MessageRepository messages;
+  final WorkspaceRepository workspace;
+  final TicketRepository tickets;
+  final SmartViewRepository? smartView;
+  final TicketDetailController Function(int id) newTicketDetail;
 
-  static const placeholder = 'Type # for commands or @name to message…';
+  /// The latest own records shown as cards (the web's `MWS_CARDS`); older
+  /// ones are in My submissions.
+  static const ownCards = 100;
+
+  static const placeholder = 'Type #<commands> or @<name>';
   static const nudgeText =
       'Start with # for commands or @name to message someone.';
 
@@ -62,10 +82,17 @@ class WorkspaceController extends GetxController {
   /// The gentle line under the field for text that is sent nowhere.
   final nudge = RxnString();
   late final prompt = CommandPrompt(commands);
-  late final runner = CommandRunner(commands, prompt);
+  late final runner = CommandRunner(
+    commands,
+    prompt,
+    submissions: submissions,
+    smartView: smartView,
+    shell: shell,
+  );
   final _notes = <WorkspaceNote>[];
   final _noteWorkers = <Worker>[];
   int _noteSeq = 0;
+  bool _wasFailing = false;
   bool _isRunning = false;
 
   /// The forms button's sheet. A form filled in here has no conversation.
@@ -90,6 +117,10 @@ class WorkspaceController extends GetxController {
   Worker? _loadedWorker;
   Worker? _failuresWorker;
   Worker? _draftsWorker;
+  Worker? _receivedWorker;
+  Worker? _workspaceStateWorker;
+  Worker? _connectivityWorker;
+  final _details = <int, TicketDetailController>{};
 
   String get me => store.userId ?? SeedMessages.me;
 
@@ -126,18 +157,46 @@ class WorkspaceController extends GetxController {
         () => notice.value = null,
       );
     });
+    _receivedWorker = ever(workspace.received, (_) => _apply());
+    _workspaceStateWorker = everAll([
+      workspace.isLoaded,
+      workspace.hasError,
+      workspace.reads,
+      workspace.isSyncing,
+    ], (_) => _apply());
+    _connectivityWorker = ever(connectivity.state, (_) => _apply());
     _apply();
     if (connectivity.state.value == AppConnectivity.online) {
-      unawaited(submissions.syncFromServer());
+      workspace.request(now: true);
     }
   }
 
+  /// The read failed and there is nothing to show: an error with Retry, never
+  /// an empty list. Offline is not an error: the cache is shown.
+  void retry() {
+    viewState.value = AppViewState.loading;
+    workspace.request(now: true);
+  }
+
   void _apply() {
-    final mine =
-        submissions.submissions
-            .where((s) => s.byUser.toLowerCase() == me.toLowerCase())
-            .toList()
-          ..sort((a, b) => a.ts.compareTo(b.ts));
+    final all = submissions.submissions
+        .where((s) => s.byUser.toLowerCase() == me.toLowerCase())
+        .toList();
+    // Not yet on the server: always shown. The rest: the latest [ownCards].
+    final pending = [
+      for (final s in all)
+        if (s.isPending) s,
+    ];
+    final synced = [
+      for (final s in all)
+        if (!s.isPending) s,
+    ]..sort((a, b) => b.ts.compareTo(a.ts));
+    final mine = [...pending, ...synced.take(ownCards)];
+    final ownIds = {for (final s in mine) s.submissionId};
+    final got = [
+      for (final t in workspace.received)
+        if (!ownIds.contains('${t.id}')) t,
+    ];
     final now = DateTime.now();
     final entries = <({int ts, WorkspaceRow row})>[
       for (final s in mine)
@@ -149,6 +208,11 @@ class WorkspaceController extends GetxController {
               definition: submissions.definitions[s.tstruct],
             ),
           ),
+        ),
+      for (final t in got)
+        (
+          ts: t.editedTs > 0 ? t.editedTs : t.ts,
+          row: WorkspaceRow.received(FormCardData.fromTicket(t)),
         ),
       for (final n in _notes) (ts: n.ts, row: WorkspaceRow.note(n)),
     ]..sort((a, b) => a.ts.compareTo(b.ts));
@@ -171,9 +235,25 @@ class WorkspaceController extends GetxController {
         Timer(AppDurations.slow * 3, () => highlighted.remove(s.submissionId));
       }
     }
-    viewState.value = submissions.isLoaded.value
-        ? AppViewState.content
-        : AppViewState.loading;
+    final isOnline = connectivity.state.value == AppConnectivity.online;
+    final hasCards = entries.any((e) => e.row.card != null);
+    if (!submissions.isLoaded.value) {
+      viewState.value = AppViewState.loading;
+    } else if (!hasCards &&
+        isOnline &&
+        !workspace.isLoaded.value &&
+        workspace.isSyncing.value) {
+      viewState.value = AppViewState.loading;
+    } else if (!hasCards && isOnline && workspace.hasError.value) {
+      viewState.value = AppViewState.error;
+    } else {
+      viewState.value = AppViewState.content;
+    }
+    final isFailing = workspace.hasError.value && hasCards && isOnline;
+    if (isFailing && !_wasFailing) {
+      _say("Couldn't refresh your workspace. Showing what was saved.");
+    }
+    _wasFailing = isFailing;
   }
 
   // ---- composing -----------------------------------------------------------
@@ -305,9 +385,67 @@ class WorkspaceController extends GetxController {
     if (id != null) Get.toNamed(AppRoutes.conversationOf(id));
   }
 
-  void open(FormCardData d) => Get.toNamed(AppRoutes.submissionDetailOf(d.id));
+  /// A record someone sent me opens as a record; my own submission as before.
+  void open(FormCardData d, {bool isReceived = false}) {
+    final id = idNumber(d.id);
+    if (isReceived && id != null) {
+      Get.toNamed(AppRoutes.ticketOf(id));
+      return;
+    }
+    Get.toNamed(AppRoutes.submissionDetailOf(d.id));
+  }
+
+  /// The record menu of a card opened: `record.actions`, read once (cached
+  /// 60 s), never while cards are drawn. Null for a card that is no record.
+  int? recordIdOf(FormCardData d) => RecordCardRule.of(d).id;
+
+  void openRecordMenu(FormCardData d) {
+    final id = recordIdOf(d);
+    if (id != null) unawaited(tickets.ensureMenu(id));
+  }
+
+  TicketDetailController? detailOf(FormCardData d) {
+    final id = recordIdOf(d);
+    if (id == null) return null;
+    return _details.putIfAbsent(id, () {
+      final c = newTicketDetail(id);
+      c.onInit();
+      return c;
+    });
+  }
 
   bool canEdit(FormCardData d) => d.canEdit(me) || d.canFix(me);
+
+  /// The rows of a card's menu: the record's actions and the card's own
+  /// Edit, History and Delete (nothing of a chat message: there is none).
+  List<CardMenuItem> cardMenuOf(FormCardData d, RecordState? state) {
+    final isSettled = !d.isPending;
+    return CardMenu.build(
+      record: state,
+      canEdit: isSettled && canEdit(d),
+      isFix: d.canFix(me),
+      canOpenHistory:
+          isSettled &&
+          recordIdOf(d) != null &&
+          d.by.toLowerCase() == me.toLowerCase(),
+      canDelete: isSettled && d.canDelete(me),
+    );
+  }
+
+  void openHistory(FormCardData d) {
+    final id = recordIdOf(d);
+    if (id != null) Get.toNamed(AppRoutes.ticketOf(id));
+  }
+
+  /// Asks, then deletes the submission on the server (online only).
+  Future<void> deleteCard(
+    FormCardData d,
+    Future<bool> Function() confirm,
+  ) async {
+    if (!d.canDelete(me) || !await confirm()) return;
+    final problem = await submissions.deleteSubmission(d.id);
+    _say(problem ?? 'Submission deleted');
+  }
 
   AppFormCardState stateOf(FormCardData d) {
     if (!d.isPending) return AppFormCardState.sent;
@@ -342,7 +480,8 @@ class WorkspaceController extends GetxController {
 
   /// A draft is finished; a failed card is fixed or sent again; any other
   /// opens.
-  void tap(FormCardData d) {
+  void tap(FormCardData d, {bool isReceived = false}) {
+    if (isReceived) return open(d, isReceived: true);
     if (isDraft(d)) return unawaited(editAndResend(d));
     if (stateOf(d) != AppFormCardState.failed) return open(d);
     if (isInvalidFailure(d)) {
@@ -395,6 +534,12 @@ class WorkspaceController extends GetxController {
     _loadedWorker?.dispose();
     _failuresWorker?.dispose();
     _draftsWorker?.dispose();
+    _receivedWorker?.dispose();
+    _workspaceStateWorker?.dispose();
+    _connectivityWorker?.dispose();
+    for (final c in _details.values) {
+      c.onClose();
+    }
     _noticeWorker?.dispose();
     _noticeTimer?.cancel();
     for (final w in _noteWorkers) {

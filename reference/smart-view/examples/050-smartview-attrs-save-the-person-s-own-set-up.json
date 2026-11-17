@@ -1,0 +1,150 @@
+{
+  "label": "smartview.attrs.save: the person's own set-up",
+  "as": "ann (author)",
+  "command": "smartview.attrs.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "metadata": [
+      {
+        "field": "title",
+        "caption": "Title",
+        "type": "Character",
+        "hide": false,
+        "key": true,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "stage",
+        "caption": "Stage",
+        "type": "Character",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "hours",
+        "caption": "Hours",
+        "type": "Numeric",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "due",
+        "caption": "Due",
+        "type": "Date",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      }
+    ],
+    "hyperlinks": [],
+    "kpis": [
+      {
+        "caption": "Tickets",
+        "agg": "count",
+        "column": ""
+      },
+      {
+        "caption": "Total hours",
+        "agg": "sum",
+        "column": "hours"
+      }
+    ],
+    "charts": [
+      {
+        "caption": "Tickets by stage",
+        "chart": "donut",
+        "groupBy": "stage",
+        "agg": "count",
+        "column": ""
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.attrs.save",
+    "data": {
+      "attrs": {
+        "charts": [
+          {
+            "agg": "count",
+            "caption": "Tickets by stage",
+            "chart": "donut",
+            "column": "",
+            "groupBy": "stage"
+          }
+        ],
+        "hyperlinks": [],
+        "kind": "structure",
+        "kpis": [
+          {
+            "agg": "count",
+            "caption": "Tickets",
+            "column": ""
+          },
+          {
+            "agg": "sum",
+            "caption": "Total hours",
+            "column": "hours"
+          }
+        ],
+        "metadata": [
+          {
+            "caption": "Title",
+            "field": "title",
+            "filter": true,
+            "hide": false,
+            "key": true,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Character"
+          },
+          {
+            "caption": "Stage",
+            "field": "stage",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Character"
+          },
+          {
+            "caption": "Hours",
+            "field": "hours",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Numeric"
+          },
+          {
+            "caption": "Due",
+            "field": "due",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Date"
+          }
+        ],
+        "name": "tickets",
+        "updatedBy": "svcapcpw1ann",
+        "updatedTs": 1794833237353
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

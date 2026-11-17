@@ -13,12 +13,27 @@ class FeedPriorityPill extends StatelessWidget {
 
   final String priority;
 
-  static (String, AppTone)? of(String priority) => switch (priority) {
-    'high' => (NotificationTexts.priorityHigh, AppTones.red),
-    'medium' => (NotificationTexts.priorityMedium, AppTones.violet),
-    'resolved' => (NotificationTexts.priorityResolved, AppTones.green),
+  /// The one mapping of a priority to its tone: the pill and the tile's
+  /// leading icon both use it. Null for low and unknown priorities.
+  static AppTone? toneOf(String priority) => switch (priority) {
+    'high' => AppTones.red,
+    'medium' => AppTones.violet,
+    'resolved' => AppTones.green,
     _ => null,
   };
+
+  static String? _labelOf(String priority) => switch (priority) {
+    'high' => NotificationTexts.priorityHigh,
+    'medium' => NotificationTexts.priorityMedium,
+    'resolved' => NotificationTexts.priorityResolved,
+    _ => null,
+  };
+
+  static (String, AppTone)? of(String priority) {
+    final label = _labelOf(priority);
+    final tone = toneOf(priority);
+    return label == null || tone == null ? null : (label, tone);
+  }
 
   @override
   Widget build(BuildContext context) {

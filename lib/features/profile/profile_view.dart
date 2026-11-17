@@ -56,21 +56,26 @@ class ProfileView extends GetView<ProfileController> {
   Widget build(BuildContext context) {
     final c = controller;
     return AppScaffold(
-      hasOuterBottomBar: true,
       isScrollable: false,
       padding: EdgeInsets.zero,
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.lg,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xs,
+              AppSpacing.sm,
               AppSpacing.md,
               AppSpacing.xs,
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Profile', style: AppText.heading),
+            child: Row(
+              children: [
+                AppButton.icon(
+                  icon: Icons.arrow_back,
+                  semanticLabel: 'Back',
+                  onPressed: Get.back,
+                ),
+                const Text('Profile', style: AppText.heading),
+              ],
             ),
           ),
           Expanded(

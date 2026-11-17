@@ -1,0 +1,24 @@
+{
+  "label": "smartview.targets: whom a person can share with",
+  "as": "ann (author)",
+  "command": "smartview.targets",
+  "request": {
+    "q": "bo"
+  },
+  "reply": {
+    "action": "smartview.targets",
+    "data": {
+      "groups": [],
+      "people": [
+        {
+          "detail": "Analyst",
+          "id": "svcapcpw1bob",
+          "name": "Bob Iyer",
+          "type": "user"
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

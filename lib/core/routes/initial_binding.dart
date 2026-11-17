@@ -44,7 +44,10 @@ import '../../data/repositories/typing_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/task_repository.dart';
+import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
+import '../../data/repositories/workspace_repository.dart';
+import '../../features/tickets/saved_record_notice.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
@@ -57,14 +60,18 @@ import '../../demo/demo_auth_repository.dart';
 import '../../demo/demo_feed_repository.dart';
 import '../../demo/demo_mode.dart';
 import '../../demo/demo_services.dart';
+import '../../data/smart_view/sv_prefs.dart';
 import '../debug/seed_qr.dart';
 import '../debug/seed_tasks.dart';
+import '../debug/seed_smart_view.dart';
 import '../debug/seed_tickets.dart';
 
 class InitialBinding extends Bindings {
-  InitialBinding(this.connectivity);
+  InitialBinding(this.connectivity, {SmartViewPrefs? smartViewPrefs})
+    : smartViewPrefs = smartViewPrefs ?? SmartViewPrefs();
 
   final ConnectivityService connectivity;
+  final SmartViewPrefs smartViewPrefs;
 
   @override
   void dependencies() {
@@ -73,6 +80,7 @@ class InitialBinding extends Bindings {
       isDemo ? DemoSessionStore() : SessionStore(),
       permanent: true,
     );
+    Get.put(smartViewPrefs, permanent: true);
     store.identity.value = SeedUi.identity();
     final links = Get.put(
       DeepLinkService(
@@ -121,7 +129,7 @@ class InitialBinding extends Bindings {
       MessageRepository(db, store, socket, conversations, policy, e2e),
       permanent: true,
     );
-    Get.put(
+    final commands = Get.put(
       CommandRepository(socket, store, connectivity, messages, conversations),
       permanent: true,
     );
@@ -137,6 +145,21 @@ class InitialBinding extends Bindings {
       TicketRepository(socket, store, conversations),
       permanent: true,
     );
+    final smartView = Get.put(
+      SmartViewRepository(socket, store, tickets),
+      permanent: true,
+    );
+    commands.sourceSuggester = smartView.suggestions;
+    Get.put(
+      WorkspaceRepository(
+        socket,
+        store,
+        tickets,
+        syncOwn: submissions.syncFromServer,
+      ),
+      permanent: true,
+    );
+    Get.put(SavedRecordNotice(submissions, tickets), permanent: true);
     final ai = Get.put<AiRepository>(
       isDemo
           ? DemoAiRepository()
@@ -226,7 +249,12 @@ class InitialBinding extends Bindings {
     Get.put(InviteService(auth, store, links), permanent: true);
     if (isDemo) {
       SeedTasks.start();
-      unawaited(SeedTickets.start());
+      unawaited(
+        SeedTickets.start().then((_) {
+          SeedTickets.startOtherPerson();
+          return SeedSmartView.start();
+        }),
+      );
     }
   }
 }

@@ -1,0 +1,271 @@
+{
+  "label": "ai.enterprise forms: the source list (as the author)",
+  "as": "ann (author)",
+  "command": "ai.enterprise",
+  "request": {
+    "what": "forms"
+  },
+  "reply": {
+    "action": "ai.enterprise",
+    "data": {
+      "forms": [
+        {
+          "canAdd": true,
+          "canFetch": true,
+          "caption": "Every field",
+          "fields": [
+            {
+              "caption": "Ref",
+              "name": "ref",
+              "section": null,
+              "type": "autogenerate"
+            },
+            {
+              "caption": "Title",
+              "name": "title",
+              "rich": false,
+              "section": null,
+              "type": "text"
+            },
+            {
+              "caption": "Notes",
+              "name": "notes",
+              "rich": false,
+              "section": null,
+              "type": "text"
+            },
+            {
+              "caption": "Story",
+              "name": "story",
+              "rich": true,
+              "section": null,
+              "type": "text"
+            },
+            {
+              "caption": "Quantity",
+              "name": "qty",
+              "section": null,
+              "type": "wholenumber"
+            },
+            {
+              "caption": "Amount",
+              "name": "amount",
+              "section": null,
+              "type": "number"
+            },
+            {
+              "caption": "Day",
+              "name": "day",
+              "section": null,
+              "type": "date"
+            },
+            {
+              "caption": "At",
+              "name": "at",
+              "section": null,
+              "type": "time"
+            },
+            {
+              "caption": "Mail",
+              "name": "mail",
+              "section": null,
+              "type": "email"
+            },
+            {
+              "caption": "Site",
+              "name": "site",
+              "section": null,
+              "type": "url"
+            },
+            {
+              "caption": "Phone",
+              "name": "phone",
+              "section": null,
+              "type": "mobile"
+            },
+            {
+              "caption": "Where",
+              "name": "where",
+              "section": null,
+              "type": "location"
+            },
+            {
+              "caption": "Kind",
+              "name": "kind",
+              "section": null,
+              "type": "selection"
+            },
+            {
+              "caption": "Tags",
+              "name": "tags",
+              "section": null,
+              "type": "list"
+            },
+            {
+              "caption": "Owner",
+              "name": "owner",
+              "section": null,
+              "type": "list"
+            },
+            {
+              "caption": "Stage",
+              "name": "stage",
+              "section": null,
+              "type": "list"
+            },
+            {
+              "caption": "Urgent",
+              "name": "urgent",
+              "section": null,
+              "type": "toggle"
+            },
+            {
+              "caption": "Code",
+              "name": "code",
+              "section": null,
+              "type": "barcode"
+            },
+            {
+              "caption": "Copy",
+              "name": "copy",
+              "section": null,
+              "type": "fill"
+            },
+            {
+              "caption": "Fee",
+              "name": "fee",
+              "section": null,
+              "type": "payment"
+            },
+            {
+              "caption": "Documents",
+              "name": "doc",
+              "section": null,
+              "type": "file"
+            }
+          ],
+          "fromSheet": false,
+          "keyField": null,
+          "name": "everyfield",
+          "owner": "svcapcpw1ann",
+          "recordThread": false,
+          "sections": [],
+          "status": {
+            "field": "stage",
+            "final": [
+              "Done"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Done"
+            ]
+          },
+          "system": false
+        },
+        {
+          "canAdd": true,
+          "canFetch": true,
+          "caption": "Requests",
+          "fields": [
+            {
+              "caption": "Title",
+              "name": "title",
+              "rich": false,
+              "section": null,
+              "type": "text"
+            },
+            {
+              "caption": "Stage",
+              "name": "stage",
+              "section": null,
+              "type": "list"
+            },
+            {
+              "caption": "Amount",
+              "name": "amount",
+              "section": null,
+              "type": "number"
+            }
+          ],
+          "fromSheet": false,
+          "keyField": null,
+          "name": "requests",
+          "owner": null,
+          "recordThread": false,
+          "sections": [],
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          },
+          "system": false
+        },
+        {
+          "canAdd": true,
+          "canFetch": true,
+          "caption": "Tickets",
+          "fields": [
+            {
+              "caption": "Title",
+              "name": "title",
+              "rich": false,
+              "section": null,
+              "type": "text"
+            },
+            {
+              "caption": "Stage",
+              "name": "stage",
+              "section": null,
+              "type": "list"
+            },
+            {
+              "caption": "Area",
+              "name": "area",
+              "section": null,
+              "type": "list"
+            },
+            {
+              "caption": "Due",
+              "name": "due",
+              "section": null,
+              "type": "date"
+            },
+            {
+              "caption": "Hours",
+              "name": "hours",
+              "section": null,
+              "type": "number"
+            }
+          ],
+          "fromSheet": false,
+          "keyField": null,
+          "name": "tickets",
+          "owner": "svcapcpw1ann",
+          "recordThread": false,
+          "sections": [],
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          },
+          "system": false
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

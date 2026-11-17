@@ -1,0 +1,73 @@
+{
+  "label": "admin.smartview.view.publish: a view for everybody who opens the source",
+  "as": "admin",
+  "command": "admin.smartview.view.publish",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "view": {
+      "id": "v9",
+      "name": "For all",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "admin.smartview.view.publish",
+    "data": {
+      "shared": [
+        {
+          "by": "svcapcpw1adm",
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "s1794833246328",
+          "kpis": true,
+          "name": "For all",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        },
+        {
+          "by": "svcapcpw1ann",
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [
+            "stage"
+          ],
+          "hidden": [],
+          "id": "s1794833243150",
+          "kpis": true,
+          "name": "Open by stage",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "to": [
+            {
+              "id": "svcapcpw1bob",
+              "type": "user"
+            }
+          ],
+          "widths": {}
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

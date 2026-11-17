@@ -11,7 +11,9 @@ import '../../data/repositories/hand_on_repository.dart';
 import '../hand_on/hand_on_controller.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
-import '../profile/profile_binding.dart';
+import '../inbox/inbox_binding.dart';
+import '../smart_view/smart_view_binding.dart';
+import '../smart_view/smart_view_controller.dart';
 import '../security/security_controller.dart';
 import '../submissions/submissions_binding.dart';
 import 'home_shell_controller.dart';
@@ -19,6 +21,7 @@ import 'home_shell_controller.dart';
 class HomeShellBinding extends Bindings {
   @override
   void dependencies() {
+    SmartViewBinding().dependencies();
     final security = Get.put(
       SecurityController(
         e2e: Get.find<E2eRepository>(),
@@ -33,12 +36,13 @@ class HomeShellBinding extends Bindings {
         links: Get.find<DeepLinkService>(),
         notifications: Get.find<LocalNotificationService>(),
         notificationRouter: Get.find<NotificationRouter>(),
+        smartView: Get.find<SmartViewController>(),
       ),
     );
     Get.put(HandOnController(Get.find<HandOnRepository>()));
     ChatsBinding().dependencies();
     AiAgentsBinding().dependencies();
     SubmissionsBinding().dependencies();
-    ProfileBinding().dependencies();
+    InboxBinding().dependencies();
   }
 }

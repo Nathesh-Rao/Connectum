@@ -5,12 +5,21 @@ import 'ticket_text.dart';
 /// The record's own values as detail rows, in the form's order: what the
 /// header already says (status, assignee, progress, subject) and empty values
 /// are left out. The details screen and the chat info page read the same rows.
-List<TicketDetailRow> ticketValueRows(Ticket t) {
+List<TicketDetailRow> ticketValueRows(Ticket t, {String status = ''}) {
   final table = t.table;
-  if (table == null) return const [];
+  final hidden = table?.headerFields ?? const <String>{};
+  bool isHidden(String key) {
+    if (hidden.contains(key)) return true;
+    final m = _hiddenSuffix.firstMatch(key);
+    return m != null && t.values.containsKey(key.substring(0, m.start));
+  }
+
   return [
     for (final e in t.values.entries)
-      if (!table.headerFields.contains(e.key) &&
+      if (!isHidden(e.key) &&
+          !(table == null &&
+              status.isNotEmpty &&
+              TicketText.value(e.value) == status) &&
           TicketText.value(e.value).isNotEmpty)
         TicketDetailRow.of(
           t.form?.labelOf(e.key) ?? e.key,
@@ -18,6 +27,8 @@ List<TicketDetailRow> ticketValueRows(Ticket t) {
         ),
   ];
 }
+
+final _hiddenSuffix = RegExp(r'_(completion|comments|files|hours)$');
 
 const _summaryOrder = [
   ['ticket no', 'ticket number'],

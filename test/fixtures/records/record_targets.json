@@ -1,0 +1,14 @@
+{
+ "action": "record.targets",
+ "data": {
+  "assignor": null,
+  "blocked": false,
+  "categories": [],
+  "designations": [],
+  "initiator": "ana",
+  "unrestricted": true
+ },
+ "ok": true,
+ "reqId": "ana-3",
+ "type": "sd"
+}

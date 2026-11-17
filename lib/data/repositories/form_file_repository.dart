@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
 import '../models/ids.dart';
+import '../records/record_commands.dart';
 import '../session_store.dart';
 import 'attachment_repository.dart';
 
@@ -24,10 +25,12 @@ class FormUploadedFile {
 /// (`POST /api/sd/files?name=...`, the bytes as the body). Picking and its
 /// checks are the chat attachment's own; the form keeps the returned ids.
 class FormFileRepository {
-  FormFileRepository(this._attachments, this._session);
+  FormFileRepository(this._attachments, this._session, {String? origin})
+    : _origin = origin ?? AppConfig.baseUrl;
 
   final AttachmentRepository _attachments;
   final SessionStore _session;
+  final String _origin;
 
   /// A photo from the library or the camera, or a document, checked against
   /// what the server takes. Null when the person backed out; throws
@@ -41,18 +44,16 @@ class FormFileRepository {
     PickedAttachment file, {
     required void Function(double progress) onProgress,
     required CancelToken cancel,
+    bool deleteAfter = false,
   }) async {
-    if (!AppConfig.isConfigured) {
+    if (_origin.isEmpty) {
       throw const AttachmentException('No server is set up for this build.');
     }
-    if (file.bytes > AttachmentRepository.maxBlobBytes) {
-      throw const AttachmentException(
-        AttachmentRepository.tooLargeNotice,
-        isRetryable: false,
-      );
+    if (file.bytes > RecordLimits.maxFileBytes) {
+      throw const AttachmentException(tooLargeNotice, isRetryable: false);
     }
     final token = _session.token;
-    final origin = AppConfig.baseUrl.replaceAll(RegExp(r'/+$'), '');
+    final origin = _origin.replaceAll(RegExp(r'/+$'), '');
     try {
       final response = await _attachments.dio.post<Object?>(
         '$origin/api/sd/files',
@@ -80,6 +81,7 @@ class FormFileRepository {
           'The server gave an unexpected answer. Try again.',
         );
       }
+      if (deleteAfter) await _deleteTemp(file.path);
       return FormUploadedFile(
         id: id,
         name: saved is Map && idText(saved['name']).isNotEmpty
@@ -90,6 +92,21 @@ class FormFileRepository {
     } on DioException catch (e) {
       throw _fail(e);
     }
+  }
+
+  /// The 10 MB a record's file may have (not the chat upload's limits).
+  static const tooLargeNotice =
+      'That file is over 10 MB. Choose a smaller one.';
+
+  /// The picked copy in the temp folder goes once it is uploaded; nothing of
+  /// a record's file stays on the phone. A file outside the temp folder is
+  /// never touched.
+  Future<void> _deleteTemp(String path) async {
+    try {
+      if (path.startsWith(Directory.systemTemp.path)) {
+        await File(path).delete();
+      }
+    } catch (_) {}
   }
 
   AttachmentException _fail(DioException e) {
@@ -109,10 +126,7 @@ class FormFileRepository {
       );
     }
     if (status == 413) {
-      return const AttachmentException(
-        AttachmentRepository.tooLargeNotice,
-        isRetryable: false,
-      );
+      return const AttachmentException(tooLargeNotice, isRetryable: false);
     }
     if (status >= 400 && status < 500 && said.isNotEmpty) {
       return AttachmentException(said, isRetryable: false);

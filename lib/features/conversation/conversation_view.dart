@@ -16,7 +16,8 @@ import '../../core/widgets/app_skeleton.dart';
 import '../../core/widgets/app_state_image.dart';
 import 'conversation_controller.dart';
 import 'models/chat_item.dart';
-import 'widgets/ticket_card_actions.dart';
+import '../tickets/widgets/record_card_actions.dart';
+import '../tickets/widgets/ticket_action_sheet.dart';
 import 'widgets/attachment_view.dart';
 import 'widgets/chat_rows.dart';
 import 'widgets/conversation_composer.dart';
@@ -27,7 +28,6 @@ import 'widgets/key_change_sheet.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_status_mark.dart';
 import 'widgets/reaction_chips.dart';
-import '../tickets/tickets_texts.dart';
 import 'widgets/scroll_to_latest_button.dart';
 import 'widgets/typing_dots.dart';
 import 'widgets/upload_bubble.dart';
@@ -215,11 +215,18 @@ Widget _message(BuildContext context, ConversationController c, ChatItem item) {
                 ? c.formProblemOf(m)
                 : null,
             isHighlighted: c.highlighted.contains(m.msgId),
-            stripLabel: card.isTicket && !card.isPending
-                ? '${TicketsTexts.ticketMarker} #${card.id}'
-                : null,
-            actions: card.isTicket && !card.isPending
-                ? TicketCardActions(card: card, controller: c)
+            stripLabel: c.recordMarkerOf(card),
+            actions: c.recordIdOf(card) != null
+                ? RecordCardActions(
+                    recordId: c.recordIdOf(card)!,
+                    tickets: c.tickets,
+                    onAction: (context, id) {
+                      final detail = c.ticketDetailOf(card);
+                      if (detail != null) {
+                        TicketActionSheet.show(context, detail, id);
+                      }
+                    },
+                  )
                 : null,
             statusMark: m.isMine
                 ? MessageStatusMark(status: m.status, isDirect: c.isDirect)

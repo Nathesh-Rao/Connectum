@@ -1,0 +1,79 @@
+{
+  "label": "submission.history: events oldest first",
+  "as": "ann (author)",
+  "command": "submission.history",
+  "request": {
+    "id": 41
+  },
+  "reply": {
+    "action": "submission.history",
+    "data": {
+      "caption": "Requests",
+      "events": [
+        {
+          "by": "svcapcpw1ann",
+          "caption": "Requests",
+          "id": 42,
+          "op": "created",
+          "record": 41,
+          "structure": "requests",
+          "ts": 1794833218514
+        },
+        {
+          "asAdmin": false,
+          "by": "svcapcpw1ann",
+          "caption": "Requests",
+          "claimed": false,
+          "files": [],
+          "fromHolder": "svcapcpw1ann",
+          "id": 55,
+          "op": "sent",
+          "record": 41,
+          "status": "Open",
+          "structure": "requests",
+          "to": [
+            "svcapcpw1bob"
+          ],
+          "ts": 1794833224889,
+          "value": "",
+          "via": "user"
+        },
+        {
+          "asAdmin": false,
+          "by": "svcapcpw1bob",
+          "caption": "Requests",
+          "claimed": false,
+          "completion": "30",
+          "files": [],
+          "final": false,
+          "fromStatus": "Open",
+          "id": 59,
+          "op": "status",
+          "record": 41,
+          "remarks": "started",
+          "structure": "requests",
+          "toStatus": "In progress",
+          "ts": 1794833231114
+        }
+      ],
+      "fields": {
+        "amount": "Amount",
+        "stage": "Stage",
+        "stage_comments": "Stage comments",
+        "stage_completion": "Stage completion",
+        "stage_files": "Stage files",
+        "stage_hours": "Stage hours",
+        "title": "Title"
+      },
+      "files": {},
+      "names": {
+        "svcapcpw1ann": "Ann Rao",
+        "svcapcpw1bob": "Bob Iyer"
+      },
+      "sections": {},
+      "status": "record"
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

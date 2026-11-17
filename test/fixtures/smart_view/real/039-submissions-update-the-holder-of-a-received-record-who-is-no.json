@@ -1,0 +1,20 @@
+{
+  "label": "submissions.update: the holder of a received record, who is not its author",
+  "as": "bob (colleague)",
+  "command": "submissions.update",
+  "request": {
+    "id": 45,
+    "values": {
+      "title": "changed by bob"
+    }
+  },
+  "reply": {
+    "action": "submissions.update",
+    "error": {
+      "code": "forbidden",
+      "message": "You can only edit your own submission."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

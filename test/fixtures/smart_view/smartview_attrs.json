@@ -1,0 +1,63 @@
+{
+  "_section": "MOBILE_SMART_VIEW.md §2.7 smartview.attrs (RECONSTRUCTED by the BE, not captured). The request is given in the document as {kind,name} (prose); the values below are the ones of the response example.",
+  "command": "smartview.attrs",
+  "request": {
+    "kind": "structure",
+    "name": "leave_request"
+  },
+  "response": {
+    "attrs": {
+      "kind": "structure",
+      "name": "leave_request",
+      "metadata": [
+        {
+          "field": "days",
+          "caption": "Days",
+          "type": "Numeric",
+          "hide": false,
+          "key": false,
+          "filter": true,
+          "sourceForm": "",
+          "sourceField": ""
+        }
+      ],
+      "hyperlinks": [
+        {
+          "field": "employee",
+          "type": "tstruct",
+          "target": "employee",
+          "mappings": [
+            {
+              "from": "employee",
+              "to": "name"
+            }
+          ],
+          "inline": true
+        }
+      ],
+      "kpis": [
+        {
+          "caption": "Total days",
+          "agg": "sum",
+          "column": "days"
+        }
+      ],
+      "charts": [
+        {
+          "caption": "By stage",
+          "chart": "donut",
+          "groupBy": "stage",
+          "agg": "count",
+          "column": ""
+        }
+      ],
+      "updatedBy": "ann",
+      "updatedTs": 1763300000000,
+      "createdTs": 1763200000000
+    },
+    "mine": false,
+    "canConfigure": true,
+    "canDefault": false
+  },
+  "note": "Reconstructed in stage 1 from the BE document, revision 1. SUPERSEDED by the real captures in real/ captures of smartview.attrs (see index.json) where one exists (BE document revision 2, origin/dev a5f28fca, 16 Nov 2026). Kept, not deleted."
+}

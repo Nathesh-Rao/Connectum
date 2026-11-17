@@ -1,0 +1,423 @@
+{
+  "label": "tstruct.user.save: a structure with every field type",
+  "as": "ann (author)",
+  "command": "tstruct.user.save",
+  "request": {
+    "name": "everyfield",
+    "caption": "Every field",
+    "fields": [
+      {
+        "name": "ref",
+        "type": "autogenerate",
+        "caption": "Ref",
+        "prefix": "VIS-",
+        "digits": 4
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "caption": "Title",
+        "required": true
+      },
+      {
+        "name": "notes",
+        "type": "text",
+        "caption": "Notes",
+        "multiline": true
+      },
+      {
+        "name": "story",
+        "type": "text",
+        "caption": "Story",
+        "rich": true
+      },
+      {
+        "name": "qty",
+        "type": "wholenumber",
+        "caption": "Quantity"
+      },
+      {
+        "name": "amount",
+        "type": "number",
+        "caption": "Amount"
+      },
+      {
+        "name": "day",
+        "type": "date",
+        "caption": "Day"
+      },
+      {
+        "name": "at",
+        "type": "time",
+        "caption": "At"
+      },
+      {
+        "name": "mail",
+        "type": "email",
+        "caption": "Mail"
+      },
+      {
+        "name": "site",
+        "type": "url",
+        "caption": "Site"
+      },
+      {
+        "name": "phone",
+        "type": "mobile",
+        "caption": "Phone"
+      },
+      {
+        "name": "where",
+        "type": "location",
+        "caption": "Where"
+      },
+      {
+        "name": "kind",
+        "type": "selection",
+        "caption": "Kind",
+        "options": [
+          "Invoice",
+          "Contract"
+        ]
+      },
+      {
+        "name": "tags",
+        "type": "list",
+        "caption": "Tags",
+        "multi": true,
+        "options": [
+          "red",
+          "green",
+          "blue"
+        ]
+      },
+      {
+        "name": "owner",
+        "type": "list",
+        "caption": "Owner",
+        "source": "users"
+      },
+      {
+        "name": "stage",
+        "type": "list",
+        "caption": "Stage",
+        "status": true,
+        "options": [
+          "Open",
+          "In progress",
+          "Done"
+        ],
+        "finalOptions": [
+          "Done"
+        ]
+      },
+      {
+        "name": "urgent",
+        "type": "toggle",
+        "caption": "Urgent"
+      },
+      {
+        "name": "code",
+        "type": "barcode",
+        "caption": "Code"
+      },
+      {
+        "name": "copy",
+        "type": "fill",
+        "caption": "Copy",
+        "fillFrom": "title"
+      },
+      {
+        "name": "fee",
+        "type": "payment",
+        "caption": "Fee",
+        "amount": 500,
+        "currency": "INR",
+        "methods": [
+          "Cash",
+          "UPI"
+        ]
+      },
+      {
+        "name": "doc",
+        "type": "file",
+        "caption": "Documents",
+        "multi": true
+      }
+    ]
+  },
+  "reply": {
+    "action": "tstruct.user.save",
+    "data": {
+      "tstruct": {
+        "caption": "Every field",
+        "createdTs": 1794833219945,
+        "description": "",
+        "fields": [
+          {
+            "caption": "Ref",
+            "condition": null,
+            "digits": 4,
+            "name": "ref",
+            "prefix": "VIS-",
+            "required": false,
+            "resetEvery": "never",
+            "section": null,
+            "start": 1,
+            "suffix": "",
+            "type": "autogenerate"
+          },
+          {
+            "caption": "Title",
+            "condition": null,
+            "multiline": false,
+            "name": "title",
+            "required": true,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Notes",
+            "condition": null,
+            "multiline": true,
+            "name": "notes",
+            "required": false,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Story",
+            "condition": null,
+            "multiline": false,
+            "name": "story",
+            "required": false,
+            "rich": true,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Quantity",
+            "condition": null,
+            "name": "qty",
+            "required": false,
+            "section": null,
+            "type": "wholenumber"
+          },
+          {
+            "caption": "Amount",
+            "condition": null,
+            "name": "amount",
+            "required": false,
+            "section": null,
+            "type": "number"
+          },
+          {
+            "caption": "Day",
+            "condition": null,
+            "name": "day",
+            "required": false,
+            "section": null,
+            "type": "date"
+          },
+          {
+            "caption": "At",
+            "condition": null,
+            "name": "at",
+            "required": false,
+            "section": null,
+            "type": "time"
+          },
+          {
+            "caption": "Mail",
+            "condition": null,
+            "name": "mail",
+            "required": false,
+            "section": null,
+            "type": "email"
+          },
+          {
+            "caption": "Site",
+            "condition": null,
+            "name": "site",
+            "required": false,
+            "section": null,
+            "type": "url"
+          },
+          {
+            "caption": "Phone",
+            "condition": null,
+            "countryPicker": false,
+            "name": "phone",
+            "required": false,
+            "section": null,
+            "type": "mobile",
+            "withCountryCode": false
+          },
+          {
+            "caption": "Where",
+            "condition": null,
+            "name": "where",
+            "required": false,
+            "section": null,
+            "type": "location"
+          },
+          {
+            "allowTyping": false,
+            "api": null,
+            "caption": "Kind",
+            "condition": null,
+            "name": "kind",
+            "required": false,
+            "section": null,
+            "type": "selection"
+          },
+          {
+            "caption": "Tags",
+            "condition": null,
+            "multi": true,
+            "name": "tags",
+            "options": [
+              "red",
+              "green",
+              "blue"
+            ],
+            "required": false,
+            "section": null,
+            "type": "list"
+          },
+          {
+            "allowAll": false,
+            "caption": "Owner",
+            "condition": null,
+            "multi": false,
+            "name": "owner",
+            "required": false,
+            "section": null,
+            "source": "users",
+            "type": "list"
+          },
+          {
+            "caption": "Stage",
+            "condition": null,
+            "finalOptions": [
+              "Done"
+            ],
+            "multi": false,
+            "name": "stage",
+            "options": [
+              "Open",
+              "In progress",
+              "Done"
+            ],
+            "required": false,
+            "section": null,
+            "status": true,
+            "type": "list"
+          },
+          {
+            "caption": "Urgent",
+            "condition": null,
+            "name": "urgent",
+            "required": false,
+            "section": null,
+            "type": "toggle"
+          },
+          {
+            "caption": "Code",
+            "condition": null,
+            "name": "code",
+            "required": false,
+            "section": null,
+            "type": "barcode"
+          },
+          {
+            "caption": "Copy",
+            "condition": null,
+            "fillFrom": "title",
+            "name": "copy",
+            "required": false,
+            "section": null,
+            "sourceProp": null,
+            "type": "fill"
+          },
+          {
+            "amount": 500,
+            "caption": "Fee",
+            "condition": null,
+            "currency": "INR",
+            "methods": [
+              "Cash",
+              "UPI"
+            ],
+            "name": "fee",
+            "required": false,
+            "section": null,
+            "type": "payment"
+          },
+          {
+            "caption": "Documents",
+            "condition": null,
+            "multi": true,
+            "name": "doc",
+            "required": false,
+            "section": null,
+            "type": "file"
+          },
+          {
+            "caption": "Stage completion",
+            "condition": null,
+            "hidden": true,
+            "max": 100,
+            "min": 0,
+            "name": "stage_completion",
+            "required": false,
+            "section": null,
+            "type": "wholenumber"
+          },
+          {
+            "caption": "Stage comments",
+            "condition": null,
+            "hidden": true,
+            "length": 1000,
+            "multiline": true,
+            "name": "stage_comments",
+            "required": false,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Stage files",
+            "condition": null,
+            "hidden": true,
+            "multi": true,
+            "name": "stage_files",
+            "required": false,
+            "section": null,
+            "type": "file"
+          },
+          {
+            "caption": "Stage hours",
+            "condition": null,
+            "decimals": 2,
+            "hidden": true,
+            "max": 24,
+            "min": 0,
+            "name": "stage_hours",
+            "required": false,
+            "section": null,
+            "type": "number"
+          }
+        ],
+        "name": "everyfield",
+        "owner": "svcapcpw1ann",
+        "saveToDb": true,
+        "sections": []
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

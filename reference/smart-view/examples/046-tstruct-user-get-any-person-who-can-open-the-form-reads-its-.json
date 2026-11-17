@@ -1,0 +1,141 @@
+{
+  "label": "tstruct.user.get: any person who can open the form reads its full definition",
+  "as": "bob (colleague)",
+  "command": "tstruct.user.get",
+  "request": {
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "tstruct.user.get",
+    "data": {
+      "tstruct": {
+        "caption": "Tickets",
+        "createdTs": 1794833215213,
+        "description": "",
+        "fields": [
+          {
+            "caption": "Title",
+            "condition": null,
+            "multiline": false,
+            "name": "title",
+            "required": true,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Stage",
+            "condition": null,
+            "finalOptions": [
+              "Closed"
+            ],
+            "multi": false,
+            "name": "stage",
+            "options": [
+              "Open",
+              "In progress",
+              "Closed"
+            ],
+            "required": false,
+            "section": null,
+            "status": true,
+            "statusLocked": true,
+            "type": "list"
+          },
+          {
+            "caption": "Area",
+            "condition": null,
+            "multi": false,
+            "name": "area",
+            "options": [
+              "Billing",
+              "Delivery"
+            ],
+            "required": false,
+            "section": null,
+            "type": "list"
+          },
+          {
+            "caption": "Due",
+            "condition": null,
+            "name": "due",
+            "required": false,
+            "section": null,
+            "type": "date"
+          },
+          {
+            "caption": "Hours",
+            "condition": null,
+            "name": "hours",
+            "required": false,
+            "section": null,
+            "type": "number"
+          },
+          {
+            "caption": "Internal note",
+            "condition": null,
+            "default": "HIDDEN-VALUE-123",
+            "hidden": true,
+            "multiline": false,
+            "name": "secret",
+            "required": false,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Stage completion",
+            "condition": null,
+            "hidden": true,
+            "max": 100,
+            "min": 0,
+            "name": "stage_completion",
+            "required": false,
+            "section": null,
+            "type": "wholenumber"
+          },
+          {
+            "caption": "Stage comments",
+            "condition": null,
+            "hidden": true,
+            "length": 1000,
+            "multiline": true,
+            "name": "stage_comments",
+            "required": false,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Stage files",
+            "condition": null,
+            "hidden": true,
+            "multi": true,
+            "name": "stage_files",
+            "required": false,
+            "section": null,
+            "type": "file"
+          },
+          {
+            "caption": "Stage hours",
+            "condition": null,
+            "decimals": 2,
+            "hidden": true,
+            "max": 24,
+            "min": 0,
+            "name": "stage_hours",
+            "required": false,
+            "section": null,
+            "type": "number"
+          }
+        ],
+        "name": "tickets",
+        "owner": "svcapcpw1ann",
+        "saveToDb": true,
+        "sections": []
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

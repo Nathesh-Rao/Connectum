@@ -8,7 +8,13 @@ import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_list_row.dart';
 import '../../../core/utils/attachment_tag.dart';
+import '../../../data/models/form_card.dart';
 import '../../../data/models/message.dart';
+import '../../submission_detail/submission_detail_view.dart'
+    show confirmDeleteSubmission;
+import '../../tickets/models/card_menu.dart';
+import '../../tickets/widgets/record_menu_rows.dart';
+import '../../tickets/widgets/ticket_action_sheet.dart';
 import '../conversation_controller.dart';
 import 'forward_sheet.dart';
 import 'reaction_picker.dart';
@@ -29,11 +35,14 @@ class MessageActionsSheet extends StatelessWidget {
     BuildContext context,
     ConversationController controller,
     Message message,
-  ) => AppBottomSheet.show<void>(
-    context,
-    title: 'Message',
-    child: MessageActionsSheet(controller: controller, message: message),
-  );
+  ) {
+    if (message.kind == 'form') controller.openRecordMenu(message);
+    return AppBottomSheet.show<void>(
+      context,
+      title: 'Message',
+      child: MessageActionsSheet(controller: controller, message: message),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +51,7 @@ class MessageActionsSheet extends StatelessWidget {
     final isSettled = !m.isLocalTemp && m.status != MessageStatus.failed;
     final isForm = m.kind == 'form';
     final isFailedForm = isForm && m.status == MessageStatus.failed;
+    final settledCard = isForm && isSettled ? c.formCardOf(m) : null;
     // The text of a sealed file is its tag, which holds the key.
     final canCopy =
         !m.isDeleted &&
@@ -138,64 +148,114 @@ class MessageActionsSheet extends StatelessWidget {
               },
             ),
         ],
-        if (canReply)
-          AppListRow(
-            title: 'Reply',
-            minHeight: AppSpacing.settingRowHeight,
-            leading: const Icon(Icons.reply, size: 20, color: AppColors.muted),
-            onTap: () {
-              Navigator.of(context).pop();
-              c.startReply(m);
-            },
-          ),
-        if (canForward)
-          AppListRow(
-            title: 'Forward',
-            minHeight: AppSpacing.settingRowHeight,
-            leading: const Icon(
-              Icons.shortcut,
-              size: 20,
-              color: AppColors.muted,
-            ),
-            onTap: () {
-              Navigator.of(context).pop();
-              ForwardSheet.show(context, c, m);
-            },
-          ),
-        if (canCopy)
-          AppListRow(
-            title: 'Copy',
-            minHeight: AppSpacing.settingRowHeight,
-            leading: const Icon(Icons.copy, size: 20, color: AppColors.muted),
-            onTap: () {
-              c.copy(m);
-              Navigator.of(context).pop();
-            },
-          ),
-        if (canDelete) ...[
-          if (isOffline)
-            const Padding(
-              padding: EdgeInsets.only(top: AppSpacing.xs),
-              child: Text(
-                'Deleting needs a connection.',
-                style: AppText.readable,
+        if (settledCard != null)
+          _cardMenu(context, settledCard)
+        else ...[
+          if (canReply)
+            AppListRow(
+              title: 'Reply',
+              minHeight: AppSpacing.settingRowHeight,
+              leading: const Icon(
+                Icons.reply,
+                size: 20,
+                color: AppColors.muted,
               ),
+              onTap: () {
+                Navigator.of(context).pop();
+                c.startReply(m);
+              },
             ),
-          AppListRow(
-            title: 'Delete',
-            minHeight: AppSpacing.settingRowHeight,
-            titleStyle: AppText.rowTitle.copyWith(
-              color: isOffline ? AppColors.cardMuted : AppColors.error,
+          if (canForward)
+            AppListRow(
+              title: 'Forward',
+              minHeight: AppSpacing.settingRowHeight,
+              leading: const Icon(
+                Icons.shortcut,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                ForwardSheet.show(context, c, m);
+              },
             ),
-            leading: Icon(
-              Icons.delete_outline,
-              size: 20,
-              color: isOffline ? AppColors.cardMuted : AppColors.error,
+          if (canCopy)
+            AppListRow(
+              title: 'Copy',
+              minHeight: AppSpacing.settingRowHeight,
+              leading: const Icon(Icons.copy, size: 20, color: AppColors.muted),
+              onTap: () {
+                c.copy(m);
+                Navigator.of(context).pop();
+              },
             ),
-            onTap: isOffline ? null : confirmDelete,
-          ),
+          if (canDelete) ...[
+            if (isOffline)
+              const Padding(
+                padding: EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  'Deleting needs a connection.',
+                  style: AppText.readable,
+                ),
+              ),
+            AppListRow(
+              title: 'Delete',
+              minHeight: AppSpacing.settingRowHeight,
+              titleStyle: AppText.rowTitle.copyWith(
+                color: isOffline ? AppColors.cardMuted : AppColors.error,
+              ),
+              leading: Icon(
+                Icons.delete_outline,
+                size: 20,
+                color: isOffline ? AppColors.cardMuted : AppColors.error,
+              ),
+              onTap: isOffline ? null : confirmDelete,
+            ),
+          ],
         ],
       ],
+    );
+  }
+
+  /// A settled form or record card: the web's menu (see [CardMenu]), the
+  /// same list the Work Space opens.
+  Widget _cardMenu(BuildContext context, FormCardData card) {
+    final c = controller;
+    final m = message;
+    final recordId = c.recordIdOf(card);
+    return RecordMenuRows(
+      tickets: c.tickets,
+      recordId: recordId,
+      itemsFor: (state) => c.cardMenuOf(m, card, state),
+      onPick: (item) {
+        final root = Navigator.of(context, rootNavigator: true).context;
+        Navigator.of(context).pop();
+        switch (item.id) {
+          case CardMenuItem.reply:
+            c.startReply(m);
+          case CardMenuItem.forward:
+            ForwardSheet.show(root, c, m);
+          case CardMenuItem.copy:
+            c.copy(m);
+          case CardMenuItem.save:
+          case CardMenuItem.pin:
+          case CardMenuItem.unread:
+            c.tapPlaceholder();
+          case CardMenuItem.edit:
+            c.editForm(m, card);
+          case CardMenuItem.history:
+            c.openHistory(card);
+          case CardMenuItem.delete:
+            c.deleteRecordCard(card, () => confirmDeleteSubmission(root, card));
+          default:
+            if (item.isRecordAction) {
+              final detail = c.ticketDetailOf(card);
+              if (detail != null) {
+                TicketActionSheet.show(root, detail, item.recordActionId);
+              }
+            }
+        }
+      },
     );
   }
 }

@@ -67,9 +67,6 @@ Ticket get _ticket => Ticket(
     },
     table: TicketTable(
       field: 'status',
-      assignee: 'assigned to',
-      completion: 'completion',
-      subject: 'title',
       statuses: [TicketStatus('Open'), TicketStatus('In progress')],
     ),
   ),

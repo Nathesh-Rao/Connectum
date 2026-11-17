@@ -1,0 +1,109 @@
+{
+  "label": "submissions.delete: the author",
+  "as": "ann (author)",
+  "command": "submissions.delete",
+  "request": {
+    "id": 43
+  },
+  "reply": {
+    "action": "submissions.delete",
+    "data": {
+      "deleted": true
+    },
+    "ok": true,
+    "type": "sd"
+  },
+  "eventsSeenAfterwards": {
+    "ann (author)": [
+      {
+        "data": {
+          "action": "updated",
+          "by": "svcapcpw1ann",
+          "id": 47,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "Open",
+            "ts": 1794833234736
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 61,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833235595
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "private_t",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 63,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": null,
+            "ts": 1794833248382
+          },
+          "tstruct": "private_t"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "deleted",
+          "by": "svcapcpw1ann",
+          "id": 43,
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      }
+    ],
+    "bob (colleague)": [
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "private_t",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      }
+    ]
+  }
+}

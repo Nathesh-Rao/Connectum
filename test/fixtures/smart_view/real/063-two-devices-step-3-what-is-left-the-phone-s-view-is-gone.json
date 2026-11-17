@@ -1,0 +1,77 @@
+{
+  "label": "two devices, step 3: what is left (the phone's view is gone)",
+  "as": "ann (author)",
+  "command": "smartview.views",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.views",
+    "data": {
+      "canPublish": false,
+      "mine": [
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "__default",
+          "kpis": true,
+          "name": "Default View",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "desc"
+          },
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [
+            "stage"
+          ],
+          "hidden": [
+            "hours"
+          ],
+          "id": "v1",
+          "kpis": true,
+          "name": "Open by stage",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "asc"
+          },
+          "widths": {
+            "title": 320
+          }
+        },
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "t1",
+          "kpis": true,
+          "name": "From tablet",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        }
+      ],
+      "shared": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

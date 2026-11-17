@@ -1,0 +1,16 @@
+{
+  "label": "record.actions over HTTP: POST /api/sd/record.actions",
+  "as": "bob (colleague)",
+  "command": "POST /api/sd/record.actions",
+  "request": {
+    "id": 41
+  },
+  "httpStatus": 404,
+  "reply": {
+    "ok": false,
+    "error": {
+      "code": "not_found",
+      "message": "No such endpoint."
+    }
+  }
+}

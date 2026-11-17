@@ -17,7 +17,6 @@ final _card = FormCardData(
   scope: 'user',
   by: 'bruno',
   ts: _ts,
-  isTicket: true,
   entries: const [FormEntry(name: 'title', caption: 'Title', text: 'Printer')],
 );
 

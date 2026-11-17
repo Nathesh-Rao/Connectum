@@ -4,9 +4,13 @@ import 'dart:math';
 
 import 'package:get/get.dart';
 
+import '../../core/debug/records_log.dart';
 import '../../core/debug/seed_messages.dart';
+import '../../core/debug/seed_tickets.dart';
 import '../../core/debug/seed_ui.dart';
 import '../db/app_database.dart';
+import '../records/paged_read.dart';
+import '../records/record_commands.dart';
 import '../models/form_card.dart';
 import '../models/form_entry.dart';
 import '../models/form_definition.dart';
@@ -18,6 +22,23 @@ import '../session_store.dart';
 import 'form_options_repository.dart';
 import 'message_repository.dart';
 import '../socket/socket_service.dart';
+
+/// A submission the server accepted: [isPending] when it waits for approval.
+class SavedRecord {
+  const SavedRecord({
+    required this.id,
+    required this.tstruct,
+    this.isPending = false,
+    this.isDuplicate = false,
+  });
+
+  final int id;
+  final String tstruct;
+  final bool isPending;
+
+  /// The answer to a repeated `cid`: nothing was saved twice.
+  final bool isDuplicate;
+}
 
 class SubmissionRepository extends GetxService {
   SubmissionRepository(
@@ -47,6 +68,13 @@ class SubmissionRepository extends GetxService {
   final notice = RxnString();
 
   final submissions = <FormSubmission>[].obs;
+
+  final _saved = StreamController<SavedRecord>.broadcast();
+
+  /// A new submission the server accepted (`tstruct.submit` answered, or
+  /// answered again for the same `cid` with `duplicate: true`): saved, or
+  /// waiting for approval. Auto-send rules have already run by now.
+  Stream<SavedRecord> get saved => _saved.stream;
 
   /// The forms the cached submissions belong to, by form name: full ones where
   /// a definition was fetched, captions only otherwise.
@@ -344,6 +372,23 @@ class SubmissionRepository extends GetxService {
     });
   }
 
+  /// The `sd` action of a new submission, by the form's scope.
+  static String submitCommand(String scope) =>
+      scope == 'user' ? RecordCmd.userSubmit : RecordCmd.submit;
+
+  /// The request of a new submission: the name, the values and the one `cid`
+  /// of the save; `chat` only when the form is posted into a chat. Never a
+  /// `ref` or `meta`.
+  static Map<String, dynamic> submitArgs(
+    Map<String, dynamic> payload,
+    String cid,
+  ) => {
+    'name': idText(payload['name']),
+    'values': payload['values'],
+    if (payload['chat'] != null) 'chat': payload['chat'],
+    'cid': cid,
+  };
+
   /// An edit of a saved submission, sent as `submissions.update`.
   Future<void> editSubmission(
     String id,
@@ -361,7 +406,57 @@ class SubmissionRepository extends GetxService {
       await resendFailed(id, values);
       return;
     }
+    // `submissions.update` replaces every value and has no version check: a
+    // newer edit by someone else is overwritten. The web says nothing either.
+    RecordsLog.line('edit $id sends the full value set; no version check');
     await _queueSaved('form_edit', id, values, cid);
+  }
+
+  /// Deletes a submission of mine (`submissions.delete {id}`). Needs a
+  /// connection and is never queued. Null when it is gone; otherwise the
+  /// words to show (never the raw server code). The list, and with it My
+  /// Work Space, is read again afterwards; the history rows of the record
+  /// stay on the server.
+  Future<String?> deleteSubmission(String id) async {
+    final number = int.tryParse(id);
+    if (number == null) return "That submission isn't sent yet.";
+    if (SeedUi.isActive) {
+      submissions.removeWhere((s) => s.submissionId == id);
+      return null;
+    }
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return deleteFailed;
+    if (!_socket.isOnline) return 'Needs a connection';
+    try {
+      await _socket.sdCall(RecordCmd.delete, {'id': number});
+    } on SocketCallError catch (e) {
+      if (e.code == 'not_found') {
+        await _forget(id);
+        return 'That submission no longer exists.';
+      }
+      unawaited(syncFromServer());
+      return switch (e.code) {
+        'submission_locked' =>
+          "It can't be deleted while it waits for approval or after it was approved.",
+        'forbidden' => 'Only the person who submitted it can delete it.',
+        'rate_limited' => 'Too many requests. Try again in a moment.',
+        _ => e.isConnectionGap ? 'Needs a connection' : deleteFailed,
+      };
+    }
+    await _forget(id);
+    unawaited(syncFromServer());
+    return null;
+  }
+
+  static const deleteFailed = "Couldn't delete it. Try again.";
+
+  Future<void> _forget(String id) async {
+    await _db.update(
+      'DELETE FROM form_submissions WHERE org_id = ? AND user_id = ? AND submission_id = ?',
+      [_org, _me, id],
+    );
+    await reload();
   }
 
   /// A declined submission fixed and sent again (`submission.resubmit`).
@@ -603,22 +698,29 @@ class SubmissionRepository extends GetxService {
             ? idText(entry.payload['scope'])
             : definitions[name]?.scope ?? '';
         final data = await _socket.sdCall(
-          scope == 'user' ? 'tstruct.user.submit' : 'tstruct.submit',
-          {
-            'name': name,
-            'values': entry.payload['values'],
-            if (entry.payload['chat'] != null) 'chat': entry.payload['chat'],
-            'cid': cid,
-          },
+          submitCommand(scope),
+          submitArgs(entry.payload, cid),
         );
+        final submission = (data['submission'] as Map).cast<String, dynamic>();
         await _adopt(
           entry,
-          (data['submission'] as Map).cast<String, dynamic>(),
+          submission,
           data['recordStatus'],
           message: data['message'] is Map
               ? (data['message'] as Map).cast<String, dynamic>()
               : null,
         );
+        final id = idNumber(submission['id']);
+        if (id != null && !_saved.isClosed) {
+          _saved.add(
+            SavedRecord(
+              id: id,
+              tstruct: name,
+              isPending: data['recordStatus'] == 'pending',
+              isDuplicate: data['duplicate'] == true,
+            ),
+          );
+        }
       } else {
         final data = await _socket.sdCall(
           entry.kind == 'form_resubmit'
@@ -700,6 +802,7 @@ class SubmissionRepository extends GetxService {
     if (e.code == 'submission_locked') {
       return "It can't be changed while it waits for approval.";
     }
+    if (e.code == 'not_found') return 'That submission no longer exists.';
     if (e.code == 'forbidden') return "You can't use this form.";
     return e.message.isEmpty ? e.code : e.message;
   }
@@ -915,7 +1018,10 @@ class SubmissionRepository extends GetxService {
   }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final tempId = 'temp-$now';
-    final finalId = '${1100 + submissions.length}';
+    final isRecord = SeedTickets.isActive && SeedTickets.handles(name);
+    final finalId = isRecord
+        ? '${SeedTickets.addFromForm(name, values)}'
+        : '${1100 + submissions.length}';
     final def = definitions[name];
     FormSubmission build(String id, String state) => FormSubmission(
       submissionId: id,
@@ -945,6 +1051,10 @@ class SubmissionRepository extends GetxService {
       submissions
         ..removeWhere((s) => s.submissionId == tempId)
         ..insert(0, build(finalId, 'synced'));
+      final number = int.tryParse(finalId);
+      if (isRecord && number != null && !_saved.isClosed) {
+        _saved.add(SavedRecord(id: number, tstruct: name));
+      }
     });
   }
 
@@ -1035,18 +1145,54 @@ class SubmissionRepository extends GetxService {
     );
   }
 
+  /// `submissions.list` pages read per sync (100 rows each; the web reads 10
+  /// too). Older records are not cached; reaching the limit is logged.
+  static const ownPages = 10;
+
+  /// The pause between two pages (30 commands per 10 s are allowed).
+  Duration pageGap = const Duration(milliseconds: 350);
+
+  Future<bool>? _syncing;
+
   /// True when the list was fetched; false when the server could not be
-  /// reached or refused (the cached rows stay either way).
-  Future<bool> syncFromServer() async {
-    if (SeedUi.isActive) return true;
-    if (_org == null || _me == null) return false;
-    var offset = 0;
-    var isOk = true;
-    try {
-      for (var page = 0; page < 5; page++) {
-        final data = await _socket.sdCall('submissions.list', {
-          'offset': offset,
-        });
+  /// reached or refused (the cached rows stay either way, and the failure is
+  /// logged). One read at a time: a call during a read gets its result.
+  Future<bool> syncFromServer() {
+    if (SeedUi.isActive) return Future.value(true);
+    return _syncing ??= _sync().whenComplete(() => _syncing = null);
+  }
+
+  Future<bool> _sync() async {
+    final org = _org;
+    final me = _me;
+    if (org == null || me == null) return false;
+    final result = await PagedRead.run(
+      label: 'submissions.list org=$org',
+      maxPages: ownPages,
+      gap: pageGap,
+      isStale: () => _org != org || _me != me,
+      page: (offset) async {
+        final args = <String, dynamic>{'offset': offset};
+        final Map<String, dynamic> data;
+        try {
+          data = await _socket.sdCall('submissions.list', args);
+          RecordsLog.call(
+            'submissions.list',
+            args,
+            org: org,
+            user: me,
+            reply: data,
+          );
+        } on SocketCallError catch (e) {
+          RecordsLog.call(
+            'submissions.list',
+            args,
+            org: org,
+            user: me,
+            error: e.code,
+          );
+          rethrow;
+        }
         final list = ((data['submissions'] as List?) ?? []).cast<Map>();
         final scopes = <String, String>{
           for (final s in list) idText(s['tstruct']): idText(s['scope']),
@@ -1069,14 +1215,11 @@ class SubmissionRepository extends GetxService {
             }
           }
         });
-        if (data['hasMore'] != true || list.isEmpty) break;
-        offset += list.length;
-      }
-    } on SocketCallError catch (_) {
-      isOk = false;
-    }
-    await reload();
-    return isOk;
+        return (received: list.length, hasMore: data['hasMore'] == true);
+      },
+    );
+    if (result.error != 'stale') await reload();
+    return result.isOk;
   }
 
   /// The captions a list answer carries. A full definition that was fetched
@@ -1116,8 +1259,21 @@ class SubmissionRepository extends GetxService {
   /// A form a person made (`user`) is read with `tstruct.user.get`, an
   /// admin's with `tstruct.get`; with no scope given both are tried, user
   /// first. Null when it can't be had.
-  Future<FormDefinition?> definition(String name, {String scope = ''}) async {
+  Future<FormDefinition?> definition(
+    String name, {
+    String scope = '',
+    Duration? maxAge,
+  }) async {
     if (SeedUi.isActive) return definitions[name];
+    final kept = definitions[name];
+    if (maxAge != null &&
+        kept != null &&
+        kept.isFull &&
+        (scope.isEmpty || kept.scope == scope) &&
+        DateTime.now().millisecondsSinceEpoch - kept.fetchedTs <
+            maxAge.inMilliseconds) {
+      return kept;
+    }
     final org = _org;
     final user = _me;
     if (org == null || user == null || name.isEmpty) return null;
@@ -1135,37 +1291,12 @@ class SubmissionRepository extends GetxService {
             {'name': name},
           );
           final tstruct = (data['tstruct'] as Map).cast<String, dynamic>();
-          final rev = idText(data['rev']);
-          final now = DateTime.now().millisecondsSinceEpoch;
-          final before = await _db.query(
-            'SELECT rev FROM form_definitions WHERE org_id = ? AND user_id = ? AND name = ?',
-            [org, user, name],
-          );
-          // Another version of the form: what was kept for the old one goes.
-          if (before.isNotEmpty && idText(before.first['rev']) != rev) {
-            await _options.dropForm(name);
-          }
-          await _db.insert(
-            'INSERT OR REPLACE INTO form_definitions(org_id, user_id, name, scope, caption, definition_json, fetched_ts, rev) VALUES(?,?,?,?,?,?,?,?)',
-            [
-              org,
-              user,
-              name,
-              s,
-              idText(tstruct['caption']),
-              jsonEncode(tstruct),
-              now,
-              rev,
-            ],
-          );
-          final parsed = FormDefinition.fromMap(
+          final parsed = await _keepDefinition(
             name,
             s,
             tstruct,
-            rev: rev,
-            fetchedTs: now,
+            idText(data['rev']),
           );
-          definitions[name] = parsed;
           return parsed;
         } on SocketCallError catch (_) {
           continue;
@@ -1175,6 +1306,115 @@ class SubmissionRepository extends GetxService {
       }
     }
     return definitions[name];
+  }
+
+  /// Stores a form's full definition for this organisation and person.
+  Future<FormDefinition> _keepDefinition(
+    String name,
+    String scope,
+    Map<String, dynamic> tstruct,
+    String rev,
+  ) async {
+    final org = _org!;
+    final user = _me!;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final before = await _db.query(
+      'SELECT rev FROM form_definitions WHERE org_id = ? AND user_id = ? AND name = ?',
+      [org, user, name],
+    );
+    // Another version of the form: what was kept for the old one goes.
+    if (before.isNotEmpty && idText(before.first['rev']) != rev) {
+      await _options.dropForm(name);
+    }
+    await _db.insert(
+      'INSERT OR REPLACE INTO form_definitions(org_id, user_id, name, scope, caption, definition_json, fetched_ts, rev) VALUES(?,?,?,?,?,?,?,?)',
+      [
+        org,
+        user,
+        name,
+        scope,
+        idText(tstruct['caption']),
+        jsonEncode(tstruct),
+        now,
+        rev,
+      ],
+    );
+    final parsed = FormDefinition.fromMap(
+      name,
+      scope,
+      tstruct,
+      rev: rev,
+      fetchedTs: now,
+    );
+    definitions[name] = parsed;
+    return parsed;
+  }
+
+  /// What `#tstruct-add <name>` does first, as the web does: `tstruct.user.open`
+  /// with `mode: add` (the server takes the caption or the name and checks the
+  /// person may fill it), once per opening. The definition it returns is kept,
+  /// so the form screen does not ask again. Offline, a form already kept on
+  /// the device (by name or caption) opens from the cache.
+  Future<StructureOpen> openStructure(String typed) async {
+    final text = typed.trim();
+    if (text.isEmpty) return const StructureOpen.failed('', isUsage: true);
+    if (SeedUi.isActive) {
+      final lower = text.toLowerCase();
+      final hit = definitions.values
+          .where(
+            (d) =>
+                d.isFull &&
+                (d.name.toLowerCase() == lower ||
+                    d.caption.toLowerCase() == lower),
+          )
+          .firstOrNull;
+      return hit == null
+          ? const StructureOpen.failed(
+              'No such structure, or it is not available to you.',
+              code: 'not_found',
+            )
+          : StructureOpen(hit.name, hit.scope, hit.caption);
+    }
+    if (_org == null || _me == null) return const StructureOpen.failed('');
+    if (!_socket.isOnline) {
+      final lower = text.toLowerCase();
+      final kept = definitions.values
+          .where(
+            (d) =>
+                d.isFull &&
+                (d.name.toLowerCase() == lower ||
+                    d.caption.toLowerCase() == lower),
+          )
+          .firstOrNull;
+      return kept == null
+          ? const StructureOpen.failed('', isOffline: true)
+          : StructureOpen(kept.name, kept.scope, kept.caption);
+    }
+    try {
+      final data = await _socket.sdCall(RecordCmd.openStructure, {
+        'name': text,
+        'mode': 'add',
+      });
+      final tstruct = (data['tstruct'] as Map).cast<String, dynamic>();
+      final name = idText(tstruct['name']);
+      final scope = idText(data['scope']) == 'admin' ? 'admin' : 'user';
+      if (name.isEmpty) return const StructureOpen.failed('');
+      final def = await _keepDefinition(
+        name,
+        scope,
+        tstruct,
+        idText(data['rev']),
+      );
+      return StructureOpen(name, scope, def.caption);
+    } on SocketCallError catch (e) {
+      return StructureOpen.failed(
+        e.message,
+        isOffline: e.isConnectionGap,
+        code: e.code,
+      );
+    } on TypeError catch (_) {
+      return const StructureOpen.failed('');
+    }
   }
 
   /// Debug: submits a real test form with a client id, then the same id again
@@ -1195,4 +1435,33 @@ class SubmissionRepository extends GetxService {
         'duplicate=${again['duplicate'] == true}, '
         '${id(first) == id(again) && again['duplicate'] == true ? 'nothing saved twice' : 'NOT a clean duplicate'}';
   }
+}
+
+/// The answer of `SubmissionRepository.openStructure`: the form to open, or
+/// why there is none.
+class StructureOpen {
+  const StructureOpen(this.name, this.scope, this.caption)
+    : message = '',
+      code = '',
+      isOffline = false,
+      isUsage = false;
+
+  const StructureOpen.failed(
+    this.message, {
+    this.code = '',
+    this.isOffline = false,
+    this.isUsage = false,
+  }) : name = '',
+       scope = '',
+       caption = '';
+
+  final String name;
+  final String scope;
+  final String caption;
+  final String message;
+  final String code;
+  final bool isOffline;
+  final bool isUsage;
+
+  bool get isOpen => name.isNotEmpty;
 }

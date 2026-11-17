@@ -285,3 +285,11 @@ Series colours in order (01-colors.md section 13), plot height 200, donut height
 **Do:** keep the page pure white and separate cards with a hairline or a navy shadow; use `primary` for fills and text, `primaryBright` for icons and focus; use the strong shade for text on a tint; keep the bubble surface on every filled primary button and the FAB; keep the field label, helper and error text sizes; keep the focus ring on every field; use the tone's `strong` for text on `tint`; compute control padding from `(H - 2 - lineHeight) / 2`; respect reduced motion.
 
 **Don't:** use orange or yellow anywhere; use warm greys (all greys here are cool and navy-tinted); put small text on `primaryBright` (4.33:1); make a flat blue primary button; use purple or violet for a button or onboarding; use black shadows; add a dark theme; use a raw text input or a second field style; give pills a radius other than full; hardcode colours, sizes or durations in components (use the tokens).
+
+## Pull to refresh indicator
+
+- Asset: `assets/icons/loader/spinner-double.svg` (two arcs, viewBox 80x80, pivot 40,40).
+- Speeds: thick outer arc clockwise 0.8 s per turn, thin inner arc counter-clockwise 0.6 s per turn.
+- Size: 28 dp, no disc, no shadow, on the white page. Scales 0.6 to 1 and fades in while pulling, turns with the pull, then spins freely until the refresh ends.
+- Colour: `AppColors.primaryBright` (the logo blue the old refresh header and the other loaders use). One constant, `kPullRefreshColor`, switches it to primary blue or violet.
+- Reduced motion: static frame, still visible while refreshing.

@@ -1,0 +1,16 @@
+{
+ "action": "record.people",
+ "data": {
+  "people": [
+   {
+    "designation": "Analyst",
+    "name": "Ben Iyer",
+    "username": "ben"
+   }
+  ],
+  "total": 1
+ },
+ "ok": true,
+ "reqId": "ana-4",
+ "type": "sd"
+}

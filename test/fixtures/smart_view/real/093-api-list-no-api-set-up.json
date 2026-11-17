@@ -1,0 +1,14 @@
+{
+  "label": "api.list: no API set up",
+  "as": "ann (author)",
+  "command": "api.list",
+  "request": {},
+  "reply": {
+    "action": "api.list",
+    "data": {
+      "apis": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

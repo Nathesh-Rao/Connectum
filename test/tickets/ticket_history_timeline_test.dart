@@ -1,0 +1,681 @@
+import 'package:connectum/core/debug/seed_tickets.dart';
+import 'package:connectum/core/routes/app_routes.dart';
+import 'package:connectum/core/widgets/app_state_view.dart';
+import 'package:connectum/data/models/record_state.dart';
+import 'package:connectum/data/models/ticket.dart';
+import 'package:connectum/data/records/record_commands.dart';
+import 'package:connectum/data/repositories/form_file_repository.dart';
+import 'package:connectum/data/repositories/ticket_repository.dart';
+import 'package:connectum/data/socket/connectivity_service.dart';
+import 'package:connectum/data/socket/socket_service.dart';
+import 'package:connectum/features/tickets/ticket_detail_binding.dart';
+import 'package:connectum/features/tickets/ticket_detail_view.dart';
+import 'package:connectum/features/tickets/tickets_texts.dart';
+import 'package:connectum/features/tickets/widgets/ticket_history_panel.dart';
+import 'package:connectum/features/tickets/widgets/ticket_history_timeline.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
+
+import '../support/fake_socket.dart';
+import 'ticket_fixtures.dart';
+
+Future<void> _settle() async {
+  for (var i = 0; i < 10; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
+class _Connectivity extends ConnectivityService {
+  @override
+  // ignore: must_call_super
+  Future<void> onInit() async {
+    state.value = AppConnectivity.online;
+  }
+
+  @override
+  void attachSocket(Rx<SocketState> socketState) {}
+}
+
+final _now = DateTime.now().millisecondsSinceEpoch;
+
+/// An event [minutes] ago.
+Map<String, dynamic> _ev(
+  int id,
+  String op, {
+  String by = 'ben',
+  int minutes = 0,
+  Map<String, dynamic> extra = const {},
+}) => {'id': id, 'op': op, 'by': by, 'ts': _now - minutes * 60000, ...extra};
+
+Map<String, dynamic> _history(
+  List<Map<String, dynamic>> events, {
+  Map<String, dynamic> files = const {},
+}) => {
+  'caption': 'Ticket',
+  'events': events,
+  'names': {
+    'ana': 'Ana Rao',
+    'ben': 'Ben Iyer',
+    'sam': 'Sam Joseph',
+    'rhea': 'Rhea Das',
+  },
+  'fields': {'title': 'Title', 'stage': 'Stage'},
+  'files': files,
+};
+
+const _ticket = Ticket(id: 24, by: 'ana', ts: 1, tstruct: 'help_ticket');
+
+HistoryFeed _feed(Map<String, dynamic> data) => HistoryFeed(
+  history: RecordHistory.parse(data),
+  nameOf: (u) => u,
+  ticket: _ticket,
+  first: 'Open',
+);
+
+/// The timeline alone, in a scroll view.
+Widget _timeline(Map<String, dynamic> data) => MaterialApp(
+  home: Scaffold(
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: TicketHistoryTimeline(feed: _feed(data)),
+    ),
+  ),
+);
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('the timeline', () {
+    testWidgets('lists the newest event first', (tester) async {
+      tester.view.physicalSize = const Size(420, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(1, 'created', by: 'ana', minutes: 30),
+            _ev(
+              2,
+              'sent',
+              by: 'ana',
+              minutes: 20,
+              extra: {
+                'to': ['ben'],
+                'fromHolder': 'ana',
+              },
+            ),
+            _ev(
+              3,
+              'status',
+              minutes: 10,
+              extra: {'fromStatus': 'Open', 'toStatus': 'Done', 'final': true},
+            ),
+          ]),
+        ),
+      );
+      final created = tester.getTopLeft(find.text('Created')).dy;
+      final sent = tester.getTopLeft(find.text('Sent to Ben Iyer')).dy;
+      final status = tester.getTopLeft(find.text('Status updated')).dy;
+      expect(status, lessThan(sent));
+      expect(sent, lessThan(created));
+    });
+
+    testWidgets('every kind of event has its icon, title and meta', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(420, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            for (var i = 0; i < RecordEvent.ops.length; i++)
+              _ev(i + 1, RecordEvent.ops[i], by: 'sam', minutes: 90 - i),
+          ]),
+        ),
+      );
+      for (final op in RecordEvent.ops) {
+        expect(find.text(TicketsTexts.opTitle(op)), findsOneWidget, reason: op);
+        final icon = HistoryKind.of(op).icon!;
+        expect(find.byIcon(icon), findsWidgets, reason: op);
+      }
+      expect(
+        find.textContaining('Sam Joseph'),
+        findsNWidgets(RecordEvent.ops.length),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('an unknown op is a neutral dot with the BE words', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _timeline(_history([_ev(1, 'archived_elsewhere', minutes: 5)])),
+      );
+      expect(find.text('archived elsewhere'), findsOneWidget);
+      expect(HistoryKind.of('archived_elsewhere').icon, isNull);
+    });
+
+    testWidgets('a status change is two pills, the final one with a check', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(
+              1,
+              'status',
+              extra: {'fromStatus': 'Open', 'toStatus': 'In progress'},
+            ),
+            _ev(
+              2,
+              'status',
+              minutes: -1,
+              extra: {
+                'fromStatus': 'In progress',
+                'toStatus': 'Done',
+                'final': true,
+              },
+            ),
+          ]),
+        ),
+      );
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.text('In progress'), findsNWidgets(2));
+      expect(find.text('Done'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_forward), findsNWidgets(2));
+      expect(find.byIcon(Icons.check), findsOneWidget);
+    });
+
+    testWidgets('several recipients collapse to a name and +N, a tap opens', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(
+              1,
+              'sent',
+              by: 'ana',
+              extra: {
+                'to': ['ben', 'sam', 'rhea'],
+                'fromHolder': 'ana',
+                'via': 'user',
+              },
+            ),
+          ]),
+        ),
+      );
+      expect(find.text('Ana Rao'), findsWidgets);
+      expect(find.text('+2'), findsOneWidget);
+      expect(find.text('Sam Joseph'), findsNothing);
+      await tester.tap(find.text('+2'));
+      await tester.pump();
+      expect(find.text('+2'), findsNothing);
+      expect(find.text('Sam Joseph'), findsOneWidget);
+      expect(find.text('Rhea Das'), findsOneWidget);
+    });
+
+    testWidgets('completion shows "from -> to" and the hours as a pill', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(1, 'status', minutes: 20, extra: {'completion': '40'}),
+            _ev(2, 'status', extra: {'completion': '81', 'hours': '2.5'}),
+          ]),
+        ),
+      );
+      expect(find.text('81%'), findsOneWidget);
+      expect(find.text('40%'), findsNWidgets(2));
+      expect(find.text('2.5 h'), findsOneWidget);
+    });
+
+    testWidgets('a long remark shows three lines and Show more', (
+      tester,
+    ) async {
+      final long = List.filled(40, 'remark').join(' ');
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(1, 'status', extra: {'remarks': long}),
+            _ev(2, 'status', minutes: -1, extra: {'remarks': 'Short one'}),
+          ]),
+        ),
+      );
+      expect(find.text('Show more'), findsOneWidget);
+      expect(find.text('Short one'), findsOneWidget);
+      final collapsed = tester
+          .getSize(find.text(long, findRichText: true))
+          .height;
+      await tester.tap(find.text('Show more'));
+      await tester.pump();
+      expect(find.text('Show less'), findsOneWidget);
+      expect(
+        tester.getSize(find.text(long, findRichText: true)).height,
+        greaterThan(collapsed),
+      );
+    });
+
+    testWidgets('files are chips, more than three collapse', (tester) async {
+      await tester.pumpWidget(
+        _timeline(
+          _history(
+            [
+              _ev(
+                1,
+                'status',
+                extra: {
+                  'files': ['f1', 'f2', 'f3', 'f4', 'f5'],
+                },
+              ),
+            ],
+            files: {
+              for (var i = 1; i <= 5; i++)
+                'f$i': {'id': 'f$i', 'name': 'photo$i.png'},
+            },
+          ),
+        ),
+      );
+      expect(find.text('photo1.png'), findsOneWidget);
+      expect(find.text('photo3.png'), findsOneWidget);
+      expect(find.text('photo4.png'), findsNothing);
+      expect(find.text('+2'), findsOneWidget);
+      expect(find.byIcon(Icons.attach_file), findsNWidgets(4));
+    });
+
+    testWidgets('edits show three rows, the rest on +N more', (tester) async {
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(
+              1,
+              'edited',
+              extra: {
+                'changes': [
+                  for (var i = 1; i <= 4; i++)
+                    {'field': 'title', 'from': 'old$i', 'to': 'new$i'},
+                ],
+              },
+            ),
+          ]),
+        ),
+      );
+      expect(find.textContaining('old3', findRichText: true), findsOneWidget);
+      expect(find.textContaining('old4', findRichText: true), findsNothing);
+      await tester.tap(find.text('+1 more'));
+      await tester.pump();
+      expect(find.textContaining('old4', findRichText: true), findsOneWidget);
+    });
+
+    testWidgets('a tap on the time shows the exact date and time', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _timeline(_history([_ev(1, 'created', by: 'ana', minutes: 5)])),
+      );
+      expect(find.text('5 min ago'), findsOneWidget);
+      await tester.tap(find.text('5 min ago'));
+      await tester.pump(const Duration(milliseconds: 200));
+      final at = DateTime.fromMillisecondsSinceEpoch(_now - 5 * 60000);
+      expect(find.textContaining('${at.year}'), findsOneWidget);
+    });
+
+    testWidgets('one semantics node reads the whole event', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _timeline(
+          _history([
+            _ev(
+              1,
+              'status',
+              by: 'ben',
+              minutes: 120,
+              extra: {
+                'fromStatus': 'Open',
+                'toStatus': 'In progress',
+                'completion': '81',
+                'remarks': 'Technician called',
+              },
+            ),
+          ]),
+        ),
+      );
+      expect(
+        find.bySemanticsLabel(
+          'Status updated by Ben Iyer, 2 hours ago, Open to In progress, '
+          'completion 81 percent, remark Technician called',
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+  });
+
+  group('the panel', () {
+    Widget panel({
+      RecordHistory? history,
+      AppViewState state = AppViewState.content,
+      Future<void> Function()? onRefresh,
+      bool isInline = false,
+    }) => MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          height: 400,
+          child: TicketHistoryPanel(
+            history: history,
+            state: state,
+            ticket: _ticket,
+            nameOf: (u) => u,
+            onRefresh: onRefresh ?? () async {},
+            isInline: isInline,
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('empty and error and loading', (tester) async {
+      await tester.pumpWidget(panel(state: AppViewState.empty));
+      expect(find.text('No history yet'), findsOneWidget);
+      var retries = 0;
+      await tester.pumpWidget(
+        panel(state: AppViewState.error, onRefresh: () async => retries++),
+      );
+      expect(find.text(TicketsTexts.historyError), findsOneWidget);
+      await tester.tap(find.text(TicketsTexts.historyRetry));
+      expect(retries, 1);
+      await tester.pumpWidget(panel(state: AppViewState.loading));
+      expect(find.text('No history yet'), findsNothing);
+    });
+
+    testWidgets('the header says the count', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        panel(
+          history: RecordHistory.parse(
+            _history([_ev(1, 'created'), _ev(2, 'sent')]),
+          ),
+        ),
+      );
+      expect(find.bySemanticsLabel('History, 2 events'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('a live event fades in; scrolled down it waits', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(420, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final events = [
+        for (var i = 1; i <= 30; i++)
+          _ev(i, 'status', minutes: 60 - i, extra: {'remarks': 'event $i'}),
+      ];
+      final data = ValueNotifier(RecordHistory.parse(_history(events)));
+      Widget host() => MaterialApp(
+        home: Scaffold(
+          body: ValueListenableBuilder(
+            valueListenable: data,
+            builder: (_, h, _) => SizedBox(
+              height: 400,
+              child: TicketHistoryPanel(
+                history: h,
+                state: AppViewState.content,
+                ticket: _ticket,
+                nameOf: (u) => u,
+                onRefresh: () async {},
+              ),
+            ),
+          ),
+        ),
+      );
+      RecordHistory withNew(int id) => RecordHistory.parse(
+        _history([
+          ...events,
+          _ev(id, 'status', extra: {'remarks': 'event $id'}),
+        ]),
+      );
+
+      await tester.pumpWidget(host());
+      expect(find.text('event 30'), findsOneWidget);
+
+      // At the top: the new event appears with a short fade.
+      data.value = withNew(31);
+      await tester.pump();
+      expect(find.text('event 31'), findsOneWidget);
+      final fade = tester.widget<FadeTransition>(
+        find
+            .ancestor(
+              of: find.text('event 31'),
+              matching: find.byType(FadeTransition),
+            )
+            .first,
+      );
+      expect(fade.opacity.value, lessThan(1));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(fade.opacity.value, 1);
+
+      // Scrolled down: the list does not move.
+      final list = find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.drag(list, const Offset(0, -500));
+      await tester.pump();
+      final before = tester.state<ScrollableState>(list).position.pixels;
+      expect(before, greaterThan(100));
+      data.value = withNew(32);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.state<ScrollableState>(list).position.pixels, before);
+      expect(find.text('event 32'), findsNothing);
+
+      // Back at the top it shows.
+      tester.state<ScrollableState>(list).position.jumpTo(0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('event 32'), findsOneWidget);
+    });
+  });
+
+  group('the screen', () {
+    late FakeSocket socket;
+    late TicketRepository repo;
+
+    setUp(() {
+      Get.reset();
+      socket = FakeSocket()..goOnline();
+      repo = Get.put(
+        TicketRepository(socket, FakeStore(user: 'ana'), FakeConversations()),
+      );
+      Get.put<FormFileRepository>(FakeFiles());
+      Get.put<ConnectivityService>(_Connectivity());
+      socket.answers[RecordCmd.get] = {
+        'submission': {
+          'id': 24,
+          'tstruct': 'help_ticket',
+          'by': 'rhea',
+          'holder': 'ana',
+          'ts': 5,
+          'values': {'title': 'Printer is jammed', 'stage': 'Open'},
+        },
+      };
+      socket.answers[RecordCmd.actions] = fixtureData('record_actions');
+    });
+
+    tearDown(() {
+      repo.onClose();
+      Get.reset();
+    });
+
+    Future<void> open(
+      WidgetTester tester,
+      Size size, {
+      double scale = 1,
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: const ValueKey('shot'),
+          child: GetMaterialApp(
+            debugShowCheckedModeBanner: false,
+            initialRoute: AppRoutes.ticketOf(24),
+            getPages: [
+              GetPage(
+                name: AppRoutes.ticket,
+                page: () => const TicketDetailView(),
+                binding: TicketDetailBinding(),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(_settle);
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    List<Map<String, dynamic>> many(int n) => [
+      _ev(1, 'created', by: 'rhea', minutes: n + 5),
+      for (var i = 2; i <= n; i++)
+        _ev(
+          i,
+          'status',
+          minutes: n + 5 - i,
+          extra: {
+            'fromStatus': 'Open',
+            'toStatus': 'In progress',
+            'remarks': i == n ? 'newest' : 'event $i',
+          },
+        ),
+    ];
+
+    for (final size in const [Size(360, 640), Size(320, 568)]) {
+      testWidgets('the page stays fixed and the list scrolls at $size', (
+        tester,
+      ) async {
+        socket.answers[RecordCmd.history] = _history(many(40));
+        await open(tester, size);
+        expect(tester.takeException(), isNull);
+        final panel = tester.widget<TicketHistoryPanel>(
+          find.byType(TicketHistoryPanel),
+        );
+        // The smallest phone leaves a tall top block too little room: the
+        // page scrolls as one there, and the next test covers it.
+        expect(panel.isInline, size.height < 600);
+        if (panel.isInline) {
+          expect(tester.takeException(), isNull);
+          return;
+        }
+        // One scrollable only: the list inside the panel.
+        expect(find.byType(CustomScrollView), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(TicketHistoryPanel),
+            matching: find.byType(CustomScrollView),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('newest'), findsOneWidget);
+        expect(find.text('40'), findsOneWidget);
+        final title = tester
+            .getTopLeft(find.text('Printer is jammed').first)
+            .dy;
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+        await tester.pump();
+        expect(
+          tester.getTopLeft(find.text('Printer is jammed').first).dy,
+          title,
+        );
+        expect(find.text('newest'), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets(
+      'a tall top block and 200% text turn the page into one scroll',
+      (tester) async {
+        socket.answers[RecordCmd.history] = _history(many(6));
+        await open(tester, const Size(320, 568), scale: 2);
+        expect(tester.takeException(), isNull);
+        // The panel sits below the top block, inside the one scroll view.
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -3000),
+        );
+        await tester.pump();
+        final panel = tester.widget<TicketHistoryPanel>(
+          find.byType(TicketHistoryPanel),
+        );
+        expect(panel.isInline, isTrue);
+        expect(find.byType(CustomScrollView), findsOneWidget);
+        expect(
+          find.ancestor(
+            of: find.byType(TicketHistoryPanel),
+            matching: find.byType(CustomScrollView),
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    Future<void> golden(WidgetTester tester, String name) => expectLater(
+      find.byKey(const ValueKey('shot')),
+      matchesGoldenFile('goldens/$name.png'),
+    );
+
+    testWidgets('golden: a short history', (tester) async {
+      socket.answers[RecordCmd.history] = _history(many(3));
+      await open(tester, const Size(390, 800));
+      await golden(tester, 'ticket_detail_short');
+    });
+
+    testWidgets('golden: a long history, scrolled to the top', (tester) async {
+      socket.answers[RecordCmd.history] = _history(many(40));
+      await open(tester, const Size(390, 800));
+      await golden(tester, 'ticket_detail_long');
+    });
+
+    testWidgets('golden: the single-scroll fallback', (tester) async {
+      socket.answers[RecordCmd.history] = _history(many(6));
+      await open(tester, const Size(360, 520));
+      await golden(tester, 'ticket_detail_fallback');
+    });
+
+    testWidgets('a short history and an empty one', (tester) async {
+      socket.answers[RecordCmd.history] = _history(many(2));
+      await open(tester, const Size(360, 640));
+      expect(find.text('2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('the demo history', () {
+    test('has every kind of event, a long history and a short one', () async {
+      await SeedTickets.start();
+      addTearDown(SeedTickets.stop);
+      RecordHistory read(int id) => RecordHistory.parse(
+        SeedTickets.answer(RecordCmd.history, {'id': id}),
+      );
+      final all = read(SeedTickets.demoHistoryAll);
+      final ops = {for (final e in all.events) e.op};
+      expect(ops.containsAll(RecordEvent.ops), isTrue);
+      expect(all.events.any((e) => e.to.length > 2), isTrue);
+      expect(all.events.any((e) => e.remarks.length > 200), isTrue);
+      expect(read(SeedTickets.demoHistoryLong).events, hasLength(40));
+      expect(read(SeedTickets.demoHistoryShort).events, hasLength(2));
+    });
+  });
+}

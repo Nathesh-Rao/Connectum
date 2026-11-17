@@ -1,0 +1,134 @@
+{
+  "label": "two devices, step 2: device 2 saves its (older) list plus 'From tablet': no stale error",
+  "as": "ann (author)",
+  "command": "smartview.views.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "views": [
+      {
+        "charts": true,
+        "filters": [],
+        "groupBy": [],
+        "hidden": [],
+        "id": "__default",
+        "kpis": true,
+        "name": "Default View",
+        "order": [],
+        "search": "",
+        "sort": {
+          "col": "due",
+          "dir": "desc"
+        },
+        "widths": {}
+      },
+      {
+        "charts": true,
+        "filters": [
+          {
+            "col": "stage",
+            "op": "not",
+            "value": "Closed"
+          }
+        ],
+        "groupBy": [
+          "stage"
+        ],
+        "hidden": [
+          "hours"
+        ],
+        "id": "v1",
+        "kpis": true,
+        "name": "Open by stage",
+        "order": [],
+        "search": "",
+        "sort": {
+          "col": "due",
+          "dir": "asc"
+        },
+        "widths": {
+          "title": 320
+        }
+      },
+      {
+        "id": "t1",
+        "name": "From tablet",
+        "search": "",
+        "filters": [],
+        "sort": null,
+        "groupBy": [],
+        "hidden": [],
+        "order": [],
+        "widths": {},
+        "kpis": true,
+        "charts": true
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.views.save",
+    "data": {
+      "views": [
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "__default",
+          "kpis": true,
+          "name": "Default View",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "desc"
+          },
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [
+            "stage"
+          ],
+          "hidden": [
+            "hours"
+          ],
+          "id": "v1",
+          "kpis": true,
+          "name": "Open by stage",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "asc"
+          },
+          "widths": {
+            "title": 320
+          }
+        },
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "t1",
+          "kpis": true,
+          "name": "From tablet",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

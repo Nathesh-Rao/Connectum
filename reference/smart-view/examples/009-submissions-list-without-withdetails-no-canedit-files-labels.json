@@ -1,0 +1,68 @@
+{
+  "label": "submissions.list: without withDetails (no canEdit, files, labels)",
+  "as": "ann (author)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "tickets",
+    "limit": 1,
+    "fetch": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": true,
+      "limit": 1,
+      "offset": 0,
+      "structures": {
+        "tickets": {
+          "caption": "Tickets",
+          "fields": {
+            "area": "Area",
+            "due": "Due",
+            "hours": "Hours",
+            "secret": "Internal note",
+            "stage": "Stage",
+            "stage_comments": "Stage comments",
+            "stage_completion": "Stage completion",
+            "stage_files": "Stage files",
+            "stage_hours": "Stage hours",
+            "title": "Title"
+          },
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          }
+        }
+      },
+      "submissions": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 39,
+          "scope": "user",
+          "ts": 1794833216938,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Delivery",
+            "due": "2026-11-20",
+            "hours": 2.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Printer jammed"
+          }
+        }
+      ],
+      "total": 6
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

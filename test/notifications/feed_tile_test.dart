@@ -3,6 +3,7 @@ import 'package:connectum/core/theme/app_tones.dart';
 import 'package:connectum/features/notifications/models/feed_item.dart';
 import 'package:connectum/features/notifications/notification_style.dart';
 import 'package:connectum/features/notifications/notification_texts.dart';
+import 'package:connectum/features/notifications/widgets/feed_priority_pill.dart';
 import 'package:connectum/features/notifications/widgets/feed_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +65,53 @@ void main() {
     expect(icon.size, 22);
     final circle = tester.widget<Container>(_circle());
     expect((circle.decoration! as BoxDecoration).color, AppTones.purple.tint);
+  });
+
+  testWidgets('the icon takes the priority colour of the pill', (tester) async {
+    for (final priority in ['high', 'medium', 'resolved']) {
+      for (final isRead in [false, true]) {
+        await _pump(tester, _item(priority: priority, isRead: isRead));
+        final tone = FeedPriorityPill.toneOf(priority)!;
+        final pill = FeedPriorityPill.of(priority)!;
+        expect(pill.$2, tone);
+        expect(
+          tester
+              .widget<Icon>(find.byIcon(Icons.confirmation_number_rounded))
+              .color,
+          tone.solid,
+          reason: '$priority read=$isRead',
+        );
+        final circle = tester.widget<Container>(_circle());
+        expect((circle.decoration! as BoxDecoration).color, tone.tint);
+        expect(
+          tester.widget<Text>(find.text(pill.$1)).style!.color,
+          tone.strong,
+        );
+      }
+    }
+  });
+
+  testWidgets('low or unknown priority keeps the type colour', (tester) async {
+    for (final priority in ['low', 'whatever']) {
+      await _pump(tester, _item(priority: priority));
+      expect(FeedPriorityPill.toneOf(priority), isNull);
+      expect(
+        tester
+            .widget<Icon>(find.byIcon(Icons.confirmation_number_rounded))
+            .color,
+        AppTones.purple.solid,
+      );
+    }
+  });
+
+  test('every priority tone reads 3:1 on its tint', () {
+    for (final priority in ['high', 'medium', 'resolved']) {
+      final tone = FeedPriorityPill.toneOf(priority)!;
+      final a = tone.solid.computeLuminance();
+      final b = tone.tint.computeLuminance();
+      final ratio = (b + 0.05) / (a + 0.05);
+      expect(ratio, greaterThanOrEqualTo(3), reason: priority);
+    }
   });
 
   testWidgets('priority pill: high, medium, resolved shown, low hidden', (

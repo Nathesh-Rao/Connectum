@@ -35,4 +35,13 @@ class AppShadows {
     BoxShadow(color: Color(0x0B003A8C), blurRadius: 22, offset: Offset(0, 8)),
     BoxShadow(color: Color(0x04003A8C), blurRadius: 2, offset: Offset(0, 1)),
   ];
+
+  static const drawerBody = [
+    BoxShadow(
+      color: Color(0x290B1B3B),
+      blurRadius: 28,
+      spreadRadius: -6,
+      offset: Offset(-6, 0),
+    ),
+  ];
 }

@@ -1,0 +1,17 @@
+{
+  "label": "tstruct.get: the shared (administrator) scope, asked by an ordinary person",
+  "as": "bob (colleague)",
+  "command": "tstruct.get",
+  "request": {
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "tstruct.get",
+    "error": {
+      "code": "not_found",
+      "message": "No such form."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

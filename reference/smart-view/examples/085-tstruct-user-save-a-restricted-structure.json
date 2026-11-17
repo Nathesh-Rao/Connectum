@@ -1,0 +1,47 @@
+{
+  "label": "tstruct.user.save: a restricted structure",
+  "as": "ann (author)",
+  "command": "tstruct.user.save",
+  "request": {
+    "name": "private_t",
+    "caption": "Private",
+    "restricted": true,
+    "fields": [
+      {
+        "name": "a",
+        "type": "text",
+        "caption": "A",
+        "required": true
+      }
+    ]
+  },
+  "reply": {
+    "action": "tstruct.user.save",
+    "data": {
+      "tstruct": {
+        "caption": "Private",
+        "createdTs": 1794833248089,
+        "description": "",
+        "fields": [
+          {
+            "caption": "A",
+            "condition": null,
+            "multiline": false,
+            "name": "a",
+            "required": true,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          }
+        ],
+        "name": "private_t",
+        "owner": "svcapcpw1ann",
+        "restricted": true,
+        "saveToDb": true,
+        "sections": []
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "label": "submissions.delete: an administrator deleting someone else's record",
+  "as": "admin",
+  "command": "submissions.delete",
+  "request": {
+    "id": 61
+  },
+  "reply": {
+    "action": "submissions.delete",
+    "error": {
+      "code": "forbidden",
+      "message": "You can only delete your own submission, or any record of a structure you created."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

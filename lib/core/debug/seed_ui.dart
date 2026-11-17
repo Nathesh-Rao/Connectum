@@ -489,6 +489,14 @@ class SeedUi {
         category: 'forms',
       ),
       c(
+        'tstruct-add',
+        'Open a structure to fill it in',
+        '#tstruct-add <name>',
+        'sd',
+        aliases: ['create', 'ts-add'],
+        category: 'forms',
+      ),
+      c(
         'submissions',
         'Forms you have submitted',
         '#submissions',
@@ -805,9 +813,58 @@ class SeedUi {
         ],
       }),
       'all_types': FormDefinition.fromMap('all_types', 'user', _allTypes),
+      ...createFlowForms(),
       ...SeedSampleForms.definitions(),
     };
   }
+
+  /// Forms for `#create <name>` offline. `help_ticket` has a status field
+  /// and sends itself on when saved (the fake record server in
+  /// `SeedTickets` says who holds it); `help_task` asks for comments,
+  /// completion, hours and a file when its status is updated; `asset_check`
+  /// has a field type the app cannot fill (`signature`).
+  static Map<String, FormDefinition> createFlowForms() => {
+    'help_ticket': FormDefinition.fromMap('help_ticket', 'user', {
+      'caption': 'Ticket',
+      'recordThread': true,
+      'fields': [
+        {'name': 'title', 'caption': 'Title', 'type': 'text', 'required': true},
+        {
+          'name': 'details',
+          'caption': 'Details',
+          'type': 'text',
+          'multiline': true,
+        },
+        {
+          'name': 'stage',
+          'caption': 'Stage',
+          'type': 'list',
+          'options': ['Open', 'In progress', 'Done'],
+          'statusLocked': true,
+        },
+      ],
+    }),
+    'help_task': FormDefinition.fromMap('help_task', 'user', {
+      'caption': 'Work order',
+      'fields': [
+        {'name': 'title', 'caption': 'Title', 'type': 'text', 'required': true},
+        {
+          'name': 'stage',
+          'caption': 'Stage',
+          'type': 'list',
+          'options': ['New', 'Working', 'Closed'],
+          'statusLocked': true,
+        },
+      ],
+    }),
+    'asset_check': FormDefinition.fromMap('asset_check', 'user', {
+      'caption': 'Asset check',
+      'fields': [
+        {'name': 'asset', 'caption': 'Asset', 'type': 'text', 'required': true},
+        {'name': 'signature', 'caption': 'Signature', 'type': 'signature'},
+      ],
+    }),
+  };
 
   static final _allTypes = <String, Object?>{
     'caption': 'Everything form',

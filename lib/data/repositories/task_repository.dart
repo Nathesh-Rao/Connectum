@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_tasks.dart';
 import '../models/task.dart';
+import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 
@@ -28,7 +29,7 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
   final SessionStore _store;
 
   static const pageSize = 50;
-  static const burst = Duration(milliseconds: 150);
+  static const burst = Duration(milliseconds: 300);
 
   final _changes = StreamController<TaskChange>.broadcast();
   final _refreshes = StreamController<void>.broadcast();
@@ -86,11 +87,16 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
   void onEvent(Map<String, dynamic> e) {
     if (e['type'] != 'sd_event') return;
     final event = e['event'];
-    if (event != 'task_assigned' && event != 'task_updated') return;
+    if (event != RecordEvents.taskAssigned &&
+        event != RecordEvents.taskUpdated) {
+      return;
+    }
     final data = e['data'];
     final task = data is Map ? Task.tryParse(data['task']) : null;
     if (task != null) {
-      _changes.add(TaskChange(task, isAssigned: event == 'task_assigned'));
+      _changes.add(
+        TaskChange(task, isAssigned: event == RecordEvents.taskAssigned),
+      );
     }
     scheduleRefresh();
   }
@@ -107,7 +113,7 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
     if (SeedTasks.isActive) {
       return SeedTasks.taskPage(as, status, offset, pageSize);
     }
-    final data = await _socket.sdCall('task.list', {
+    final data = await _socket.sdCall(TaskCmd.list, {
       'as': as,
       'status': status,
       'limit': pageSize,
@@ -137,7 +143,7 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
       SeedTasks.tasks = [...SeedTasks.tasks, task];
       return task;
     }
-    return _task(await _socket.sdCall('task.create', fields));
+    return _task(await _socket.sdCall(TaskCmd.create, fields));
   }
 
   Future<Task> update(int id, Map<String, dynamic> fields) async {
@@ -154,7 +160,7 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
       ];
       return next;
     }
-    return _task(await _socket.sdCall('task.update', {'id': id, ...fields}));
+    return _task(await _socket.sdCall(TaskCmd.update, {'id': id, ...fields}));
   }
 
   Future<Task> send(int id, String to) async {
@@ -180,7 +186,7 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
       ];
       return next;
     }
-    return _task(await _socket.sdCall('task.send', {'id': id, 'to': to}));
+    return _task(await _socket.sdCall(TaskCmd.send, {'id': id, 'to': to}));
   }
 
   /// One task (`task.get {id}`).
@@ -189,7 +195,7 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
       SeedTasks.failIfAsked();
       return SeedTasks.tasks.firstWhere((t) => t.id == id);
     }
-    return _task(await _socket.sdCall('task.get', {'id': id}));
+    return _task(await _socket.sdCall(TaskCmd.get, {'id': id}));
   }
 
   /// `{task: view}` or a bare view.

@@ -10,7 +10,8 @@ import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../ai_agents/ai_agents_view.dart';
 import '../chats/chats_view.dart';
-import '../profile/profile_view.dart';
+import '../inbox/inbox_view.dart';
+import '../smart_view/smart_view_view.dart';
 import '../submissions/submissions_view.dart';
 import 'home_shell_controller.dart';
 
@@ -21,7 +22,38 @@ class HomeShellView extends GetView<HomeShellController> {
     ChatsView(),
     AiAgentsView(),
     SubmissionsView(),
-    ProfileView(),
+    SmartViewView(),
+    InboxView(),
+  ];
+
+  /// The bar's items, in tab order (the order of [_screens]).
+  static List<AppNavItem> navItems({bool hasUnread = false}) => [
+    AppNavItem(
+      label: 'Chats',
+      selectedAsset: AppIcons.bottomNav.chatSelected,
+      unselectedAsset: AppIcons.bottomNav.chatUnselected,
+      showDot: hasUnread,
+    ),
+    AppNavItem(
+      label: 'Agents',
+      selectedAsset: AppIcons.bottomNav.aiSelected,
+      unselectedAsset: AppIcons.bottomNav.aiUnselected,
+    ),
+    AppNavItem(
+      label: 'Submits',
+      selectedAsset: AppIcons.bottomNav.submissionsSelected,
+      unselectedAsset: AppIcons.bottomNav.submissionsUnselected,
+    ),
+    AppNavItem(
+      label: 'Smart view',
+      selectedAsset: AppIcons.bottomNav.smartViewSelected,
+      unselectedAsset: AppIcons.bottomNav.smartViewUnselected,
+    ),
+    AppNavItem(
+      label: 'Inbox',
+      selectedAsset: AppIcons.bottomNav.inboxSelected,
+      unselectedAsset: AppIcons.bottomNav.inboxUnselected,
+    ),
   ];
 
   @override
@@ -76,30 +108,7 @@ class HomeShellView extends GetView<HomeShellController> {
                   () => AppBottomNav(
                     index: c.index.value,
                     onSelected: c.select,
-                    items: [
-                      AppNavItem(
-                        label: 'Chats',
-                        selectedAsset: AppIcons.bottomNav.chatSelected,
-                        unselectedAsset: AppIcons.bottomNav.chatUnselected,
-                        showDot: c.hasUnread.value,
-                      ),
-                      AppNavItem(
-                        label: 'Agents',
-                        selectedAsset: AppIcons.bottomNav.aiSelected,
-                        unselectedAsset: AppIcons.bottomNav.aiUnselected,
-                      ),
-                      AppNavItem(
-                        label: 'Submits',
-                        selectedAsset: AppIcons.bottomNav.submissionsSelected,
-                        unselectedAsset:
-                            AppIcons.bottomNav.submissionsUnselected,
-                      ),
-                      AppNavItem(
-                        label: 'Profile',
-                        selectedAsset: AppIcons.bottomNav.profileSelected,
-                        unselectedAsset: AppIcons.bottomNav.profileUnselected,
-                      ),
-                    ],
+                    items: navItems(hasUnread: c.hasUnread.value),
                   ),
                 ),
               ],

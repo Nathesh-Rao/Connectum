@@ -1,0 +1,17 @@
+{
+  "label": "submission.history: a person who may not open the record",
+  "as": "cara (unrelated colleague)",
+  "command": "submission.history",
+  "request": {
+    "id": 41
+  },
+  "reply": {
+    "action": "submission.history",
+    "error": {
+      "code": "not_found",
+      "message": "No such submission."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

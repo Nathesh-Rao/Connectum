@@ -5,6 +5,7 @@ import 'package:connectum/data/models/session_info.dart';
 import 'package:connectum/data/repositories/auth_repository.dart';
 import 'package:connectum/data/repositories/session_repository.dart';
 import 'package:connectum/data/repositories/ticket_repository.dart';
+import 'package:connectum/data/repositories/workspace_repository.dart';
 import 'package:connectum/data/session_store.dart';
 import 'package:connectum/demo/demo_ai_repository.dart';
 import 'package:connectum/demo/demo_auth_repository.dart';
@@ -109,23 +110,54 @@ void main() {
     });
   });
 
-  test('a ticket action updates the ticket', () async {
+  test('a status update on a demo record moves it', () async {
     await SeedTickets.start();
     addTearDown(SeedTickets.stop);
     final repo = TicketRepository(socket, store, FakeConversations());
     final page = await repo.mine(as: 'with');
     expect(page.tickets, isNotEmpty);
     final id = page.tickets.first.id;
-    final before = (await repo.get(id)).ticket.values['state'];
-    final result = await repo.update({
+    final before = (await repo.get(id)).state.status;
+    final patch = await repo.setStatus({
       'requestId': 'r-1',
       'id': id,
-      'action': 'Complete',
+      'status': before == 'Open' ? 'In progress' : 'Open',
     });
-    expect(result, isNotNull);
-    final after = (await repo.get(id)).ticket.values['state'];
-    expect(after, isNot(before));
+    expect(patch.status, isNot(before));
+    expect((await repo.get(id)).state.status, patch.status);
   });
+
+  test(
+    'the demo workspace has received records next to the own ones',
+    () async {
+      await SeedTickets.start();
+      addTearDown(SeedTickets.stop);
+      final tickets = TicketRepository(socket, store, FakeConversations());
+      var ownReads = 0;
+      final workspace = WorkspaceRepository(
+        socket,
+        store,
+        tickets,
+        syncOwn: () async {
+          ownReads++;
+          return true;
+        },
+        pageGap: Duration.zero,
+      );
+      await store.save(SessionInfo(orgId: 'demo', userId: 'alex'), 'token');
+      await workspace.syncNow();
+      expect(ownReads, 1);
+      final ids = workspace.received.map((t) => t.id).toList();
+      // Held by the demo person (with), shared with them earlier (involved),
+      // paged: more than one page of the sample rows is read.
+      expect(ids, containsAll([31, 32, 33, 51]));
+      expect(ids.length, greaterThan(60));
+      // Never the demo person's own records or one waiting for approval.
+      expect(ids, isNot(contains(41)));
+      expect(ids, isNot(contains(43)));
+      expect(ids.toSet().length, ids.length);
+    },
+  );
 
   test('the AI answers in turn: text, chart, error', () async {
     final ai = DemoAiRepository();

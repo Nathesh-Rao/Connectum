@@ -1,0 +1,82 @@
+{
+  "label": "admin.smartview.save: refused without smartview.configure",
+  "as": "bob (colleague)",
+  "command": "admin.smartview.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "metadata": [
+      {
+        "field": "title",
+        "caption": "Title",
+        "type": "Character",
+        "hide": false,
+        "key": true,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "stage",
+        "caption": "Stage",
+        "type": "Character",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "hours",
+        "caption": "Hours",
+        "type": "Numeric",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      },
+      {
+        "field": "due",
+        "caption": "Due",
+        "type": "Date",
+        "hide": false,
+        "key": false,
+        "filter": true,
+        "sourceForm": "",
+        "sourceField": ""
+      }
+    ],
+    "hyperlinks": [],
+    "kpis": [
+      {
+        "caption": "Tickets",
+        "agg": "count",
+        "column": ""
+      },
+      {
+        "caption": "Total hours",
+        "agg": "sum",
+        "column": "hours"
+      }
+    ],
+    "charts": [
+      {
+        "caption": "Tickets by stage",
+        "chart": "donut",
+        "groupBy": "stage",
+        "agg": "count",
+        "column": ""
+      }
+    ]
+  },
+  "reply": {
+    "action": "admin.smartview.save",
+    "error": {
+      "code": "forbidden",
+      "message": "You don't have the permission for this (smartview.configure)."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

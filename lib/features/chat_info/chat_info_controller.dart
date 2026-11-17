@@ -103,8 +103,9 @@ class ChatInfoController extends GetxController {
     final c = conversation;
     if (c == null) return null;
     final id = ticketId;
-    final Ticket? ticket = id == null ? null : tickets.stateOf(id)?.ticket;
-    final kind = ChatInfoData.kindOf(c, isTicket: ticket?.isTicket ?? false);
+    if (id != null) tickets.stateOf(id);
+    final Ticket? ticket = id == null ? null : tickets.known(id);
+    final kind = ChatInfoData.kindOf(c, isTicket: ticket != null);
     final isGroupLike = kind != ChatInfoKind.personal;
     final members = isGroupLike
         ? ChatInfoMember.listOf(c, me: me, nameOf: tickets.nameOf)

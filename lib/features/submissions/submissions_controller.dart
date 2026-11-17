@@ -68,6 +68,9 @@ class SubmissionsController extends GetxController {
       ever(query, (_) => _filter()),
       ever(selectedForm, (_) => _filter()),
       ever(selectedStatus, (_) => _filter()),
+      ever(shell.submissionsForm, (name) {
+        if (name != null) _build();
+      }),
       ever(shell.index, (i) {
         if (i == _tabIndex) unawaited(_syncIfStale());
       }),
@@ -130,10 +133,17 @@ class SubmissionsController extends GetxController {
     }
     final names = counts.keys.toList()
       ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final wanted = shell.submissionsForm.value;
+    if (wanted != null && !names.contains(wanted)) {
+      names.add(wanted);
+      counts[wanted] = 0;
+      labels[wanted] = submissions.definitions[wanted]?.caption ?? wanted;
+    }
     final previousForm =
-        selectedForm.value > 0 && selectedForm.value <= forms.length
-        ? forms[selectedForm.value - 1].name
-        : null;
+        wanted ??
+        (selectedForm.value > 0 && selectedForm.value <= forms.length
+            ? forms[selectedForm.value - 1].name
+            : null);
     forms.assignAll([
       for (final n in names) FormFilter(n, labels[n] ?? n, counts[n]!),
     ]);
@@ -148,6 +158,7 @@ class SubmissionsController extends GetxController {
     selectedForm.value = previousForm == null
         ? 0
         : names.indexOf(previousForm) + 1;
+    if (wanted != null) shell.submissionsForm.value = null;
     selectedStatus.value = previousStatus == null
         ? 0
         : statuses.indexOf(previousStatus) + 1;

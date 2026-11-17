@@ -1,0 +1,40 @@
+{
+  "label": "submissions.update: the author of a record that is with someone else",
+  "as": "ann (author)",
+  "command": "submissions.update",
+  "request": {
+    "id": 47,
+    "values": {
+      "title": "Request 4 (edited)"
+    }
+  },
+  "reply": {
+    "action": "submissions.update",
+    "data": {
+      "submission": {
+        "actedBy": "svcapcpw1ann",
+        "actionSeq": 1,
+        "assignor": "svcapcpw1ann",
+        "branch": "HQ",
+        "by": "svcapcpw1ann",
+        "editedTs": 1794833234736,
+        "holder": "svcapcpw1bob",
+        "host": null,
+        "id": 47,
+        "participants": [
+          "svcapcpw1ann",
+          "svcapcpw1bob"
+        ],
+        "scope": "global",
+        "ts": 1794833219353,
+        "tstruct": "requests",
+        "values": {
+          "stage": "Open",
+          "title": "Request 4 (edited)"
+        }
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -115,6 +115,16 @@ class CommandMenu {
         if (!taken(w)) w,
     ];
     return [
+      if (!taken('view'))
+        HashCommand(
+          name: 'view',
+          aliases: free(const ['smartview', 'list']),
+          category: 'lookup',
+          summary: 'Open a structure as a table of record cards',
+          usage: '#view [name]  (also #list [name])',
+          args: const [CommandArg(name: 'name', type: 'source', isRest: true)],
+          isLocal: true,
+        ),
       if (!taken('tasks'))
         HashCommand(
           name: 'tasks',

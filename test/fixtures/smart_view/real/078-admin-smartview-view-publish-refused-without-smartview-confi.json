@@ -1,0 +1,31 @@
+{
+  "label": "admin.smartview.view.publish: refused without smartview.configure",
+  "as": "bob (colleague)",
+  "command": "admin.smartview.view.publish",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "view": {
+      "id": "v9",
+      "name": "For all",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "admin.smartview.view.publish",
+    "error": {
+      "code": "forbidden",
+      "message": "You don't have the permission for this (smartview.configure)."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

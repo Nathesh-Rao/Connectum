@@ -52,6 +52,7 @@ class AppSpacing {
   static const double spinnerSm = 20;
   static const double spinnerMd = 24;
   static const double spinnerLg = 32;
+  static const double spinnerPull = 28;
   static const double refreshTrigger = 80;
   static const double refreshExtent = 56;
   static const double loadingMedium = 64;
@@ -94,6 +95,10 @@ class AppSpacing {
   static const double headerLogoWidth = 26;
   static const double headerHeight = 72;
   static const double searchHeight = 44;
+  static const double drawerMaxWidth = 320;
+  static const double drawerWidthFactor = 0.82;
+  static const double drawerEdge = 20;
+  static const double drawerRowHeight = 44;
   static const double commandRowHeight = 56;
   static const int commandMaxRows = 6;
   static const double filterTabHeight = 45;
@@ -137,4 +142,7 @@ class AppSpacing {
   static const double qrFooterLogo = 16;
   static const double qrLoading = 140;
   static const double fixedSheetFraction = 0.88;
+  static const double pillTall = 34;
+  static const double pillChevron = 16;
+  static const double chipStripHeight = 40;
 }

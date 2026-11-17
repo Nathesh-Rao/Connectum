@@ -1,0 +1,180 @@
+{
+  "label": "tstruct.user.submit: one record",
+  "as": "ann (author)",
+  "command": "tstruct.user.submit",
+  "request": {
+    "name": "tickets",
+    "values": {
+      "title": "Printer jammed",
+      "stage": "Open",
+      "area": "Delivery",
+      "due": "2026-11-20",
+      "hours": 2.5
+    }
+  },
+  "reply": {
+    "action": "tstruct.user.submit",
+    "data": {
+      "recordStatus": "saved",
+      "submission": {
+        "branch": "HQ",
+        "by": "svcapcpw1ann",
+        "host": null,
+        "id": 39,
+        "scope": "user",
+        "ts": 1794833216938,
+        "tstruct": "tickets",
+        "values": {
+          "area": "Delivery",
+          "due": "2026-11-20",
+          "hours": 2.5,
+          "secret": "HIDDEN-VALUE-123",
+          "stage": "Open",
+          "title": "Printer jammed"
+        }
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  },
+  "eventsSeenAfterwards": {
+    "ann (author)": [
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "tickets",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 29,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833215495
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 31,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833215783
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 33,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833216063
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 35,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833216359
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 37,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833216651
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 39,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833216938
+          },
+          "tstruct": "tickets"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      }
+    ],
+    "bob (colleague)": [
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "tickets",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      }
+    ]
+  }
+}

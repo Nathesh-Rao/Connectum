@@ -1,0 +1,54 @@
+{
+  "label": "record.actions: the author's menu on her own record",
+  "as": "ann (author)",
+  "command": "record.actions",
+  "request": {
+    "id": 41
+  },
+  "reply": {
+    "action": "record.actions",
+    "data": {
+      "assignor": null,
+      "claimants": [],
+      "commentsRequired": false,
+      "completion": null,
+      "completionRequired": false,
+      "files": [],
+      "filesRequired": false,
+      "final": [
+        "Closed"
+      ],
+      "finalStatuses": [
+        "Closed"
+      ],
+      "hasRules": false,
+      "holder": "svcapcpw1ann",
+      "hours": null,
+      "hoursRequired": false,
+      "initiator": "svcapcpw1ann",
+      "isAdmin": false,
+      "items": [
+        {
+          "enabled": true,
+          "id": "send",
+          "label": "Send"
+        },
+        {
+          "enabled": true,
+          "id": "status",
+          "label": "Update status"
+        }
+      ],
+      "lastUpdate": null,
+      "minCompletion": 0,
+      "status": "Open",
+      "statuses": [
+        "Open",
+        "In progress",
+        "Closed"
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,517 @@
+Records and Tickets – Answers to Your Questions (by your numbers)
+Based on the dev branch code, 13 Nov 2026. Dev is currently running release 061ed545.
+Important: Anything marked NOT FOUND does not exist in the current code.
+All record commands are WebSocket only:
+/sd <action> {json}
+Response format:
+{type:"sd", reqId, ok, data | error:{code,message,details?}}
+The documentation in docs/RECORD_ACTIONS.md mentions an alternative HTTP route (POST /api/sd/<command>). This is incorrect. Plain HTTP requests return 404 not_found with "No such endpoint."
+Important Corrections – Please Read First
+There are two incorrect assumptions worth clarifying before going through the details:
+task.fetch does not exist. The correct command is still task.get. The name task.fetch appears only in docs/TASKS_AND_ACTIONS_FOR_MOBILE.md, which is incorrect on this point. That document is also outdated regarding records.mine options.
+structures[form].status.actions[] is gone. Allowed actions for a record are now retrieved using record.actions {id}.
+Also, tasks are a separate personal list and are not linked to records (see point 24).
+B. Changes
+1. status.mine replacement
+Yes. status.mine has been replaced by:
+records.mine {as?: "with"|"raised"|"involved"|"all", limit?, offset?}
+2. task.get
+No change. task.get remains the correct command. There is no task.fetch.
+Available task commands:
+task.create
+task.get
+task.list
+task.update
+task.send
+3. status.get replacement
+status.get has been removed, with no direct replacement.
+Use:
+record.actions {id} – actions and status for a particular record.
+submission.get {id} – retrieves the record itself as {submission}.
+submission.history {id} – retrieves the record's events.
+4. Are the old commands still supported?
+No. The old names have been removed, not aliased. There is no transition period.
+The following commands return unknown_action:
+status.mine
+status.get
+status.update
+status.history
+Response:
+{ok:false, error:{code:"unknown_action", message:"Unknown sd action: <name>"}}
+5. Is the new record flow live on dev?
+Yes. The record flow arrived on 11 Nov (PR #752).
+Dev currently runs 061ed545, which includes 0e64c035.
+6. Where do we get the allowed actions for a record?
+structures[form].status.actions[] is NOT FOUND.
+structures[form].status now contains only:
+{field, statuses, final}
+It is absent for forms without a status.
+Use record.actions {id} to retrieve the available actions and record information.
+The response includes:
+items: [{id:"send"|"status", label, enabled, why?}]
+holder
+claimants
+initiator
+assignor
+status
+statuses
+final
+completion
+hours
+commentsRequired
+completionRequired
+hoursRequired
+filesRequired
+isAdmin
+hasRules
+lastUpdate
+files
+Action availability:
+send appears only when Send is enabled on the form.
+status appears only when the form has a status field.
+Disabled actions include a why explanation.
+C. Status
+7. How are statuses defined?
+Statuses are defined per form.
+Each form has one dropdown field marked "Use as status".
+Its options define the available statuses (maximum 20).
+The first option is the starting status.
+Some statuses can be marked as final.
+Read the status information from:
+record.actions → status, statuses, final
+records.mine → structures[form].status
+There is no transition table. Any status can move to any other status.
+The system refuses an update to the same status with "It is already X.", unless the update also changes completion or hours.
+8. How does record.status work?
+Command:
+record.status {id, status, comments?, percent?, hours?, files?, expected?, requestId?}
+Who can update a record?
+The person currently holding the record.
+An administrator.
+Any claimant if the record is shared; the first person to act takes it.
+The initiator and assignor have no rights unless they currently hold the record.
+Additional restrictions:
+Nobody can update a record while it is waiting for approval.
+For records in a final status, only administrators can make changes.
+Available fields:
+Field	Constraint
+comments	Up to 1,000 characters
+percent	0–100; cannot decrease, except for an admin
+hours	0–24, up to 2 decimal places
+files	Up to 10 of your own uploads
+These fields are required only when the form's status configuration specifies them through:
+commentsRequired
+completionRequired
+hoursRequired
+filesRequired
+9. Optimistic locking (expected)
+Yes, expected is used for optimistic locking, but it contains:
+{status, holder}
+Both fields are optional. Missing keys are ignored.
+There is no version or updatedAt field. The server compares the supplied values with the current status and holder.
+10. Idempotency (requestId)
+requestId is optional.
+Must be a non-empty string of up to 100 bytes.
+Invalid values are silently ignored.
+Makes retries safe: if the first request succeeded, the same response is returned again with repeated:true.
+Remembered for 24 hours.
+Scoped per record and per person.
+Stored only after a successful operation.
+11. Error responses
+Errors use:
+{code, message}
+There is no separate field identifying which input caused the error. The message itself explains the problem.
+Common errors:
+Code	Message / Meaning
+stale	"This record was updated by someone else. Reload to see the latest."
+forbidden	"Only the person it is with can do this."
+not_found	"No such record." Also returned when a person is not allowed to see it.
+invalid	Validation failure; the message explains what is wrong.
+bad_request	Missing ID.
+busy	"This record is being updated. Try again in a moment."
+rate_limited	Too many commands.
+Examples of invalid messages:
+"Choose one of the statuses of this record."
+"Add your comments."
+"Enter the completion."
+"Enter the hours worked."
+"Attach a file."
+"Completion cannot go down."
+"This record is <status>; only an administrator can change it."
+"This record is waiting for approval; ..."
+"Hours worked must be a number from 0 to 24, with at most two decimals."
+Rate limits:
+30 commands per 10 seconds per connection by default.
+Dev currently uses 200.
+There is no separate rate limit specifically for record commands.
+No retryAfter is returned.
+Note: Form-validation failures during create or edit return invalid_values with details.fields:{field:message}.
+12. What does the server return after an action?
+Only a patch is returned, not the entire record.
+record.status returns:
+{id, holder, status, completion, hours, final, files}
+record.send returns:
+{id, holder, assignor, status, completion, files}
+Events generated:
+The following people receive events:
+New holder.
+Old holder.
+Initiator.
+Actor.
+Events are delivered to every connected device belonging to those people. Offline devices miss the event, but feed.list retains the notification.
+Events include:
+submissions_changed {id, tstruct, action:"Send"|"Status update"|"Taken"}
+ticket_assigned {id, tstruct, action, by} – only to a new holder who is not the actor; never generated for record.status.
+feed_item {notification, counts}
+form_message_updated
+form_message – for the record's conversation card.
+Important: After performing an action, re-read record.actions {id} to get the latest state.
+D. Send
+13. How do we create and send a record?
+Create a record:
+tstruct.submit {name, values:{field:value}}
+Optional fields:
+ref
+meta
+chat
+cid
+Response:
+{submission, recordStatus:"saved"|"pending"}
+There is no recipient argument in tstruct.submit.
+Recipients are determined through:
+The form's automatic send rules (applied after saving).
+A subsequent call to record.send.
+Automatic send rules:
+Never send to the author.
+Maximum 50 recipients.
+Multiple recipients can share the record.
+Send an existing record:
+record.send {id, via, person?, value?, reason?, remarks?, files?, expected?, requestId?}
+Supported via values:
+via	Requirement
+user	Requires person
+designation	Requires value
+category	Requires value
+initiator	No additional value
+assignor	No additional value
+Restrictions:
+Works only when Send is enabled on the form.
+Cannot send to yourself.
+Cannot send to the current holder.
+Cannot send to someone blocked by the send rules.
+Helper commands:
+record.targets {id}
+record.people {id, q?, designation?, category?}
+14. Are drafts supported?
+NOT FOUND.
+There is no "save without sending" functionality.
+Record states are:
+Normal
+pending (waiting for approval)
+approved
+rejected
+Note: tstruct.user.save saves a form definition, not a record.
+15. How are attachments handled?
+Attachments must be uploaded first and then referenced by file ID.
+Upload endpoint:
+POST /api/sd/files?name=<name>
+Requirements:
+Raw file bytes in the request body.
+Content-Type must match the file type.
+Content-Length is required.
+Bearer token authentication.
+Response:
+{ok, data:{file:{id,name,mime,size,by,ts}}}
+Limits:
+10 MB per file on dev (CONNECTUM_MAX_FILE_MB).
+Any file type is accepted by this endpoint.
+60 uploads per hour per person.
+Organisation file quota also applies (quota).
+Referencing attachments:
+A file form field takes a file ID.
+It can accept one file or a list of up to 10 when multiple files are allowed.
+record.send and record.status accept files:[id,...], up to 10 files.
+Only your own uploads can be attached.
+Possible errors:
+"You can attach only files you uploaded yourself."
+"That file is no longer there. Attach it again."
+Download endpoints:
+GET /api/sd/files/<id>
+GET /api/sd/files/<id>/link
+Important distinction: POST /upload is for chat media only, not tickets.
+It supports:
+PNG/JPEG/GIF/WebP.
+Voice files.
+Documents up to 20 MB.
+Video up to 25 MB.
+20 uploads per minute per person.
+16. Does sending a record create a chat message?
+Not by default.
+A chat message is created only if the form has a record conversation (recordThread).
+Retrieve the conversation using:
+record.thread {id}
+Conversation ID format:
+group:rec-<slug>-<id>
+When enabled, a read-only card of the history event is posted with:
+form message type.
+structure:"record_history".
+Card fields include:
+Structure
+Record (record ID)
+Event
+By
+To
+From status
+To status
+Completion
+Hours worked
+Reason
+Remarks
+Important: submissionId in the card refers to the history row, not the record ID.
+Recipient notification:
+The recipient always receives a feed item:
+{id, ts, category:"submissions", title:"<Form> #<id> is with you", message, actionType:"tickets", actionLabel:"Open ticket", ref:{submissionId, tstruct}, from}
+The feed item is updated in place for each record.
+There is no chatId or deep link.
+Use ref.submissionId and ref.tstruct to identify the record.
+17. Idempotency for record operations
+requestId is supported by record.send and record.status (see point 10).
+cid is supported by tstruct.submit, submissions.update, and submission.resubmit.
+cid requirements:
+1–64 characters.
+Allowed characters: [A-Za-z0-9-_.:].
+Remembered for 24 hours.
+A repeated request does not save anything again and returns the original response with duplicate:true.
+E. Editing
+18. How does editing work?
+Command:
+submissions.update {id, values, meta?, cid?}
+Response:
+{submission}
+Who can edit?
+The author.
+A person with an edit rule for that data.
+The holder and administrators cannot edit unless they also have the relevant edit rule.
+Otherwise, the response is:
+forbidden: "You can only edit your own submission."
+Restrictions:
+Editing is refused while the record is pending or approved (submission_locked).
+A rejected record can be edited.
+There is no check preventing edits to sent or final records.
+values replaces the entire set of values.
+Omit values to retain the existing values.
+The status field cannot be changed through this command.
+Error:
+"The status changes through Update status only."
+19. Optimistic locking for edits
+NOT FOUND.
+There is no expected parameter or stale check on edits.
+Therefore, if two people edit simultaneously, their changes can overwrite each other.
+Only record.send and record.status support expected.
+20. Comments, assignment, priority and due date
+Comments: comments on record.status.
+Remarks and reason: remarks and reason on record.send.
+Maximum length: 1,000 characters.
+Assignee changes: Use record.send.
+Priority and due date: NOT FOUND as record-level properties. They can exist as form fields and be edited using submissions.update.
+Separate comment/note command: NOT FOUND.
+21. Record history
+Command:
+submission.history {id}
+Response:
+{events (oldest first), names:{username:name}, files:{id:{id,name,size,mime}}, status, caption, fields, sections}
+Accessible to anyone who can open the record. Otherwise, returns not_found.
+Each event contains:
+id, op, ts, by, structure, record, caption
+Additional fields depend on the event type.
+Sent event:
+to[]
+reason
+remarks
+via
+value
+fromHolder
+asAdmin
+claimed
+status
+files
+Status event:
+fromStatus
+toStatus
+completion
+hours
+remarks
+asAdmin
+claimed
+final
+files
+Edited event:
+changes:[{field,from,to}]
+Supported event operations:
+created
+edited
+deleted
+sent_for_approval
+waiting
+approved
+declined
+returned
+resubmitted
+approved_final
+sent
+status
+reassigned
+Organisation-wide history:
+records.history {structure?, record?, actor?, event?, limit?<=200 (default 50), before?}
+This is restricted to administrators.
+22. Delete, cancel, reopen and resubmit
+Delete:
+submissions.delete {id} → {deleted:true}
+Allowed for the author or the form owner.
+Refused while the record is pending or approved.
+History rows remain after deletion.
+There is one rule in the code stating that a record "that has been updated cannot be deleted". This looks like a leftover, but it has not been verified. Do not rely on it.
+Cancel: NOT FOUND as a separate operation.
+Reopen a final record:
+Use record.status.
+Administrator only.
+Resubmit a rejected record:
+submission.resubmit {id, values?, meta?}
+Author only.
+Allowed only if the approver has permitted resubmission.
+F. Lists, Tasks and Pagination
+23. Listing records
+Command:
+records.mine {as, limit, offset}
+Response:
+{submissions, structures, total, hasMore, next}
+Supported as values:
+Value	Meaning
+with (default)	Open records currently held by you
+raised	Records created by you that are now with someone else or waiting for approval
+involved	Records given to you, shared with you, or acted on by you; excludes your own records
+all	Administrator access; other users receive with
+An unknown as value defaults to with.
+Filtering:
+No filtering by status, form or role is supported.
+Pagination and sorting:
+Sorted newest first.
+Default page size: 100.
+Maximum page size: 200.
+Uses offset-based pagination.
+Out-of-range values are clamped by the server rather than returning an error.
+next is always null; use offset and hasMore instead.
+Important pagination details:
+total is a real count for with and involved.
+For raised, total is only the number of items on the current page.
+A page may contain fewer items than the requested limit while hasMore is still true.
+Continue paging until hasMore is false (as the web implementation does).
+raised looks at only the newest 1,000 records.
+24. Tasks versus records
+Command:
+task.get {id}
+Response:
+{task}
+Task fields:
+id
+title
+description
+creator
+assignee
+due
+priority
+status
+created
+updated
+doneTs
+overdue
+creatorName
+assigneeName
+Important: Tasks and records are completely unrelated.
+A task has no record ID.
+A record response does not contain tasks.
+Tasks are maintained as a separate personal list.
+Task listing:
+task.list {as: assigned|created|all, status: active|open|in_progress|done|cancelled|all, limit<=100 (default 50), offset}
+Task statuses:
+open
+in_progress
+done
+cancelled
+Priorities:
+low
+normal
+high
+Live task events:
+task_assigned
+task_updated
+25. Delta updates (changes since a timestamp)
+NOT FOUND for records, tasks or feed.
+Recommended approach:
+Re-read the relevant list after reconnecting.
+Re-read on submissions_changed, task_assigned, task_updated and ticket_assigned.
+Offline events are lost.
+records.list supports from and to, but these filter by creation time, not edit time.
+G. Testing
+26. Seeded records and test scenarios
+Currently, seed.mjs does not create:
+Records.
+Tickets.
+Statuses.
+Approvals.
+Creating seeded records in different statuses is feasible. Our own test suite already does this for scenarios such as:
+Creator.
+Assignee.
+User without access.
+Stale record.
+However, this is not built into the seed script and is not scheduled.
+Please let us know which forms and statuses you need.
+27. JSON examples and Postman collection
+docs/RECORD_ACTIONS.md currently contains tables but no JSON examples.
+Actual captured examples are available in:
+tools/postman/examples.json
+This file is on the dev branch and includes examples for:
+record.actions
+record.send (success and stale)
+record.status (success, forbidden and final locked)
+records.mine (with and raised)
+submission.history
+There are no examples there for:
+tstruct.submit
+submissions.update
+Our tests demonstrate the request and response structures for these commands.
+28. Version marker
+Use:
+GET /api/sd/version
+It returns:
+schema (currently 1).
+release.
+Every API-visible change is documented in:
+docs/DEV_API_CHANGES.md
+Record actions do not have a separate version marker.
+H. Changes Since 0e64c035
+29. What has changed on dev?
+The following PRs are now on dev:
+PR #782
+Includes:
+Schema version in /api/sd/version.
+/setavatar, /removeavatar and /setstatus now return ack/error responses containing cmd and code.
+Upload rate limit changed to per-person.
+retryAfter added to password-login 429 responses.
+Dev mail allow-list implementation.
+seed --password support.
+PR #783
+Smart View (web).
+API impact has not been reviewed.
+Record-related changes:
+Nothing else has changed in the record commands.
+Planned but not built:
+Print (PDF generation of a record).
+Post (posting to another structure).
+Push notifications (no delivery date).
+Documentation corrections required:
+docs/RECORD_ACTIONS.md contains an incorrect HTTP route.
+docs/TASKS_AND_ACTIONS_FOR_MOBILE.md incorrectly refers to task.fetch and is outdated regarding records.mine options.
+Testing status:
+Automated tests for PR #782 have not run yet because our CI cannot start.
+Final note: The above reflects the implementation currently present on the dev branch as of 13 Nov 2026. Anything marked NOT FOUND is not available in the current code, and anything explicitly marked unverified should not be treated as confirmed behaviour.

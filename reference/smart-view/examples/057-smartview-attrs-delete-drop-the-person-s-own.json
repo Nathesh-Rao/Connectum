@@ -1,0 +1,17 @@
+{
+  "label": "smartview.attrs.delete: drop the person's own",
+  "as": "ann (author)",
+  "command": "smartview.attrs.delete",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.attrs.delete",
+    "data": {
+      "deleted": true
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

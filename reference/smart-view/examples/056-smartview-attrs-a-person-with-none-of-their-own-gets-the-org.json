@@ -1,0 +1,77 @@
+{
+  "label": "smartview.attrs: a person with none of their own gets the organisation's",
+  "as": "bob (colleague)",
+  "command": "smartview.attrs",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.attrs",
+    "data": {
+      "attrs": {
+        "charts": [],
+        "createdTs": 1794833238817,
+        "hyperlinks": [],
+        "kind": "structure",
+        "kpis": [
+          {
+            "agg": "count",
+            "caption": "Tickets",
+            "column": ""
+          }
+        ],
+        "metadata": [
+          {
+            "caption": "Title",
+            "field": "title",
+            "filter": true,
+            "hide": false,
+            "key": true,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Character"
+          },
+          {
+            "caption": "Stage",
+            "field": "stage",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Character"
+          },
+          {
+            "caption": "Hours",
+            "field": "hours",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Numeric"
+          },
+          {
+            "caption": "Due",
+            "field": "due",
+            "filter": true,
+            "hide": false,
+            "key": false,
+            "sourceField": "",
+            "sourceForm": "",
+            "type": "Date"
+          }
+        ],
+        "name": "tickets",
+        "updatedBy": "svcapcpw1adm",
+        "updatedTs": 1794833238817
+      },
+      "canConfigure": true,
+      "canDefault": false,
+      "mine": false
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

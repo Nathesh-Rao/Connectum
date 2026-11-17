@@ -1,0 +1,144 @@
+{
+  "label": "submissions.list: every field type, one record of each kind",
+  "as": "ann (author)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "everyfield",
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": false,
+      "limit": 500,
+      "offset": 0,
+      "structures": {
+        "everyfield": {
+          "caption": "Every field",
+          "fields": {
+            "amount": "Amount",
+            "at": "At",
+            "code": "Code",
+            "copy": "Copy",
+            "day": "Day",
+            "doc": "Documents",
+            "fee": "Fee",
+            "kind": "Kind",
+            "mail": "Mail",
+            "notes": "Notes",
+            "owner": "Owner",
+            "phone": "Phone",
+            "qty": "Quantity",
+            "ref": "Ref",
+            "site": "Site",
+            "stage": "Stage",
+            "stage_comments": "Stage comments",
+            "stage_completion": "Stage completion",
+            "stage_files": "Stage files",
+            "stage_hours": "Stage hours",
+            "story": "Story",
+            "tags": "Tags",
+            "title": "Title",
+            "urgent": "Urgent",
+            "where": "Where"
+          },
+          "status": {
+            "field": "stage",
+            "final": [
+              "Done"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Done"
+            ]
+          }
+        }
+      },
+      "submissions": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 53,
+          "labels": {},
+          "scope": "user",
+          "ts": 1794833220527,
+          "tstruct": "everyfield",
+          "values": {
+            "ref": "VIS-0002",
+            "stage": "Open",
+            "title": "Bare"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {
+            "doc": [
+              {
+                "id": "4961748d27125c549678e385",
+                "mime": "application/pdf",
+                "name": "Everything.pdf",
+                "size": 14
+              }
+            ]
+          },
+          "host": null,
+          "id": 51,
+          "labels": {
+            "owner": "Bob Iyer"
+          },
+          "scope": "user",
+          "ts": 1794833220243,
+          "tstruct": "everyfield",
+          "values": {
+            "amount": 1234.5,
+            "at": "09:45",
+            "code": "8901234567890",
+            "day": "2026-11-12",
+            "doc": [
+              "4961748d27125c549678e385"
+            ],
+            "fee": {
+              "amount": 500,
+              "currency": "INR",
+              "method": "UPI",
+              "status": "paid"
+            },
+            "kind": "Contract",
+            "mail": "a@b.co",
+            "notes": "line one\nline two",
+            "owner": "svcapcpw1bob",
+            "phone": "+919886012345",
+            "qty": 7,
+            "ref": "VIS-0001",
+            "site": "https://example.com/x",
+            "stage": "Open",
+            "story": "<p>Hello <b>world</b> &amp; <i>friends</i><script>alert(1)</script></p>",
+            "tags": [
+              "red",
+              "blue"
+            ],
+            "title": "Everything",
+            "urgent": "Yes",
+            "where": {
+              "address": "MG Road",
+              "lat": 12.9,
+              "lng": 77.5
+            }
+          }
+        }
+      ],
+      "total": 2
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

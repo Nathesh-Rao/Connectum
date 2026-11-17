@@ -235,6 +235,24 @@ void main() {
     expect(hashLines(), isEmpty);
   });
 
+  test('#tstruct-add and #tstruct open a structure and send no line', () async {
+    final add = await repo.run('#tstruct-add Leave Request');
+    expect(add.kind, HashKind.form);
+    expect(add.target, 'Leave Request');
+    expect(add.isFinished, isTrue);
+    final alias = await repo.run('#create leave_request');
+    expect(alias.kind, HashKind.form);
+    expect(alias.target, 'leave_request');
+    final open = await repo.run('#ts leave_request');
+    expect(open.kind, HashKind.records);
+    expect(open.target, 'leave_request');
+    final bare = await repo.run('#tstruct-add');
+    expect(bare.kind, HashKind.usage);
+    expect(bare.text, CommandRepository.noStructure);
+    expect(bare.isFinished, isFalse);
+    expect(hashLines(), isEmpty);
+  });
+
   test('a command the person may not run is refused before sending', () async {
     final r = await repo.run('#transfer ana bob');
     expect(r.kind, HashKind.blocked);

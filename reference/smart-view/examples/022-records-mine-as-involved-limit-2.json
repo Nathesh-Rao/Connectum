@@ -1,0 +1,93 @@
+{
+  "label": "records.mine as involved: limit 2",
+  "as": "bob (colleague)",
+  "command": "records.mine",
+  "request": {
+    "as": "involved",
+    "limit": 2,
+    "offset": 0
+  },
+  "reply": {
+    "action": "records.mine",
+    "data": {
+      "hasMore": true,
+      "next": null,
+      "structures": {
+        "requests": {
+          "caption": "Requests",
+          "fields": {
+            "amount": "Amount",
+            "stage": "Stage",
+            "stage_comments": "Stage comments",
+            "stage_completion": "Stage completion",
+            "stage_files": "Stage files",
+            "stage_hours": "Stage hours",
+            "title": "Title"
+          },
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          }
+        }
+      },
+      "submissions": [
+        {
+          "actedBy": "svcapcpw1ann",
+          "actionSeq": 1,
+          "assignor": "svcapcpw1ann",
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "editedTs": 1794833226479,
+          "holder": "svcapcpw1bob",
+          "host": null,
+          "id": 47,
+          "participants": [
+            "svcapcpw1ann",
+            "svcapcpw1bob"
+          ],
+          "scope": "global",
+          "ts": 1794833219353,
+          "tstruct": "requests",
+          "values": {
+            "amount": 400,
+            "stage": "Open",
+            "title": "Request 4"
+          }
+        },
+        {
+          "actedBy": "svcapcpw1ann",
+          "actionSeq": 1,
+          "assignor": "svcapcpw1ann",
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "editedTs": 1794833226178,
+          "holder": "svcapcpw1bob",
+          "host": null,
+          "id": 45,
+          "participants": [
+            "svcapcpw1ann",
+            "svcapcpw1bob"
+          ],
+          "scope": "global",
+          "ts": 1794833219069,
+          "tstruct": "requests",
+          "values": {
+            "amount": 300,
+            "stage": "Open",
+            "title": "Request 3"
+          }
+        }
+      ],
+      "total": 4
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

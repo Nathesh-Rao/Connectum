@@ -15,6 +15,7 @@ import 'core/theme/app_theme.dart';
 import 'core/widgets/app_config_error.dart';
 import 'core/widgets/app_connectivity_scope.dart';
 import 'core/widgets/app_notices.dart';
+import 'data/smart_view/sv_prefs.dart';
 import 'data/socket/connectivity_service.dart';
 import 'demo/demo_mode.dart';
 import 'demo/demo_services.dart';
@@ -28,8 +29,10 @@ Future<void> main() async {
   }
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  final smartViewPrefs = await SmartViewPrefs.load();
   runApp(
     ConnectumApp(
+      smartViewPrefs: smartViewPrefs,
       connectivity: DemoMode.isActive
           ? DemoConnectivityService()
           : ConnectivityService(),
@@ -38,9 +41,14 @@ Future<void> main() async {
 }
 
 class ConnectumApp extends StatelessWidget {
-  const ConnectumApp({super.key, required this.connectivity});
+  const ConnectumApp({
+    super.key,
+    required this.connectivity,
+    this.smartViewPrefs,
+  });
 
   final ConnectivityService connectivity;
+  final SmartViewPrefs? smartViewPrefs;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +57,10 @@ class ConnectumApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       scrollBehavior: const AppScrollBehavior(),
-      initialBinding: InitialBinding(connectivity),
+      initialBinding: InitialBinding(
+        connectivity,
+        smartViewPrefs: smartViewPrefs,
+      ),
       initialRoute: AppPages.initial,
       getPages: AppPages.pages,
       navigatorObservers: [ConversationRoute.observer, HomeReload.observer],

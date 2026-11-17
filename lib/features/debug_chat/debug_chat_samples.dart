@@ -103,9 +103,6 @@ class DebugChatSamples extends StatelessWidget {
         fields: fields,
         table: TicketTable(
           field: 'status',
-          assignee: 'assigned to',
-          completion: 'completion',
-          subject: 'title',
           statuses: [
             TicketStatus('Open'),
             TicketStatus('In progress'),
@@ -340,7 +337,6 @@ class _SampleCard extends StatelessWidget {
       scope: 'user',
       by: 'bruno',
       ts: DateTime.now().millisecondsSinceEpoch,
-      isTicket: true,
       entries: const [
         FormEntry(name: 'title', caption: 'Title', text: 'Printer is jammed'),
         FormEntry(name: 'priority', caption: 'Priority', text: 'High'),

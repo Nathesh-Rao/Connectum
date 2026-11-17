@@ -13,8 +13,8 @@ import '../../data/repositories/e2e_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/group_repository.dart';
 import '../../data/repositories/presence_repository.dart';
+import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/typing_repository.dart';
@@ -39,6 +39,7 @@ class ConversationBinding extends Bindings {
         presence: Get.find<PresenceRepository>(),
         typing: Get.find<TypingRepository>(),
         submissions: Get.find<SubmissionRepository>(),
+        smartView: Get.find<SmartViewRepository>(),
         formOptions: Get.find<FormOptionsRepository>(),
         connectivity: Get.find<ConnectivityService>(),
         shell: Get.isRegistered<HomeShellController>()
@@ -57,7 +58,6 @@ class ConversationBinding extends Bindings {
         newTicketDetail: (ticketId) => TicketDetailController(
           ticketId: ticketId,
           tickets: Get.find<TicketRepository>(),
-          people: Get.find<GroupRepository>(),
           files: Get.find<FormFileRepository>(),
           connectivity: Get.find<ConnectivityService>(),
         ),

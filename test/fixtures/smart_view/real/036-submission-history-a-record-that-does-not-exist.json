@@ -1,0 +1,17 @@
+{
+  "label": "submission.history: a record that does not exist",
+  "as": "ann (author)",
+  "command": "submission.history",
+  "request": {
+    "id": 999999999
+  },
+  "reply": {
+    "action": "submission.history",
+    "error": {
+      "code": "not_found",
+      "message": "No such submission."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

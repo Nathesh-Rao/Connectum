@@ -1,0 +1,53 @@
+{
+  "label": "records.list: a date range on the record's ts (epoch ms) and scope mine",
+  "as": "ann (author)",
+  "command": "records.list",
+  "request": {
+    "tstruct": "tickets",
+    "from": 1794746877826,
+    "to": 1794919677826,
+    "scope": "mine",
+    "limit": 2
+  },
+  "reply": {
+    "action": "records.list",
+    "data": {
+      "hasMore": true,
+      "limit": 2,
+      "offset": 0,
+      "records": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 72,
+          "scope": "user",
+          "ts": 1794833275334,
+          "tstruct": "tickets",
+          "values": {
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Event probe"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 61,
+          "scope": "user",
+          "ts": 1794833235595,
+          "tstruct": "tickets",
+          "values": {
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Throwaway"
+          }
+        }
+      ],
+      "total": 8
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

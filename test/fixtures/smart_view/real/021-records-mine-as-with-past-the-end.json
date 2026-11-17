@@ -1,0 +1,22 @@
+{
+  "label": "records.mine as with: past the end",
+  "as": "bob (colleague)",
+  "command": "records.mine",
+  "request": {
+    "as": "with",
+    "limit": 2,
+    "offset": 40
+  },
+  "reply": {
+    "action": "records.mine",
+    "data": {
+      "hasMore": false,
+      "next": null,
+      "structures": {},
+      "submissions": [],
+      "total": 4
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

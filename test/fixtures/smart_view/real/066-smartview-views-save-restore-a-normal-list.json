@@ -1,0 +1,88 @@
+{
+  "label": "smartview.views.save: restore a normal list",
+  "as": "ann (author)",
+  "command": "smartview.views.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "views": [
+      {
+        "id": "__default",
+        "name": "Default View",
+        "search": "",
+        "filters": [],
+        "sort": null,
+        "groupBy": [],
+        "hidden": [],
+        "order": [],
+        "widths": {},
+        "kpis": true,
+        "charts": true
+      },
+      {
+        "id": "v1",
+        "name": "Open by stage",
+        "search": "",
+        "filters": [
+          {
+            "col": "stage",
+            "op": "not",
+            "value": "Closed"
+          }
+        ],
+        "sort": null,
+        "groupBy": [
+          "stage"
+        ],
+        "hidden": [],
+        "order": [],
+        "widths": {},
+        "kpis": true,
+        "charts": true
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.views.save",
+    "data": {
+      "views": [
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "__default",
+          "kpis": true,
+          "name": "Default View",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [
+            "stage"
+          ],
+          "hidden": [],
+          "id": "v1",
+          "kpis": true,
+          "name": "Open by stage",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

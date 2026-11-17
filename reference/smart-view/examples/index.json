@@ -1,0 +1,862 @@
+{
+  "base": "a scratch organisation made by this run",
+  "ranAt": "2026-11-16T12:47:58.383Z",
+  "files": [
+    {
+      "file": "001-tstruct-user-save-a-structure-with-a-status-and-a-hidden-fie.json",
+      "label": "tstruct.user.save: a structure with a status and a hidden field",
+      "as": "ann (author)",
+      "command": "tstruct.user.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "002-tstruct-user-submit-one-record.json",
+      "label": "tstruct.user.submit: one record",
+      "as": "ann (author)",
+      "command": "tstruct.user.submit",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "003-tstruct-user-save-a-structure-with-every-field-type.json",
+      "label": "tstruct.user.save: a structure with every field type",
+      "as": "ann (author)",
+      "command": "tstruct.user.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "004-ai-enterprise-forms-the-source-list-as-the-author.json",
+      "label": "ai.enterprise forms: the source list (as the author)",
+      "as": "ann (author)",
+      "command": "ai.enterprise",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "005-ai-enterprise-forms-the-source-list-as-a-colleague.json",
+      "label": "ai.enterprise forms: the source list (as a colleague)",
+      "as": "bob (colleague)",
+      "command": "ai.enterprise",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "006-ai-enterprise-people-refused-for-a-non-administrator.json",
+      "label": "ai.enterprise people: refused for a non-administrator",
+      "as": "ann (author)",
+      "command": "ai.enterprise",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "007-submissions-list-the-smart-view-read-page-1-of-2-limit-3.json",
+      "label": "submissions.list: the Smart View read (page 1 of 2, limit 3)",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "008-submissions-list-page-2-offset-3.json",
+      "label": "submissions.list: page 2 (offset 3)",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "009-submissions-list-without-withdetails-no-canedit-files-labels.json",
+      "label": "submissions.list: without withDetails (no canEdit, files, labels)",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "010-submissions-list-every-field-type-one-record-of-each-kind.json",
+      "label": "submissions.list: every field type, one record of each kind",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "011-submissions-list-a-colleague-reads-someone-else-s-structure.json",
+      "label": "submissions.list: a colleague reads someone else's structure",
+      "as": "bob (colleague)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "012-submissions-list-an-administrator.json",
+      "label": "submissions.list: an administrator",
+      "as": "admin",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "013-submissions-list-limit-and-offset-out-of-range-are-clamped.json",
+      "label": "submissions.list: limit and offset out of range are clamped",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "014-submissions-list-a-structure-that-does-not-exist.json",
+      "label": "submissions.list: a structure that does not exist",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "015-submissions-list-an-administrator-made-structure-with-send-a.json",
+      "label": "submissions.list: an administrator-made structure with Send and a status",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "016-record-actions-the-author-s-menu-on-her-own-record.json",
+      "label": "record.actions: the author's menu on her own record",
+      "as": "ann (author)",
+      "command": "record.actions",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "017-record-send-send-a-record-to-a-colleague.json",
+      "label": "record.send: send a record to a colleague",
+      "as": "ann (author)",
+      "command": "record.send",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "018-submissions-list-the-colleague-it-was-sent-to-reads-the-stru.json",
+      "label": "submissions.list: the colleague it was sent to reads the structure (the sent records are NOT in it)",
+      "as": "bob (colleague)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "019-records-mine-as-with-limit-2-hasmore-true-next-null.json",
+      "label": "records.mine as with: limit 2 (hasMore true, next null)",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "020-records-mine-as-with-the-next-page-by-offset-received.json",
+      "label": "records.mine as with: the next page by offset += received",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "021-records-mine-as-with-past-the-end.json",
+      "label": "records.mine as with: past the end",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "022-records-mine-as-involved-limit-2.json",
+      "label": "records.mine as involved: limit 2",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "023-records-mine-as-raised-limit-2-a-real-next.json",
+      "label": "records.mine as raised: limit 2 (a real next)",
+      "as": "ann (author)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "024-records-mine-as-raised-limit-10-returns-all-four-limit-2-abo.json",
+      "label": "records.mine as raised: limit 10 returns all four (limit 2 above dropped two)",
+      "as": "ann (author)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "025-records-mine-as-team-a-person-with-no-reports.json",
+      "label": "records.mine as team: a person with no reports",
+      "as": "ann (author)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "026-records-mine-as-all-a-non-administrator-silently-gets-with.json",
+      "label": "records.mine as all: a non-administrator silently gets with",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "027-records-mine-as-all-an-administrator.json",
+      "label": "records.mine as all: an administrator",
+      "as": "admin",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "028-records-mine-limit-over-200-is-clamped.json",
+      "label": "records.mine: limit over 200 is clamped",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "029-records-mine-a-bad-as.json",
+      "label": "records.mine: a bad as",
+      "as": "bob (colleague)",
+      "command": "records.mine",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "030-record-actions-the-holder-s-menu.json",
+      "label": "record.actions: the holder's menu",
+      "as": "bob (colleague)",
+      "command": "record.actions",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "031-record-status-the-holder-updates-the-status.json",
+      "label": "record.status: the holder updates the status",
+      "as": "bob (colleague)",
+      "command": "record.status",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "032-record-actions-a-person-who-may-not-read-the-record.json",
+      "label": "record.actions: a person who may not read the record",
+      "as": "cara (unrelated colleague)",
+      "command": "record.actions",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "033-submission-history-events-oldest-first.json",
+      "label": "submission.history: events oldest first",
+      "as": "ann (author)",
+      "command": "submission.history",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "034-submission-history-a-person-who-may-not-open-the-record.json",
+      "label": "submission.history: a person who may not open the record",
+      "as": "cara (unrelated colleague)",
+      "command": "submission.history",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "035-submission-get-a-person-who-may-not-open-the-record.json",
+      "label": "submission.get: a person who may not open the record",
+      "as": "cara (unrelated colleague)",
+      "command": "submission.get",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "036-submission-history-a-record-that-does-not-exist.json",
+      "label": "submission.history: a record that does not exist",
+      "as": "ann (author)",
+      "command": "submission.history",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "037-records-summary-one-call-for-a-screenful-of-rows.json",
+      "label": "records.summary: one call for a screenful of rows",
+      "as": "ann (author)",
+      "command": "records.summary",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "038-records-summary-a-person-who-may-read-none-of-them.json",
+      "label": "records.summary: a person who may read none of them",
+      "as": "cara (unrelated colleague)",
+      "command": "records.summary",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "039-submissions-update-the-holder-of-a-received-record-who-is-no.json",
+      "label": "submissions.update: the holder of a received record, who is not its author",
+      "as": "bob (colleague)",
+      "command": "submissions.update",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "040-submissions-delete-the-holder-of-a-received-record-who-is-no.json",
+      "label": "submissions.delete: the holder of a received record, who is not its author",
+      "as": "bob (colleague)",
+      "command": "submissions.delete",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "041-submissions-update-the-author-of-a-record-that-is-with-someo.json",
+      "label": "submissions.update: the author of a record that is with someone else",
+      "as": "ann (author)",
+      "command": "submissions.update",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "042-tstruct-user-get-an-administrator-made-form-asked-by-an-ordi.json",
+      "label": "tstruct.user.get: an administrator-made form, asked by an ordinary person",
+      "as": "bob (colleague)",
+      "command": "tstruct.user.get",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "043-tstruct-get-an-administrator-made-form-asked-by-an-ordinary-.json",
+      "label": "tstruct.get: an administrator-made form, asked by an ordinary person",
+      "as": "bob (colleague)",
+      "command": "tstruct.get",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "044-submissions-delete-an-administrator-deleting-someone-else-s-.json",
+      "label": "submissions.delete: an administrator deleting someone else's record",
+      "as": "admin",
+      "command": "submissions.delete",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "045-http-post-api-sd-record-actions.json",
+      "label": "http route",
+      "as": "bob (colleague)",
+      "command": "POST /api/sd/record.actions",
+      "ok": false,
+      "code": 404
+    },
+    {
+      "file": "046-tstruct-user-get-any-person-who-can-open-the-form-reads-its-.json",
+      "label": "tstruct.user.get: any person who can open the form reads its full definition",
+      "as": "bob (colleague)",
+      "command": "tstruct.user.get",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "047-tstruct-get-the-shared-administrator-scope-asked-by-an-ordin.json",
+      "label": "tstruct.get: the shared (administrator) scope, asked by an ordinary person",
+      "as": "bob (colleague)",
+      "command": "tstruct.get",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "048-submissions-list-a-person-who-is-not-involved-reads-the-stru.json",
+      "label": "submissions.list: a person who is not involved reads the structure",
+      "as": "cara (unrelated colleague)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "049-smartview-attrs-nothing-set-up-attrs-null-not-an-error.json",
+      "label": "smartview.attrs: nothing set up (attrs null, not an error)",
+      "as": "ann (author)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "050-smartview-attrs-save-the-person-s-own-set-up.json",
+      "label": "smartview.attrs.save: the person's own set-up",
+      "as": "ann (author)",
+      "command": "smartview.attrs.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "051-smartview-attrs-after-saving-mine-true.json",
+      "label": "smartview.attrs: after saving (mine true)",
+      "as": "ann (author)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "052-smartview-attrs-another-person-never-sees-it.json",
+      "label": "smartview.attrs: another person never sees it",
+      "as": "bob (colleague)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "053-smartview-attrs-save-a-refused-set-up-unknown-column.json",
+      "label": "smartview.attrs.save: a refused set-up (unknown column)",
+      "as": "ann (author)",
+      "command": "smartview.attrs.save",
+      "ok": false,
+      "code": "invalid"
+    },
+    {
+      "file": "054-admin-smartview-save-refused-without-smartview-configure.json",
+      "label": "admin.smartview.save: refused without smartview.configure",
+      "as": "bob (colleague)",
+      "command": "admin.smartview.save",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "055-admin-smartview-save-the-organisation-default.json",
+      "label": "admin.smartview.save: the organisation default",
+      "as": "admin",
+      "command": "admin.smartview.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "056-smartview-attrs-a-person-with-none-of-their-own-gets-the-org.json",
+      "label": "smartview.attrs: a person with none of their own gets the organisation's",
+      "as": "bob (colleague)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "057-smartview-attrs-delete-drop-the-person-s-own.json",
+      "label": "smartview.attrs.delete: drop the person's own",
+      "as": "ann (author)",
+      "command": "smartview.attrs.delete",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "058-smartview-views-the-views-the-server-made-when-the-structure.json",
+      "label": "smartview.views: the views the server made when the structure was created",
+      "as": "ann (author)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "059-smartview-views-save-the-whole-list-is-replaced.json",
+      "label": "smartview.views.save: the whole list is replaced",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "060-smartview-views-after-saving.json",
+      "label": "smartview.views: after saving",
+      "as": "ann (author)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "061-two-devices-step-1-device-1-saves-its-list-plus-from-phone.json",
+      "label": "two devices, step 1: device 1 saves its list plus 'From phone'",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "062-two-devices-step-2-device-2-saves-its-older-list-plus-from-t.json",
+      "label": "two devices, step 2: device 2 saves its (older) list plus 'From tablet': no stale error",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "063-two-devices-step-3-what-is-left-the-phone-s-view-is-gone.json",
+      "label": "two devices, step 3: what is left (the phone's view is gone)",
+      "as": "ann (author)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "064-smartview-views-save-21-views-refused.json",
+      "label": "smartview.views.save: 21 views refused",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": false,
+      "code": "invalid"
+    },
+    {
+      "file": "065-smartview-views-save-a-view-without-a-name-refused.json",
+      "label": "smartview.views.save: a view without a name refused",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": false,
+      "code": "invalid"
+    },
+    {
+      "file": "066-smartview-views-save-restore-a-normal-list.json",
+      "label": "smartview.views.save: restore a normal list",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "067-smartview-targets-whom-a-person-can-share-with.json",
+      "label": "smartview.targets: whom a person can share with",
+      "as": "ann (author)",
+      "command": "smartview.targets",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "068-smartview-share-share-a-view-with-a-colleague.json",
+      "label": "smartview.share: share a view with a colleague",
+      "as": "ann (author)",
+      "command": "smartview.share",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "069-smartview-views-the-colleague-sees-the-shared-view.json",
+      "label": "smartview.views: the colleague sees the shared view",
+      "as": "bob (colleague)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "070-smartview-views-save-the-owner-removes-the-shared-view-from-.json",
+      "label": "smartview.views.save: the owner removes the shared view from her own list",
+      "as": "ann (author)",
+      "command": "smartview.views.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "071-smartview-views-the-colleague-still-has-the-shared-view-a-sh.json",
+      "label": "smartview.views: the colleague still has the shared view (a share is a copy)",
+      "as": "bob (colleague)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "072-smartview-views-an-unrelated-colleague-sees-none.json",
+      "label": "smartview.views: an unrelated colleague sees none",
+      "as": "cara (unrelated colleague)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "073-smartview-shares-what-the-sharer-shared.json",
+      "label": "smartview.shares: what the sharer shared",
+      "as": "ann (author)",
+      "command": "smartview.shares",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "074-smartview-share-the-default-view-cannot-be-shared.json",
+      "label": "smartview.share: the Default View cannot be shared",
+      "as": "ann (author)",
+      "command": "smartview.share",
+      "ok": false,
+      "code": "invalid"
+    },
+    {
+      "file": "075-smartview-share-not-with-yourself.json",
+      "label": "smartview.share: not with yourself",
+      "as": "ann (author)",
+      "command": "smartview.share",
+      "ok": false,
+      "code": "invalid"
+    },
+    {
+      "file": "076-smartview-share-nobody-chosen.json",
+      "label": "smartview.share: nobody chosen",
+      "as": "ann (author)",
+      "command": "smartview.share",
+      "ok": false,
+      "code": "invalid"
+    },
+    {
+      "file": "077-smartview-share-a-source-that-does-not-exist.json",
+      "label": "smartview.share: a source that does not exist",
+      "as": "ann (author)",
+      "command": "smartview.share",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "078-admin-smartview-view-publish-refused-without-smartview-confi.json",
+      "label": "admin.smartview.view.publish: refused without smartview.configure",
+      "as": "bob (colleague)",
+      "command": "admin.smartview.view.publish",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "079-admin-smartview-view-publish-a-view-for-everybody-who-opens-.json",
+      "label": "admin.smartview.view.publish: a view for everybody who opens the source",
+      "as": "admin",
+      "command": "admin.smartview.view.publish",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "080-smartview-views-the-published-view-reaches-an-unrelated-coll.json",
+      "label": "smartview.views: the published view reaches an unrelated colleague",
+      "as": "cara (unrelated colleague)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "081-smartview-unshare-take-one-person-back.json",
+      "label": "smartview.unshare: take one person back",
+      "as": "ann (author)",
+      "command": "smartview.unshare",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "082-smartview-view-unshare-not-a-view-of-the-caller-s.json",
+      "label": "smartview.view.unshare: not a view of the caller's",
+      "as": "ann (author)",
+      "command": "smartview.view.unshare",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "083-admin-smartview-view-unpublish-take-the-published-view-back.json",
+      "label": "admin.smartview.view.unpublish: take the published view back",
+      "as": "admin",
+      "command": "admin.smartview.view.unpublish",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "084-smartview-attrs-a-source-that-does-not-exist-attrs-null.json",
+      "label": "smartview.attrs: a source that does not exist (attrs null)",
+      "as": "ann (author)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "085-tstruct-user-save-a-restricted-structure.json",
+      "label": "tstruct.user.save: a restricted structure",
+      "as": "ann (author)",
+      "command": "tstruct.user.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "086-ai-enterprise-forms-the-restricted-structure-is-not-listed-f.json",
+      "label": "ai.enterprise forms: the restricted structure is not listed for a colleague",
+      "as": "bob (colleague)",
+      "command": "ai.enterprise",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "087-smartview-share-to-a-person-who-cannot-open-the-source-noacc.json",
+      "label": "smartview.share: to a person who cannot open the source (noAccess lists them; the share is kept)",
+      "as": "ann (author)",
+      "command": "smartview.share",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "088-smartview-views-a-person-who-cannot-open-the-source-gets-no-.json",
+      "label": "smartview.views: a person who cannot open the source gets no shared view (empty, not an error)",
+      "as": "bob (colleague)",
+      "command": "smartview.views",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "089-smartview-share-refused-when-the-sharer-cannot-open-the-sour.json",
+      "label": "smartview.share: refused when the sharer cannot open the source",
+      "as": "bob (colleague)",
+      "command": "smartview.share",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "090-smartview-shares-the-share-to-a-person-who-cannot-open-it-sa.json",
+      "label": "smartview.shares: the share to a person who cannot open it says canOpen false",
+      "as": "ann (author)",
+      "command": "smartview.shares",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "091-submissions-list-a-restricted-structure-read-by-a-colleague.json",
+      "label": "submissions.list: a restricted structure read by a colleague",
+      "as": "bob (colleague)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "092-smartview-attrs-a-source-the-person-cannot-open-attrs-null.json",
+      "label": "smartview.attrs: a source the person cannot open (attrs null)",
+      "as": "bob (colleague)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "093-api-list-no-api-set-up.json",
+      "label": "api.list: no API set up",
+      "as": "ann (author)",
+      "command": "api.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "094-api-run-an-api-that-does-not-exist.json",
+      "label": "api.run: an API that does not exist",
+      "as": "ann (author)",
+      "command": "api.run",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "095-submissions-delete-not-the-author-or-the-structure-s-owner.json",
+      "label": "submissions.delete: not the author or the structure's owner",
+      "as": "bob (colleague)",
+      "command": "submissions.delete",
+      "ok": false,
+      "code": "forbidden"
+    },
+    {
+      "file": "096-submissions-delete-the-author.json",
+      "label": "submissions.delete: the author",
+      "as": "ann (author)",
+      "command": "submissions.delete",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "097-smartview-sheet-save-a-spreadsheet-saved-as-a-structure.json",
+      "label": "smartview.sheet.save: a spreadsheet saved as a structure",
+      "as": "ann (author)",
+      "command": "smartview.sheet.save",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "098-smartview-sheet-delete-remove-it-again.json",
+      "label": "smartview.sheet.delete: remove it again",
+      "as": "ann (author)",
+      "command": "smartview.sheet.delete",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "099-tstruct-user-get-a-form-the-person-may-not-open.json",
+      "label": "tstruct.user.get: a form the person may not open",
+      "as": "ann (author)",
+      "command": "tstruct.user.get",
+      "ok": false,
+      "code": "not_found"
+    },
+    {
+      "file": "100-submissions-list-the-author-s-list-after-one-record-was-sent.json",
+      "label": "submissions.list: the author's list after one record was sent and its status updated",
+      "as": "ann (author)",
+      "command": "submissions.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "101-cmds-catalogue-and-cmdcomplete-for-view.json",
+      "label": "cmds catalogue",
+      "as": "ann (author)",
+      "command": "/cmds",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "102-rate-limit-burst-of-40.json",
+      "label": "rate limit",
+      "as": "bob (colleague)",
+      "command": "smartview.attrs",
+      "ok": true,
+      "code": "rate_limited"
+    },
+    {
+      "file": "103-events-after-a-record-is-created.json",
+      "label": "events after a record is created",
+      "as": "events",
+      "command": null,
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "104-events-after-a-structure-is-created-tstructs-changed.json",
+      "label": "events after a structure is created (tstructs_changed)",
+      "as": "events",
+      "command": null,
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "105-records-list-server-side-text-search-over-every-value-q-newe.json",
+      "label": "records.list: server-side text search over every value (q), newest first",
+      "as": "ann (author)",
+      "command": "records.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "106-records-list-a-date-range-on-the-record-s-ts-epoch-ms-and-sc.json",
+      "label": "records.list: a date range on the record's ts (epoch ms) and scope mine",
+      "as": "ann (author)",
+      "command": "records.list",
+      "ok": true,
+      "code": null
+    },
+    {
+      "file": "107-records-list-limit-over-100-is-clamped-to-100.json",
+      "label": "records.list: limit over 100 is clamped to 100",
+      "as": "ann (author)",
+      "command": "records.list",
+      "ok": true,
+      "code": null
+    }
+  ]
+}

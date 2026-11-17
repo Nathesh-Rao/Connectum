@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
@@ -9,79 +8,107 @@ import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/models/ids.dart';
+import '../../data/models/record_state.dart';
 import '../../data/models/ticket.dart';
+import '../../data/records/record_commands.dart';
 import '../../data/repositories/attachment_repository.dart';
 import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/group_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/socket/call_problem.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
-import '../chats/models/chat_person.dart';
 import '../forms/models/field_input.dart';
 import '../forms/models/form_launch.dart';
 import '../tasks/task_people_controller.dart';
-import 'models/ticket_actions.dart';
+import '../../data/models/group_add.dart';
+import '../chats/models/chat_person.dart';
 import 'models/ticket_input.dart';
 import 'ticket_action_form.dart';
 import 'tickets_texts.dart';
 
-/// One ticket in full: its header, record, the actions this person may take
-/// and its history. It reads `status.get` and `status.history`, shows the
-/// server's own words when an action is refused, and reads again on every
-/// ticket event.
+/// How an action ended, for the sheet that asked.
+enum ActionResult { done, failed, gone }
+
+/// One record in full: its header, values, the actions this person may take
+/// (`record.actions`) and its history. The server judges who may do what;
+/// this shows its words when an action is refused and reads again after every
+/// action (only a patch comes back) and on every record event.
 class TicketDetailController extends GetxController {
   TicketDetailController({
     required this.ticketId,
     required this.tickets,
-    required this.people,
     required this.files,
     required this.connectivity,
+    this.busyDelay = const Duration(seconds: 2),
+    this.coolDown = const Duration(seconds: 3),
   });
 
   final int ticketId;
   final TicketRepository tickets;
-  final GroupRepository people;
   final FormFileRepository files;
   final ConnectivityService connectivity;
 
-  static const maxFiles = 10;
+  /// `busy`: the one automatic retry waits this long.
+  final Duration busyDelay;
+
+  /// `rate_limited` (no `retryAfter`): the buttons wait this long.
+  final Duration coolDown;
+
+  static const maxFiles = RecordLimits.maxFiles;
 
   final ticket = Rxn<Ticket>();
-  final isAdmin = false.obs;
-  final inPool = Rxn<bool>();
+  final state = Rxn<RecordState>();
   final viewState = AppViewState.loading.obs;
 
-  /// The ticket is gone (not found) or the record has no status.
+  /// The record is gone (not found, or this person may no longer see it).
   final isGone = false.obs;
-  final isNotTicket = false.obs;
 
-  final history = <TicketHistoryEntry>[].obs;
+  /// The record opens but `record.actions` is `not_found` (an approver of an
+  /// open stage, a notified person): details and history, no actions.
+  final isReadOnly = false.obs;
+
+  /// The list showed this record but `submission.get` refuses it (a person who
+  /// sees every record of the form): the list row, a calm notice, no history.
+  final isUnopenable = false.obs;
+
+  final history = Rxn<RecordHistory>();
   final historyState = AppViewState.loading.obs;
 
-  /// An update is in flight: no second one starts.
+  /// An action is in flight: no second one starts.
   final isBusy = false.obs;
+
+  /// `rate_limited`: actions wait a little.
+  final isCooling = false.obs;
 
   StreamSubscription<void>? _refreshes;
   int _seq = 0;
+  bool _isReading = false;
+  bool _wantsAgain = false;
 
   String get me => tickets.me;
 
-  /// The actions this person may take now.
-  List<TicketAction> get actions {
-    final t = ticket.value;
-    if (t == null) return const [];
-    return TicketActions.of(
-      t,
-      me,
-      isAdmin: isAdmin.value,
-      inPool: inPool.value,
-    );
+  /// The menu of `record.actions`: `send` and `status`, each with its own
+  /// enabled flag and `why`.
+  List<RecordActionItem> get items => state.value?.items ?? const [];
+
+  RecordActionItem? item(String id) => state.value?.item(id);
+
+  /// The status as the screen shows it: the server's, else the first one.
+  String get status => state.value?.status ?? ticket.value?.status ?? '';
+
+  /// A real person to show for the holder: the claimants when it is shared.
+  List<String> get holders {
+    final s = state.value;
+    if (s == null) return [ticket.value?.withWhom ?? ''];
+    if (s.claimants.isNotEmpty) return s.claimants;
+    return [s.holder.isNotEmpty ? s.holder : ticket.value?.withWhom ?? ''];
   }
 
+  /// Edit is the author's own form screen (`submissions.update`); the server
+  /// refuses it while the record waits for approval or is approved.
   bool get canEdit {
     final t = ticket.value;
-    return t != null && TicketActions.canEdit(t, me);
+    return t != null && !t.isAwaitingApproval && t.isRaisedBy(me);
   }
 
   @override
@@ -90,6 +117,7 @@ class TicketDetailController extends GetxController {
     final known = tickets.known(ticketId);
     if (known != null) {
       ticket.value = known;
+      state.value = tickets.stateOf(ticketId);
       viewState.value = AppViewState.content;
     }
     _refreshes = tickets.refreshes.listen((_) => unawaited(reload()));
@@ -104,28 +132,36 @@ class TicketDetailController extends GetxController {
 
   // ---- reading ---------------------------------------------------------------
 
-  /// The ticket and its history again. [isQuiet]: what is shown stays when a
-  /// read fails.
+  /// The record, its actions and its history again; one read at a time (an
+  /// event during a read asks for one more after it). [isQuiet]: what is
+  /// shown stays when a read fails.
   Future<void> reload({bool isQuiet = true}) async {
-    final seq = ++_seq;
-    if (ticket.value == null) viewState.value = AppViewState.loading;
-    await Future.wait([_readTicket(seq, isQuiet), _readHistory(seq)]);
+    if (_isReading) {
+      _wantsAgain = true;
+      return;
+    }
+    _isReading = true;
+    try {
+      do {
+        _wantsAgain = false;
+        final seq = ++_seq;
+        if (ticket.value == null) viewState.value = AppViewState.loading;
+        await Future.wait([_readRecord(seq, isQuiet), _readHistory(seq)]);
+      } while (_wantsAgain);
+    } finally {
+      _isReading = false;
+    }
   }
 
-  Future<void> _readTicket(int seq, bool isQuiet) async {
+  Future<void> _readRecord(int seq, bool isQuiet) async {
     try {
       final detail = await tickets.get(ticketId);
       if (seq != _seq) return;
-      if (!detail.ticket.isTicket) {
-        isNotTicket.value = true;
-        viewState.value = AppViewState.empty;
-        return;
-      }
-      ticket.value = detail.ticket;
-      isAdmin.value = detail.isAdmin;
-      inPool.value = detail.inPool;
+      ticket.value = tickets.known(ticketId) ?? detail.ticket;
+      state.value = detail.state;
+      isReadOnly.value = detail.isReadOnly;
+      isUnopenable.value = detail.isUnopenable;
       isGone.value = false;
-      isNotTicket.value = false;
       viewState.value = AppViewState.content;
     } on SocketCallError catch (e) {
       if (seq != _seq) return;
@@ -147,89 +183,163 @@ class TicketDetailController extends GetxController {
 
   Future<void> _readHistory(int seq) async {
     try {
-      final rows = await tickets.history(ticketId);
+      final read = await tickets.history(ticketId);
       if (seq != _seq) return;
-      history.assignAll(rows);
+      history.value = read;
+      final t = tickets.known(ticketId);
+      if (t != null) ticket.value = t;
       historyState.value = AppViewState.content;
-    } on SocketCallError {
+    } on SocketCallError catch (e) {
       if (seq != _seq) return;
-      if (history.isEmpty) historyState.value = AppViewState.error;
+      if (e.code == 'not_found') {
+        // Not allowed to read it (a BE gap for some roles): quiet, no retry.
+        history.value = null;
+        historyState.value = AppViewState.empty;
+        return;
+      }
+      if (history.value == null) historyState.value = AppViewState.error;
     }
   }
 
   // ---- actions ---------------------------------------------------------------
 
-  TicketActionForm newForm(TicketAction action) =>
-      TicketActionForm(action, completion: ticket.value?.completion ?? 0);
+  TicketActionForm newForm(String kind) {
+    final s = state.value;
+    if (s == null) {
+      throw StateError('The record has not been read yet.');
+    }
+    return TicketActionForm(kind, state: s);
+  }
 
-  /// Sends [form]'s action. True when it is done (the sheet closes). A failure
-  /// is told with the server's text; what was typed stays in the form.
-  Future<bool> submit(TicketActionForm form) async {
-    final t = ticket.value;
-    if (t == null || isBusy.value) return false;
+  /// Sends the form's action. The sheet closes on [ActionResult.done] and
+  /// [ActionResult.gone]. A failure is told with the server's text and what
+  /// was typed stays in the form.
+  Future<ActionResult> submit(TicketActionForm form) async {
+    if (isBusy.value || isCooling.value) return ActionResult.failed;
+    final offered = item(form.kind);
+    if (offered == null || !offered.isEnabled) {
+      form.error.value = offered?.why.isNotEmpty == true
+          ? offered!.why
+          : TicketsTexts.actionGone;
+      return ActionResult.failed;
+    }
     final problem = form.problem;
     if (problem != null) {
       form.error.value = problem;
-      return false;
+      return ActionResult.failed;
     }
     form.error.value = null;
     isBusy.value = true;
-    final requestId = form.requestId ??= _newRequestId();
-    final payload = TicketPayload.build(
-      id: t.id,
-      action: form.action,
-      input: form.input,
-      requestId: requestId,
-      expectedStatus: t.status,
-      expectedAssignee: t.withWhom,
-    );
+    final requestId = form.requestId ??= newRequestId();
+    final expected = (state.value ?? form.state).expected;
     try {
-      final result = await tickets.update(payload);
-      form.requestId = null;
-      _succeed(t, form, result);
-      return true;
-    } on SocketCallError catch (e) {
-      final failure = CallProblem.of(e, isWrite: true);
-      final outcome = TicketOutcome.of(failure);
-      if (outcome.isSuccess) {
-        form.requestId = null;
-        _succeed(t, form, null);
-        return true;
+      while (true) {
+        try {
+          final patch = form.isStatus
+              ? await tickets.setStatus(
+                  RecordPayload.status(
+                    id: ticketId,
+                    input: form.statusInput,
+                    requestId: requestId,
+                    expected: expected,
+                  ),
+                )
+              : await tickets.send(
+                  RecordPayload.send(
+                    id: ticketId,
+                    input: form.sendInput,
+                    requestId: requestId,
+                    expected: expected,
+                  ),
+                );
+          _succeed(form, patch);
+          return ActionResult.done;
+        } on SocketCallError catch (e) {
+          final failure = CallProblem.of(e, isWrite: true);
+          final outcome = TicketOutcome.of(failure);
+          if (outcome.isSuccess) {
+            _succeed(form, null);
+            return ActionResult.done;
+          }
+          if (outcome.shouldRetryOnce && !form.hasRetriedBusy) {
+            form.hasRetriedBusy = true;
+            await Future<void>.delayed(busyDelay);
+            continue;
+          }
+          return _failed(form, failure, outcome);
+        }
       }
-      if (!outcome.shouldKeepRequestId) form.requestId = null;
-      _tell(
-        failure,
-        retry: outcome.canRetry ? () => unawaited(submit(form)) : null,
-      );
-      if (outcome.shouldRemoveRow) {
-        isGone.value = true;
-        tickets.scheduleRefresh();
-      } else if (outcome.shouldReload) {
-        unawaited(reload());
-      }
-      return false;
     } finally {
       isBusy.value = false;
     }
   }
 
-  void _succeed(Ticket before, TicketActionForm form, TicketUpdateResult? r) {
-    if (r != null) ticket.value = before.applying(r);
-    final status = r?.status ?? form.action.to;
+  ActionResult _failed(
+    TicketActionForm form,
+    CallProblem failure,
+    TicketOutcome outcome,
+  ) {
+    if (!outcome.shouldKeepRequestId) form.requestId = null;
+    form.error.value = failure.text;
+    _tell(
+      failure,
+      retry: outcome.canRetry ? () => unawaited(submit(form)) : null,
+    );
+    if (outcome.shouldBackOff) _coolDown();
+    if (outcome.shouldLeave) {
+      isGone.value = true;
+      tickets.scheduleRefresh();
+      return ActionResult.gone;
+    }
+    if (outcome.shouldReload) unawaited(_refreshForm(form));
+    return ActionResult.failed;
+  }
+
+  /// After a stale or refused action: the record and its actions again, and
+  /// the sheet follows them (required flags, statuses) with its input kept.
+  Future<void> _refreshForm(TicketActionForm form) async {
+    await reload();
+    final s = state.value;
+    if (s != null) form.state = s;
+  }
+
+  void _coolDown() {
+    isCooling.value = true;
+    Future<void>.delayed(coolDown, () => isCooling.value = false);
+  }
+
+  void _succeed(TicketActionForm form, RecordPatch? patch) {
+    form.requestId = null;
+    if (patch != null) {
+      final next = tickets.applied(ticketId, patch);
+      if (next != null) ticket.value = next;
+    }
+    final sentTo = form.isSend
+        ? (form.person.value?.name ?? form.via.value)
+        : null;
     AppNotices.success(
       TicketsTexts.done(
-        status: status,
-        sentTo: form.action.asksSendTo ? form.input.sendTo : null,
+        status: patch?.status.isNotEmpty == true
+            ? patch!.status
+            : form.statusPick.value,
+        sentTo: sentTo,
       ),
     );
+    // Only a patch comes back: the record and its history are read again.
     unawaited(reload());
     tickets.scheduleRefresh();
   }
 
-  /// A UUID v4 for one press of Send.
-  static String _newRequestId() => newCid().substring(2);
+  /// A UUID v4 for one intent (well under 100 bytes).
+  static String newRequestId() => newCid().substring(2);
 
-  void _tell(CallProblem problem, {VoidCallback? retry}) {
+  /// Leaves the record screen when the record is gone; a chat card that
+  /// shares this controller stays where it is.
+  void leave() {
+    if (Get.currentRoute == AppRoutes.ticketOf(ticketId)) Get.back<void>();
+  }
+
+  void _tell(CallProblem problem, {void Function()? retry}) {
     AppNotices.show(
       problem.text,
       variant: retry != null || problem.kind == CallProblemKind.unknownOutcome
@@ -243,8 +353,9 @@ class TicketDetailController extends GetxController {
   // ---- edit ------------------------------------------------------------------
 
   /// The form screen again, filled in with the record's values. The save goes
-  /// through the outbox (`submissions.update`); the ticket is read again when
-  /// the screen closes and when the server's change event arrives.
+  /// through the outbox (`submissions.update`, one cid per save; it replaces
+  /// every value); the record is read again when the screen closes and when
+  /// the server's change event arrives.
   Future<void> edit() async {
     final t = ticket.value;
     if (t == null) return;
@@ -264,10 +375,31 @@ class TicketDetailController extends GetxController {
 
   // ---- people and files ------------------------------------------------------
 
-  TaskPeopleController newPeople() => TaskPeopleController(people);
+  /// The people this record can be sent to (`record.people`, searched by
+  /// name; the sender and the holder are left out by the server).
+  TaskPeopleController newPeople() => TaskPeopleController(
+    null,
+    source: (q) async {
+      final rows = await tickets.people(ticketId, q: q);
+      return GroupPeoplePage([
+        for (final p in rows)
+          ChatPerson(
+            username: p.username,
+            name: p.name,
+            source: 'colleague',
+            detail: p.designation,
+          ),
+      ]);
+    },
+  );
 
   void picked(TicketActionForm form, ChatPerson person) {
-    form.sendTo.value = person;
+    form.via.value = SendInput.viaUser;
+    form.person.value = RecordPerson(
+      username: person.username,
+      name: person.name,
+      designation: person.detail,
+    );
     tickets.rememberName(person.username, person.name);
   }
 
@@ -289,6 +421,10 @@ class TicketDetailController extends GetxController {
       return;
     }
     if (picked == null) return;
+    if (picked.bytes > RecordLimits.maxFileBytes) {
+      form.error.value = TicketsTexts.fileTooLarge;
+      return;
+    }
     final item = FormFileItem(
       name: picked.name,
       size: picked.bytes,
@@ -314,6 +450,7 @@ class TicketDetailController extends GetxController {
         ),
         onProgress: (p) => item.progress.value = p,
         cancel: item.cancel,
+        deleteAfter: true,
       );
       if (!form.files.contains(item)) return;
       item.id = done.id;

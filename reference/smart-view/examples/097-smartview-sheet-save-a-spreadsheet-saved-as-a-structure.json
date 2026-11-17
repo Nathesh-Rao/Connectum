@@ -1,0 +1,39 @@
+{
+  "label": "smartview.sheet.save: a spreadsheet saved as a structure",
+  "as": "ann (author)",
+  "command": "smartview.sheet.save",
+  "request": {
+    "caption": "Cap sheet",
+    "columns": [
+      {
+        "name": "Item",
+        "type": "text"
+      },
+      {
+        "name": "Qty",
+        "type": "number"
+      }
+    ],
+    "rows": [
+      [
+        "Pen",
+        3
+      ],
+      [
+        "Ink",
+        5
+      ]
+    ]
+  },
+  "reply": {
+    "action": "smartview.sheet.save",
+    "data": {
+      "added": 2,
+      "caption": "Cap sheet",
+      "failed": 0,
+      "name": "sheet_cap_sheet"
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -5,9 +5,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_notification_bell.dart';
+import '../../../core/widgets/app_profile_avatar.dart';
 
 /// The Chats app bar: the enterprise title on the left, the notification bell
-/// on the right.
+/// and the profile avatar on the right.
 class ChatsHeader extends StatelessWidget {
   const ChatsHeader({
     super.key,
@@ -15,6 +16,9 @@ class ChatsHeader extends StatelessWidget {
     required this.unread,
     required this.onSwitchEnterprise,
     required this.onOpenNotifications,
+    required this.profileName,
+    required this.profilePicture,
+    required this.onOpenProfile,
   });
 
   /// Read inside an Obx, so it may read observables.
@@ -22,6 +26,11 @@ class ChatsHeader extends StatelessWidget {
   final int Function() unread;
   final VoidCallback onSwitchEnterprise;
   final VoidCallback onOpenNotifications;
+
+  /// Read inside an Obx, so they may read observables.
+  final String Function() profileName;
+  final String? Function() profilePicture;
+  final VoidCallback onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +93,13 @@ class ChatsHeader extends StatelessWidget {
             () => AppNotificationBell(
               count: unread(),
               onPressed: onOpenNotifications,
+            ),
+          ),
+          Obx(
+            () => AppProfileAvatar(
+              name: profileName(),
+              picture: profilePicture(),
+              onPressed: onOpenProfile,
             ),
           ),
         ],

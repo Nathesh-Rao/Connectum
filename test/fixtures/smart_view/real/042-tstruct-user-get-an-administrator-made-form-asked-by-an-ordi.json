@@ -1,0 +1,17 @@
+{
+  "label": "tstruct.user.get: an administrator-made form, asked by an ordinary person",
+  "as": "bob (colleague)",
+  "command": "tstruct.user.get",
+  "request": {
+    "name": "requests"
+  },
+  "reply": {
+    "action": "tstruct.user.get",
+    "error": {
+      "code": "not_found",
+      "message": "No such structure."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

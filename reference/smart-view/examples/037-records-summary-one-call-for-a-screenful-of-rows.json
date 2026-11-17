@@ -1,0 +1,48 @@
+{
+  "label": "records.summary: one call for a screenful of rows",
+  "as": "ann (author)",
+  "command": "records.summary",
+  "request": {
+    "ids": [
+      41,
+      43,
+      999999999
+    ]
+  },
+  "reply": {
+    "action": "records.summary",
+    "data": {
+      "omitted": 1,
+      "summaries": [
+        {
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1bob",
+            "claimants": [],
+            "completion": 30,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "In progress",
+            "ts": 1794833231113
+          },
+          "tstruct": "requests"
+        },
+        {
+          "id": 43,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "Open",
+            "ts": 1794833225889
+          },
+          "tstruct": "requests"
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

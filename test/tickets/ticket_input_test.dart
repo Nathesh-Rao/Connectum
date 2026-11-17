@@ -1,316 +1,271 @@
-import 'package:connectum/data/models/ticket.dart';
+import 'package:connectum/data/models/record_state.dart';
+import 'package:connectum/data/records/record_commands.dart';
 import 'package:connectum/data/socket/call_problem.dart';
 import 'package:connectum/data/socket/socket_service.dart';
 import 'package:connectum/features/tickets/models/ticket_input.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'ticket_fixtures.dart';
-
-final _table = TicketForm.parseAll(
-  fixtureData('status_mine_with')['structures'],
-)['help_ticket']!.table!;
-
-TicketAction action(String name) =>
-    _table.actions.firstWhere((a) => a.name == name);
-
-Map<String, dynamic> build(
-  String name,
-  TicketActionInput input, {
-  String requestId = 'r1',
-}) => TicketPayload.build(
-  id: 38,
-  action: action(name),
-  input: input,
-  requestId: requestId,
-  expectedStatus: 'Open',
-  expectedAssignee: 'ana',
+RecordState state({
+  bool comments = false,
+  bool completion = false,
+  bool hours = false,
+  bool files = false,
+  bool admin = false,
+  int? done,
+}) => RecordState(
+  items: const [],
+  status: 'Open',
+  statuses: const ['Open', 'In progress', 'Done'],
+  finalStatuses: const ['Done'],
+  completion: done,
+  isCommentsRequired: comments,
+  isCompletionRequired: completion,
+  isHoursRequired: hours,
+  isFilesRequired: files,
+  isAdmin: admin,
 );
 
-CallProblem problem(String code, [String message = 'm']) =>
-    CallProblem.of(SocketCallError(code, message), isWrite: true);
+CallProblem problem(String code, {bool isWrite = true}) =>
+    CallProblem.of(SocketCallError(code, 'm'), isWrite: isWrite);
 
 void main() {
-  group('payload builder', () {
-    test('expected and requestId are always there', () {
-      final p = build('Take it', const TicketActionInput());
-      expect(p, {
-        'id': 38,
-        'action': 'Take it',
-        'expected': {'status': 'Open', 'assignee': 'ana'},
-        'requestId': 'r1',
-      });
-    });
-
-    test('Send: remarks and sendTo, nothing else', () {
-      final p = build(
-        'Send',
-        const TicketActionInput(
-          remarks: ' your area ',
-          sendTo: 'ben',
-          reason: 'ignored',
-          percent: 50,
-          files: ['f'],
-        ),
-      );
-      expect(p['remarks'], 'your area');
-      expect(p['sendTo'], 'ben');
-      expect(p.containsKey('reason'), isFalse);
-      expect(p.containsKey('percent'), isFalse);
-      expect(p.containsKey('files'), isFalse);
-    });
-
-    test('Status update: percent and optional remarks', () {
-      final p = build(
-        'Status update',
-        const TicketActionInput(percent: 30, remarks: 'started'),
-      );
-      expect(p['percent'], 30);
-      expect(p['remarks'], 'started');
-      expect(p.containsKey('sendTo'), isFalse);
-    });
-
-    test('an empty optional remark is left out', () {
-      final p = build('Status update', const TicketActionInput(percent: 10));
-      expect(p.containsKey('remarks'), isFalse);
-    });
-
-    test('Complete: percent hundred sends no percent', () {
-      final p = build('Complete', const TicketActionInput(percent: 77));
-      expect(p.containsKey('percent'), isFalse);
-    });
-
-    test('Return: reason and remarks', () {
-      final p = build(
-        'Return',
-        const TicketActionInput(reason: 'Wrong team', remarks: 'not mine'),
-      );
-      expect(p['reason'], 'Wrong team');
-      expect(p['remarks'], 'not mine');
-    });
-
-    test('files go in when the action takes them', () {
-      const withFiles = TicketAction(name: 'Attach', attachments: 'optional');
-      final p = TicketPayload.build(
-        id: 1,
-        action: withFiles,
-        input: const TicketActionInput(files: ['a', 'b']),
-        requestId: 'r',
-        expectedStatus: 'Open',
-        expectedAssignee: 'x',
-      );
-      expect(p['files'], ['a', 'b']);
-    });
-
-    test('a retry reuses the same request id', () {
-      const input = TicketActionInput(remarks: 'x', sendTo: 'ben');
-      final first = build('Send', input, requestId: 'same');
-      final retry = build('Send', input, requestId: 'same');
-      expect(retry['requestId'], first['requestId']);
-      expect(retry, first);
-    });
-  });
-
-  group('validation', () {
-    test('required remarks block until filled', () {
+  group('status validation uses the BE wording', () {
+    test('a status of the record is needed', () {
       expect(
-        TicketValidation.check(
-          action('Send'),
-          const TicketActionInput(sendTo: 'ben'),
-        ),
-        TicketValidation.remarksRequired,
+        RecordValidation.status(state(), const StatusInput()),
+        'Choose one of the statuses of this record.',
       );
       expect(
-        TicketValidation.check(
-          action('Send'),
-          const TicketActionInput(sendTo: 'ben', remarks: '  '),
-        ),
-        TicketValidation.remarksRequired,
+        RecordValidation.status(state(), const StatusInput(status: 'Nope')),
+        RecordValidation.statusRequired,
       );
       expect(
-        TicketValidation.check(
-          action('Send'),
-          const TicketActionInput(sendTo: 'ben', remarks: 'ok'),
+        RecordValidation.status(state(), const StatusInput(status: 'Done')),
+        isNull,
+      );
+    });
+
+    test('required fields from record.actions are mandatory', () {
+      const base = StatusInput(status: 'Done');
+      final s = state(
+        comments: true,
+        completion: true,
+        hours: true,
+        files: true,
+      );
+      expect(RecordValidation.status(s, base), 'Add your comments.');
+      expect(
+        RecordValidation.status(
+          s,
+          const StatusInput(status: 'Done', comments: 'x'),
+        ),
+        'Enter the completion.',
+      );
+      expect(
+        RecordValidation.status(
+          s,
+          const StatusInput(status: 'Done', comments: 'x', percent: 0),
+        ),
+        'Enter the hours worked.',
+      );
+      expect(
+        RecordValidation.status(
+          s,
+          const StatusInput(
+            status: 'Done',
+            comments: 'x',
+            percent: 0,
+            hours: '0',
+          ),
+        ),
+        'Attach a file.',
+      );
+      expect(
+        RecordValidation.status(
+          s,
+          const StatusInput(
+            status: 'Done',
+            comments: 'x',
+            percent: 0,
+            hours: '0',
+            files: ['f'],
+          ),
         ),
         isNull,
       );
     });
 
-    test('required reason and remarks', () {
+    test(
+      'spaces are not a comment; a completion of 0 and hours of 0 count',
+      () {
+        expect(
+          RecordValidation.status(
+            state(comments: true),
+            const StatusInput(status: 'Done', comments: '   '),
+          ),
+          'Add your comments.',
+        );
+        expect(
+          RecordValidation.status(
+            state(completion: true, hours: true),
+            const StatusInput(status: 'Done', percent: 0, hours: '0'),
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test('the completion cannot go down, except for an administrator', () {
+      const input = StatusInput(status: 'Done', percent: 20);
       expect(
-        TicketValidation.check(
-          action('Return'),
-          const TicketActionInput(remarks: 'x'),
-        ),
-        TicketValidation.reasonRequired,
+        RecordValidation.status(state(done: 40), input),
+        'Completion cannot go down.',
       );
       expect(
-        TicketValidation.check(
-          action('Return'),
-          const TicketActionInput(reason: 'r'),
-        ),
-        TicketValidation.remarksRequired,
-      );
-      expect(
-        TicketValidation.check(
-          action('Return'),
-          const TicketActionInput(reason: 'r', remarks: 'x'),
-        ),
+        RecordValidation.status(state(done: 40, admin: true), input),
         isNull,
+      );
+      expect(
+        RecordValidation.status(
+          state(),
+          const StatusInput(status: 'Done', percent: 101),
+        ),
+        'Completion is 0 to 100.',
       );
     });
 
-    test('optional inputs may stay empty', () {
-      expect(
-        TicketValidation.check(
-          action('Status update'),
-          const TicketActionInput(),
-        ),
-        isNull,
+    test('hours: 0 to 24 with at most two decimals', () {
+      String? check(String h) => RecordValidation.status(
+        state(),
+        StatusInput(status: 'Done', hours: h),
       );
-      expect(
-        TicketValidation.check(action('Close'), const TicketActionInput()),
-        isNull,
-      );
+      expect(check('24'), isNull);
+      expect(check('2.5'), isNull);
+      expect(check('2,25'), isNull);
+      expect(check('0'), isNull);
+      expect(check('24.5'), RecordValidation.hoursRange);
+      expect(check('2.555'), RecordValidation.hoursRange);
+      expect(check('-1'), RecordValidation.hoursRange);
+      expect(check('abc'), RecordValidation.hoursRange);
     });
 
-    test('percent must be 0 to 100', () {
+    test('comments at most 1,000 characters; files at most 10', () {
       expect(
-        TicketValidation.check(
-          action('Status update'),
-          const TicketActionInput(percent: 101),
+        RecordValidation.status(
+          state(),
+          StatusInput(status: 'Done', comments: 'x' * 1001),
         ),
-        TicketValidation.percentRange,
+        RecordValidation.commentsLong,
       );
       expect(
-        TicketValidation.check(
-          action('Status update'),
-          const TicketActionInput(percent: -1),
-        ),
-        TicketValidation.percentRange,
-      );
-      expect(
-        TicketValidation.check(
-          action('Status update'),
-          const TicketActionInput(percent: 100),
+        RecordValidation.status(
+          state(),
+          StatusInput(status: 'Done', comments: 'x' * 1000),
         ),
         isNull,
       );
-    });
-
-    test('sendTo is needed when assign is pick', () {
       expect(
-        TicketValidation.check(
-          action('Send'),
-          const TicketActionInput(remarks: 'x'),
+        RecordValidation.status(
+          state(),
+          StatusInput(
+            status: 'Done',
+            files: [for (var i = 0; i < 11; i++) '$i'],
+          ),
         ),
-        TicketValidation.sendToRequired,
-      );
-    });
-
-    test('a reason must come from the list when there is one', () {
-      const a = TicketAction(
-        name: 'Return',
-        reason: 'required',
-        reasons: ['A', 'B'],
-      );
-      expect(
-        TicketValidation.check(a, const TicketActionInput(reason: 'C')),
-        TicketValidation.reasonRequired,
-      );
-      expect(
-        TicketValidation.check(a, const TicketActionInput(reason: 'A')),
-        isNull,
-      );
-    });
-
-    test('a required file', () {
-      const a = TicketAction(name: 'Proof', attachments: 'required');
-      expect(
-        TicketValidation.check(a, const TicketActionInput()),
-        TicketValidation.fileRequired,
-      );
-      expect(
-        TicketValidation.check(a, const TicketActionInput(files: ['f'])),
-        isNull,
+        RecordValidation.tooManyFiles,
       );
     });
   });
 
-  group('error mapping', () {
-    test('stale: reload, keep what was typed, fresh request id next time', () {
-      final p = problem(
-        'stale',
-        'This ticket was updated by someone else. Reload to see the latest.',
+  group('send validation', () {
+    test('every via needs its value', () {
+      String? check(SendInput i) => RecordValidation.send(i);
+      expect(check(const SendInput()), RecordValidation.sendToRequired);
+      expect(
+        check(const SendInput(via: 'user')),
+        RecordValidation.sendToRequired,
       );
-      expect(p.kind, CallProblemKind.stale);
-      expect(p.text, startsWith('This ticket was updated'));
-      final o = TicketOutcome.of(p);
+      expect(check(const SendInput(via: 'user', person: 'ben')), isNull);
+      expect(
+        check(const SendInput(via: 'designation')),
+        RecordValidation.sendToRequired,
+      );
+      expect(check(const SendInput(via: 'designation', value: 'Tech')), isNull);
+      expect(check(const SendInput(via: 'category', value: 'C')), isNull);
+      expect(check(const SendInput(via: 'initiator')), isNull);
+      expect(check(const SendInput(via: 'assignor')), isNull);
+    });
+
+    test('reason and remarks at most 1,000 characters', () {
+      expect(
+        RecordValidation.send(SendInput(via: 'initiator', reason: 'x' * 1001)),
+        RecordValidation.textLong,
+      );
+      expect(
+        RecordValidation.send(SendInput(via: 'initiator', remarks: 'x' * 1001)),
+        RecordValidation.textLong,
+      );
+    });
+  });
+
+  group('outcomes are decided by the code', () {
+    test('stale: read again, keep what was typed', () {
+      final o = TicketOutcome.of(problem('stale'));
+      expect(o.shouldReload, isTrue);
       expect(o.isSuccess, isFalse);
-      expect(o.shouldReload, isTrue);
-      expect(o.shouldKeepForm, isTrue);
-      expect(o.shouldKeepRequestId, isFalse);
-      expect(o.canRetry, isFalse);
-    });
-
-    test('duplicate is success', () {
-      final o = TicketOutcome.of(problem('duplicate'));
-      expect(o.isSuccess, isTrue);
-    });
-
-    test('forbidden: server text, refresh, keep the form', () {
-      final p = problem('forbidden', 'You cannot do this on this ticket.');
-      expect(p.text, 'You cannot do this on this ticket.');
-      final o = TicketOutcome.of(p);
-      expect(o.shouldReload, isTrue);
-      expect(o.canRetry, isFalse);
       expect(o.shouldKeepRequestId, isFalse);
     });
 
-    test('invalid refreshes too', () {
-      expect(TicketOutcome.of(problem('invalid')).shouldReload, isTrue);
+    test('not_found: leave and refresh the list', () {
+      expect(TicketOutcome.of(problem('not_found')).shouldLeave, isTrue);
     });
 
-    test('not_found removes the row', () {
-      final o = TicketOutcome.of(problem('not_found', 'No such ticket.'));
-      expect(o.shouldRemoveRow, isTrue);
+    test('busy: one automatic retry with the same request id', () {
+      final o = TicketOutcome.of(problem('busy'));
+      expect(o.shouldRetryOnce, isTrue);
+      expect(o.shouldKeepRequestId, isTrue);
     });
 
-    test('busy and rate_limited: manual retry with the same request id', () {
-      for (final code in ['busy', 'rate_limited']) {
-        final o = TicketOutcome.of(problem(code, 'slow down'));
-        expect(o.canRetry, isTrue);
+    test('rate_limited: a short back-off, same request id', () {
+      final o = TicketOutcome.of(problem('rate_limited'));
+      expect(o.shouldBackOff, isTrue);
+      expect(o.shouldKeepRequestId, isTrue);
+      expect(o.canRetry, isTrue);
+    });
+
+    test('forbidden shows the text and reads again', () {
+      final o = TicketOutcome.of(problem('forbidden'));
+      expect(o.shouldReload, isTrue);
+      expect(o.shouldKeepRequestId, isFalse);
+    });
+
+    test('invalid and bad_request only show their message', () {
+      for (final code in ['invalid', 'bad_request']) {
+        final o = TicketOutcome.of(problem(code));
+        expect(o.shouldReload || o.shouldLeave || o.canRetry, isFalse);
+      }
+    });
+
+    test(
+      'a lost answer: the same request id is kept and the record is read',
+      () {
+        final o = TicketOutcome.of(problem('timeout'));
         expect(o.shouldKeepRequestId, isTrue);
-        expect(o.shouldKeepForm, isTrue);
-        expect(o.shouldReload, isFalse);
-      }
-    });
+        expect(o.shouldReload, isTrue);
+      },
+    );
 
-    test('a lost answer: retry with the same request id, and read again', () {
-      final p = problem('timeout');
-      expect(p.kind, CallProblemKind.unknownOutcome);
-      final o = TicketOutcome.of(p);
-      expect(o.canRetry, isTrue);
-      expect(o.shouldKeepRequestId, isTrue);
-      expect(o.shouldReload, isTrue);
+    test('the words never decide', () {
+      final a = CallProblem.of(
+        const SocketCallError('stale', 'Something else entirely.'),
+      );
+      expect(TicketOutcome.of(a).shouldReload, isTrue);
     });
+  });
 
-    test('offline: retry, same request id', () {
-      final o = TicketOutcome.of(problem('not_connected'));
-      expect(o.canRetry, isTrue);
-      expect(o.shouldKeepRequestId, isTrue);
-    });
-
-    test('the server text is always verbatim', () {
-      for (final code in [
-        'invalid',
-        'not_found',
-        'duplicate',
-        'busy',
-        'rate_limited',
-        'other',
-      ]) {
-        expect(problem(code, 'Exactly this.').text, 'Exactly this.');
-      }
-    });
+  test('the limits are the ones the server states', () {
+    expect(RecordLimits.maxFiles, 10);
+    expect(RecordLimits.maxText, 1000);
+    expect(RecordLimits.maxFileBytes, 10 * 1024 * 1024);
   });
 }

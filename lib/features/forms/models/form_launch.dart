@@ -20,6 +20,8 @@ class FormLaunch {
     this.errorDetails,
     this.isEncryptedChat = false,
     this.isDraft = false,
+    this.postChoiceTitle,
+    this.isPostedByDefault = false,
   }) : tag = 'form-${newCid()}';
 
   /// An edit of a submission of mine, or its resubmit when it was declined
@@ -80,6 +82,18 @@ class FormLaunch {
   /// The conversation is end-to-end encrypted: the form says its message is
   /// not.
   final bool isEncryptedChat;
+
+  /// Set when the form was started from `#` in a chat: the screen then offers
+  /// "Also post this to the chat with <title>" and [convId] is sent as `chat`
+  /// only when it is ticked. Null for every other launch (the forms button
+  /// always posts into its chat; the Work Space never does).
+  final String? postChoiceTitle;
+
+  /// The box starts ticked (a person's care thread).
+  final bool isPostedByDefault;
+
+  bool get hasPostChoice =>
+      mode == FormMode.create && convId != null && postChoiceTitle != null;
 
   bool get isEdit => mode != FormMode.create;
 

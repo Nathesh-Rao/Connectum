@@ -1,0 +1,17 @@
+{
+  "label": "record.actions: a person who may not read the record",
+  "as": "cara (unrelated colleague)",
+  "command": "record.actions",
+  "request": {
+    "id": 41
+  },
+  "reply": {
+    "action": "record.actions",
+    "error": {
+      "code": "not_found",
+      "message": "No such record."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

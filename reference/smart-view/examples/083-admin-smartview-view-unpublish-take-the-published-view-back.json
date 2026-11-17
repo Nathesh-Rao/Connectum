@@ -1,0 +1,18 @@
+{
+  "label": "admin.smartview.view.unpublish: take the published view back",
+  "as": "admin",
+  "command": "admin.smartview.view.unpublish",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "id": "s1794833246328"
+  },
+  "reply": {
+    "action": "admin.smartview.view.unpublish",
+    "data": {
+      "shared": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

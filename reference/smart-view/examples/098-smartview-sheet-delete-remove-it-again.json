@@ -1,0 +1,17 @@
+{
+  "label": "smartview.sheet.delete: remove it again",
+  "as": "ann (author)",
+  "command": "smartview.sheet.delete",
+  "request": {
+    "name": "sheet_cap_sheet"
+  },
+  "reply": {
+    "action": "smartview.sheet.delete",
+    "data": {
+      "deleted": true,
+      "rows": 2
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

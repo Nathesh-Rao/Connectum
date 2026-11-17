@@ -54,7 +54,11 @@ node tools/mobile-test/seed.mjs http://10.0.2.113:8080 --prefix mt1
 3. `POST /api/sd/enter {enterprise}` with the account token → the **enterprise session token**
 4. Open the web socket with that token.
 
-The emails are `<username>@test.co`. **There is no fixed code** (a fixed OTP is not supported: the code is random and returned); this path replaces it and works for any account. **It only exists where `CONNECTUM_DEV_OTP=1`, so it can never be used against production.**
+The emails are `<username>@test.co`. **There is no fixed code for these people**: the code is random and returned; this path works for any account. **It only exists where `CONNECTUM_DEV_OTP=1`, so it can never be used against production.** (A separate, dev-only fixed code `000000` exists for **named** addresses in `CONNECTUM_FIXED_OTP_USERS`: `docs/EMAIL_SETUP.md`.)
+
+**Password sign-in.** Add `--password <8 to 128 characters>` and the seed gives **every** person it makes that password (it signs each in by `devOtp`, then calls `account/password/start` and `account/password/set`), so `POST /api/sd/login/password {email, password}` can be tested. Without the flag nobody has a password. The call, its refusals and `retryAfter`: `docs/MULTI_ENTERPRISE.md`, "Signing in with a password of one's own". A wrong password is `401 invalid_credentials`; 8 wrong ones for one email in 15 minutes lock that password (the emailed code still works) with `429 rate_limited` and `error.retryAfter`.
+
+**Real mail from dev.** The dev instance has real mail settings. `CONNECTUM_MAIL_ALLOW` (`docs/EMAIL_SETUP.md`) limits mail on dev to listed addresses and domains such as `@test.co`; where it is not set, mail can reach any address, so use only addresses you control.
 
 **One thing that surprises parallel tests:** a person has **one active session per client kind** (web or mobile): signing in again as the same person on the same kind ends the first session (`sd_auth`). Use a different account for each parallel test, or sign in once and share the session.
 
@@ -72,7 +76,7 @@ The emails are `<username>@test.co`. **There is no fixed code** (a fixed OTP is 
 |---|---|
 | Forms in general (calculations, rules, conditions, cascading drop downs, a grid with a total, file, dates) | **Available, separately:** `tools/sample-forms/load.mjs` loads the sample forms of `docs/sample-forms/` into a test organisation (an administrator's session; `docs/sample-forms/README.md`). Not the ticket forms. |
 | Direct chats with messages | Not seeded. Messages go over the socket; the backend suites do this (`connectum-backend/test/lib/harness.mjs`, `Client`). |
-| A ticket form with its structure and actions (Send, Status update, Complete, Return, Drop) | Not seeded. The ticket forms are **Ticket Category** and **Ticket SubCategory**, made by `scripts/create-ticket-structs.mjs` (needs a session token and a server with `form.inherit`); the actions and the screens they need are in `docs/TICKETS_AND_TASKS_MOBILE.md` and `docs/TASKS_AND_ACTIONS_FOR_MOBILE.md`. **To add:** seeding these is a piece of work we have not done; say if you want it. |
+| A form with a status, and the record actions (Send, Update status) | Not seeded: make a form with a drop down marked "Use as status" in Studio. The commands are in `docs/RECORD_ACTIONS.md`. |
 | Approvals | Not seeded. A form with an approval chain is made with `admin.tstruct.save` (`approval: {enabled: true, ...}`); approvals are answered with `req.respond`. The suites show the recipe (`connectum-backend/test/connectum_putapi_test.mjs`, `connectum_work_test.mjs`). |
 | Forwarded messages, attachments | Not seeded. Attachments need a **file storage profile** on the instance; whether the dev instance has one was not verified. |
 | QR and branch codes | The organisation's Connectum ID and the person's code are printed by the seed. A QR opens `https://<host>/connect/<code>` (`docs/MOBILE_QR.md`; Postman collection `docs/postman/Connectum_Mobile_QR.postman_collection.json`). Branch-specific join codes are not seeded. |

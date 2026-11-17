@@ -1,0 +1,49 @@
+{
+  "_section": "MOBILE_SMART_VIEW.md §2.2 ai.enterprise {what:\"forms\"} (RECONSTRUCTED by the BE, not captured from a live run)",
+  "command": "ai.enterprise",
+  "request": {
+    "what": "forms"
+  },
+  "response": {
+    "forms": [
+      {
+        "name": "leave_request",
+        "caption": "Leave Request",
+        "keyField": "reqno",
+        "owner": "ann",
+        "fromSheet": false,
+        "system": false,
+        "canFetch": true,
+        "canAdd": true,
+        "recordThread": false,
+        "status": {
+          "field": "stage",
+          "statuses": [
+            "Open",
+            "In progress",
+            "Closed"
+          ],
+          "final": [
+            "Closed"
+          ]
+        },
+        "fields": [
+          {
+            "name": "title",
+            "caption": "Title",
+            "type": "text",
+            "section": "main"
+          }
+        ],
+        "sections": [
+          {
+            "name": "main",
+            "caption": "Details",
+            "grid": false
+          }
+        ]
+      }
+    ]
+  },
+  "note": "Reconstructed in stage 1 from the BE document, revision 1. SUPERSEDED by the real captures in real/004-* and 005-* (ai.enterprise forms) where one exists (BE document revision 2, origin/dev a5f28fca, 16 Nov 2026). Kept, not deleted."
+}

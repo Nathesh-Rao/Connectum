@@ -136,7 +136,8 @@ class _HomeObserver extends NavigatorObserver {
     AppRoutes.chats,
     AppRoutes.aiAgents,
     AppRoutes.submissions,
-    AppRoutes.profile,
+    AppRoutes.smartView,
+    AppRoutes.inbox,
   };
 
   final routes = <Route<dynamic>>{};

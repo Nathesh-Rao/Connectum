@@ -79,21 +79,41 @@ while IFS= read -r f; do
 done < <(cd "$ROOT" && find reference -type f \
   -not -path 'reference/prototype/*' -not -path 'reference/screenshots/*' \
   -not -path 'reference/backend-pack/*' -not -path 'reference/test-env/tools/*' \
-  -not -name '.DS_Store')
+  -not -path 'reference/smart-view/*' -not -name '.DS_Store')
 while IFS= read -r f; do
   base="$(basename "$f")"
   up="$(grep "/$base\$" "$TMP/tools.txt" | head -1)"
   [ -n "$up" ] && printf '%s\t%s\n' "$f" "$up" >> "$TMP/map.txt"
 done < <(cd "$ROOT" && find reference/test-env/tools -type f -not -name '.DS_Store' 2>/dev/null)
 
+# Smart View material (reference copies only, never executed). local <TAB> upstream.
+SV=connectum
+add() { printf '%s\t%s\n' "$1" "$2" >> "$TMP/map.txt"; }
+for f in MOBILE_SMART_VIEW SMART_VIEW RECORD_ACTIONS MOBILE_RECORDS_FULL DEV_API_CHANGES; do
+  g cat-file -e "$REF:$SV/docs/$f.md" 2>/dev/null && add "reference/$f.md" "$SV/docs/$f.md"
+done
+g cat-file -e "$REF:$SV/docs/README.md" 2>/dev/null && add "reference/BE_DOCS_README.md" "$SV/docs/README.md"
+g cat-file -e "$REF:$SV/docs/examples/smartview-engine/vectors.json" 2>/dev/null \
+  && add "reference/smart-view/engine/vectors.json" "$SV/docs/examples/smartview-engine/vectors.json"
+g cat-file -e "$REF:$SV/tools/smartview-doc-examples.mjs" 2>/dev/null \
+  && add "reference/smart-view/tools/smartview-doc-examples.mjs" "$SV/tools/smartview-doc-examples.mjs"
+while IFS= read -r up; do
+  [ -n "$up" ] && add "reference/smart-view/examples/$(basename "$up")" "$up"
+done < <(g ls-tree -r --name-only "$REF" "$SV/docs/examples/smartview/")
+sort -u "$TMP/map.txt" -o "$TMP/map.txt"
+
 head_ "mirrored files that differ from $REF"
 : > "$TMP/changed.txt"
 while IFS=$'\t' read -r local up; do
   if ! g show "$REF:$up" 2>/dev/null | cmp -s - "$ROOT/$local"; then
     printf '%s\t%s\n' "$local" "$up" >> "$TMP/changed.txt"
-    add=$(g show "$REF:$up" | diff "$ROOT/$local" - | grep -c '^>')
-    del=$(g show "$REF:$up" | diff "$ROOT/$local" - | grep -c '^<')
-    say "  $local  (+$add -$del lines)  <- $up"
+    if [ ! -f "$ROOT/$local" ]; then
+      say "  $local  (new)  <- $up"
+    else
+      add=$(g show "$REF:$up" | diff "$ROOT/$local" - | grep -c '^>')
+      del=$(g show "$REF:$up" | diff "$ROOT/$local" - | grep -c '^<')
+      say "  $local  (+$add -$del lines)  <- $up"
+    fi
   fi
 done < "$TMP/map.txt"
 [ -s "$TMP/changed.txt" ] || say "  none: $(wc -l < "$TMP/map.txt" | tr -d ' ') mirrored files are up to date"
@@ -170,11 +190,11 @@ fi
 # --- apply ------------------------------------------------------------------
 head_ "apply"
 if [ "$DRY" = 1 ]; then
-  n=$(cat "$TMP/changed.txt" "$TMP/newcopy.txt" | wc -l | tr -d ' ')
+  n=$(cat "$TMP/changed.txt" "$TMP/newcopy.txt" | sort -u | wc -l | tr -d ' ')
   say "  dry run: would update $n file(s) and write $STATE (sha ${NEW:0:10}, date $NEW_DATE)."
   exit 0
 fi
-cat "$TMP/changed.txt" "$TMP/newcopy.txt" | while IFS=$'\t' read -r local up; do
+cat "$TMP/changed.txt" "$TMP/newcopy.txt" | sort -u | while IFS=$'\t' read -r local up; do
   [ -n "$local" ] || continue
   mkdir -p "$(dirname "$ROOT/$local")"
   g show "$REF:$up" > "$ROOT/$local"

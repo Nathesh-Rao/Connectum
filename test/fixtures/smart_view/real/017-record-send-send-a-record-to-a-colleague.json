@@ -1,0 +1,310 @@
+{
+  "label": "record.send: send a record to a colleague",
+  "as": "ann (author)",
+  "command": "record.send",
+  "request": {
+    "id": 41,
+    "via": "user",
+    "person": "svcapcpw1bob"
+  },
+  "reply": {
+    "action": "record.send",
+    "data": {
+      "assignor": "svcapcpw1ann",
+      "completion": null,
+      "files": [],
+      "holder": "svcapcpw1bob",
+      "id": 41,
+      "status": "Open"
+    },
+    "ok": true,
+    "type": "sd"
+  },
+  "eventsSeenAfterwards": {
+    "ann (author)": [
+      {
+        "data": {
+          "action": "saved",
+          "by": "svcapcpw1adm",
+          "name": "requests",
+          "scope": "admin"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "saved",
+          "by": "svcapcpw1adm",
+          "id": "requests_o"
+        },
+        "event": "options_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833218512
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 43,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833218790
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 45,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833219069
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 47,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833219353
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 49,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833219643
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "everyfield",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 51,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833220243
+          },
+          "tstruct": "everyfield"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "id": 53,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1ann",
+            "status": "Open",
+            "ts": 1794833220527
+          },
+          "tstruct": "everyfield"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "Send",
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "Open",
+            "ts": 1794833224886
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      }
+    ],
+    "bob (colleague)": [
+      {
+        "data": {
+          "action": "saved",
+          "by": "svcapcpw1adm",
+          "name": "requests",
+          "scope": "admin"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "saved",
+          "by": "svcapcpw1adm",
+          "id": "requests_o"
+        },
+        "event": "options_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "everyfield",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "Send",
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "Open",
+            "ts": 1794833224886
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "action": "Send",
+          "by": "svcapcpw1ann",
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1ann",
+            "claimants": [],
+            "completion": null,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "Open",
+            "ts": 1794833224886
+          },
+          "tstruct": "requests"
+        },
+        "event": "ticket_assigned",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "counts": {
+            "high": 1,
+            "low": 0,
+            "medium": 0,
+            "resolved": 0,
+            "total": 1,
+            "unread": 1
+          },
+          "notification": {
+            "actionLabel": "Open ticket",
+            "actionType": "tickets",
+            "category": "submissions",
+            "count": 1,
+            "from": "svcapcpw1ann",
+            "icon": "assignment_turned_in",
+            "id": "agwx2HalfJKtp9R5krGnPRD8tOAkWGZcJGGr4kEJxSI",
+            "message": "Ann Rao: Send.",
+            "priority": "high",
+            "read": false,
+            "ref": {
+              "submissionId": 41,
+              "tstruct": "requests"
+            },
+            "resolved": false,
+            "resolvedTs": null,
+            "severity": "high",
+            "title": "Requests #41 is with you",
+            "ts": 1794833224890
+          }
+        },
+        "event": "feed_item",
+        "type": "sd_event"
+      }
+    ]
+  }
+}

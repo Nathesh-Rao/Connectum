@@ -20,6 +20,11 @@ class AppBottomNavIcons {
       'assets/icons/bottom_nav/submissions_unselected.png';
   final profileSelected = 'assets/icons/bottom_nav/profile_selected.png';
   final profileUnselected = 'assets/icons/bottom_nav/profile_unselected.png';
+  final smartViewSelected = 'assets/icons/bottom_nav/smart_view_selected.png';
+  final smartViewUnselected =
+      'assets/icons/bottom_nav/smart_view_unselected.png';
+  final inboxSelected = 'assets/icons/bottom_nav/inbox_selected.png';
+  final inboxUnselected = 'assets/icons/bottom_nav/inbox_unselected.png';
 }
 
 /// Paths of the PNG icons, e.g. `AppIcons.home.newChat`.

@@ -1,0 +1,152 @@
+{
+  "label": "records.list: limit over 100 is clamped to 100",
+  "as": "ann (author)",
+  "command": "records.list",
+  "request": {
+    "tstruct": "tickets",
+    "limit": 5000
+  },
+  "reply": {
+    "action": "records.list",
+    "data": {
+      "hasMore": false,
+      "limit": 100,
+      "offset": 0,
+      "records": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 72,
+          "scope": "user",
+          "ts": 1794833275334,
+          "tstruct": "tickets",
+          "values": {
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Event probe"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 61,
+          "scope": "user",
+          "ts": 1794833235595,
+          "tstruct": "tickets",
+          "values": {
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Throwaway"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 39,
+          "scope": "user",
+          "ts": 1794833216938,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Delivery",
+            "due": "2026-11-20",
+            "hours": 2.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Printer jammed"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 37,
+          "scope": "user",
+          "ts": 1794833216651,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Billing",
+            "due": "2026-11-15",
+            "hours": 7.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 5"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 35,
+          "scope": "user",
+          "ts": 1794833216359,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Delivery",
+            "due": "2026-11-14",
+            "hours": 6,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 4"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 33,
+          "scope": "user",
+          "ts": 1794833216063,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Billing",
+            "due": "2026-11-13",
+            "hours": 4.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 3"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 31,
+          "scope": "user",
+          "ts": 1794833215783,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Delivery",
+            "due": "2026-11-12",
+            "hours": 3,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 2"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 29,
+          "scope": "user",
+          "ts": 1794833215495,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Billing",
+            "due": "2026-11-11",
+            "hours": 1.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 1"
+          }
+        }
+      ],
+      "total": 8
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

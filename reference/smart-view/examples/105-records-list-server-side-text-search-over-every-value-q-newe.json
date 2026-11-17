@@ -1,0 +1,40 @@
+{
+  "label": "records.list: server-side text search over every value (q), newest first",
+  "as": "ann (author)",
+  "command": "records.list",
+  "request": {
+    "tstruct": "tickets",
+    "q": "ticket 3",
+    "limit": 5
+  },
+  "reply": {
+    "action": "records.list",
+    "data": {
+      "hasMore": false,
+      "limit": 5,
+      "offset": 0,
+      "records": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "host": null,
+          "id": 33,
+          "scope": "user",
+          "ts": 1794833216063,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Billing",
+            "due": "2026-11-13",
+            "hours": 4.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 3"
+          }
+        }
+      ],
+      "total": 1
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "label": "smartview.views: the published view reaches an unrelated colleague",
+  "as": "cara (unrelated colleague)",
+  "command": "smartview.views",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.views",
+    "data": {
+      "canPublish": false,
+      "mine": [],
+      "shared": [
+        {
+          "by": "svcapcpw1adm",
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "s1794833246328",
+          "kpis": true,
+          "mine": false,
+          "name": "For all",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

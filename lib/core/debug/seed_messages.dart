@@ -486,6 +486,16 @@ class SeedMessages {
   /// three location shapes, then generated ones (about 100 in all) for the
   /// scrolling check.
   static List<Message> _formCards(String c) {
+    final demo = <Message>[
+      for (final (i, title) in const [
+        'Send and Update status',
+        'No Send on this form',
+        'No status field',
+        'Send is off (with a reason)',
+        'record.actions not found',
+      ].indexed)
+        _form(c, 61 + i, 'rhea', 'Help ticket', 5 - i, [('title', title)]),
+    ];
     const long =
         'Patient reports intermittent pain in the left knee after long walks. Advised rest, ice, compression and a follow-up visit in two weeks if it does not settle on its own.';
     final out = <Message>[
@@ -566,6 +576,7 @@ class SeedMessages {
         );
       }
     }
+    out.addAll(demo);
     return out;
   }
 

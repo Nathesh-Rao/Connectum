@@ -62,6 +62,12 @@ class ChatsView extends GetView<ChatsController> {
               );
             },
             onOpenNotifications: c.openNotifications,
+            profileName: () {
+              c.store.identity.value;
+              return c.profileName;
+            },
+            profilePicture: () => c.profilePicture,
+            onOpenProfile: c.openProfile,
           ),
           const AppOfflineBar(),
           _SearchRow(controller: c),

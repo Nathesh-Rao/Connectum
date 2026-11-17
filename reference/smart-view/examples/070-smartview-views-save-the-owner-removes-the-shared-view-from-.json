@@ -1,0 +1,46 @@
+{
+  "label": "smartview.views.save: the owner removes the shared view from her own list",
+  "as": "ann (author)",
+  "command": "smartview.views.save",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "views": [
+      {
+        "id": "__default",
+        "name": "Default View",
+        "search": "",
+        "filters": [],
+        "sort": null,
+        "groupBy": [],
+        "hidden": [],
+        "order": [],
+        "widths": {},
+        "kpis": true,
+        "charts": true
+      }
+    ]
+  },
+  "reply": {
+    "action": "smartview.views.save",
+    "data": {
+      "views": [
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "__default",
+          "kpis": true,
+          "name": "Default View",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

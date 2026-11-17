@@ -1,0 +1,17 @@
+{
+  "label": "ai.enterprise people: refused for a non-administrator",
+  "as": "ann (author)",
+  "command": "ai.enterprise",
+  "request": {
+    "what": "people"
+  },
+  "reply": {
+    "action": "ai.enterprise",
+    "error": {
+      "code": "forbidden",
+      "message": "Only an administrator can list everyone in the organisation."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

@@ -1,7 +1,7 @@
 import 'package:connectum/core/theme/app_tones.dart';
 import 'package:connectum/features/tickets/models/ticket_action_style.dart';
 import 'package:connectum/features/tickets/widgets/ticket_action_sheet.dart';
-import 'package:connectum/data/models/ticket.dart';
+import 'package:connectum/data/models/record_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -35,30 +35,28 @@ void main() {
 
   test('bar items keep the order and names of the actions', () {
     final items = actionItemsOf(const [
-      TicketAction(name: 'Send'),
-      TicketAction(name: 'Drop'),
+      RecordActionItem(id: 'send', label: 'Send'),
+      RecordActionItem(id: 'status', label: 'Update status'),
     ]);
-    expect([for (final i in items) i.id], ['Send', 'Drop']);
-    expect(items[1].tone, AppTones.red);
+    expect([for (final i in items) i.id], ['send', 'status']);
+    expect([for (final i in items) i.label], ['Send', 'Update status']);
+    expect(items[0].tone, AppTones.blue);
+    expect(items[1].tone, AppTones.slate);
   });
 
-  testWidgets('the sheet header shows the action and where it goes', (
+  testWidgets('the sheet header shows the icon and the name of the item', (
     tester,
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
           body: TicketSheetTitle(
-            action: TicketAction(name: 'Return', assign: 'raiser'),
+            item: RecordActionItem(id: 'send', label: 'Send'),
           ),
         ),
       ),
     );
-    expect(find.text('Return'), findsOneWidget);
-    expect(find.byIcon(Icons.undo), findsOneWidget);
-    expect(
-      find.text('It goes back to the person who raised it.'),
-      findsOneWidget,
-    );
+    expect(find.text('Send'), findsOneWidget);
+    expect(find.byIcon(Icons.send_outlined), findsOneWidget);
   });
 }

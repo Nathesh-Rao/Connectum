@@ -1,0 +1,91 @@
+{
+  "label": "smartview.views: the views the server made when the structure was created",
+  "as": "ann (author)",
+  "command": "smartview.views",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.views",
+    "data": {
+      "canPublish": false,
+      "mine": [
+        {
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [],
+          "hidden": [],
+          "id": "auto-open",
+          "kpis": true,
+          "name": "Everything open",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [
+            {
+              "col": "stage",
+              "op": "not",
+              "value": "Closed"
+            }
+          ],
+          "groupBy": [
+            "stage"
+          ],
+          "hidden": [],
+          "id": "auto-by-status",
+          "kpis": true,
+          "name": "Open by status",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [
+            "area"
+          ],
+          "hidden": [],
+          "id": "auto-by-choice",
+          "kpis": true,
+          "name": "By Area",
+          "order": [],
+          "search": "",
+          "sort": null,
+          "widths": {}
+        },
+        {
+          "charts": true,
+          "filters": [],
+          "groupBy": [],
+          "hidden": [],
+          "id": "auto-newest",
+          "kpis": true,
+          "name": "Newest first",
+          "order": [],
+          "search": "",
+          "sort": {
+            "col": "due",
+            "dir": "desc"
+          },
+          "widths": {}
+        }
+      ],
+      "shared": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "label": "smartview.attrs: nothing set up (attrs null, not an error)",
+  "as": "ann (author)",
+  "command": "smartview.attrs",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.attrs",
+    "data": {
+      "attrs": null,
+      "canConfigure": true,
+      "canDefault": false,
+      "mine": false
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

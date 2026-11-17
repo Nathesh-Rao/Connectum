@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-
 import '../config/app_config.dart';
 import '../../features/approvals/approvals_binding.dart';
 import '../../features/approvals/approvals_view.dart';
@@ -12,6 +11,8 @@ import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_ai/debug_ai_binding.dart';
 import '../../features/debug_photo_crop/debug_photo_crop_binding.dart';
+import '../../features/debug_refresh/debug_refresh_binding.dart';
+import '../../features/debug_refresh/debug_refresh_view.dart';
 import '../../features/debug_photo_crop/debug_photo_crop_view.dart';
 import '../../features/profile_photo/profile_photo_crop_binding.dart';
 import '../../features/profile_photo/profile_photo_crop_view.dart';
@@ -49,6 +50,14 @@ import '../../features/debug_qr/debug_qr_view.dart';
 import '../../features/debug_socket/debug_socket_binding.dart';
 import '../../features/debug_tasks/debug_tasks_binding.dart';
 import '../../features/debug_tasks/debug_tasks_view.dart';
+import '../../features/debug_smart_drawer/debug_smart_drawer_binding.dart';
+import '../../features/debug_smart_drawer/debug_smart_drawer_view.dart';
+import '../../features/debug_smart_query/debug_smart_query_binding.dart';
+import '../../features/debug_smart_query/debug_smart_query_view.dart';
+import '../../features/debug_smart_table/debug_smart_table_binding.dart';
+import '../../features/debug_smart_table/debug_smart_table_view.dart';
+import '../../features/debug_smart_view/debug_smart_view_binding.dart';
+import '../../features/debug_smart_view/debug_smart_view_view.dart';
 import '../../features/debug_tickets/debug_tickets_binding.dart';
 import '../../features/debug_tickets/debug_tickets_view.dart';
 import '../../features/debug_socket/debug_socket_view.dart';
@@ -83,6 +92,8 @@ import '../../features/tickets/ticket_detail_binding.dart';
 import '../../features/tickets/ticket_detail_view.dart';
 import '../../features/submission_detail/submission_detail_view.dart';
 import '../../features/verification/verification_binding.dart';
+import '../../features/profile/profile_binding.dart';
+import '../../features/profile/profile_view.dart';
 import '../../features/workspace/workspace_binding.dart';
 import '../../features/workspace/workspace_view.dart';
 import '../../features/verification/verification_view.dart';
@@ -199,6 +210,12 @@ class AppPages {
       AppTransitionKind.slideUp,
     ),
     _page(
+      AppRoutes.profile,
+      () => const ProfileView(),
+      ProfileBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
       AppRoutes.workspace,
       () => const WorkspaceView(),
       WorkspaceBinding(),
@@ -260,6 +277,12 @@ class AppPages {
         AppTransitionKind.push,
       ),
       _page(
+        AppRoutes.debugRefresh,
+        () => const DebugRefreshView(),
+        DebugRefreshBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
         AppRoutes.photoCrop,
         () => const ProfilePhotoCropView(),
         ProfilePhotoCropBinding(),
@@ -275,6 +298,30 @@ class AppPages {
         AppRoutes.debugAi,
         () => const DebugAiView(),
         DebugAiBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartQuery,
+        () => const DebugSmartQueryView(),
+        DebugSmartQueryBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartDrawer,
+        () => const DebugSmartDrawerView(),
+        DebugSmartDrawerBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartView,
+        () => const DebugSmartViewView(),
+        DebugSmartViewBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartTable,
+        () => const DebugSmartTableView(),
+        DebugSmartTableBinding(),
         AppTransitionKind.push,
       ),
       _page(

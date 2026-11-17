@@ -1,0 +1,85 @@
+{
+  "label": "submissions.list: an administrator-made structure with Send and a status",
+  "as": "ann (author)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "requests",
+    "limit": 2,
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": true,
+      "limit": 2,
+      "offset": 0,
+      "structures": {
+        "requests": {
+          "caption": "Requests",
+          "fields": {
+            "amount": "Amount",
+            "stage": "Stage",
+            "stage_comments": "Stage comments",
+            "stage_completion": "Stage completion",
+            "stage_files": "Stage files",
+            "stage_hours": "Stage hours",
+            "title": "Title"
+          },
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          }
+        }
+      },
+      "submissions": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 49,
+          "labels": {},
+          "scope": "global",
+          "ts": 1794833219643,
+          "tstruct": "requests",
+          "values": {
+            "amount": 500,
+            "stage": "Open",
+            "title": "Request 5"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 47,
+          "labels": {},
+          "scope": "global",
+          "ts": 1794833219353,
+          "tstruct": "requests",
+          "values": {
+            "amount": 400,
+            "stage": "Open",
+            "title": "Request 4"
+          }
+        }
+      ],
+      "total": 5
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

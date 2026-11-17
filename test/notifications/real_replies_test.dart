@@ -1,5 +1,8 @@
 import 'package:connectum/data/models/approval.dart';
+import 'package:connectum/data/models/record_state.dart';
 import 'package:connectum/data/models/ticket.dart';
+
+import '../tickets/ticket_fixtures.dart';
 import 'package:connectum/features/notifications/models/feed_item.dart';
 import 'package:connectum/features/notifications/models/feed_reducer.dart';
 import 'package:connectum/features/notifications/notification_router.dart';
@@ -136,25 +139,13 @@ void main() {
   });
 
   group('tickets', () {
-    test('status.update answers: ok, a repeat, stale, forbidden', () {
-      final ok = TicketUpdateResult.parse(
-        p.data('status.update: a status update'),
-      );
+    test('record.status answers: ok, stale, forbidden, final locked', () {
+      final ok = RecordPatch.parse(fixtureData('record_status_ok'));
       expect(ok.status, 'In progress');
       expect(ok.isRepeated, isFalse);
-      final again = TicketUpdateResult.parse(
-        p.data('status.update: the same request again'),
-      );
-      expect(again.isRepeated, isTrue);
-      expect(again.completion, ok.completion);
-      expect(
-        p.error('status.update: someone else got there first')['code'],
-        'stale',
-      );
-      expect(
-        p.error('status.update: not for this person')['code'],
-        'forbidden',
-      );
+      expect(fixture('record_status_forbidden')['error']['code'], 'forbidden');
+      expect(fixture('record_send_stale')['error']['code'], 'stale');
+      expect(fixture('record_status_final_locked')['error']['code'], 'invalid');
     });
 
     test('ticket_assigned event', () {

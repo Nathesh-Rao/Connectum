@@ -3,7 +3,16 @@ import 'package:get/get.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../core/widgets/app_notices.dart';
+import '../../data/models/chat_thread.dart';
 import '../../data/repositories/command_repository.dart';
+import '../../data/repositories/conversation_repository.dart';
+import '../../data/repositories/smart_view_repository.dart';
+import '../../data/repositories/submission_repository.dart';
+import '../../data/smart_view/models/sv_source.dart';
+import '../../data/socket/socket_service.dart';
+import '../smart_view/models/smart_view_entry.dart';
+import '../forms/models/form_launch.dart';
+import '../home_shell/home_shell_controller.dart';
 import '../conversation/models/command_prompt.dart';
 import 'widgets/command_sheets.dart';
 
@@ -16,6 +25,11 @@ class CommandRunner {
     this._prompt, {
     this.activeConvId,
     this.applyDraft,
+    this.submissions,
+    this.smartView,
+    this.shell,
+    this.chatConvId,
+    this.chatTitle,
   });
 
   final CommandRepository _commands;
@@ -26,6 +40,18 @@ class CommandRunner {
 
   /// Puts a draft into this composer when the chat it names is the open one.
   final void Function(String text)? applyDraft;
+
+  /// Opens the structure a `#tstruct` / `#tstruct-add` line names.
+  final SubmissionRepository? submissions;
+
+  /// Opens `#view`; null: it says "coming soon".
+  final SmartViewRepository? smartView;
+  final HomeShellController? shell;
+
+  /// The open chat when a form may be posted into it (a direct message or a
+  /// group); null in the Work Space and in the other kinds.
+  final String? chatConvId;
+  final String Function()? chatTitle;
 
   /// True while a command waits for its answer; the send button is off.
   final isRunning = false.obs;
@@ -66,6 +92,11 @@ class CommandRunner {
         AppNotices.error(r.text);
       case HashKind.draft:
         _openDraft(r);
+      case HashKind.form:
+      case HashKind.records:
+        return _openStructure(r);
+      case HashKind.smartView:
+        return _openSmartView(r.target);
       case HashKind.screen:
         _openScreen(r.target);
       case HashKind.rows:
@@ -82,6 +113,100 @@ class CommandRunner {
         break;
     }
     return r.isFinished;
+  }
+
+  /// The web sends the line and opens what the server answers (the fill-in
+  /// form, or the person's records of it). Nothing is posted to the chat. A
+  /// form opened in a direct message or a group offers the web's "also post
+  /// this to the chat" box (unticked; ticked in a care thread; encrypted chats
+  /// included, as on the web: the server posts the card); from the Work Space nothing is posted and the saved
+  /// record shows there.
+  Future<bool> _openStructure(HashResult r) async {
+    final open = await submissions?.openStructure(r.target);
+    if (open == null || !open.isOpen) {
+      final text = open == null
+          ? CommandRepository.comingSoon
+          : open.isOffline
+          ? 'Needs a connection'
+          : open.code == 'rate_limited'
+          ? 'Too many requests. Try again in a moment.'
+          : open.message.isNotEmpty && open.code == 'not_found'
+          ? open.message
+          : "Couldn't open that structure. Try again.";
+      AppNotices.warning(text);
+      return false;
+    }
+    if (r.kind == HashKind.records) {
+      shell?.openSubmissionsOf(open.name);
+    } else {
+      Get.toNamed(
+        AppRoutes.form,
+        arguments: FormLaunch(
+          name: open.name,
+          scope: open.scope,
+          caption: open.caption,
+          convId: _postableChat,
+          postChoiceTitle: _postableChat == null ? null : _chatName,
+          isPostedByDefault:
+              _postableChat != null && ChatThread.careUser(_groupName) != null,
+        ),
+      );
+    }
+    return true;
+  }
+
+  /// `#view [name]`: nothing is posted and nothing is sent. No name: the
+  /// Smart view tab with its drawer open. A name: the first structure that matches it (exact name or
+  /// caption, else the first that contains it); no match keeps the text.
+  Future<bool> _openSmartView(String typed) async {
+    final repo = smartView;
+    final home = shell;
+    if (repo == null || home == null) {
+      AppNotices.info(CommandRepository.comingSoon);
+      return false;
+    }
+    if (typed.isEmpty) {
+      home.openSmartView(const SmartViewEntry.drawer());
+      return true;
+    }
+    final List<SvSource> all;
+    try {
+      all = await repo.sources();
+    } on SocketCallError catch (e) {
+      AppNotices.warning(
+        e.isConnectionGap
+            ? 'Needs a connection'
+            : "Couldn't open that. Try again.",
+      );
+      return false;
+    }
+    final hit = SvSources.find(all, typed);
+    if (hit == null) {
+      AppNotices.warning('Nothing is called “$typed” that you can open.');
+      return false;
+    }
+    home.openSmartView(SmartViewEntry.named(hit.name));
+    return true;
+  }
+
+  String? get _postableChat {
+    final id = chatConvId;
+    if (id == null) return null;
+    final kind = ConversationRepository.kindOf(id);
+    if (kind != 'dm' && kind != 'group') return null;
+    return id;
+  }
+
+  String get _chatName {
+    final t = chatTitle?.call() ?? '';
+    return t.isNotEmpty ? t : ConversationRepository.targetOf(chatConvId ?? '');
+  }
+
+  String get _groupName {
+    final id = chatConvId ?? '';
+    return ConversationRepository.kindOf(id) == 'group'
+        ? ConversationRepository.targetOf(id)
+        : '';
   }
 
   void _openDraft(HashResult r) {

@@ -1,0 +1,37 @@
+{
+  "label": "/cmds # and /cmdcomplete #view le",
+  "as": "ann (author)",
+  "command": "/cmds, /cmdcomplete (chat frames, not /sd)",
+  "commandNamesInCatalogue": [
+    "dm",
+    "groupmsg",
+    "users",
+    "groups",
+    "inbox",
+    "historyhost",
+    "profile",
+    "creategroup",
+    "addmember",
+    "leavegroup",
+    "me",
+    "associates",
+    "find",
+    "transfer",
+    "scan",
+    "forms",
+    "options",
+    "lookups",
+    "form",
+    "tstruct",
+    "tstruct-add",
+    "help"
+  ],
+  "viewInCatalogue": false,
+  "cmd_suggestions": {
+    "input": "#view le",
+    "items": [],
+    "kind": "none",
+    "reqId": 7,
+    "type": "cmd_suggestions"
+  }
+}

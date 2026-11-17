@@ -1,0 +1,102 @@
+{
+  "label": "record.status: the holder updates the status",
+  "as": "bob (colleague)",
+  "command": "record.status",
+  "request": {
+    "id": 41,
+    "status": "In progress",
+    "comments": "started",
+    "percent": 30
+  },
+  "reply": {
+    "action": "record.status",
+    "data": {
+      "completion": 30,
+      "files": [],
+      "final": false,
+      "holder": "svcapcpw1bob",
+      "hours": null,
+      "id": 41,
+      "status": "In progress"
+    },
+    "ok": true,
+    "type": "sd"
+  },
+  "eventsSeenAfterwards": {
+    "ann (author)": [
+      {
+        "data": {
+          "action": "Status update",
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1bob",
+            "claimants": [],
+            "completion": 30,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "In progress",
+            "ts": 1794833231113
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      },
+      {
+        "data": {
+          "counts": {
+            "high": 0,
+            "low": 0,
+            "medium": 1,
+            "resolved": 0,
+            "total": 1,
+            "unread": 1
+          },
+          "notification": {
+            "actionLabel": "Open ticket",
+            "actionType": "tickets",
+            "category": "submissions",
+            "count": 1,
+            "from": "svcapcpw1bob",
+            "icon": "assignment_turned_in",
+            "id": "cGZ0URZBHsftl64EQzV7w4sGQrQ6mYO6dyorS4fRhac",
+            "message": "Bob Iyer: Status update.",
+            "priority": "medium",
+            "read": false,
+            "ref": {
+              "submissionId": 41,
+              "tstruct": "requests"
+            },
+            "resolved": false,
+            "resolvedTs": null,
+            "severity": "medium",
+            "title": "Requests #41: Status update",
+            "ts": 1794833231115
+          }
+        },
+        "event": "feed_item",
+        "type": "sd_event"
+      }
+    ],
+    "bob (colleague)": [
+      {
+        "data": {
+          "action": "Status update",
+          "id": 41,
+          "record": {
+            "by": "svcapcpw1bob",
+            "claimants": [],
+            "completion": 30,
+            "final": false,
+            "holder": "svcapcpw1bob",
+            "status": "In progress",
+            "ts": 1794833231113
+          },
+          "tstruct": "requests"
+        },
+        "event": "submissions_changed",
+        "type": "sd_event"
+      }
+    ]
+  }
+}

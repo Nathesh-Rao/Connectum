@@ -1,0 +1,17 @@
+{
+  "label": "submission.get: a person who may not open the record",
+  "as": "cara (unrelated colleague)",
+  "command": "submission.get",
+  "request": {
+    "id": 41
+  },
+  "reply": {
+    "action": "submission.get",
+    "error": {
+      "code": "not_found",
+      "message": "No such submission."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

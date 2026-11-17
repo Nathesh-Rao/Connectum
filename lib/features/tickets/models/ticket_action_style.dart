@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_tones.dart';
 import '../../../core/widgets/app_action_bar.dart';
-import '../../../data/models/ticket.dart';
+import '../../../data/models/record_state.dart';
 
 /// The icon and tone of an action, picked from its words.
 class ActionStyle {
@@ -57,12 +57,12 @@ ActionStyle actionStyleFor(String name) {
 }
 
 /// [actions] as bar items, in the same order.
-List<ActionItem> actionItemsOf(List<TicketAction> actions) => [
+List<ActionItem> actionItemsOf(List<RecordActionItem> actions) => [
   for (final a in actions)
     ActionItem(
-      id: a.name,
-      label: a.name,
-      icon: actionStyleFor(a.name).icon,
-      tone: actionStyleFor(a.name).tone,
+      id: a.id,
+      label: a.label,
+      icon: actionStyleFor(a.label).icon,
+      tone: actionStyleFor(a.label).tone,
     ),
 ];

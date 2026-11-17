@@ -43,6 +43,7 @@ class FeedTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = styleFor(item);
+    final iconTone = FeedPriorityPill.toneOf(item.priority) ?? style.tone;
     final destination = NotificationRouter.resolve(item);
     return Dismissible(
       key: ValueKey('dismiss-${item.id}'),
@@ -69,13 +70,13 @@ class FeedTile extends StatelessWidget {
                     width: AppSpacing.feedIconCircle,
                     height: AppSpacing.feedIconCircle,
                     decoration: BoxDecoration(
-                      color: style.tint,
+                      color: iconTone.tint,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       style.icon,
                       size: AppSpacing.feedIcon,
-                      color: style.color,
+                      color: iconTone.solid,
                     ),
                   ),
                 ),

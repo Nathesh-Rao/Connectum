@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'ticket_fixtures.dart';
 
 final _forms = TicketForm.parseAll(
-  fixtureData('status_mine_with')['structures'],
+  fixtureData('records_mine_with')['structures'],
 );
 
 Ticket t(
@@ -20,7 +20,8 @@ Ticket t(
   by: by,
   ts: 1,
   tstruct: 'help_ticket',
-  values: {'assignee': assignee, 'state': state},
+  holder: assignee,
+  values: {'title': 'T$id', 'stage': state},
   recordStatus: recordStatus,
   form: _forms['help_ticket'],
 );
@@ -54,13 +55,13 @@ void main() {
 
   test('remove and replace', () {
     expect(ids(TicketReducer.remove([t(1), t(2)], 1)), [2]);
-    final r = TicketReducer.replace([t(1), t(2)], t(2, state: 'Closed'));
-    expect(r[1].status, 'Closed');
+    final r = TicketReducer.replace([t(1), t(2)], t(2, state: 'Done'));
+    expect(r[1].status, 'Done');
   });
 
   group('a ticket leaving the list after my action', () {
     test('sent on: no longer with me', () {
-      final after = t(1, assignee: 'ben', state: 'Forwarded');
+      final after = t(1, assignee: 'ben', state: 'In progress');
       final r = TicketReducer.afterUpdate(
         [t(1), t(2)],
         after,
@@ -70,8 +71,8 @@ void main() {
       expect(r.isGone, isTrue);
     });
 
-    test('completed in the raised tab stays until it is final', () {
-      final after = t(1, by: 'ana', assignee: 'ana', state: 'Completed');
+    test('in progress in the raised tab stays until it is final', () {
+      final after = t(1, by: 'ana', assignee: 'ana', state: 'In progress');
       final r = TicketReducer.afterUpdate(
         [after],
         after,
@@ -82,7 +83,7 @@ void main() {
     });
 
     test('dropped (final) leaves both tabs', () {
-      final after = t(1, by: 'ana', assignee: 'ana', state: 'Dropped');
+      final after = t(1, by: 'ana', assignee: 'ana', state: 'Done');
       for (final as in ['with', 'raised']) {
         expect(
           TicketReducer.afterUpdate([after], after, as: as, user: 'ana').isGone,

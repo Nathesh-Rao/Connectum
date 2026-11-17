@@ -42,6 +42,9 @@ class FormController extends GetxController {
 
   static const maxRows = 200;
 
+  /// A form just fetched by `#tstruct-add` is not fetched again.
+  static const openedAge = Duration(seconds: 30);
+
   final FormLaunch launch;
   final SubmissionRepository submissions;
   final FormOptionsRepository options;
@@ -107,6 +110,18 @@ class FormController extends GetxController {
   /// a retry. The sample data always says so, to be seen without a server.
   bool get isConnectNeeded => isOffline || SeedUi.isActive;
 
+  /// The "Also post this to the chat" box (only for a form started from `#`
+  /// in a chat). Unticked unless the launch says otherwise.
+  late final isPostedToChat = launch.isPostedByDefault.obs;
+
+  /// What goes out as `chat`: the forms button always posts into its chat; a
+  /// form started from `#` only when the box is ticked; the Work Space never.
+  String? get chatToSend => launch.postChoiceTitle == null
+      ? launch.convId
+      : launch.hasPostChoice && isPostedToChat.value
+      ? launch.convId
+      : null;
+
   bool get isEncryptedChat => launch.convId != null && launch.isEncryptedChat;
 
   bool get isDirty => definition != null && _snapshot() != _initial;
@@ -131,7 +146,11 @@ class FormController extends GetxController {
   Future<void> _load() async {
     viewState.value = AppViewState.loading;
     final isOnline = connectivity.state.value == AppConnectivity.online;
-    final def = await submissions.definition(launch.name, scope: launch.scope);
+    final def = await submissions.definition(
+      launch.name,
+      scope: launch.scope,
+      maxAge: launch.mode == FormMode.create ? openedAge : null,
+    );
     if (def == null || !def.isFull) {
       viewState.value = isOnline ? AppViewState.error : AppViewState.offline;
       return;
@@ -237,13 +256,18 @@ class FormController extends GetxController {
     return fields[name]?.value.value;
   }
 
-  /// A field is shown when it is not hidden and its own condition and its
+  /// A field is shown when it is not hidden (`statusLocked`, the status and
+  /// completion of a ticket form, is kept by the server and never shown or
+  /// sent, as on the web) and its own condition and its
   /// section's both hold. A grid field's condition looks at its own row
   /// first. The conditions are answered by the form logic (`_updateVisibility`,
   /// after the calculations); this reads the last answer, so an Obx around it
   /// rebuilds when they change. A condition not answered yet counts as met.
   bool isVisible(FormFieldDef f, {RowInput? row}) =>
-      definition != null && _isCounted(f, row: row) && f.raw['hidden'] != true;
+      definition != null &&
+      _isCounted(f, row: row) &&
+      f.raw['hidden'] != true &&
+      f.raw['statusLocked'] != true;
 
   /// Does the field take part (conditions hold), shown or not?
   bool _isCounted(FormFieldDef f, {RowInput? row}) {
@@ -425,7 +449,11 @@ class FormController extends GetxController {
     FieldInput? last;
     for (final f in def.fields) {
       final input = fields[f.name];
-      if (input == null || f.raw['hidden'] == true) continue;
+      if (input == null ||
+          f.raw['hidden'] == true ||
+          f.raw['statusLocked'] == true) {
+        continue;
+      }
       if (f.hasCalc || f.isReadOnly) continue;
       if (_typedKinds.contains(f.type)) last = input;
     }
@@ -1238,7 +1266,7 @@ class FormController extends GetxController {
           cid: cid,
           scope: definition!.scope,
           caption: definition!.caption,
-          chat: launch.convId,
+          chat: chatToSend,
           waiting: waiting,
         );
       } else {
@@ -1294,7 +1322,7 @@ class FormController extends GetxController {
             cid: cid,
             scope: def.scope,
             caption: def.caption,
-            chat: launch.convId,
+            chat: chatToSend,
           );
         case FormMode.edit:
           await submissions.editSubmission(

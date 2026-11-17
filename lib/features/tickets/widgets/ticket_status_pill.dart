@@ -16,6 +16,7 @@ class TicketPill extends StatelessWidget {
     required this.icon,
     required this.tone,
     this.hasDot = false,
+    this.leading,
   });
 
   final String label;
@@ -24,6 +25,9 @@ class TicketPill extends StatelessWidget {
 
   /// A small dot instead of the icon.
   final bool hasDot;
+
+  /// Shown instead of the icon and the dot, e.g. a small progress arc.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -35,7 +39,9 @@ class TicketPill extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (hasDot)
+        if (leading != null)
+          leading!
+        else if (hasDot)
           Container(
             width: 7,
             height: 7,
@@ -64,22 +70,54 @@ class TicketPill extends StatelessWidget {
 /// the status a record starts at is open), then words refine it (a returned
 /// or dropped status).
 class TicketStatusPill extends StatelessWidget {
-  const TicketStatusPill({super.key, required this.ticket});
+  const TicketStatusPill({
+    super.key,
+    required this.ticket,
+    this.status,
+    this.isFinal,
+    this.first,
+  });
 
   final Ticket ticket;
 
-  static AppTone toneOf(Ticket t) {
+  /// What `record.actions` says now, when the screen has it: it wins over the
+  /// value stored in the record.
+  final String? status;
+  final bool? isFinal;
+  final String? first;
+
+  static AppTone toneOf(
+    Ticket t, {
+    String? status,
+    bool? isFinal,
+    String? first,
+  }) {
     if (t.isAwaitingApproval) return AppTones.slate;
-    final table = t.table;
-    if (table == null) return AppTones.slate;
-    final name = t.status.toLowerCase();
-    if (t.isFinal) {
-      return _isLost(name) ? AppTones.red : AppTones.green;
+    final shown = status ?? t.status;
+    final done = isFinal ?? t.isFinal;
+    final start = first ?? t.table?.firstStatus;
+    if (start == null && t.table == null && status == null) {
+      return AppTones.slate;
     }
+    return toneOfStatus(shown, isFinal: done, first: start);
+  }
+
+  /// The tone of a status name alone: green when final, red when dropped,
+  /// blue at the first status, violet in between. The header pill and the
+  /// history pills share it.
+  static AppTone toneOfStatus(
+    String shown, {
+    required bool isFinal,
+    String? first,
+  }) {
+    final done = isFinal;
+    final start = first;
+    final name = shown.toLowerCase();
+    if (done) return _isLost(name) ? AppTones.red : AppTones.green;
     if (name.contains('return') || name.contains('revert')) {
       return AppTones.violet;
     }
-    return t.status == table.firstStatus ? AppTones.blue : AppTones.violet;
+    return shown == start ? AppTones.blue : AppTones.violet;
   }
 
   static bool _isLost(String name) =>
@@ -92,9 +130,9 @@ class TicketStatusPill extends StatelessWidget {
   Widget build(BuildContext context) => TicketPill(
     label: ticket.isAwaitingApproval
         ? TicketsTexts.waitingForApproval
-        : ticket.status,
+        : status ?? ticket.status,
     icon: Icons.circle,
-    tone: toneOf(ticket),
+    tone: toneOf(ticket, status: status, isFinal: isFinal, first: first),
     hasDot: true,
   );
 }

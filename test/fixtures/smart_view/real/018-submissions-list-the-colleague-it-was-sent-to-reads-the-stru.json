@@ -1,0 +1,24 @@
+{
+  "label": "submissions.list: the colleague it was sent to reads the structure (the sent records are NOT in it)",
+  "as": "bob (colleague)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "requests",
+    "limit": 5,
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": false,
+      "limit": 5,
+      "offset": 0,
+      "structures": {},
+      "submissions": [],
+      "total": 0
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

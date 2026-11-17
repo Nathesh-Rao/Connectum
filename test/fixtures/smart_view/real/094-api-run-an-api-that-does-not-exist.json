@@ -1,0 +1,19 @@
+{
+  "label": "api.run: an API that does not exist",
+  "as": "ann (author)",
+  "command": "api.run",
+  "request": {
+    "name": "nothing_here",
+    "values": {},
+    "limit": 500
+  },
+  "reply": {
+    "action": "api.run",
+    "error": {
+      "code": "not_found",
+      "message": "No such API."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

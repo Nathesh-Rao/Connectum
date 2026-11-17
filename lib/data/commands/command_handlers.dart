@@ -14,6 +14,16 @@ enum CommandMode {
   /// An app screen or sheet; nothing is sent.
   screen,
 
+  /// `#tstruct-add <name>`: the fill-in form of a structure.
+  form,
+
+  /// `#tstruct <name>`: my records of a structure.
+  records,
+
+  /// `#view [name]`: a structure's records as cards. Built in the app; the
+  /// server does not know it and nothing is sent.
+  smartView,
+
   /// Not in the app yet.
   soon,
 }
@@ -49,6 +59,9 @@ class CommandHandlers {
     'inbox': CommandHandler(CommandMode.screen, 'inbox'),
     'tasks': CommandHandler(CommandMode.screen, 'tasks'),
     'help': CommandHandler(CommandMode.screen, 'help'),
+    'tstruct-add': CommandHandler(CommandMode.form),
+    'tstruct': CommandHandler(CommandMode.records),
+    'view': CommandHandler(CommandMode.smartView),
   };
 
   static CommandHandler of(HashCommand c) {

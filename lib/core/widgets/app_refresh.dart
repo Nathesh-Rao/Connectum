@@ -1,17 +1,32 @@
 import 'package:flutter/cupertino.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import 'app_spinner.dart';
+import 'app_spinner/app_spinner_double.dart';
+import 'app_spinner/pull_refresh_config.dart';
 
 /// Pull to refresh for a list of slivers, the Cupertino way on both platforms:
 /// the content bounces, the header grows with the pull and stays pinned while
-/// [onRefresh] runs. The header shows the standard activity indicator.
+/// [onRefresh] runs. The header shows [AppSpinnerDouble]: it scales in and
+/// turns with the pull, then spins freely until [onRefresh] completes.
+/// This is the only place a refresh control is built.
 class AppRefresh extends StatelessWidget {
-  const AppRefresh({super.key, required this.onRefresh, required this.slivers});
+  const AppRefresh({
+    super.key,
+    required this.onRefresh,
+    required this.slivers,
+    this.spinnerSize = AppSpacing.spinnerPull,
+    this.spinnerColor = kPullRefreshColor,
+    this.wrapSpinner,
+  });
 
   final Future<void> Function() onRefresh;
   final List<Widget> slivers;
+  final double spinnerSize;
+  final Color spinnerColor;
+
+  /// For a list wider than the screen (the Smart View table): places the
+  /// spinner inside the part of the list that is on screen.
+  final Widget Function(Widget spinner)? wrapSpinner;
 
   @override
   Widget build(BuildContext context) => CustomScrollView(
@@ -30,7 +45,7 @@ class AppRefresh extends StatelessWidget {
     ],
   );
 
-  static Widget _buildHeader(
+  Widget _buildHeader(
     BuildContext context,
     RefreshIndicatorMode mode,
     double pulledExtent,
@@ -39,25 +54,20 @@ class AppRefresh extends StatelessWidget {
   ) {
     final isPulling =
         mode == RefreshIndicatorMode.drag ||
+        mode == RefreshIndicatorMode.armed ||
         mode == RefreshIndicatorMode.inactive;
-    final radius = AppSpinnerSize.lg.radius;
-    return Semantics(
-      label: 'Loading',
-      child: Center(
-        child: isPulling
-            ? CupertinoActivityIndicator.partiallyRevealed(
-                radius: radius,
-                color: AppColors.primaryBright,
-                progress: (pulledExtent / refreshTriggerPullDistance).clamp(
-                  0.0,
-                  1.0,
-                ),
-              )
-            : CupertinoActivityIndicator(
-                radius: radius,
-                color: AppColors.primaryBright,
-              ),
-      ),
+    final isRunning =
+        mode == RefreshIndicatorMode.refresh ||
+        mode == RefreshIndicatorMode.done;
+    final progress = isPulling
+        ? (pulledExtent / refreshTriggerPullDistance).clamp(0.0, 1.0)
+        : (pulledExtent / refreshIndicatorExtent).clamp(0.0, 1.0);
+    final spinner = AppSpinnerDouble(
+      size: spinnerSize,
+      color: spinnerColor,
+      progress: progress,
+      spinning: isRunning,
     );
+    return wrapSpinner?.call(spinner) ?? Center(child: spinner);
   }
 }

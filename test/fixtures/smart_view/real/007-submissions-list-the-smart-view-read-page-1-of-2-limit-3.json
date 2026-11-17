@@ -1,0 +1,116 @@
+{
+  "label": "submissions.list: the Smart View read (page 1 of 2, limit 3)",
+  "as": "ann (author)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "tickets",
+    "limit": 3,
+    "offset": 0,
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": true,
+      "limit": 3,
+      "offset": 0,
+      "structures": {
+        "tickets": {
+          "caption": "Tickets",
+          "fields": {
+            "area": "Area",
+            "due": "Due",
+            "hours": "Hours",
+            "secret": "Internal note",
+            "stage": "Stage",
+            "stage_comments": "Stage comments",
+            "stage_completion": "Stage completion",
+            "stage_files": "Stage files",
+            "stage_hours": "Stage hours",
+            "title": "Title"
+          },
+          "status": {
+            "field": "stage",
+            "final": [
+              "Closed"
+            ],
+            "statuses": [
+              "Open",
+              "In progress",
+              "Closed"
+            ]
+          }
+        }
+      },
+      "submissions": [
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 39,
+          "labels": {},
+          "scope": "user",
+          "ts": 1794833216938,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Delivery",
+            "due": "2026-11-20",
+            "hours": 2.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Printer jammed"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 37,
+          "labels": {},
+          "scope": "user",
+          "ts": 1794833216651,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Billing",
+            "due": "2026-11-15",
+            "hours": 7.5,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 5"
+          }
+        },
+        {
+          "branch": "HQ",
+          "by": "svcapcpw1ann",
+          "byName": "Ann Rao",
+          "canEdit": true,
+          "files": {},
+          "host": null,
+          "id": 35,
+          "labels": {},
+          "scope": "user",
+          "ts": 1794833216359,
+          "tstruct": "tickets",
+          "values": {
+            "area": "Delivery",
+            "due": "2026-11-14",
+            "hours": 6,
+            "secret": "HIDDEN-VALUE-123",
+            "stage": "Open",
+            "title": "Ticket 4"
+          }
+        }
+      ],
+      "total": 6
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

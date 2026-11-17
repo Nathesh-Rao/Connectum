@@ -89,6 +89,10 @@ class CommandPrompt {
     final at = rest.isEmpty ? 0 : rest.split(' ').length - 1;
     final arg = args[at < args.length ? at : args.length - 1];
     argName.value = arg.name;
+    if (arg.type == 'source') {
+      _suggestSources(cmd, rest);
+      return;
+    }
     final isText = arg.isRest || arg.type == 'text' && at >= args.length - 1;
     if (isText) {
       _suggester.cancel();
@@ -105,6 +109,32 @@ class CommandPrompt {
     isLoadingItems.value = true;
     _page = 1;
     _suggester.request(_input);
+  }
+
+  int _sourceSeq = 0;
+
+  /// The choices of a `source` argument come from the source list the app
+  /// already holds (read once, never per keystroke), not from the server.
+  Future<void> _suggestSources(HashCommand cmd, String typed) async {
+    _suggester.cancel();
+    hint.value = cmd.usage;
+    hasMore.value = false;
+    final fetch = _commands.sourceSuggester;
+    if (fetch == null) {
+      items.clear();
+      return;
+    }
+    final seq = ++_sourceSeq;
+    isLoadingItems.value = true;
+    List<CommandSuggestion> found;
+    try {
+      found = await fetch(typed);
+    } catch (_) {
+      found = const [];
+    }
+    if (seq != _sourceSeq || command.value != cmd) return;
+    isLoadingItems.value = false;
+    items.assignAll(found);
   }
 
   void _onResult(CommandSuggestions r, {required bool isMore}) {
@@ -131,6 +161,11 @@ class CommandPrompt {
   /// The text with [item] in place of the word being written, and one space.
   String insert(CommandSuggestion item) {
     var base = _input;
+    final cmd = command.value;
+    if (cmd != null && cmd.args.any((a) => a.type == 'source')) {
+      final parsed = CommandLine.parse(base);
+      return '#${parsed?.name ?? cmd.name} ${item.value} ';
+    }
     if (_token.isNotEmpty && base.endsWith(_token)) {
       base = base.substring(0, base.length - _token.length);
     } else {
@@ -150,6 +185,7 @@ class CommandPrompt {
   }
 
   void close() {
+    _sourceSeq++;
     query.value = null;
     command.value = null;
     items.clear();

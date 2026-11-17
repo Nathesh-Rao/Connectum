@@ -1,0 +1,64 @@
+{
+  "_section": "MOBILE_SMART_VIEW.md §2.8 smartview.views (RECONSTRUCTED by the BE, not captured). The request is given in the document as {kind,name} (prose); the \"...\" key is in the document's example as written.",
+  "command": "smartview.views",
+  "request": {
+    "kind": "structure",
+    "name": "leave_request"
+  },
+  "response": {
+    "mine": [
+      {
+        "id": "__default",
+        "name": "Default View",
+        "search": "",
+        "filters": [],
+        "sort": null,
+        "groupBy": [],
+        "hidden": [],
+        "order": [],
+        "widths": {},
+        "kpis": true,
+        "charts": true
+      },
+      {
+        "id": "1763300000001",
+        "name": "Open by status",
+        "search": "",
+        "filters": [
+          {
+            "col": "stage",
+            "op": "not",
+            "value": "Closed"
+          }
+        ],
+        "sort": {
+          "col": "On",
+          "dir": "desc"
+        },
+        "groupBy": [
+          "stage"
+        ],
+        "hidden": [
+          "By"
+        ],
+        "order": [],
+        "widths": {
+          "title": 320
+        },
+        "kpis": true,
+        "charts": false
+      }
+    ],
+    "shared": [
+      {
+        "id": "s1763300000999",
+        "name": "Weekly",
+        "by": "ann",
+        "mine": false,
+        "...": "same fields as a view"
+      }
+    ],
+    "canPublish": false
+  },
+  "note": "Reconstructed in stage 1 from the BE document, revision 1. SUPERSEDED by the real captures in real/ captures of smartview.views (see 063-*) where one exists (BE document revision 2, origin/dev a5f28fca, 16 Nov 2026). Kept, not deleted."
+}

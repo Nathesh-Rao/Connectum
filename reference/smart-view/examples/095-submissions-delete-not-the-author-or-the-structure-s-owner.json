@@ -1,0 +1,17 @@
+{
+  "label": "submissions.delete: not the author or the structure's owner",
+  "as": "bob (colleague)",
+  "command": "submissions.delete",
+  "request": {
+    "id": 43
+  },
+  "reply": {
+    "action": "submissions.delete",
+    "error": {
+      "code": "forbidden",
+      "message": "You can only delete your own submission, or any record of a structure you created."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

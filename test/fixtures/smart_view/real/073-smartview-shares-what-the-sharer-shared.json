@@ -1,0 +1,24 @@
+{
+  "label": "smartview.shares: what the sharer shared",
+  "as": "ann (author)",
+  "command": "smartview.shares",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "reply": {
+    "action": "smartview.shares",
+    "data": {
+      "shares": [
+        {
+          "canOpen": true,
+          "id": "svcapcpw1bob",
+          "name": "Bob Iyer",
+          "type": "user"
+        }
+      ]
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

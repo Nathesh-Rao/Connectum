@@ -15,6 +15,7 @@ import '../../data/models/ids.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../data/repositories/message_repository.dart';
+import '../../data/repositories/people_avatars.dart';
 import '../../data/repositories/presence_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
@@ -39,6 +40,7 @@ class ChatsController extends GetxController {
     required this.shell,
     required this.switcher,
     required this.newChat,
+    required this.avatars,
   });
 
   static const _searchDelay = Duration(milliseconds: 250);
@@ -53,6 +55,7 @@ class ChatsController extends GetxController {
   final HomeShellController shell;
   final EnterpriseSwitcherController switcher;
   final NewChatController newChat;
+  final PeopleAvatars avatars;
 
   final searchField = TextEditingController();
   final searchFocus = FocusNode();
@@ -217,7 +220,22 @@ class ChatsController extends GetxController {
 
   void openNotifications() => Get.toNamed(AppRoutes.notifications);
 
-  void openProfile() => shell.select(3);
+  void openProfile() => Get.toNamed(AppRoutes.profile);
+
+  /// The signed-in person's display name, the same as the Profile screen's.
+  String get profileName {
+    if (SeedUi.isActive) return SeedUi.profile().name;
+    final identity = store.identity.value;
+    if (identity != null && identity.name.isNotEmpty) return identity.name;
+    return store.userId ?? identity?.username ?? '';
+  }
+
+  /// The own picture's address, or null. Reads an Rx value: call it in Obx.
+  String? get profilePicture => avatars.urlOf(
+    SeedUi.isActive
+        ? SeedUi.profile().username
+        : store.identity.value?.username,
+  );
 
   void openWorkspace() => Get.toNamed(AppRoutes.workspace);
 

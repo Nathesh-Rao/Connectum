@@ -1,5 +1,7 @@
 # Notifications, To-dos, approvals and tickets: audit
 
+> The ticket parts of this audit (`status.*`, `structures[].status.actions[]`, `TicketAction`) are superseded by the record flow: see `records-and-tickets.md`. Tasks and notifications below still hold.
+
 Date: 2026-11-05. Read: `reference/notification/*`, `reference/task-and-action/TASKS_AND_ACTIONS_FOR_MOBILE.md`, `reference/tickets/*` (both documents and the Postman collection), `mobile-handoff/notifications-audit.md`, `push-readiness.md`, and the code of the four features end to end. Nothing was run on a phone or on the real server.
 
 How to read "verified": **code** = I read the line (file:line); **test** = a test in `test/` proves it; **NOT** = nobody has checked it, it is in the manual plan (`tasks-notifications-test-plan.md`).

@@ -1,0 +1,17 @@
+{
+  "label": "tstruct.user.get: a form the person may not open",
+  "as": "ann (author)",
+  "command": "tstruct.user.get",
+  "request": {
+    "name": "nothing_here"
+  },
+  "reply": {
+    "action": "tstruct.user.get",
+    "error": {
+      "code": "not_found",
+      "message": "No such structure."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

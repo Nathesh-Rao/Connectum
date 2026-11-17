@@ -19,6 +19,8 @@ class AppDurations {
   static const scanSweep = Duration(seconds: 1);
   static const scanSuccess = Duration(milliseconds: 300);
   static const chartGrow = Duration(milliseconds: 400);
+  static const smartControls = Duration(milliseconds: 220);
+  static const smartChip = Duration(milliseconds: 190);
 }
 
 class AppCurves {
@@ -55,6 +57,7 @@ class AppDistances {
   static const double introScale = 1.02;
   static const double chipPopScale = 0.7;
   static const double scrimOpacity = 0.12;
+  static const double drawerBodyScale = 0.94;
 }
 
 class SpringCurve extends Curve {

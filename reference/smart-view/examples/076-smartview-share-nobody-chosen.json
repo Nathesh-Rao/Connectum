@@ -1,0 +1,32 @@
+{
+  "label": "smartview.share: nobody chosen",
+  "as": "ann (author)",
+  "command": "smartview.share",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "to": [],
+    "view": {
+      "id": "v1",
+      "name": "Open by stage",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "smartview.share",
+    "error": {
+      "code": "invalid",
+      "message": "Choose at least one person or group."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

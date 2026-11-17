@@ -1,0 +1,59 @@
+{
+  "_section": "MOBILE_SMART_VIEW.md §2.3 submissions.list (RECONSTRUCTED by the BE, not captured). The document's // comments are removed because they are not valid JSON: status = approval: pending | rejected | approved | absent = recorded; labels = names of chosen options/people.",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "leave_request",
+    "limit": 500,
+    "offset": 0,
+    "fetch": true,
+    "withDetails": true
+  },
+  "response": {
+    "submissions": [
+      {
+        "id": 41,
+        "tstruct": "leave_request",
+        "by": "ann",
+        "byName": "Ann Rao",
+        "ts": 1763300000000,
+        "status": "approved",
+        "holder": "bob",
+        "claimants": [],
+        "completion": 40,
+        "values": {
+          "title": "Fever",
+          "stage": "Open",
+          "days": 3
+        },
+        "labels": {
+          "stage": "Open",
+          "owner": "Bob Rao"
+        },
+        "files": {
+          "doc": [
+            {
+              "id": "<24hex>",
+              "name": "Invoice 1.pdf",
+              "mime": "application/pdf",
+              "size": 2048
+            }
+          ]
+        },
+        "canEdit": true
+      }
+    ],
+    "total": 1234,
+    "offset": 0,
+    "limit": 500,
+    "hasMore": true,
+    "structures": {
+      "leave_request": {
+        "caption": "Leave Request",
+        "fields": {
+          "title": "Title"
+        }
+      }
+    }
+  },
+  "note": "Reconstructed in stage 1 from the BE document, revision 1. SUPERSEDED by the real captures in real/007-* and 008-* (submissions.list pages) where one exists (BE document revision 2, origin/dev a5f28fca, 16 Nov 2026). Kept, not deleted."
+}

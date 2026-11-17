@@ -1,0 +1,21 @@
+{
+  "label": "40 commands sent at once on one connection",
+  "as": "bob (colleague)",
+  "command": "smartview.attrs",
+  "request": {
+    "kind": "structure",
+    "name": "tickets"
+  },
+  "answered": 40,
+  "ok": 30,
+  "rate_limited": 10,
+  "firstRefusal": {
+    "action": "smartview.attrs",
+    "error": {
+      "code": "rate_limited",
+      "message": "Too many commands -- slow down and retry."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

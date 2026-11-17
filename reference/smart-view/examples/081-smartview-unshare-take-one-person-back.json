@@ -1,0 +1,19 @@
+{
+  "label": "smartview.unshare: take one person back",
+  "as": "ann (author)",
+  "command": "smartview.unshare",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "type": "user",
+    "id": "svcapcpw1bob"
+  },
+  "reply": {
+    "action": "smartview.unshare",
+    "data": {
+      "unshared": true
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

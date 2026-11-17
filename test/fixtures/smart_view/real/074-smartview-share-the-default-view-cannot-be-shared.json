@@ -1,0 +1,37 @@
+{
+  "label": "smartview.share: the Default View cannot be shared",
+  "as": "ann (author)",
+  "command": "smartview.share",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "to": [
+      {
+        "type": "user",
+        "id": "svcapcpw1bob"
+      }
+    ],
+    "view": {
+      "id": "__default",
+      "name": "Default View",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "smartview.share",
+    "error": {
+      "code": "invalid",
+      "message": "The Default View cannot be shared; save it as a view with a name first."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "label": "smartview.share: share a view with a colleague",
+  "as": "ann (author)",
+  "command": "smartview.share",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "to": [
+      {
+        "type": "user",
+        "id": "svcapcpw1bob"
+      }
+    ],
+    "view": {
+      "id": "v1",
+      "name": "Open by stage",
+      "search": "",
+      "filters": [
+        {
+          "col": "stage",
+          "op": "not",
+          "value": "Closed"
+        }
+      ],
+      "sort": null,
+      "groupBy": [
+        "stage"
+      ],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "smartview.share",
+    "data": {
+      "noAccess": [],
+      "views": true
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

@@ -1,0 +1,14 @@
+{
+ "action": "record.send",
+ "data": {
+  "assignor": "ana",
+  "completion": null,
+  "files": [],
+  "holder": "ben",
+  "id": 24,
+  "status": "Open"
+ },
+ "ok": true,
+ "reqId": "ana-5",
+ "type": "sd"
+}

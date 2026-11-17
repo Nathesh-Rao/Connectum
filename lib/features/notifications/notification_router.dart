@@ -288,9 +288,10 @@ class NotificationRouter extends GetxService {
     }
   }
 
-  /// The ticket of a notification: read with `status.get`. A record that is
-  /// not a ticket (no status table) falls back to the detail sheet. When the
-  /// read fails the ticket screen opens anyway and says why, with a retry.
+  /// The record of a notification: `ref.submissionId` IS the record id here
+  /// (there is no chatId or deep link). It is read once; a record that is
+  /// gone or not visible says so. When the read fails any other way the
+  /// record screen opens anyway and says why, with a retry.
   Future<void> _openTicket(Destination d) async {
     final id = ticketIdOf(d);
     final item = d.item;
@@ -303,15 +304,7 @@ class NotificationRouter extends GetxService {
       return;
     }
     try {
-      final detail = await _tickets.get(id);
-      if (!detail.ticket.isTicket) {
-        if (item == null) {
-          _openList();
-        } else {
-          showDetail(item);
-        }
-        return;
-      }
+      await _tickets.get(id);
     } on SocketCallError catch (e) {
       if (e.code == 'not_found') {
         AppNotices.info('That ticket is no longer available.');

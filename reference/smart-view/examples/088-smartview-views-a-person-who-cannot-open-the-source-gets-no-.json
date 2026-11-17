@@ -1,0 +1,19 @@
+{
+  "label": "smartview.views: a person who cannot open the source gets no shared view (empty, not an error)",
+  "as": "bob (colleague)",
+  "command": "smartview.views",
+  "request": {
+    "kind": "structure",
+    "name": "private_t"
+  },
+  "reply": {
+    "action": "smartview.views",
+    "data": {
+      "canPublish": false,
+      "mine": [],
+      "shared": []
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

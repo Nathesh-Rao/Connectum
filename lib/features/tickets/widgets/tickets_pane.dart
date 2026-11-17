@@ -13,7 +13,8 @@ import '../tickets_controller.dart';
 import '../tickets_texts.dart';
 import 'ticket_tile.dart';
 
-/// The Tickets section: tabs "With me" (badge = total) and "Raised by me", a
+/// The Tickets section: tabs "With me" (badge = total), "Raised by me" (no
+/// total: the server only counts the page) and "Involved", a
 /// filter by form when there is more than one, and the lists.
 class TicketsPane extends StatelessWidget {
   const TicketsPane({super.key, required this.controller});
@@ -44,6 +45,7 @@ class TicketsPane extends StatelessWidget {
                   label: TicketsTexts.tabRaised,
                   kind: AppPillKind.violet,
                 ),
+                const AppPill(label: TicketsTexts.tabInvolved),
               ],
               selected: c.selectedTab.value,
               onSelected: (i) => c.selectedTab.value = i,
@@ -91,6 +93,19 @@ class _Pane extends StatelessWidget {
   final String as;
 
   bool get _isWith => as == 'with';
+  bool get _isRaised => as == 'raised';
+
+  String get _emptyTitle => _isWith
+      ? TicketsTexts.emptyWithTitle
+      : _isRaised
+      ? TicketsTexts.emptyRaisedTitle
+      : TicketsTexts.emptyInvolvedTitle;
+
+  String get _emptyMessage => _isWith
+      ? TicketsTexts.emptyWithMessage
+      : _isRaised
+      ? TicketsTexts.emptyRaisedMessage
+      : TicketsTexts.emptyInvolvedMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -102,14 +117,10 @@ class _Pane extends StatelessWidget {
       final isFiltered = c.selectedForm.value != null;
       final empty = AppStateView(
         state: state,
-        emptyTitle: _isWith
-            ? TicketsTexts.emptyWithTitle
-            : TicketsTexts.emptyRaisedTitle,
+        emptyTitle: _emptyTitle,
         emptyMessage: isFiltered
             ? TicketsTexts.emptyFilteredMessage
-            : _isWith
-            ? TicketsTexts.emptyWithMessage
-            : TicketsTexts.emptyRaisedMessage,
+            : _emptyMessage,
         errorMessage: TicketsTexts.errorMessage,
         onRetry: () => c.load(as, isQuiet: false),
         child: const SizedBox.shrink(),
@@ -129,9 +140,7 @@ class _Pane extends StatelessWidget {
               hasScrollBody: false,
               child: AppStateView(
                 state: AppViewState.empty,
-                emptyTitle: _isWith
-                    ? TicketsTexts.emptyWithTitle
-                    : TicketsTexts.emptyRaisedTitle,
+                emptyTitle: _emptyTitle,
                 emptyMessage: TicketsTexts.emptyFilteredMessage,
                 child: const SizedBox.shrink(),
               ),
@@ -167,21 +176,20 @@ class _Pane extends StatelessWidget {
               );
             },
           ),
-          if (_isWith)
-            SliverToBoxAdapter(
-              child: Obx(
-                () => list.hasMore.value
-                    ? Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: AppButton.secondary(
-                          label: TicketsTexts.showMore,
-                          isLoading: list.isLoadingMore.value,
-                          onPressed: () => c.loadMore(as),
-                        ),
-                      )
-                    : const SizedBox(height: AppSpacing.xl),
-              ),
+          SliverToBoxAdapter(
+            child: Obx(
+              () => list.hasMore.value
+                  ? Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: AppButton.secondary(
+                        label: TicketsTexts.showMore,
+                        isLoading: list.isLoadingMore.value,
+                        onPressed: () => c.loadMore(as),
+                      ),
+                    )
+                  : const SizedBox(height: AppSpacing.xl),
             ),
+          ),
         ],
       );
     });

@@ -1,0 +1,3071 @@
+{
+  "about": "Real output of the web's Smart View functions for fixed input. `fn` names the function in chat-app/features/smartView/. See docs/MOBILE_SMART_VIEW.md section 5.",
+  "environment": {
+    "timeZone": "Asia/Calcutta",
+    "locale": "en-GB",
+    "node": "v20.19.3",
+    "madeOn": "2026-11-16T12:47:58.555Z"
+  },
+  "toTime": [
+    {
+      "fn": "toTime",
+      "input": "2026-11-12",
+      "outputEpochMs": 1794421800000,
+      "outputUtcIso": "2026-11-11T18:30:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "2026-11-12 09:30",
+      "outputEpochMs": 1794456000000,
+      "outputUtcIso": "2026-11-12T04:00:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "2026-11-12T09:30:00",
+      "outputEpochMs": 1794456000000,
+      "outputUtcIso": "2026-11-12T04:00:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "2026-11-12T09:30:00Z",
+      "outputEpochMs": 1794475800000,
+      "outputUtcIso": "2026-11-12T09:30:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "2026-11-12T09:30:00+05:30",
+      "outputEpochMs": 1794456000000,
+      "outputUtcIso": "2026-11-12T04:00:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "12/11/2026",
+      "outputEpochMs": 1794421800000,
+      "outputUtcIso": "2026-11-11T18:30:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "12-11-2026",
+      "outputEpochMs": 1794421800000,
+      "outputUtcIso": "2026-11-11T18:30:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "1/2/2026",
+      "outputEpochMs": 1769884200000,
+      "outputUtcIso": "2026-01-31T18:30:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "11/12/2026",
+      "outputEpochMs": 1796927400000,
+      "outputUtcIso": "2026-12-10T18:30:00.000Z"
+    },
+    {
+      "fn": "toTime",
+      "input": "2026-13-45",
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    },
+    {
+      "fn": "toTime",
+      "input": 1794831150455,
+      "outputEpochMs": 1794831150455,
+      "outputUtcIso": "2026-11-16T12:12:30.455Z"
+    },
+    {
+      "fn": "toTime",
+      "input": 99999999999,
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    },
+    {
+      "fn": "toTime",
+      "input": "1794831150455",
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    },
+    {
+      "fn": "toTime",
+      "input": "",
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    },
+    {
+      "fn": "toTime",
+      "input": null,
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    },
+    {
+      "fn": "toTime",
+      "input": "yesterday",
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    },
+    {
+      "fn": "toTime",
+      "input": "2026-11-12 9:30",
+      "outputEpochMs": null,
+      "outputUtcIso": null
+    }
+  ],
+  "inferType": [
+    {
+      "fn": "inferType",
+      "label": "numbers as numbers",
+      "input": {
+        "values": [
+          1,
+          2.5,
+          3
+        ],
+        "name": "Amount"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "inferType",
+      "label": "numbers as text",
+      "input": {
+        "values": [
+          "1,200.50",
+          "$1,200",
+          "45%",
+          "-3"
+        ],
+        "name": "Amount"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "inferType",
+      "label": "leading zero is a code",
+      "input": {
+        "values": [
+          "007",
+          "010"
+        ],
+        "name": "Amount"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "ten digits is not an amount",
+      "input": {
+        "values": [
+          "9886012345",
+          "9886012346"
+        ],
+        "name": "Amount"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "nine digits is a number",
+      "input": {
+        "values": [
+          "988601234"
+        ],
+        "name": "Amount"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "inferType",
+      "label": "a phone column by name",
+      "input": {
+        "values": [
+          1,
+          2,
+          3
+        ],
+        "name": "Phone"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "name words: pin code, account",
+      "input": {
+        "values": [
+          1,
+          2
+        ],
+        "name": "Account no"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "the word 'contact' anywhere in the name",
+      "input": {
+        "values": [
+          1,
+          2
+        ],
+        "name": "Contact count"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "ISO dates",
+      "input": {
+        "values": [
+          "2026-11-12",
+          "2026-11-13"
+        ],
+        "name": "Day"
+      },
+      "output": "date"
+    },
+    {
+      "fn": "inferType",
+      "label": "day-first dates",
+      "input": {
+        "values": [
+          "12/11/2026",
+          "13/11/2026"
+        ],
+        "name": "Day"
+      },
+      "output": "date"
+    },
+    {
+      "fn": "inferType",
+      "label": "epoch ms",
+      "input": {
+        "values": [
+          1794831150455,
+          1794831160455
+        ],
+        "name": "At"
+      },
+      "output": "date"
+    },
+    {
+      "fn": "inferType",
+      "label": "small integers are NOT dates",
+      "input": {
+        "values": [
+          1000,
+          2000
+        ],
+        "name": "At"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "inferType",
+      "label": "booleans real",
+      "input": {
+        "values": [
+          true,
+          false
+        ],
+        "name": "Flag"
+      },
+      "output": "bool"
+    },
+    {
+      "fn": "inferType",
+      "label": "booleans as text",
+      "input": {
+        "values": [
+          "true",
+          "FALSE",
+          "True"
+        ],
+        "name": "Flag"
+      },
+      "output": "bool"
+    },
+    {
+      "fn": "inferType",
+      "label": "yes/no text is text",
+      "input": {
+        "values": [
+          "yes",
+          "no"
+        ],
+        "name": "Flag"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "mixed number and text",
+      "input": {
+        "values": [
+          1,
+          "two"
+        ],
+        "name": "X"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "mixed dates and numbers",
+      "input": {
+        "values": [
+          "2026-11-12",
+          5
+        ],
+        "name": "X"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "all empty",
+      "input": {
+        "values": [
+          null,
+          "",
+          null
+        ],
+        "name": "X"
+      },
+      "output": "text"
+    },
+    {
+      "fn": "inferType",
+      "label": "blanks are skipped",
+      "input": {
+        "values": [
+          null,
+          3,
+          "",
+          4
+        ],
+        "name": "X"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "inferType",
+      "label": "lists",
+      "input": {
+        "values": [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c"
+          ]
+        ],
+        "name": "Tags"
+      },
+      "output": "list"
+    },
+    {
+      "fn": "inferType",
+      "label": "a list written as JSON text",
+      "input": {
+        "values": [
+          "[1,2]",
+          "[3]"
+        ],
+        "name": "Tags"
+      },
+      "output": "list"
+    },
+    {
+      "fn": "inferType",
+      "label": "objects",
+      "input": {
+        "values": [
+          {
+            "a": 1
+          },
+          {
+            "b": 2
+          }
+        ],
+        "name": "Obj"
+      },
+      "output": "json"
+    },
+    {
+      "fn": "inferType",
+      "label": "list and object mixed",
+      "input": {
+        "values": [
+          [
+            1
+          ],
+          {
+            "a": 1
+          }
+        ],
+        "name": "Obj"
+      },
+      "output": "json"
+    },
+    {
+      "fn": "inferType",
+      "label": "only the first 200 values count",
+      "input": {
+        "values": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          "text"
+        ],
+        "name": "X"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "inferType",
+      "label": "text with a number-like first character",
+      "input": {
+        "values": [
+          "1st",
+          "2nd"
+        ],
+        "name": "X"
+      },
+      "output": "text"
+    }
+  ],
+  "plain": [
+    {
+      "fn": "plain",
+      "input": null,
+      "output": ""
+    },
+    {
+      "fn": "plain",
+      "input": "",
+      "output": ""
+    },
+    {
+      "fn": "plain",
+      "input": "abc",
+      "output": "abc"
+    },
+    {
+      "fn": "plain",
+      "input": 5,
+      "output": "5"
+    },
+    {
+      "fn": "plain",
+      "input": true,
+      "output": "true"
+    },
+    {
+      "fn": "plain",
+      "input": [
+        "a",
+        "b"
+      ],
+      "output": "a, b"
+    },
+    {
+      "fn": "plain",
+      "input": [
+        1,
+        [
+          2,
+          3
+        ]
+      ],
+      "output": "1, 2, 3"
+    },
+    {
+      "fn": "plain",
+      "input": {
+        "a": 1,
+        "b": {
+          "c": 2
+        }
+      },
+      "output": "a: 1 · b: 1 field"
+    },
+    {
+      "fn": "plain",
+      "input": "{\"a\":1,\"b\":[1,2]}",
+      "output": "a: 1 · b: 1, 2"
+    },
+    {
+      "fn": "plain",
+      "input": "[1,2,3]",
+      "output": "1, 2, 3"
+    },
+    {
+      "fn": "plain",
+      "input": "[{\"a\":1},{\"a\":2}]",
+      "output": "2 items"
+    },
+    {
+      "fn": "plain",
+      "input": "{not json",
+      "output": "{not json"
+    },
+    {
+      "fn": "plain",
+      "input": "{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5}",
+      "output": "a: 1 · b: 2 · c: 3 · d: 4 · +1 more"
+    },
+    {
+      "fn": "plain",
+      "input": "{}",
+      "output": "empty"
+    },
+    {
+      "fn": "plain",
+      "input": "[]",
+      "output": "empty"
+    }
+  ],
+  "plainFromHtml": [
+    {
+      "fn": "plainFromHtml",
+      "input": "<p>Hello <b>world</b> &amp; <i>friends</i></p>",
+      "output": "Hello world & friends"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "a<br>b",
+      "output": "a b"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "<script>alert(1)</script>after",
+      "output": "after"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "<script>never closed",
+      "output": ""
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "<style>p{}</style>x",
+      "output": "x"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "&lt;b&gt; &#65; &#x42; &unknown; &nbsp;y",
+      "output": "<b> A B &unknown; y"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "<div>one</div><div>two</div>",
+      "output": "one two"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "  lots   of\n\nspace  ",
+      "output": "lots of space"
+    },
+    {
+      "fn": "plainFromHtml",
+      "input": "<ul><li>a</li><li>b</li></ul>",
+      "output": "a b"
+    }
+  ],
+  "table": {
+    "columns": [
+      {
+        "key": "name",
+        "label": "Name",
+        "type": "text"
+      },
+      {
+        "key": "qty",
+        "label": "Qty",
+        "type": "number"
+      },
+      {
+        "key": "day",
+        "label": "Day",
+        "type": "date"
+      },
+      {
+        "key": "ok",
+        "label": "OK",
+        "type": "bool"
+      },
+      {
+        "key": "kind",
+        "label": "Kind",
+        "type": "text"
+      }
+    ],
+    "rows": [
+      {
+        "__i": 0,
+        "name": "Alpha",
+        "qty": 10,
+        "day": "2026-11-10",
+        "ok": true,
+        "kind": "A"
+      },
+      {
+        "__i": 1,
+        "name": "beta",
+        "qty": 2,
+        "day": "2026-11-12",
+        "ok": false,
+        "kind": "B"
+      },
+      {
+        "__i": 2,
+        "name": "Émile",
+        "qty": "1,200",
+        "day": "12/11/2026",
+        "ok": "yes",
+        "kind": "A"
+      },
+      {
+        "__i": 3,
+        "name": "alpha 2",
+        "qty": null,
+        "day": "",
+        "ok": "no",
+        "kind": ""
+      },
+      {
+        "__i": 4,
+        "name": "ÉMILE",
+        "qty": "45%",
+        "day": "2026-11-12 09:30",
+        "ok": "1",
+        "kind": "B"
+      },
+      {
+        "__i": 5,
+        "name": "Item 10",
+        "qty": 7,
+        "day": "2026-12-01",
+        "ok": "0",
+        "kind": "A"
+      },
+      {
+        "__i": 6,
+        "name": "Item 9",
+        "qty": 7,
+        "day": "2026-11-30",
+        "ok": true,
+        "kind": "B"
+      },
+      {
+        "__i": 7,
+        "name": "Item 2",
+        "qty": -3,
+        "day": "2026-11-11",
+        "ok": false,
+        "kind": "A"
+      }
+    ]
+  },
+  "filters": [
+    {
+      "fn": "applyFilters",
+      "label": "search: case-insensitive contains",
+      "input": {
+        "search": "ALPHA"
+      },
+      "outputRowIndexes": [
+        0,
+        3
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "search: accents are NOT folded (é differs from e)",
+      "input": {
+        "search": "emile"
+      },
+      "outputRowIndexes": []
+    },
+    {
+      "fn": "applyFilters",
+      "label": "search: matches the same column text the person sees (a date is its stored text)",
+      "input": {
+        "search": "2026-11-12"
+      },
+      "outputRowIndexes": [
+        1,
+        4
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "search: spaces trimmed",
+      "input": {
+        "search": "  beta  "
+      },
+      "outputRowIndexes": [
+        1
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "search only in chosen columns",
+      "input": {
+        "search": "a",
+        "searchIn": [
+          {
+            "key": "kind",
+            "label": "Kind",
+            "type": "text"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        5,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "text contains",
+      "input": {
+        "filters": [
+          {
+            "col": "name",
+            "op": "contains",
+            "value": "mil"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        2,
+        4
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "text equals (case-insensitive)",
+      "input": {
+        "filters": [
+          {
+            "col": "name",
+            "op": "equals",
+            "value": "ALPHA"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "text not",
+      "input": {
+        "filters": [
+          {
+            "col": "name",
+            "op": "not",
+            "value": "alpha"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "text starts",
+      "input": {
+        "filters": [
+          {
+            "col": "name",
+            "op": "starts",
+            "value": "item"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "text empty",
+      "input": {
+        "filters": [
+          {
+            "col": "kind",
+            "op": "empty"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        3
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "text filled",
+      "input": {
+        "filters": [
+          {
+            "col": "kind",
+            "op": "filled"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "in (case-insensitive list)",
+      "input": {
+        "filters": [
+          {
+            "col": "kind",
+            "op": "in",
+            "value": [
+              "a"
+            ]
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        5,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "in with an empty list is inactive (ignored, not 'match nothing')",
+      "input": {
+        "filters": [
+          {
+            "col": "kind",
+            "op": "in",
+            "value": []
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "equals with an empty value is inactive",
+      "input": {
+        "filters": [
+          {
+            "col": "kind",
+            "op": "equals",
+            "value": ""
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number eq (text numbers are read: 1,200 and 45%)",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "eq",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        5,
+        6
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number ne (blank rows do NOT match)",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "ne",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        1,
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number gt",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "gt",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        4
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number gte",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "gte",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number lt",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "lt",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        1,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number lte",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "lte",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        1,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number between is inclusive",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "between",
+            "value": {
+              "from": 2,
+              "to": 10
+            }
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        1,
+        5,
+        6
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number between, one end",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "between",
+            "value": {
+              "from": 100
+            }
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        2
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number between with both ends empty is inactive",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "between",
+            "value": {
+              "from": "",
+              "to": ""
+            }
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "number empty",
+      "input": {
+        "filters": [
+          {
+            "col": "qty",
+            "op": "empty"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        3
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "date on (by local day; d/m/yyyy is day first)",
+      "input": {
+        "filters": [
+          {
+            "col": "day",
+            "op": "on",
+            "value": "2026-11-12"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "date after",
+      "input": {
+        "filters": [
+          {
+            "col": "day",
+            "op": "after",
+            "value": "2026-11-12"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        5,
+        6
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "date before",
+      "input": {
+        "filters": [
+          {
+            "col": "day",
+            "op": "before",
+            "value": "2026-11-12"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "date between is inclusive by day",
+      "input": {
+        "filters": [
+          {
+            "col": "day",
+            "op": "between",
+            "value": {
+              "from": "2026-11-11",
+              "to": "2026-11-12"
+            }
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        1,
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "date empty",
+      "input": {
+        "filters": [
+          {
+            "col": "day",
+            "op": "empty"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        3
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "bool true (true, yes, 1)",
+      "input": {
+        "filters": [
+          {
+            "col": "ok",
+            "op": "true"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        4,
+        6
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "bool false (false, no, 0)",
+      "input": {
+        "filters": [
+          {
+            "col": "ok",
+            "op": "false"
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        1,
+        3,
+        5,
+        7
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "two conditions are ANDed",
+      "input": {
+        "filters": [
+          {
+            "col": "kind",
+            "op": "equals",
+            "value": "A"
+          },
+          {
+            "col": "qty",
+            "op": "gte",
+            "value": 7
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        5
+      ]
+    },
+    {
+      "fn": "applyFilters",
+      "label": "a condition on a column that does not exist matches nothing for text ops",
+      "input": {
+        "filters": [
+          {
+            "col": "nope",
+            "op": "equals",
+            "value": "x"
+          }
+        ]
+      },
+      "outputRowIndexes": []
+    },
+    {
+      "fn": "applyFilters",
+      "label": "search AND filter",
+      "input": {
+        "search": "item",
+        "filters": [
+          {
+            "col": "qty",
+            "op": "gt",
+            "value": 0
+          }
+        ]
+      },
+      "outputRowIndexes": [
+        5,
+        6
+      ]
+    }
+  ],
+  "sort": [
+    {
+      "fn": "applySort",
+      "label": "text asc: case-insensitive, numeric-aware ('Item 2' < 'Item 9' < 'Item 10'), blanks last",
+      "input": {
+        "col": "name",
+        "dir": "asc"
+      },
+      "outputRowIndexes": [
+        0,
+        3,
+        1,
+        2,
+        4,
+        7,
+        6,
+        5
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "text desc: blanks still last",
+      "input": {
+        "col": "name",
+        "dir": "desc"
+      },
+      "outputRowIndexes": [
+        5,
+        6,
+        7,
+        2,
+        4,
+        1,
+        3,
+        0
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "number asc: '1,200' and '45%' read as numbers, blank last, ties keep original order",
+      "input": {
+        "col": "qty",
+        "dir": "asc"
+      },
+      "outputRowIndexes": [
+        7,
+        1,
+        5,
+        6,
+        0,
+        4,
+        2,
+        3
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "number desc: ties STILL keep original order (not reversed)",
+      "input": {
+        "col": "qty",
+        "dir": "desc"
+      },
+      "outputRowIndexes": [
+        2,
+        4,
+        0,
+        5,
+        6,
+        1,
+        7,
+        3
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "date asc (mixed ISO and d/m/yyyy), blank last",
+      "input": {
+        "col": "day",
+        "dir": "asc"
+      },
+      "outputRowIndexes": [
+        0,
+        7,
+        1,
+        2,
+        4,
+        6,
+        5,
+        3
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "date desc",
+      "input": {
+        "col": "day",
+        "dir": "desc"
+      },
+      "outputRowIndexes": [
+        5,
+        6,
+        4,
+        1,
+        2,
+        7,
+        0,
+        3
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "bool column sorts as lower-cased text of the stored value",
+      "input": {
+        "col": "ok",
+        "dir": "asc"
+      },
+      "outputRowIndexes": [
+        5,
+        4,
+        1,
+        7,
+        3,
+        0,
+        6,
+        2
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "no sort column: unchanged",
+      "input": null,
+      "outputRowIndexes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "fn": "applySort",
+      "label": "kind asc: blank last",
+      "input": {
+        "col": "kind",
+        "dir": "asc"
+      },
+      "outputRowIndexes": [
+        0,
+        2,
+        5,
+        7,
+        1,
+        4,
+        6,
+        3
+      ]
+    }
+  ],
+  "group": [
+    {
+      "fn": "groupTree+flattenTree",
+      "label": "one level: groups in order of first appearance (not sorted), blank = (empty), sum of the measure",
+      "input": {
+        "keys": [
+          "kind"
+        ],
+        "sumKey": "qty"
+      },
+      "output": [
+        {
+          "group": "A",
+          "path": "A",
+          "depth": 0,
+          "count": 4,
+          "sum": 1214,
+          "open": true
+        },
+        {
+          "row": 0,
+          "depth": 1
+        },
+        {
+          "row": 2,
+          "depth": 1
+        },
+        {
+          "row": 5,
+          "depth": 1
+        },
+        {
+          "row": 7,
+          "depth": 1
+        },
+        {
+          "group": "B",
+          "path": "B",
+          "depth": 0,
+          "count": 3,
+          "sum": 54,
+          "open": true
+        },
+        {
+          "row": 1,
+          "depth": 1
+        },
+        {
+          "row": 4,
+          "depth": 1
+        },
+        {
+          "row": 6,
+          "depth": 1
+        },
+        {
+          "group": "(empty)",
+          "path": "(empty)",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "row": 3,
+          "depth": 1
+        }
+      ]
+    },
+    {
+      "fn": "groupTree+flattenTree",
+      "label": "two levels",
+      "input": {
+        "keys": [
+          "kind",
+          "ok"
+        ],
+        "sumKey": "qty"
+      },
+      "output": [
+        {
+          "group": "A",
+          "path": "A",
+          "depth": 0,
+          "count": 4,
+          "sum": 1214,
+          "open": true
+        },
+        {
+          "group": "true",
+          "path": "A\u001ftrue",
+          "depth": 1,
+          "count": 1,
+          "sum": 10,
+          "open": true
+        },
+        {
+          "row": 0,
+          "depth": 2
+        },
+        {
+          "group": "yes",
+          "path": "A\u001fyes",
+          "depth": 1,
+          "count": 1,
+          "sum": 1200,
+          "open": true
+        },
+        {
+          "row": 2,
+          "depth": 2
+        },
+        {
+          "group": "0",
+          "path": "A\u001f0",
+          "depth": 1,
+          "count": 1,
+          "sum": 7,
+          "open": true
+        },
+        {
+          "row": 5,
+          "depth": 2
+        },
+        {
+          "group": "false",
+          "path": "A\u001ffalse",
+          "depth": 1,
+          "count": 1,
+          "sum": -3,
+          "open": true
+        },
+        {
+          "row": 7,
+          "depth": 2
+        },
+        {
+          "group": "B",
+          "path": "B",
+          "depth": 0,
+          "count": 3,
+          "sum": 54,
+          "open": true
+        },
+        {
+          "group": "false",
+          "path": "B\u001ffalse",
+          "depth": 1,
+          "count": 1,
+          "sum": 2,
+          "open": true
+        },
+        {
+          "row": 1,
+          "depth": 2
+        },
+        {
+          "group": "1",
+          "path": "B\u001f1",
+          "depth": 1,
+          "count": 1,
+          "sum": 45,
+          "open": true
+        },
+        {
+          "row": 4,
+          "depth": 2
+        },
+        {
+          "group": "true",
+          "path": "B\u001ftrue",
+          "depth": 1,
+          "count": 1,
+          "sum": 7,
+          "open": true
+        },
+        {
+          "row": 6,
+          "depth": 2
+        },
+        {
+          "group": "(empty)",
+          "path": "(empty)",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "no",
+          "path": "(empty)\u001fno",
+          "depth": 1,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "row": 3,
+          "depth": 2
+        }
+      ]
+    },
+    {
+      "fn": "groupTree+flattenTree",
+      "label": "a closed group shows no rows (closed is keyed by path, not saved in a view)",
+      "input": {
+        "keys": [
+          "kind"
+        ],
+        "sumKey": "qty",
+        "closed": {
+          "A": true
+        }
+      },
+      "output": [
+        {
+          "group": "A",
+          "path": "A",
+          "depth": 0,
+          "count": 4,
+          "sum": 1214,
+          "open": false
+        },
+        {
+          "group": "B",
+          "path": "B",
+          "depth": 0,
+          "count": 3,
+          "sum": 54,
+          "open": true
+        },
+        {
+          "row": 1,
+          "depth": 1
+        },
+        {
+          "row": 4,
+          "depth": 1
+        },
+        {
+          "row": 6,
+          "depth": 1
+        },
+        {
+          "group": "(empty)",
+          "path": "(empty)",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "row": 3,
+          "depth": 1
+        }
+      ]
+    },
+    {
+      "fn": "groupTree+flattenTree",
+      "label": "group by a date column: the key is the stored text, not the formatted date",
+      "input": {
+        "keys": [
+          "day"
+        ],
+        "sumKey": null
+      },
+      "output": [
+        {
+          "group": "2026-11-10",
+          "path": "2026-11-10",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "2026-11-12",
+          "path": "2026-11-12",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "12/11/2026",
+          "path": "12/11/2026",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "(empty)",
+          "path": "(empty)",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "2026-11-12 09:30",
+          "path": "2026-11-12 09:30",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "2026-12-01",
+          "path": "2026-12-01",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "2026-11-30",
+          "path": "2026-11-30",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        },
+        {
+          "group": "2026-11-11",
+          "path": "2026-11-11",
+          "depth": 0,
+          "count": 1,
+          "sum": 0,
+          "open": true
+        }
+      ]
+    }
+  ],
+  "aggregate": [
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "qty",
+        "agg": "sum",
+        "rows": "the table above"
+      },
+      "output": 1268
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "qty",
+        "agg": "avg",
+        "rows": "the table above"
+      },
+      "output": 181.14285714285714
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "qty",
+        "agg": "min",
+        "rows": "the table above"
+      },
+      "output": -3
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "qty",
+        "agg": "max",
+        "rows": "the table above"
+      },
+      "output": 1200
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "qty",
+        "agg": "count",
+        "rows": "the table above"
+      },
+      "output": 7
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "kind",
+        "agg": "count",
+        "rows": "the table above"
+      },
+      "output": 7
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "name",
+        "agg": "sum",
+        "rows": "the table above"
+      },
+      "output": 0
+    },
+    {
+      "fn": "aggregate",
+      "input": {
+        "key": "__rows",
+        "agg": "__rows",
+        "rows": "the table above"
+      },
+      "output": 8
+    }
+  ],
+  "aggregateEmpty": [
+    {
+      "fn": "aggregate",
+      "label": "empty set",
+      "input": {
+        "rows": [],
+        "key": "qty",
+        "agg": "sum"
+      },
+      "output": 0
+    },
+    {
+      "fn": "aggregate",
+      "label": "empty set",
+      "input": {
+        "rows": [],
+        "key": "qty",
+        "agg": "avg"
+      },
+      "output": 0
+    },
+    {
+      "fn": "aggregate",
+      "label": "empty set",
+      "input": {
+        "rows": [],
+        "key": "qty",
+        "agg": "min"
+      },
+      "output": 0
+    },
+    {
+      "fn": "aggregate",
+      "label": "empty set",
+      "input": {
+        "rows": [],
+        "key": "qty",
+        "agg": "max"
+      },
+      "output": 0
+    },
+    {
+      "fn": "aggregate",
+      "label": "empty set",
+      "input": {
+        "rows": [],
+        "key": "qty",
+        "agg": "count"
+      },
+      "output": 0
+    }
+  ],
+  "isMeasure": [
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Amount",
+        "label": "Amount",
+        "type": "number"
+      },
+      "output": true
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Order No",
+        "label": "Order No",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Year",
+        "label": "Year",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Age",
+        "label": "Age",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Employee id",
+        "label": "Employee id",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Pincode",
+        "label": "Pincode",
+        "type": "number"
+      },
+      "output": true
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Net",
+        "label": "Net",
+        "type": "number"
+      },
+      "output": true
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "#",
+        "label": "#",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Amount",
+        "label": "Amount",
+        "type": "text"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Discount code",
+        "label": "Discount code",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Rank",
+        "label": "Rank",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Sr",
+        "label": "Sr",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Total no. of units",
+        "label": "Total no. of units",
+        "type": "number"
+      },
+      "output": false
+    },
+    {
+      "fn": "isMeasure",
+      "input": {
+        "key": "Annual",
+        "label": "Annual",
+        "type": "number"
+      },
+      "output": true
+    }
+  ],
+  "summarise": {
+    "fn": "summarise",
+    "input": "the table above",
+    "output": {
+      "rows": 8,
+      "sums": [
+        {
+          "key": "qty",
+          "label": "Qty",
+          "sum": 1268,
+          "avg": 181.14285714285714,
+          "n": 7
+        }
+      ]
+    }
+  },
+  "formatCell": [
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": 1234.5,
+        "type": "number"
+      },
+      "output": "1,234.5"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "1234.567",
+        "type": "number"
+      },
+      "output": "1,234.57"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "1,200.50",
+        "type": "number"
+      },
+      "output": "1,200.5"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "45%",
+        "type": "number"
+      },
+      "output": "45%"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "$1,200",
+        "type": "number"
+      },
+      "output": "$1,200"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "abc",
+        "type": "number"
+      },
+      "output": "abc"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": 0,
+        "type": "number"
+      },
+      "output": "0"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": -3.14159,
+        "type": "number"
+      },
+      "output": "-3.14"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": null,
+        "type": "number"
+      },
+      "output": ""
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "2026-11-12",
+        "type": "date"
+      },
+      "output": "12 Nov 2026"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "2026-11-12 09:30",
+        "type": "date"
+      },
+      "output": "12 Nov 2026, 09:30"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "2026-11-12T09:30:00Z",
+        "type": "date"
+      },
+      "output": "12 Nov 2026, 15:00"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "12/11/2026",
+        "type": "date"
+      },
+      "output": "12 Nov 2026"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": 1794831150455,
+        "type": "date"
+      },
+      "output": "16 Nov 2026"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "not a date",
+        "type": "date"
+      },
+      "output": "not a date"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": true,
+        "type": "bool"
+      },
+      "output": "Yes"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "no",
+        "type": "bool"
+      },
+      "output": "No"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "1",
+        "type": "bool"
+      },
+      "output": "Yes"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "x",
+        "type": "bool"
+      },
+      "output": "No"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": [
+          "a",
+          "b"
+        ],
+        "type": "list"
+      },
+      "output": "a, b"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "{\"a\":1}",
+        "type": "json"
+      },
+      "output": "a: 1"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "{not json",
+        "type": "text"
+      },
+      "output": "{not json"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": {
+          "a": 1,
+          "b": [
+            1,
+            2
+          ]
+        },
+        "type": "json"
+      },
+      "output": "a: 1 · b: 1, 2"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": "",
+        "type": "text"
+      },
+      "output": ""
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": null,
+        "type": "text"
+      },
+      "output": ""
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": 0,
+        "type": "text"
+      },
+      "output": "0"
+    },
+    {
+      "fn": "formatCell",
+      "input": {
+        "value": false,
+        "type": "text"
+      },
+      "output": "false"
+    }
+  ],
+  "csv": {
+    "fn": "toCsv",
+    "input": {
+      "columns": [
+        {
+          "key": "name",
+          "label": "Name",
+          "type": "text"
+        },
+        {
+          "key": "qty",
+          "label": "Qty",
+          "type": "number"
+        },
+        {
+          "key": "day",
+          "label": "Day",
+          "type": "date"
+        },
+        {
+          "key": "ok",
+          "label": "OK",
+          "type": "bool"
+        },
+        {
+          "key": "kind",
+          "label": "Kind",
+          "type": "text"
+        }
+      ],
+      "rows": "the table above, first 4"
+    },
+    "outputJson": "﻿Name,Qty,Day,OK,Kind\r\nAlpha,10,2026-11-10,true,A\r\nbeta,2,2026-11-12,false,B\r\nÉmile,\"1,200\",12/11/2026,yes,A\r\nalpha 2,,,no,\r\n"
+  },
+  "datePresets": {
+    "fn": "rangeFor",
+    "nowLocal": "2026-11-18 15:00 (Wednesday)",
+    "output": {
+      "custom": {
+        "from": "",
+        "to": ""
+      },
+      "today": {
+        "from": "2026-11-18",
+        "to": "2026-11-18"
+      },
+      "yesterday": {
+        "from": "2026-11-17",
+        "to": "2026-11-17"
+      },
+      "week": {
+        "from": "2026-11-16",
+        "to": "2026-11-22"
+      },
+      "7days": {
+        "from": "2026-11-12",
+        "to": "2026-11-18"
+      },
+      "month": {
+        "from": "2026-11-01",
+        "to": "2026-11-30"
+      },
+      "lastmonth": {
+        "from": "2026-10-01",
+        "to": "2026-10-31"
+      },
+      "year": {
+        "from": "2026-01-01",
+        "to": "2026-12-31"
+      }
+    }
+  },
+  "datePresetsSunday": {
+    "fn": "rangeFor",
+    "nowLocal": "2026-11-22 (Sunday: the week is Monday to Sunday)",
+    "output": {
+      "week": {
+        "from": "2026-11-16",
+        "to": "2026-11-22"
+      }
+    }
+  },
+  "chips": [
+    {
+      "fn": "chipText",
+      "input": {
+        "col": "qty",
+        "op": "between",
+        "value": {
+          "from": 500
+        }
+      },
+      "output": "Qty: from 500"
+    },
+    {
+      "fn": "chipText",
+      "input": {
+        "col": "kind",
+        "op": "in",
+        "value": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      "output": "Kind: A, B +1"
+    },
+    {
+      "fn": "chipText",
+      "input": {
+        "col": "name",
+        "op": "starts",
+        "value": "al"
+      },
+      "output": "Name starts with al"
+    },
+    {
+      "fn": "chipText",
+      "input": {
+        "col": "day",
+        "op": "between",
+        "value": {
+          "from": "2026-11-01",
+          "to": "2026-11-30"
+        }
+      },
+      "output": "Day: 2026-11-01 to 2026-11-30"
+    },
+    {
+      "fn": "chipText",
+      "input": {
+        "col": "ok",
+        "op": "true"
+      },
+      "output": "OK is yes"
+    }
+  ],
+  "filterControl": [
+    {
+      "fn": "controlFor",
+      "input": {
+        "key": "name",
+        "label": "Name",
+        "type": "text"
+      },
+      "output": "choice"
+    },
+    {
+      "fn": "controlFor",
+      "input": {
+        "key": "qty",
+        "label": "Qty",
+        "type": "number"
+      },
+      "output": "number"
+    },
+    {
+      "fn": "controlFor",
+      "input": {
+        "key": "day",
+        "label": "Day",
+        "type": "date"
+      },
+      "output": "date"
+    },
+    {
+      "fn": "controlFor",
+      "input": {
+        "key": "ok",
+        "label": "OK",
+        "type": "bool"
+      },
+      "output": "bool"
+    },
+    {
+      "fn": "controlFor",
+      "input": {
+        "key": "kind",
+        "label": "Kind",
+        "type": "text"
+      },
+      "output": "choice"
+    }
+  ],
+  "captureView": {
+    "fn": "captureView",
+    "input": {
+      "search": "x",
+      "filters": [
+        {
+          "col": "a",
+          "op": "equals",
+          "value": "1"
+        },
+        {
+          "col": "b",
+          "op": "equals",
+          "value": "2",
+          "preset": true
+        }
+      ],
+      "sort": {
+        "col": "a",
+        "dir": "asc"
+      },
+      "groupBy": "kind",
+      "hidden": [
+        "z"
+      ],
+      "widths": {
+        "a": 100
+      },
+      "kpis": false
+    },
+    "output": {
+      "search": "x",
+      "filters": [
+        {
+          "col": "a",
+          "op": "equals",
+          "value": "1"
+        }
+      ],
+      "sort": {
+        "col": "a",
+        "dir": "asc"
+      },
+      "groupBy": [
+        "kind"
+      ],
+      "hidden": [
+        "z"
+      ],
+      "order": [],
+      "widths": {
+        "a": 100
+      },
+      "kpis": false,
+      "charts": true
+    }
+  },
+  "definedCards": {
+    "fn": "definedCards",
+    "input": [
+      {
+        "caption": "Rows",
+        "agg": "count",
+        "column": ""
+      },
+      {
+        "caption": "Total",
+        "agg": "sum",
+        "column": "qty"
+      },
+      {
+        "caption": "Avg",
+        "agg": "avg",
+        "column": "qty"
+      },
+      {
+        "caption": "Missing",
+        "agg": "sum",
+        "column": "nope"
+      }
+    ],
+    "output": [
+      {
+        "id": "kpi:0",
+        "label": "Rows",
+        "value": 8,
+        "decimals": false,
+        "tone": "brand",
+        "icon": "tag"
+      },
+      {
+        "id": "kpi:1",
+        "label": "Total",
+        "value": 1268,
+        "decimals": true,
+        "tone": "green",
+        "icon": "functions"
+      },
+      {
+        "id": "kpi:2",
+        "label": "Avg",
+        "value": 181.14285714285714,
+        "decimals": true,
+        "tone": "waiting",
+        "icon": "avg_pace"
+      }
+    ]
+  },
+  "definedChart": {
+    "fn": "definedChart",
+    "input": {
+      "caption": "Qty by kind",
+      "chart": "bar",
+      "groupBy": "kind",
+      "agg": "sum",
+      "column": "qty"
+    },
+    "output": {
+      "type": "bar",
+      "title": "Qty by kind",
+      "subtitle": "SUM Qty by Kind",
+      "unit": "",
+      "labels": [
+        "A",
+        "B",
+        "(empty)"
+      ],
+      "series": [
+        {
+          "name": "SUM Qty",
+          "values": [
+            1214,
+            54,
+            0
+          ]
+        }
+      ],
+      "more": 0
+    }
+  },
+  "structureCells": {
+    "fn": "structureTable",
+    "note": "input = the real ai.enterprise entry and the real submissions.list rows (docs/examples/smartview/04-*.json and 10-*.json); output = what each cell holds BEFORE formatCell",
+    "columns": [
+      {
+        "key": "#",
+        "label": "No.",
+        "type": "number"
+      },
+      {
+        "key": "By",
+        "label": "By"
+      },
+      {
+        "key": "On",
+        "label": "Submitted",
+        "type": "date"
+      },
+      {
+        "key": "Status",
+        "label": "Approval"
+      },
+      {
+        "key": "stage",
+        "label": "Stage"
+      },
+      {
+        "key": "With",
+        "label": "With"
+      },
+      {
+        "key": "#progress",
+        "label": "Progress",
+        "type": "number"
+      },
+      {
+        "key": "ref",
+        "label": "Ref"
+      },
+      {
+        "key": "title",
+        "label": "Title"
+      },
+      {
+        "key": "notes",
+        "label": "Notes"
+      },
+      {
+        "key": "story",
+        "label": "Story"
+      },
+      {
+        "key": "qty",
+        "label": "Quantity",
+        "type": "number"
+      },
+      {
+        "key": "amount",
+        "label": "Amount",
+        "type": "number"
+      },
+      {
+        "key": "day",
+        "label": "Day",
+        "type": "date"
+      },
+      {
+        "key": "at",
+        "label": "At"
+      },
+      {
+        "key": "mail",
+        "label": "Mail"
+      },
+      {
+        "key": "site",
+        "label": "Site"
+      },
+      {
+        "key": "phone",
+        "label": "Phone"
+      },
+      {
+        "key": "where",
+        "label": "Where"
+      },
+      {
+        "key": "kind",
+        "label": "Kind"
+      },
+      {
+        "key": "tags",
+        "label": "Tags"
+      },
+      {
+        "key": "owner",
+        "label": "Owner"
+      },
+      {
+        "key": "urgent",
+        "label": "Urgent",
+        "type": "bool"
+      },
+      {
+        "key": "code",
+        "label": "Code"
+      },
+      {
+        "key": "copy",
+        "label": "Copy"
+      },
+      {
+        "key": "fee",
+        "label": "Fee"
+      },
+      {
+        "key": "doc",
+        "label": "Documents",
+        "type": "file"
+      }
+    ],
+    "rows": [
+      {
+        "#": 53,
+        "By": "Ann Rao",
+        "On": "2026-11-16T12:47:00.527Z",
+        "Status": "Recorded",
+        "With": "svcapcpw1ann",
+        "#progress": "",
+        "ref": "VIS-0002",
+        "title": "Bare",
+        "notes": "",
+        "story": "",
+        "qty": "",
+        "amount": "",
+        "day": "",
+        "at": "",
+        "mail": "",
+        "site": "",
+        "phone": "",
+        "where": "",
+        "kind": "",
+        "tags": "",
+        "owner": "",
+        "stage": "Open",
+        "urgent": "",
+        "code": "",
+        "copy": "",
+        "fee": "",
+        "doc": []
+      },
+      {
+        "#": 51,
+        "By": "Ann Rao",
+        "On": "2026-11-16T12:47:00.243Z",
+        "Status": "Recorded",
+        "With": "svcapcpw1ann",
+        "#progress": "",
+        "ref": "VIS-0001",
+        "title": "Everything",
+        "notes": "line one\nline two",
+        "story": "Hello world & friends",
+        "qty": 7,
+        "amount": 1234.5,
+        "day": "2026-11-12",
+        "at": "09:45",
+        "mail": "a@b.co",
+        "site": "https://example.com/x",
+        "phone": "+919886012345",
+        "where": "MG Road",
+        "kind": "Contract",
+        "tags": "red, blue",
+        "owner": "Bob Iyer",
+        "stage": "Open",
+        "urgent": "Yes",
+        "code": "8901234567890",
+        "copy": "",
+        "fee": "INR 500 · UPI · Paid",
+        "doc": [
+          {
+            "fileId": "4961748d27125c549678e385",
+            "name": "Everything.pdf",
+            "mime": "application/pdf",
+            "size": 14
+          }
+        ]
+      }
+    ]
+  },
+  "structureCellsDisplayed": [
+    {
+      "No.": "53",
+      "By": "Ann Rao",
+      "Submitted": "16 Nov 2026, 18:17",
+      "Approval": "Recorded",
+      "Stage": "Open",
+      "With": "svcapcpw1ann",
+      "Progress": "",
+      "Ref": "VIS-0002",
+      "Title": "Bare",
+      "Notes": "",
+      "Story": "",
+      "Quantity": "",
+      "Amount": "",
+      "Day": "",
+      "At": "",
+      "Mail": "",
+      "Site": "",
+      "Phone": "",
+      "Where": "",
+      "Kind": "",
+      "Tags": "",
+      "Owner": "",
+      "Urgent": "",
+      "Code": "",
+      "Copy": "",
+      "Fee": "",
+      "Documents": ""
+    },
+    {
+      "No.": "51",
+      "By": "Ann Rao",
+      "Submitted": "16 Nov 2026, 18:17",
+      "Approval": "Recorded",
+      "Stage": "Open",
+      "With": "svcapcpw1ann",
+      "Progress": "",
+      "Ref": "VIS-0001",
+      "Title": "Everything",
+      "Notes": "line one\nline two",
+      "Story": "Hello world & friends",
+      "Quantity": "7",
+      "Amount": "1,234.5",
+      "Day": "12 Nov 2026",
+      "At": "09:45",
+      "Mail": "a@b.co",
+      "Site": "https://example.com/x",
+      "Phone": "+919886012345",
+      "Where": "MG Road",
+      "Kind": "Contract",
+      "Tags": "red, blue",
+      "Owner": "Bob Iyer",
+      "Urgent": "Yes",
+      "Code": "8901234567890",
+      "Copy": "",
+      "Fee": "INR 500 · UPI · Paid",
+      "Documents": "Everything.pdf"
+    }
+  ],
+  "structureColumnTypes": {
+    "#": "number",
+    "By": "text",
+    "On": "date",
+    "Status": "text",
+    "stage": "text",
+    "With": "text",
+    "#progress": "number",
+    "ref": "text",
+    "title": "text",
+    "notes": "text",
+    "story": "text",
+    "qty": "number",
+    "amount": "number",
+    "day": "date",
+    "at": "text",
+    "mail": "text",
+    "site": "text",
+    "phone": "text",
+    "where": "text",
+    "kind": "text",
+    "tags": "text",
+    "owner": "text",
+    "urgent": "bool",
+    "code": "text",
+    "copy": "text",
+    "fee": "text",
+    "doc": "file"
+  }
+}

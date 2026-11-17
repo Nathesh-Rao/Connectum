@@ -1,0 +1,15 @@
+{
+ "action": "record.status",
+ "data": {
+  "completion": 30,
+  "files": [],
+  "final": false,
+  "holder": "ben",
+  "hours": "2.5",
+  "id": 24,
+  "status": "In progress"
+ },
+ "ok": true,
+ "reqId": "ben-1",
+ "type": "sd"
+}

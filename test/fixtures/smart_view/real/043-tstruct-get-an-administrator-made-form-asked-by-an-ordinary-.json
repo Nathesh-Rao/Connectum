@@ -1,0 +1,108 @@
+{
+  "label": "tstruct.get: an administrator-made form, asked by an ordinary person",
+  "as": "bob (colleague)",
+  "command": "tstruct.get",
+  "request": {
+    "name": "requests"
+  },
+  "reply": {
+    "action": "tstruct.get",
+    "data": {
+      "rev": "c02317d37f354e4d",
+      "tstruct": {
+        "caption": "Requests",
+        "description": "",
+        "fields": [
+          {
+            "caption": "Title",
+            "condition": null,
+            "multiline": false,
+            "name": "title",
+            "required": true,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Stage",
+            "condition": null,
+            "finalOptions": [
+              "Closed"
+            ],
+            "multi": false,
+            "name": "stage",
+            "options": [
+              "Open",
+              "In progress",
+              "Closed"
+            ],
+            "required": false,
+            "section": null,
+            "status": true,
+            "statusLocked": true,
+            "type": "list"
+          },
+          {
+            "caption": "Amount",
+            "condition": null,
+            "name": "amount",
+            "required": false,
+            "section": null,
+            "type": "number"
+          },
+          {
+            "caption": "Stage completion",
+            "condition": null,
+            "hidden": true,
+            "max": 100,
+            "min": 0,
+            "name": "stage_completion",
+            "required": false,
+            "section": null,
+            "type": "wholenumber"
+          },
+          {
+            "caption": "Stage comments",
+            "condition": null,
+            "hidden": true,
+            "length": 1000,
+            "multiline": true,
+            "name": "stage_comments",
+            "required": false,
+            "rich": false,
+            "section": null,
+            "type": "text"
+          },
+          {
+            "caption": "Stage files",
+            "condition": null,
+            "hidden": true,
+            "multi": true,
+            "name": "stage_files",
+            "required": false,
+            "section": null,
+            "type": "file"
+          },
+          {
+            "caption": "Stage hours",
+            "condition": null,
+            "decimals": 2,
+            "hidden": true,
+            "max": 24,
+            "min": 0,
+            "name": "stage_hours",
+            "required": false,
+            "section": null,
+            "type": "number"
+          }
+        ],
+        "name": "requests",
+        "saveToDb": true,
+        "sections": [],
+        "sendEnabled": true
+      }
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

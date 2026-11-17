@@ -1,0 +1,24 @@
+{
+  "label": "submissions.list: a colleague reads someone else's structure",
+  "as": "bob (colleague)",
+  "command": "submissions.list",
+  "request": {
+    "tstruct": "tickets",
+    "limit": 3,
+    "fetch": true,
+    "withDetails": true
+  },
+  "reply": {
+    "action": "submissions.list",
+    "data": {
+      "hasMore": false,
+      "limit": 3,
+      "offset": 0,
+      "structures": {},
+      "submissions": [],
+      "total": 0
+    },
+    "ok": true,
+    "type": "sd"
+  }
+}

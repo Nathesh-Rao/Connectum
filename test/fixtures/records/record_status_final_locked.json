@@ -1,0 +1,10 @@
+{
+ "action": "record.status",
+ "error": {
+  "code": "invalid",
+  "message": "This record is Done; only an administrator can change it."
+ },
+ "ok": false,
+ "reqId": "ben-4",
+ "type": "sd"
+}

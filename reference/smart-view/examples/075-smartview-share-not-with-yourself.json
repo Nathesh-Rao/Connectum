@@ -1,0 +1,37 @@
+{
+  "label": "smartview.share: not with yourself",
+  "as": "ann (author)",
+  "command": "smartview.share",
+  "request": {
+    "kind": "structure",
+    "name": "tickets",
+    "to": [
+      {
+        "type": "user",
+        "id": "svcapcpw1ann"
+      }
+    ],
+    "view": {
+      "id": "v1",
+      "name": "Open by stage",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "smartview.share",
+    "error": {
+      "code": "invalid",
+      "message": "Someone you chose cannot be shared with (a person who is not in the organisation, yourself, or a group you are not in)."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}

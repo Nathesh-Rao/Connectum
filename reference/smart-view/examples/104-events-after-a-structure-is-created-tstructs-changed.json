@@ -1,0 +1,33 @@
+{
+  "label": "events after a structure is created (tstructs_changed)",
+  "as": "(events pushed to each person's WebSocket)",
+  "command": null,
+  "request": null,
+  "reply": null,
+  "events": {
+    "ann (author)": [
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "evprobecpw1",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      }
+    ],
+    "bob (colleague)": [
+      {
+        "data": {
+          "action": "created",
+          "by": "svcapcpw1ann",
+          "name": "evprobecpw1",
+          "scope": "user"
+        },
+        "event": "tstructs_changed",
+        "type": "sd_event"
+      }
+    ]
+  }
+}

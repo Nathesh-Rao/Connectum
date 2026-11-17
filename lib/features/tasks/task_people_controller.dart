@@ -15,9 +15,13 @@ import 'tasks_texts.dart';
 /// list (`users.colleagues`), searched by name. Made by the Tasks controller
 /// for one sheet; [close] when the sheet closes.
 class TaskPeopleController {
-  TaskPeopleController(this._people);
+  TaskPeopleController(this._people, {this.source});
 
-  final GroupRepository _people;
+  final GroupRepository? _people;
+
+  /// Where the names come from instead of the colleagues list (the people a
+  /// record can be sent to). One page; typing is debounced here.
+  final Future<GroupPeoplePage> Function(String q)? source;
 
   final query = TextEditingController();
   final people = <ChatPerson>[].obs;
@@ -66,6 +70,8 @@ class TaskPeopleController {
   }
 
   Future<GroupPeoplePage> _fetch(String q, String? after) async {
+    final custom = source;
+    if (custom != null) return custom(q);
     if (SeedTasks.isActive || SeedTickets.isActive) {
       final all = [
         for (final p in SeedTasks.people)
@@ -73,7 +79,7 @@ class TaskPeopleController {
       ];
       return GroupPeoplePage(all, hasMore: false);
     }
-    return _people.colleagues(query: q, after: after);
+    return _people!.colleagues(query: q, after: after);
   }
 
   void onQueryChanged(String _) {

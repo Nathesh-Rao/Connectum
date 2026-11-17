@@ -81,9 +81,14 @@ class GalleryView extends GetView<GalleryController> {
     'debug/notifications': AppRoutes.debugNotifications,
     'debug/tasks': AppRoutes.debugTasks,
     'debug/tickets': AppRoutes.debugTickets,
+    'debug/smartview': AppRoutes.debugSmartView,
+    'debug/smarttable': AppRoutes.debugSmartTable,
+    'debug/smartdrawer': AppRoutes.debugSmartDrawer,
+    'debug/smartquery': AppRoutes.debugSmartQuery,
     'debug/commands': AppRoutes.debugCommands,
     'debug/ai': AppRoutes.debugAi,
     'debug/photo-crop': AppRoutes.debugPhotoCrop,
+    'debug/refresh': AppRoutes.debugRefresh,
   };
 
   @override

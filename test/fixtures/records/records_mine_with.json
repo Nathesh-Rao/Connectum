@@ -1,0 +1,56 @@
+{
+ "action": "records.mine",
+ "data": {
+  "hasMore": false,
+  "next": null,
+  "structures": {
+   "help_ticket": {
+    "caption": "Ticket",
+    "fields": {
+     "stage": "Stage",
+     "title": "Title"
+    },
+    "recordThread": true,
+    "status": {
+     "field": "stage",
+     "final": [
+      "Done"
+     ],
+     "statuses": [
+      "Open",
+      "In progress",
+      "Done"
+     ]
+    }
+   }
+  },
+  "submissions": [
+   {
+    "actionSeq": 2,
+    "assignor": "ana",
+    "branch": "HQ",
+    "by": "ana",
+    "completion": 30,
+    "editedTs": 1794393439347,
+    "holder": "ben",
+    "host": null,
+    "id": 24,
+    "participants": [
+     "ana",
+     "ben"
+    ],
+    "scope": "global",
+    "ts": 1794393439190,
+    "tstruct": "help_ticket",
+    "values": {
+     "stage": "In progress",
+     "title": "Printer is jammed"
+    }
+   }
+  ],
+  "total": 1
+ },
+ "ok": true,
+ "reqId": "ben-2",
+ "type": "sd"
+}

@@ -1,0 +1,37 @@
+{
+  "label": "smartview.share: refused when the sharer cannot open the source",
+  "as": "bob (colleague)",
+  "command": "smartview.share",
+  "request": {
+    "kind": "structure",
+    "name": "private_t",
+    "to": [
+      {
+        "type": "user",
+        "id": "svcapcpw1cara"
+      }
+    ],
+    "view": {
+      "id": "pv2",
+      "name": "x",
+      "search": "",
+      "filters": [],
+      "sort": null,
+      "groupBy": [],
+      "hidden": [],
+      "order": [],
+      "widths": {},
+      "kpis": true,
+      "charts": true
+    }
+  },
+  "reply": {
+    "action": "smartview.share",
+    "error": {
+      "code": "forbidden",
+      "message": "You can only share what you can open yourself."
+    },
+    "ok": false,
+    "type": "sd"
+  }
+}
