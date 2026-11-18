@@ -83,6 +83,7 @@ class RecordState {
     this.statuses = const [],
     this.finalStatuses = const [],
     this.completion,
+    this.minCompletion,
     this.hours,
     this.isCommentsRequired = false,
     this.isCompletionRequired = false,
@@ -103,8 +104,15 @@ class RecordState {
   final String assignor;
   final String status;
   final List<String> statuses;
+
+  /// The closing statuses, in the form's option order (`finalStatuses`, or the
+  /// older `final`; the same list). Empty for a form without one.
   final List<String> finalStatuses;
   final int? completion;
+
+  /// The lowest completion this person may send; null when the server did not
+  /// say (the current completion then applies to a member).
+  final int? minCompletion;
 
   /// The last hours given, as the server sent them ("2.5").
   final String? hours;
@@ -157,8 +165,13 @@ class RecordState {
       assignor: idText(data['assignor']),
       status: idText(data['status']),
       statuses: _names(data['statuses']),
-      finalStatuses: _names(data['final']),
+      finalStatuses: _names(
+        data['finalStatuses'] is List ? data['finalStatuses'] : data['final'],
+      ),
       completion: completion == null ? null : intOf(completion).clamp(0, 100),
+      minCompletion: data['minCompletion'] == null
+          ? null
+          : intOf(data['minCompletion']).clamp(0, 100),
       hours: hours == null ? null : idText(hours),
       isCommentsRequired: data['commentsRequired'] == true,
       isCompletionRequired: data['completionRequired'] == true,

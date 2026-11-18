@@ -62,6 +62,8 @@ class RecordValidation {
   static const statusRequired = 'Choose one of the statuses of this record.';
   static const completionRange = 'Completion is 0 to 100.';
   static const completionDown = 'Completion cannot go down.';
+  static const closingOnly =
+      '100% completion is only for a closing status. Choose a closing status.';
   static const hoursRange =
       'Hours worked must be a number from 0 to 24, with at most two decimals.';
   static const commentsLong = 'Comments are at most 1,000 characters.';
@@ -92,8 +94,18 @@ class RecordValidation {
     final p = i.percent;
     if (p != null && (p < 0 || p > 100)) return completionRange;
     if (s.isCompletionRequired && p == null) return completionRequired;
-    if (p != null && !s.isAdmin && s.completion != null && p < s.completion!) {
-      return completionDown;
+    if (p != null && !s.isAdmin) {
+      final floor = [
+        s.completion ?? 0,
+        s.minCompletion ?? 0,
+      ].reduce((a, b) => a > b ? a : b);
+      if (p < floor) return completionDown;
+    }
+    if (p != null &&
+        p > 99 &&
+        s.finalStatuses.isNotEmpty &&
+        !s.finalStatuses.contains(i.status)) {
+      return closingOnly;
     }
     if (i.hours.trim().isNotEmpty && hoursOf(i.hours) == null) {
       return hoursRange;

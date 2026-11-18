@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_sv.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/theme/app_tones.dart';
 import '../tickets_texts.dart';
@@ -273,91 +275,133 @@ class _HistoryChangesState extends State<HistoryChanges> {
   }
 }
 
-/// A remark, a comment or a reason: a soft block with a thin accent line,
-/// three lines at most with "Show more", selectable.
+/// A remark, a comment or a reason: a small solid dot and the full
+/// text beside it, no container and no scrolling. Four lines at most;
+/// only a text that really is longer (measured at the real width) gets
+/// "See more". An opened one stays open for the session ([openKeys]).
 class HistoryQuote extends StatefulWidget {
-  const HistoryQuote({super.key, required this.text, this.label = ''});
+  const HistoryQuote({
+    super.key,
+    required this.text,
+    required this.storageKey,
+    this.label = '',
+  });
 
   final String text;
   final String label;
 
-  static const maxLines = 3;
+  /// Identifies the history item (and the kind of text) in [openKeys].
+  final String storageKey;
+
+  static const maxLines = 4;
+
+  /// The comments the person opened, kept while the app runs.
+  static final openKeys = <String>{};
 
   @override
   State<HistoryQuote> createState() => _HistoryQuoteState();
 }
 
 class _HistoryQuoteState extends State<HistoryQuote> {
-  bool _isOpen = false;
+  late bool _isOpen = HistoryQuote.openKeys.contains(widget.storageKey);
 
-  static const _accent = 2.0;
+  @override
+  void didUpdateWidget(HistoryQuote old) {
+    super.didUpdateWidget(old);
+    if (old.storageKey != widget.storageKey) {
+      _isOpen = HistoryQuote.openKeys.contains(widget.storageKey);
+    }
+  }
+
+  void _toggle() {
+    setState(() => _isOpen = !_isOpen);
+    if (_isOpen) {
+      HistoryQuote.openKeys.add(widget.storageKey);
+    } else {
+      HistoryQuote.openKeys.remove(widget.storageKey);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
-    return ClipRRect(
-      borderRadius: AppRadius.controlAll,
-      child: ColoredBox(
-        color: AppColors.primarySoft,
-        child: Stack(
-          children: [
-            const Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: _accent,
-              child: ColoredBox(color: AppColors.primaryBorder),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                _accent + AppSpacing.sm,
-                AppSpacing.xs,
-                AppSpacing.sm,
-                AppSpacing.xs,
-              ),
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final painter = TextPainter(
-                    text: TextSpan(text: widget.text, style: AppText.body),
-                    maxLines: HistoryQuote.maxLines,
-                    textDirection: Directionality.of(context),
-                    textScaler: scaler,
-                  )..layout(maxWidth: box.maxWidth);
-                  final isLong = painter.didExceedMaxLines;
-                  painter.dispose();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.label.isNotEmpty)
-                        Text(widget.label, style: AppText.rowCaption),
-                      SelectableText(
-                        widget.text,
-                        style: AppText.body,
-                        maxLines: _isOpen ? null : HistoryQuote.maxLines,
-                      ),
-                      if (isLong)
-                        InkWell(
-                          onTap: () => setState(() => _isOpen = !_isOpen),
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                            child: Text(
-                              _isOpen
-                                  ? TicketsTexts.showLess
-                                  : TicketsTexts.showMore,
-                              style: AppText.label.copyWith(
-                                color: AppColors.primaryBright,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  );
-                },
+    final lineHeight = scaler.scale(
+      AppSv.commentText.fontSize! * AppSv.commentText.height!,
+    );
+    final labelStyle = AppText.rowCaption;
+    final labelHeight = widget.label.isEmpty
+        ? 0.0
+        : scaler.scale(labelStyle.fontSize! * (labelStyle.height ?? 1.2));
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: labelHeight),
+          child: SizedBox(
+            height: lineHeight,
+            child: const Center(
+              child: SizedBox.square(
+                dimension: AppSv.commentDot,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.cardMuted,
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(width: AppSv.commentDotGap),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final painter = TextPainter(
+                text: TextSpan(text: widget.text, style: AppSv.commentText),
+                maxLines: HistoryQuote.maxLines,
+                textDirection: Directionality.of(context),
+                textScaler: scaler,
+              )..layout(maxWidth: box.maxWidth);
+              final isLong = painter.didExceedMaxLines;
+              painter.dispose();
+              final isOpen = _isOpen && isLong;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.label.isNotEmpty)
+                    Text(widget.label, style: AppText.rowCaption),
+                  AnimatedSize(
+                    duration:
+                        AppDurations.reduced + const Duration(milliseconds: 50),
+                    curve: AppCurves.out,
+                    alignment: Alignment.topCenter,
+                    child: Text(
+                      widget.text,
+                      style: AppSv.commentText,
+                      maxLines: isOpen ? null : HistoryQuote.maxLines,
+                      overflow: isOpen
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isLong)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                        child: Text(
+                          isOpen ? 'See less' : 'See more',
+                          style: AppSv.commentMore,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

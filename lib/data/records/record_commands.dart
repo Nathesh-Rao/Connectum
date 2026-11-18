@@ -8,6 +8,7 @@ class RecordCmd {
   static const get = 'submission.get';
   static const history = 'submission.history';
   static const actions = 'record.actions';
+  static const summary = 'records.summary';
   static const status = 'record.status';
   static const send = 'record.send';
   static const targets = 'record.targets';
@@ -20,6 +21,7 @@ class RecordCmd {
   static const update = 'submissions.update';
   static const resubmit = 'submission.resubmit';
   static const delete = 'submissions.delete';
+  static const list = 'submissions.list';
 
   /// Removed on the server (`unknown_action`, no alias). Kept only so a scan
   /// test can prove nothing sends them; never used to build a request.

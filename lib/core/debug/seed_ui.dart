@@ -836,6 +836,14 @@ class SeedUi {
           'multiline': true,
         },
         {
+          'name': 'due_on',
+          'caption': 'Due date (filled for you)',
+          'type': 'date',
+          'autoFill': true,
+          'fillFrom': 'details',
+          'sourceProp': 'due',
+        },
+        {
           'name': 'stage',
           'caption': 'Stage',
           'type': 'list',

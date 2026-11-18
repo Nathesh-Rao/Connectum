@@ -9,6 +9,7 @@ import '../../data/models/form_card.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
+import '../home_shell/home_tab.dart';
 import 'models/submission_row.dart';
 
 class FormFilter {
@@ -30,7 +31,6 @@ class SubmissionsController extends GetxController {
     required this.shell,
   });
 
-  static const _tabIndex = 2;
   static const _syncEvery = Duration(seconds: 20);
 
   final SubmissionRepository submissions;
@@ -71,8 +71,8 @@ class SubmissionsController extends GetxController {
       ever(shell.submissionsForm, (name) {
         if (name != null) _build();
       }),
-      ever(shell.index, (i) {
-        if (i == _tabIndex) unawaited(_syncIfStale());
+      ever(shell.tab, (t) {
+        if (t == HomeTab.submits) unawaited(_syncIfStale());
       }),
     ]);
     _build();

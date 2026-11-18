@@ -12,6 +12,14 @@ class _Auth implements AuthRepository {
   String? setOtp;
   String? setPasswordText;
   String? removedOtp;
+  String checkMessage = '';
+  final checked = <String>[];
+
+  @override
+  Future<PasswordCheck> passwordCheck(String password) async {
+    checked.add(password);
+    return PasswordCheck(isOk: checkMessage.isEmpty, message: checkMessage);
+  }
 
   @override
   Future<LoginStart> startPasswordChange() async {
@@ -81,7 +89,7 @@ void main() {
     expect(auth.setOtp, isNull);
   });
 
-  testWidgets('a wrong code shows the server wording and keeps the fields', (
+  testWidgets('a wrong code shows one wording and keeps the fields', (
     tester,
   ) async {
     final auth = _Auth()
@@ -94,8 +102,60 @@ void main() {
     c.code.text = '123456';
     c.newPassword.text = 'long enough 1';
     await c.save();
-    expect(c.error.value, 'That code is not right.');
+    expect(c.error.value, "That code isn't valid. Request a new one.");
     expect(c.newPassword.text, 'long enough 1');
+  });
+
+  testWidgets('a 503 says try again and keeps the code and the password', (
+    tester,
+  ) async {
+    final auth = _Auth()
+      ..failure = const ApiException(
+        'password_history_unavailable',
+        'x',
+        status: 503,
+      );
+    final c = await _pump(tester, auth);
+    c.code.text = '123456';
+    c.newPassword.text = 'long enough 1';
+    await c.save();
+    expect(c.error.value, 'Try again in a minute.');
+    expect(c.code.text, '123456');
+    expect(c.newPassword.text, 'long enough 1');
+    auth.failure = null;
+    await c.save();
+    expect(auth.setOtp, '123456');
+  });
+
+  testWidgets('a reused password and a plain 429 have their own words', (
+    tester,
+  ) async {
+    final auth = _Auth()..failure = const ApiException('password_reused', '');
+    final c = await _pump(tester, auth);
+    c.code.text = '123456';
+    c.newPassword.text = 'long enough 1';
+    await c.save();
+    expect(c.error.value, "You can't reuse a recent password.");
+    auth.failure = const ApiException('rate_limited', '', status: 429);
+    await c.save();
+    expect(
+      c.error.value,
+      'Too many tries. Please wait a minute and try again.',
+    );
+  });
+
+  testWidgets('typing asks password/check after a pause and shows its words', (
+    tester,
+  ) async {
+    final auth = _Auth()..checkMessage = 'Choose a stronger password.';
+    final c = await _pump(tester, auth);
+    c.newPassword.text = 'abc';
+    c.passwordChanged();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(auth.checked, isEmpty);
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(auth.checked, ['abc']);
+    expect(c.hint.value, 'Choose a stronger password.');
   });
 
   testWidgets('save sends the code and the new password', (tester) async {

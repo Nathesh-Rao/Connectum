@@ -134,6 +134,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   void start() {
     _wantConnected = true;
+    if (_isEnded(connection.value)) connection.value = SocketState.offline;
     connectNow(resetBackoff: true);
   }
 
@@ -149,6 +150,9 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (resetBackoff) _attempt = 0;
     final state = connection.value;
     if (state == SocketState.connecting || state == SocketState.online) return;
+    // The server ended this session (a password change, a sign-in elsewhere):
+    // the old token is never tried again, only `start` after a new sign-in.
+    if (_isEnded(state)) return;
     if (_session.current.value?.isExpired ?? false) {
       _drop(SocketState.expired);
       return;
@@ -254,7 +258,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
       switch (event['event']) {
         case 'session_replaced':
           _drop(SocketState.sessionReplaced);
-        case 'session_expired':
+        case 'session_expired' || 'session_ended':
           _drop(SocketState.expired);
         case 'connection_superseded':
           _drop(SocketState.superseded);
@@ -292,20 +296,23 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (_wantConnected) _scheduleRetry();
   }
 
+  static bool _isEnded(SocketState state) =>
+      state == SocketState.sessionReplaced ||
+      state == SocketState.authFailed ||
+      state == SocketState.expired ||
+      state == SocketState.superseded;
+
   void _onClosed(IOWebSocketChannel channel) {
     if (!identical(channel, _channel)) return;
     final state = connection.value;
-    final keep =
-        state == SocketState.sessionReplaced ||
-        state == SocketState.authFailed ||
-        state == SocketState.expired ||
-        state == SocketState.superseded;
+    final keep = _isEnded(state);
     _drop(keep ? state : SocketState.offline, retry: !keep);
   }
 
   void _drop(SocketState next, {bool retry = false}) {
     _handshakeTimer?.cancel();
     _stableTimer?.cancel();
+    if (_isEnded(next)) _retryTimer?.cancel();
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close();
@@ -318,6 +325,12 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     if (connection.value != next) connection.value = next;
     if (retry && _wantConnected) _scheduleRetry();
   }
+
+  @visibleForTesting
+  void receiveForTest(String frame) => _onData(frame);
+
+  @visibleForTesting
+  bool get isRetryScheduled => _retryTimer?.isActive ?? false;
 
   @visibleForTesting
   void emitOnline() {

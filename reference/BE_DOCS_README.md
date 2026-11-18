@@ -24,6 +24,7 @@
 | **Opening the app from a QR code** (the QR page, the app-link files, the provider's settings, the three mobile flows) | [MOBILE_QR.md](MOBILE_QR.md) |
 | **How the web app uses the shared form logic** (what is in the bundle, what lives only in React, what mobile must build) | [FORM_LOGIC_WEB_ARCHITECTURE.md](FORM_LOGIC_WEB_ARCHITECTURE.md), [FORM_LOGIC_FOR_MOBILE.md](FORM_LOGIC_FOR_MOBILE.md) |
 | **Start here for the mobile team**: every document, vector file, Postman collection and tool for the mobile app, in reading order | [MOBILE_HANDOVER.md](MOBILE_HANDOVER.md) |
+| **Administrators, scoped administrators and handover** (who may do what, the scope rule, the powers, orphaned items and who is told, every command) | [ADMIN_HANDOVER.md](ADMIN_HANDOVER.md) |
 | **What changed for API users, and the schema version** (`GET /api/sd/version` -> `schema`; every API-visible change, newest first) | [DEV_API_CHANGES.md](DEV_API_CHANGES.md) |
 | **Earlier messages on a new device, backup and restore** (for the mobile team) | [E2E_HISTORY_SYNC_MOBILE.md](E2E_HISTORY_SYNC_MOBILE.md) |
 | **Encrypted files, photos and voice notes** (for the mobile team) | [E2E_ATTACHMENTS.md](E2E_ATTACHMENTS.md) |

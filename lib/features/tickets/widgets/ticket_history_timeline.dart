@@ -257,11 +257,18 @@ class TicketHistoryItem extends StatelessWidget {
           if (e.reason.isNotEmpty)
             _Row(
               child: HistoryQuote(
+                storageKey: 'h-${e.id}-reason',
                 text: e.reason,
                 label: TicketsTexts.reasonLabel,
               ),
             ),
-          if (e.remarks.isNotEmpty) _Row(child: HistoryQuote(text: e.remarks)),
+          if (e.remarks.isNotEmpty)
+            _Row(
+              child: HistoryQuote(
+                storageKey: 'h-${e.id}-remarks',
+                text: e.remarks,
+              ),
+            ),
           if (changes.isNotEmpty) _Row(child: HistoryChanges(rows: changes)),
           if (fileNames.isNotEmpty) _Row(child: HistoryFiles(names: fileNames)),
         ],

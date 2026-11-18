@@ -5,7 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_sv.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/theme/app_tones.dart';
 import '../../../core/widgets/app_popup_menu.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../smart_view_controller.dart';
@@ -14,6 +16,7 @@ import 'sv_col_icon.dart';
 import 'sv_filter_sheet.dart';
 import 'sv_pill.dart';
 import 'sv_sort_sheet.dart';
+import 'sv_view_actions_sheet.dart';
 
 /// The row under the header: the Cards/Table switch on the left, Search,
 /// Filter and Sort on the right. Search opens as a field laid over the whole
@@ -50,14 +53,19 @@ class SvControls extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  SvIconAction(
-                    icon: Icons.search,
-                    label: 'Search',
-                    onTap: c.openSearch,
+                  Obx(
+                    () => SvIconAction(
+                      icon: Icons.search,
+                      label: 'Search',
+                      tone: AppSv.searchTone,
+                      isActive: c.query.value.search.isNotEmpty,
+                      onTap: c.openSearch,
+                    ),
                   ),
                   Obx(
                     () => SvIconAction(
                       icon: Icons.filter_list,
+                      tone: AppSv.filterTone,
                       label: 'Filter',
                       badge: c.query.value.activeConditions.length,
                       isActive: c.query.value.activeConditions.isNotEmpty,
@@ -67,9 +75,22 @@ class SvControls extends StatelessWidget {
                   Obx(
                     () => SvIconAction(
                       icon: Icons.swap_vert,
+                      tone: AppSv.sortTone,
                       label: 'Sort',
                       isActive: c.query.value.isSorting,
                       onTap: () => SvSortSheet.show(context, c),
+                    ),
+                  ),
+                  Obx(
+                    () => SvIconAction(
+                      icon: Icons.more_vert,
+                      tone: AppTones.slate,
+                      label: 'View options',
+                      isActive:
+                          c.isDirty ||
+                          c.groupBy.isNotEmpty ||
+                          c.hidden.isNotEmpty,
+                      onTap: () => SvViewActionsSheet.show(context, c),
                     ),
                   ),
                 ],
@@ -148,11 +169,7 @@ class _SearchBar extends StatelessWidget {
               controller: c.searchField,
               hint: 'Search',
               autofocus: true,
-              hasFocusRing: false,
               minHeight: AppSpacing.pillTall + 2,
-              borderRadius: AppRadius.pillAll,
-              borderColor: Colors.transparent,
-              fillColor: AppColors.searchFill,
               horizontalPadding: AppSpacing.sm,
               textStyle: AppText.body,
               textInputAction: TextInputAction.search,
@@ -189,16 +206,14 @@ class _SearchBar extends StatelessWidget {
             builder: (anchor) => SvPill(
               label: scoped?.label ?? SvControls.allFields,
               isActive: scoped != null,
+              isOutlined: true,
               maxWidth: 124,
               onTap: () => _scopeMenu(anchor, c),
             ),
           );
         }),
-        SvIconAction(
-          icon: Icons.close,
-          label: 'Close search',
-          onTap: c.closeSearch,
-        ),
+        const SizedBox(width: AppSpacing.xs),
+        _CloseSearch(onTap: c.closeSearch),
       ],
     );
   }
@@ -219,5 +234,39 @@ class _SearchBar extends StatelessWidget {
           onTap: () => c.setScope(col.key),
         ),
     ]);
+  }
+}
+
+/// Closes the search row: a hairline box in the field's own radius.
+class _CloseSearch extends StatelessWidget {
+  const _CloseSearch({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Close search',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: AppSpacing.pillTall + 2,
+          height: AppSpacing.pillTall + 2,
+          margin: const EdgeInsets.only(right: AppSpacing.xxs),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.controlAll,
+            border: Border.all(color: AppColors.inputBorder),
+          ),
+          child: const Icon(
+            Icons.close,
+            size: AppSpacing.popupMenuIcon,
+            color: AppColors.muted,
+          ),
+        ),
+      ),
+    );
   }
 }

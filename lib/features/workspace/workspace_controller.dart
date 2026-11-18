@@ -11,11 +11,11 @@ import '../../core/widgets/app_state_view.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../../data/models/form_card.dart';
-import '../../data/models/ids.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/workspace_repository.dart';
 import '../../data/models/record_state.dart';
+import '../tickets/models/card_destination.dart';
 import '../tickets/models/card_menu.dart';
 import '../tickets/models/record_card_rule.dart';
 import '../tickets/ticket_detail_controller.dart';
@@ -385,14 +385,11 @@ class WorkspaceController extends GetxController {
     if (id != null) Get.toNamed(AppRoutes.conversationOf(id));
   }
 
-  /// A record someone sent me opens as a record; my own submission as before.
+  /// A record or ticket opens the record screen, mine or received; a plain
+  /// submission opens its detail.
   void open(FormCardData d, {bool isReceived = false}) {
-    final id = idNumber(d.id);
-    if (isReceived && id != null) {
-      Get.toNamed(AppRoutes.ticketOf(id));
-      return;
-    }
-    Get.toNamed(AppRoutes.submissionDetailOf(d.id));
+    final route = CardDestination.of(d);
+    if (route != null) Get.toNamed<dynamic>(route);
   }
 
   /// The record menu of a card opened: `record.actions`, read once (cached

@@ -10,6 +10,7 @@ import '../models/ids.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../smart_view/models/sv_row.dart';
+import '../smart_view/overview/sv_overview.dart';
 import '../smart_view/models/sv_source.dart';
 import '../smart_view/smart_view_commands.dart';
 import '../socket/socket_service.dart';
@@ -173,6 +174,11 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
 
   // ---- the gate --------------------------------------------------------------
 
+  /// One command through the same gate as every Smart View read (saved
+  /// views ride on it).
+  Future<Map<String, dynamic>> gated(String cmd, Map<String, dynamic> args) =>
+      _call(cmd, args);
+
   Future<Map<String, dynamic>> _call(String cmd, Map<String, dynamic> args) {
     final epoch = _epoch;
     final prev = _tail;
@@ -320,7 +326,12 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   /// at most 20 pages), then the records sent to me (`records.mine` with and
   /// involved, at most 3 pages of 200 each). Rows show page by page. A pull
   /// to refresh or a retry passes [isQuiet]: the rows stay until new ones land.
-  Future<void> load(SvTable t, {bool isQuiet = false}) async {
+  Future<void> load(
+    SvTable t, {
+    bool isQuiet = false,
+    bool isOwnOnly = false,
+    int? maxPages,
+  }) async {
     final id = ++t.loadId;
     final epoch = _epoch;
     bool isStale() => id != t.loadId || epoch != _epoch;
@@ -333,7 +344,8 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       var offset = 0;
       var pages = 0;
       var isFirst = true;
-      while (pages < SvLimits.rowsMaxPages) {
+      final pageLimit = maxPages ?? SvLimits.rowsMaxPages;
+      while (pages < pageLimit) {
         final Map<String, dynamic> data;
         try {
           data = await _call(SvCmd.rows, {
@@ -369,9 +381,11 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
           );
         }
       }
-      for (final as in const ['with', 'involved']) {
-        if (isStale()) return;
-        await _readMine(t, as, own, isStale);
+      if (!isOwnOnly) {
+        for (final as in const ['with', 'involved']) {
+          if (isStale()) return;
+          await _readMine(t, as, own, isStale);
+        }
       }
       if (isStale()) return;
       _show(t, own, isDone: true);
@@ -380,6 +394,26 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         t.isLoading = false;
         t.isPaging.value = false;
       }
+    }
+  }
+
+  /// The Overview's read of one structure: the newest page of the person's
+  /// own records (`submissions.list`, the web's `structureStats`), through
+  /// the same gate as every other read. Nothing stays open afterwards.
+  Future<SvOverviewRead> readForOverview(SvSource source) async {
+    final t = open(source);
+    try {
+      await load(t, isOwnOnly: true, maxPages: 1);
+      if (t.phase.value != SvPhase.ready && t.phase.value != SvPhase.empty) {
+        return const SvOverviewRead(isOk: false);
+      }
+      return SvOverviewRead(
+        isOk: true,
+        rows: t.rows.toList(),
+        total: t.total.value,
+      );
+    } finally {
+      close(t);
     }
   }
 

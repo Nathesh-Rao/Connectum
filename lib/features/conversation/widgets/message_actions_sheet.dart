@@ -58,7 +58,7 @@ class MessageActionsSheet extends StatelessWidget {
         !m.isEncryptedUnsupported &&
         !isForm &&
         !(m.isEncrypted && AttachmentTag.parse(m.text) != null);
-    final canForward = c.canForward(m);
+    final canForward = !isForm && c.canForward(m);
     final canReply =
         c.canReply && isSettled && !m.isDeleted && !m.isEncryptedUnsupported;
     // A form that reached the server stays: it is a record. Only one that
@@ -233,8 +233,6 @@ class MessageActionsSheet extends StatelessWidget {
         switch (item.id) {
           case CardMenuItem.reply:
             c.startReply(m);
-          case CardMenuItem.forward:
-            ForwardSheet.show(root, c, m);
           case CardMenuItem.copy:
             c.copy(m);
           case CardMenuItem.save:

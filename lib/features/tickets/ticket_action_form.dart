@@ -14,7 +14,7 @@ import 'tickets_texts.dart';
 class TicketActionForm {
   TicketActionForm(this.kind, {required this.state, String status = ''})
     : statusPick = (status.isEmpty ? state.status : status).obs {
-    if (kind == RecordActionItem.status) percent.value = state.completion;
+    if (kind == RecordActionItem.status) percent.value = _startPercent();
   }
 
   final String kind;
@@ -32,9 +32,12 @@ class TicketActionForm {
   final commentsText = ''.obs;
   final percent = RxnInt();
 
-  /// The final status picked for the person because the slider reached 100;
-  /// empty when the person picked it or none was picked for them.
-  final autoFinal = ''.obs;
+  /// An administrator picked a non-final status for a closed record and has
+  /// not chosen a percentage: the control shows 99 and says so.
+  final isReopening = false.obs;
+
+  /// The server's refusal about the completion, shown under the slider.
+  final percentError = RxnString();
 
   /// The last change of [percent] came from a rule (animate it), not a drag.
   final isPercentJump = false.obs;
@@ -58,9 +61,23 @@ class TicketActionForm {
 
   bool get isFinalPicked => state.finalStatuses.contains(statusPick.value);
 
-  /// The lowest completion the person may set: what the record has now, or 0
-  /// for an administrator or a record with none yet.
-  int get minPercent => state.isAdmin ? 0 : (state.completion ?? 0);
+  /// The lowest completion the person may set. A member: the larger of the
+  /// server's `minCompletion` and the current completion. An administrator:
+  /// 0 in a form with a closing status; in a form without one the server's
+  /// own `minCompletion` stays (it does not let anyone lower it).
+  int get minPercent {
+    final floor = state.minCompletion ?? 0;
+    if (state.isAdmin) return hasFinalRules ? 0 : floor;
+    final now = state.completion ?? 0;
+    return floor > now ? floor : now;
+  }
+
+  /// The highest completion: 99 on a status that does not close (only a
+  /// closing status ends a record), else 100.
+  int get maxPercent {
+    if (!hasFinalRules || isFinalPicked) return 100;
+    return minPercent > 99 ? minPercent : 99;
+  }
 
   /// The completion before the person's change, shown as "Was 40%"; null when
   /// nothing is locked.
@@ -69,44 +86,55 @@ class TicketActionForm {
   /// A final status is picked: completion is 100 and cannot move.
   bool get isPercentLocked => hasFinalRules && isFinalPicked;
 
+  /// An older record that holds 100 on a status that does not close: the
+  /// control stays at the current value and no percentage is sent.
+  bool get isPercentFixed =>
+      hasFinalRules && !isFinalPicked && minPercent >= 100;
+
+  int? _startPercent() {
+    final now = state.completion;
+    if (now == null || !hasFinalRules || isFinalPicked) return now;
+    if (isPercentFixed) return now;
+    return now > maxPercent ? maxPercent : now;
+  }
+
   /// Picks [name] by hand and applies the rules.
   void pickStatus(String name) {
     final wasFinal = isFinalPicked;
     statusPick.value = name;
-    autoFinal.value = '';
+    isReopening.value = false;
+    percentError.value = null;
     if (!isStatus || !hasFinalRules) return;
     if (isFinalPicked) {
       _jump(100);
-    } else if (wasFinal || (percent.value ?? 0) >= 100) {
+    } else if (isPercentFixed) {
+      _jump(state.completion ?? 100);
+    } else if (state.isFinal) {
+      final now = state.completion;
+      if (now == null || now > 99) {
+        _jump(99);
+        isReopening.value = state.isAdmin;
+      } else {
+        _jump(now);
+      }
+    } else if (wasFinal || (percent.value ?? 0) > 99) {
       final before = state.completion;
       _jump(before != null && before < 100 ? before : 99);
     }
   }
 
-  /// The slider moved to [raw]: clamped to what is allowed. 100 always means
-  /// closed: on a non-final status the first final status is picked.
+  /// The slider moved to [raw]: held between the lowest and the highest
+  /// allowed. Reaching the end of a non-closing status stops at 99.
   void setPercent(int raw) {
-    if (isPercentLocked) return;
-    final v = raw.clamp(minPercent, 100);
-    final isHeld = raw < minPercent && !state.isAdmin;
+    if (isPercentLocked || isPercentFixed) return;
+    final v = raw.clamp(minPercent, maxPercent);
+    final isHeld = raw < minPercent && minPercent > 0;
     if (isHeld && !_isHeldAtFloor) HapticFeedback.lightImpact();
     _isHeldAtFloor = isHeld;
     isPercentJump.value = false;
+    isReopening.value = false;
+    percentError.value = null;
     percent.value = v;
-    if (hasFinalRules && v >= 100 && !isFinalPicked) {
-      final first = _firstFinal;
-      if (first != null) {
-        statusPick.value = first;
-        autoFinal.value = first;
-      }
-    }
-  }
-
-  String? get _firstFinal {
-    for (final name in state.statuses) {
-      if (state.finalStatuses.contains(name)) return name;
-    }
-    return state.finalStatuses.isEmpty ? null : state.finalStatuses.first;
   }
 
   void _jump(int v) {
@@ -132,7 +160,7 @@ class TicketActionForm {
   StatusInput get statusInput => StatusInput(
     status: statusPick.value,
     comments: commentsText.value,
-    percent: percent.value,
+    percent: isPercentFixed ? null : percent.value,
     hours: hoursText.value,
     files: fileIds,
   );

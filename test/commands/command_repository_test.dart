@@ -248,8 +248,20 @@ void main() {
     expect(open.target, 'leave_request');
     final bare = await repo.run('#tstruct-add');
     expect(bare.kind, HashKind.usage);
-    expect(bare.text, CommandRepository.noStructure);
+    expect(bare.text, CommandRepository.noStructure('tstruct-add'));
     expect(bare.isFinished, isFalse);
+    expect(
+      (await repo.run('#tstruct')).text,
+      CommandRepository.noStructure('tstruct'),
+    );
+    expect(
+      (await repo.run('#ts')).text,
+      CommandRepository.noStructure('tstruct'),
+    );
+    expect(
+      (await repo.run('#create')).text,
+      CommandRepository.noStructure('tstruct-add'),
+    );
     expect(hashLines(), isEmpty);
   });
 

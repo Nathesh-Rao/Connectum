@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/widgets/app_action_bar.dart';
 import '../../../core/widgets/app_form_card.dart';
+import '../../../data/models/record_live.dart';
 import '../../../data/repositories/ticket_repository.dart';
 import '../models/ticket_action_style.dart';
 import 'record_status_block.dart';
@@ -25,10 +26,15 @@ class RecordCardActions extends StatelessWidget {
     required this.recordId,
     required this.tickets,
     required this.onAction,
+    this.summary,
   });
 
   final int recordId;
   final TicketRepository tickets;
+
+  /// The `record` object the card came with; null when it had none (the
+  /// record is then unknown and asked for with `records.summary`).
+  final RecordSummary? summary;
 
   /// A button was tapped: [actionId] is `send` or `status`.
   final void Function(BuildContext context, String actionId) onAction;
@@ -38,13 +44,14 @@ class RecordCardActions extends StatelessWidget {
     return _OnScreen(
       recordId: recordId,
       tickets: tickets,
+      summary: summary,
       child: Obx(() {
         final live = tickets.liveOf(recordId).value;
         final actions = tickets.itemsOf(recordId);
         final footer =
             AppFormCardScope.maybeOf(context)?.footer ??
             const SizedBox.shrink();
-        if (actions.isEmpty && !live.isShown) return footer;
+        if (actions.isEmpty && live.isKnown && !live.isShown) return footer;
         return AppFormCardActionArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,10 +82,12 @@ class _OnScreen extends StatefulWidget {
     required this.recordId,
     required this.tickets,
     required this.child,
+    this.summary,
   });
 
   final int recordId;
   final TicketRepository tickets;
+  final RecordSummary? summary;
   final Widget child;
 
   @override
@@ -113,7 +122,9 @@ class _OnScreenState extends State<_OnScreen> {
     final tickets = widget.tickets;
     if (isOn) {
       scheduleMicrotask(() {
-        if (mounted && _isShown) tickets.loadActions([id]);
+        if (!mounted || !_isShown) return;
+        tickets.showSummary(id, widget.summary);
+        tickets.loadActions([id]);
       });
     } else {
       tickets.releaseActions([id]);

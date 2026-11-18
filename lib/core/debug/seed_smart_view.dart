@@ -5,6 +5,7 @@ import '../../data/smart_view/models/sv_row.dart';
 import '../../data/smart_view/models/sv_source.dart';
 import '../../data/smart_view/smart_view_commands.dart';
 import '../../data/socket/socket_service.dart';
+import 'seed_smart_files.dart';
 import 'seed_tickets.dart';
 
 /// Debug and demo only (`/debug/smartview`, `DEMO_MODE`; see "Before release"
@@ -49,6 +50,7 @@ class SeedSmartView {
       'manager': 'Manager',
       'notes': 'Notes',
       'covered': 'Cover arranged',
+      'attach': 'Attachments',
     },
     'recordThread': false,
     'status': {
@@ -92,7 +94,9 @@ class SeedSmartView {
           ? ''
           : 'Short note',
       'covered': i % 2 == 0,
+      'attach': SeedSmartFiles.idsFor(i),
       'internal_note': hiddenValue,
+      'internal_files': [SeedSmartFiles.hiddenId],
     };
   }
 
@@ -118,6 +122,7 @@ class SeedSmartView {
               ? 'approved'
               : '',
           values: leaveValues(i),
+          files: SeedSmartFiles.infoOf(leaveValues(i)),
         ),
     ];
   }
@@ -306,6 +311,7 @@ class SeedSmartView {
           _field('manager', 'Manager', 'text'),
           _field('notes', 'Notes', 'text'),
           _field('covered', 'Cover arranged', 'toggle'),
+          _field('attach', 'Attachments', 'file'),
         ],
         'sections': <Object>[],
       },
@@ -350,23 +356,31 @@ class SeedSmartView {
         if (r['by'] == me) r,
     ]..sort((a, b) => (b['ts'] as int).compareTo(a['ts'] as int));
     final page = all.skip(offset).take(limit).toList();
+    final now = DateTime.now().millisecondsSinceEpoch;
     return {
       'submissions': [
-        for (final r in page)
-          {
-            'id': r['id'],
-            'tstruct': name,
-            'by': r['by'],
-            'byName': 'Ana Rao',
-            'ts': r['ts'],
-            'holder': r['holder'],
-            'completion': r['completion'],
-            'canEdit': true,
-            'labels': <String, dynamic>{},
-            'files': <String, dynamic>{},
-            'scope': 'user',
-            'values': r['values'],
-          },
+        for (var i = 0; i < page.length; i++)
+          // Leave requests are spread over a month (one every 5 hours, none
+          // on some days) so the Overview's bars and "last entry" show.
+          for (final r in [page[i]])
+            {
+              'id': r['id'],
+              'tstruct': name,
+              'by': r['by'],
+              'byName': 'Ana Rao',
+              'ts': name == leave
+                  ? now - (offset + i) * 5 * 3600000 - 3 * 3600000
+                  : r['ts'],
+              'holder': r['holder'],
+              'completion': r['completion'],
+              'canEdit': true,
+              'labels': <String, dynamic>{},
+              'files': SeedSmartFiles.infoOf(
+                Map<String, dynamic>.from(r['values'] as Map),
+              ),
+              'scope': 'user',
+              'values': r['values'],
+            },
       ],
       'total': all.length,
       'offset': offset,

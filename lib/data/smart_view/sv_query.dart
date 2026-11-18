@@ -95,11 +95,11 @@ class SvEngineInput {
     _ => EngineType.text,
   };
 
+  /// Numbers and dates go in as the row holds them. A yes/no goes in as the
+  /// word the person sees (`Yes` / `No`), because a record may hold it as
+  /// `Yes`, `true` or `1`, and a filter and a sort must treat those alike.
   static bool _isRaw(SvColType t) =>
-      t == SvColType.number ||
-      t == SvColType.date ||
-      t == SvColType.datetime ||
-      t == SvColType.checkbox;
+      t == SvColType.number || t == SvColType.date || t == SvColType.datetime;
 
   static SvEngineInput of(SmartViewColumns columns, List<SvRow> rows) {
     final cols = columns.columns;
@@ -137,6 +137,59 @@ class SvEngineInput {
     }
     return idx;
   }
+
+  /// The positions of the rows that pass [q], sorted by it (the rows of
+  /// [apply] as positions into [rows]).
+  List<int> orderedPositions(SmartViewQuery q, {DateTime? now}) {
+    if (q.isEmpty || (!q.isFiltering && !q.isSorting)) {
+      return [for (var i = 0; i < rows.length; i++) i];
+    }
+    return _positions(q, now: now);
+  }
+
+  /// The positions of the rows that pass the search and filters of [q]
+  /// (every row when it has none); the order is the loaded one.
+  List<int> positions(SmartViewQuery q, {DateTime? now}) {
+    if (!q.isFiltering) return [for (var i = 0; i < rows.length; i++) i];
+    return _positions(q.copyWith(sortKey: () => null), now: now);
+  }
+
+  /// The status column the KPI cards count: the structure's own, else the
+  /// record's state word.
+  String? get statusKey {
+    final cols = columns.columns;
+    for (final c in cols) {
+      if (!c.isMeta && c.type == SvColType.status) return c.key;
+    }
+    for (final c in cols) {
+      if (c.type == SvColType.status) return c.key;
+    }
+    return null;
+  }
+
+  /// The number columns that may be totalled (the web's measure rule).
+  List<String> get measureKeys => [
+    for (final c in columns.columns)
+      if (!c.isMeta &&
+          c.type == SvColType.number &&
+          SvValues.isMeasure(c.key, c.label, EngineType.number))
+        c.key,
+  ];
+
+  /// The columns a chart can group by: status, choice, yes/no and dates.
+  List<SvColumn> get groupColumns => [
+    for (final c in columns.columns)
+      if (const {
+        SvColType.status,
+        SvColType.select,
+        SvColType.checkbox,
+        SvColType.date,
+        SvColType.datetime,
+      }.contains(c.type))
+        c,
+  ];
+
+  bool isDate(String key) => table.col(key)?.type == EngineType.date;
 
   /// The rows that pass [q], sorted by it. The source rows are not changed.
   List<SvRow> apply(SmartViewQuery q, {DateTime? now}) {

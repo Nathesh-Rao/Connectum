@@ -1,0 +1,13 @@
+{
+  "id": "1763456790001",
+  "name": "By stage then owner",
+  "search": "",
+  "filters": [ { "col": "stage", "op": "not", "value": "Closed" } ],
+  "sort": null,
+  "groupBy": ["stage", "owner"],
+  "hidden": [],
+  "order": [],
+  "widths": {},
+  "kpis": true,
+  "charts": true
+}

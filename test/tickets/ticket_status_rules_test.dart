@@ -150,32 +150,73 @@ void main() {
     expect(f.percent.value, 100);
   });
 
-  testWidgets('the slider at 100 picks the final status and says so', (
+  testWidgets('a non-final status caps the slider at 99, never closes', (
     tester,
   ) async {
     final f = await show(tester);
     f.setPercent(100);
     await tester.pump();
-    expect(f.statusPick.value, 'Done');
-    expect(find.text('Set to Done because completion is 100%'), findsOneWidget);
-    expect(find.text(_warning), findsOneWidget);
+    expect(f.percent.value, 99);
+    expect(f.statusPick.value, 'In progress');
+    await tester.drag(find.byType(Slider), const Offset(900, 0));
+    await tester.pump();
+    expect(f.percent.value, 99);
+    expect(f.statusPick.value, 'In progress');
+    expect(find.text(_warning), findsNothing);
   });
 
-  testWidgets('with several finals the first in the list is picked', (
-    tester,
-  ) async {
+  testWidgets('finalStatuses keep the form order, not sorted', (tester) async {
     final f = await show(
       tester,
       extra: {
         'statuses': ['Open', 'In progress', 'Closed', 'Dropped'],
-        'final': ['Dropped', 'Closed'],
+        'finalStatuses': ['Dropped', 'Closed'],
       },
     );
-    f.setPercent(100);
-    expect(f.statusPick.value, 'Closed');
+    expect(f.state.finalStatuses, ['Dropped', 'Closed']);
     await pick(tester, f, 'Dropped');
-    expect(f.statusPick.value, 'Dropped');
     expect(f.percent.value, 100);
+    expect(f.isPercentLocked, isTrue);
+    await pick(tester, f, 'Closed');
+    expect(f.percent.value, 100);
+  });
+
+  testWidgets('a member cannot go below minCompletion or the current value', (
+    tester,
+  ) async {
+    final f = await show(tester, extra: {'minCompletion': 55});
+    expect(f.minPercent, 55);
+    f.setPercent(10);
+    expect(f.percent.value, 55);
+  });
+
+  testWidgets('the current completion wins over a lower minCompletion', (
+    tester,
+  ) async {
+    final f = await show(tester, extra: {'minCompletion': 10});
+    expect(f.minPercent, 40);
+  });
+
+  testWidgets('an administrator goes below, to 0', (tester) async {
+    final f = await show(tester, extra: {'isAdmin': true, 'minCompletion': 0});
+    expect(f.minPercent, 0);
+    f.setPercent(0);
+    expect(f.percent.value, 0);
+  });
+
+  testWidgets('an older record at 100 on a non-final status is fixed', (
+    tester,
+  ) async {
+    final f = await show(
+      tester,
+      extra: {'completion': 100, 'minCompletion': 100},
+    );
+    expect(f.isPercentFixed, isTrue);
+    expect(f.percent.value, 100);
+    expect(tester.widget<Slider>(find.byType(Slider)).onChanged, isNull);
+    f.setPercent(50);
+    expect(f.percent.value, 100);
+    expect(f.statusInput.percent, isNull);
   });
 
   testWidgets('a non-final status never keeps 100', (tester) async {
@@ -183,8 +224,8 @@ void main() {
     await pick(tester, f, 'Open');
     expect(f.percent.value, 40);
     f.setPercent(100);
-    expect(f.statusPick.value, 'Done');
-    expect(f.percent.value, 100);
+    expect(f.statusPick.value, 'Open');
+    expect(f.percent.value, 99);
   });
 
   testWidgets('final to non-final restores the previous completion', (
@@ -197,19 +238,24 @@ void main() {
     expect(find.text(_warning), findsNothing);
   });
 
-  testWidgets(
-    'reopening a closed record as admin goes to 99 or the old value',
-    (tester) async {
-      final f = await show(
-        tester,
-        extra: {'isAdmin': true, 'status': 'Done', 'completion': 100},
-      );
-      expect(f.percent.value, 100);
-      expect(find.text(_warning), findsOneWidget);
-      await pick(tester, f, 'Open');
-      expect(f.percent.value, 99);
-    },
-  );
+  testWidgets('reopening a closed record as admin presets 99 and says so', (
+    tester,
+  ) async {
+    final f = await show(
+      tester,
+      extra: {'isAdmin': true, 'status': 'Done', 'completion': 100},
+    );
+    expect(f.percent.value, 100);
+    expect(find.text(_warning), findsOneWidget);
+    expect(find.text('Reopening sets completion to 99%'), findsNothing);
+    await pick(tester, f, 'Open');
+    expect(f.percent.value, 99);
+    expect(find.text('Reopening sets completion to 99%'), findsOneWidget);
+    expect(f.statusInput.percent, 99);
+    f.setPercent(70);
+    await tester.pump();
+    expect(find.text('Reopening sets completion to 99%'), findsNothing);
+  });
 
   testWidgets('no final status in the form keeps the old behaviour', (
     tester,
@@ -229,7 +275,7 @@ void main() {
     tester,
   ) async {
     final f = await show(tester);
-    f.setPercent(100);
+    await pick(tester, f, 'Done');
     socket.answers[RecordCmd.status] = fixtureData('record_status_ok');
     await tester.runAsync(() => c.submit(f));
     final args = socket.calls
@@ -249,6 +295,23 @@ void main() {
     await tester.runAsync(() => c.submit(f));
     await tester.pump();
     expect(find.text('Completion cannot go down.'), findsOneWidget);
+  });
+
+  testWidgets('the 100%-only-for-closing refusal shows under the slider', (
+    tester,
+  ) async {
+    final f = await show(tester);
+    f.setPercent(60);
+    const text =
+        '100% completion is only for a closing status. Choose a closing status.';
+    socket.answers[RecordCmd.status] = const SocketCallError('invalid', text);
+    await tester.runAsync(() => c.submit(f));
+    await tester.pump();
+    expect(f.percentError.value, text);
+    expect(f.error.value, isNull);
+    expect(find.text(text), findsOneWidget);
+    f.setPercent(70);
+    expect(f.percentError.value, isNull);
   });
 
   testWidgets('text at 200% does not overflow', (tester) async {

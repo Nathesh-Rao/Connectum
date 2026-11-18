@@ -20,6 +20,7 @@ import '../notifications/notification_router.dart';
 import '../notifications/widgets/notification_permission_sheet.dart';
 import '../security/security_controller.dart';
 import '../smart_view/models/smart_view_entry.dart';
+import 'home_tab.dart';
 import '../smart_view/smart_view_controller.dart';
 import '../security/widgets/security_sheets.dart';
 
@@ -34,13 +35,7 @@ class HomeShellController extends GetxController
     required this.smartView,
   });
 
-  static const tabRoutes = [
-    AppRoutes.chats,
-    AppRoutes.aiAgents,
-    AppRoutes.submissions,
-    AppRoutes.smartView,
-    AppRoutes.inbox,
-  ];
+  static final tabRoutes = [for (final t in HomeTab.values) t.route];
 
   final ConversationRepository conversations;
   final SecurityController security;
@@ -49,7 +44,7 @@ class HomeShellController extends GetxController
   final NotificationRouter notificationRouter;
   final SmartViewController smartView;
 
-  final index = 0.obs;
+  final tab = HomeTab.chats.obs;
   final hasUnread = false.obs;
 
   /// A form (its name) My Submissions should show only; set by `#tstruct`,
@@ -60,7 +55,7 @@ class HomeShellController extends GetxController
   /// before the controllers behind it are closed.
   final isRetired = false.obs;
   final isBuilt = <bool>[true, false, false, false, false];
-  int previous = 0;
+  HomeTab previous = HomeTab.chats;
   late final AnimationController crossfade = AnimationController(
     vsync: this,
     duration: AppDurations.base,
@@ -73,12 +68,12 @@ class HomeShellController extends GetxController
     notificationRouter.selectTab = select;
     HomeReload.retireHome = () => isRetired.value = true;
     HomeReload.restoreHome = () => isRetired.value = false;
-    final start = tabRoutes.indexOf(Get.currentRoute);
-    if (start > 0) {
-      index.value = start;
+    final start = HomeTab.ofRoute(Get.currentRoute);
+    if (start != null && start != HomeTab.chats) {
+      tab.value = start;
       previous = start;
-      isBuilt[start] = true;
-      if (start == smartViewTab) {
+      isBuilt[start.index] = true;
+      if (start == HomeTab.smartView) {
         unawaited(smartView.enter(const SmartViewEntry.tab()));
       }
     }
@@ -210,30 +205,28 @@ class HomeShellController extends GetxController
   void openSubmissionsOf(String formName) {
     submissionsForm.value = formName;
     Get.until((r) => tabRoutes.contains(r.settings.name));
-    select(_submissionsTab);
+    select(HomeTab.submits);
   }
-
-  static const _submissionsTab = 2;
-  static const smartViewTab = 3;
 
   /// `#view`, `#view <name>`: leaves the open chat, shows the Smart view tab
   /// and tells it how it was entered. Nothing is stacked: a second call on the
   /// tab only updates it.
   void openSmartView(SmartViewEntry entry) {
     Get.until((r) => tabRoutes.contains(r.settings.name));
-    select(smartViewTab, entry: entry);
+    select(HomeTab.smartView, entry: entry);
   }
 
-  void select(int next, {SmartViewEntry? entry}) {
-    final isSmart = next == smartViewTab;
-    final isMoving = next != index.value;
+  void select(HomeTab next, {SmartViewEntry? entry}) {
+    final isSmart = next == HomeTab.smartView;
+    final isMoving = next != tab.value;
     if (isMoving) {
-      previous = index.value;
-      isBuilt[next] = true;
-      index.value = next;
+      previous = tab.value;
+      isBuilt[next.index] = true;
+      tab.value = next;
       crossfade.forward(from: 0);
       smartView.setActive(isSmart);
     }
+    if (isSmart && !isMoving && entry == null) smartView.onReselect();
     if (isSmart && (isMoving || entry != null)) {
       unawaited(smartView.enter(entry ?? const SmartViewEntry.tab()));
     }

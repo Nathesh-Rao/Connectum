@@ -107,7 +107,7 @@ class SeedTickets {
   static const raisedChunk = 200;
 
   /// Records where the demo user is an administrator.
-  static const _adminIds = {34};
+  static const _adminIds = {34, 44};
 
   /// Demo records for the card bars (chat `dm:forms` and the Work Space):
   /// what `record.actions` returns differs per record.
@@ -189,6 +189,15 @@ class SeedTickets {
       holder: me,
       completion: 60,
       ts: t - 7.5e6,
+    );
+    _add(
+      44,
+      'Admin sample: reopen a closed record',
+      'Done',
+      by: 'rhea',
+      holder: me,
+      completion: 100,
+      ts: t - 7.2e6,
     );
     _add(
       33,
@@ -663,6 +672,25 @@ class SeedTickets {
         return _actions(_find(intOf(args['id'])));
       case RecordCmd.history:
         return _history(_find(intOf(args['id'])));
+      case RecordCmd.summary:
+        final ids = args['ids'];
+        final rows = <Map<String, dynamic>>[];
+        if (ids is List) {
+          for (final id in ids.take(50)) {
+            final r = _records.where((e) => e['id'] == intOf(id)).firstOrNull;
+            if (r != null) {
+              rows.add({
+                'id': r['id'],
+                'tstruct': r['tstruct'],
+                'record': _summary(r),
+              });
+            }
+          }
+        }
+        return {
+          'summaries': rows,
+          'omitted': (ids is List ? ids.length : 0) - rows.length,
+        };
       case RecordCmd.targets:
         final r = _find(intOf(args['id']));
         return {
@@ -703,6 +731,17 @@ class SeedTickets {
     }
     throw SocketCallError('unknown_action', 'Unknown sd action: $cmd');
   }
+
+  /// The `record` object an event, a card and `records.summary` carry.
+  static Map<String, dynamic> _summary(Map<String, dynamic> r) => {
+    'status': _statusOf(r),
+    'holder': r['holder'],
+    'claimants': <String>[],
+    'completion': r['completion'],
+    'final': _isFinal(r),
+    'ts': r['editedTs'] ?? r['ts'],
+    'by': r['by'],
+  };
 
   static Map<String, dynamic> _view(Map<String, dynamic> r) => {
     for (final e in r.entries)
@@ -775,6 +814,7 @@ class SeedTickets {
     final isHolder = r['holder'] == me;
     final waiting = _isPending(r);
     final isFinal = _isFinal(r);
+    final isAdmin = _adminIds.contains(r['id']);
     String? why;
     if (waiting) {
       why = 'This record is waiting for approval.';
@@ -787,7 +827,7 @@ class SeedTickets {
         {
           'id': 'status',
           'label': 'Update status',
-          'enabled': why == null && !isFinal,
+          'enabled': why == null && (!isFinal || isAdmin),
           'why':
               ?(why ??
               (isFinal
@@ -802,7 +842,9 @@ class SeedTickets {
       'status': _statusOf(r),
       'statuses': spec['statuses'],
       'final': spec['final'],
+      'finalStatuses': spec['final'],
       'completion': r['completion'],
+      'minCompletion': isAdmin ? 0 : intOf(r['completion']),
       'hours': r['hours'],
       'commentsRequired': r['tstruct'] == 'help_task',
       'completionRequired': r['tstruct'] == 'help_task',
@@ -879,7 +921,8 @@ class SeedTickets {
     Map<String, dynamic> r,
     Map<String, dynamic> args,
   ) {
-    if (_isFinal(r)) {
+    final isAdmin = _adminIds.contains(r['id']);
+    if (_isFinal(r) && !isAdmin) {
       throw SocketCallError(
         'invalid',
         'This record is ${_statusOf(r)}; only an administrator can change it.',
@@ -897,9 +940,23 @@ class SeedTickets {
     if (r['tstruct'] == 'help_task' && comments.isEmpty) {
       throw const SocketCallError('invalid', 'Add your comments.');
     }
-    final percent = args['percent'];
-    if (percent != null && intOf(percent) < intOf(r['completion'])) {
+    var percent = args['percent'];
+    final closes = (spec['final'] as List).contains(next);
+    if (percent != null && intOf(percent) == 100 && !closes) {
+      throw const SocketCallError(
+        'invalid',
+        '100% completion is only for a closing status. Choose a closing status.',
+      );
+    }
+    if (percent != null &&
+        !isAdmin &&
+        intOf(percent) < intOf(r['completion'])) {
       throw const SocketCallError('invalid', 'Completion cannot go down.');
+    }
+    if (closes) {
+      percent = 100;
+    } else if (percent == null && intOf(r['completion']) > 99 && isAdmin) {
+      percent = 99;
     }
     final hours = args['hours'];
     final h = hours == null ? null : double.tryParse('$hours');

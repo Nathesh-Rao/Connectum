@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "750938704312",
+    "project_id": "connectum-5cb41",
+    "storage_bucket": "connectum-5cb41.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:750938704312:android:f2f1d05517237a7897274d",
+        "android_client_info": {
+          "package_name": "com.agile.connectum"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3Oc3SNoPCHJ9-we2fwU85Jo5ux3poxyA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

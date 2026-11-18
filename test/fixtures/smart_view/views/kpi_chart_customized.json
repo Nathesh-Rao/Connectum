@@ -1,0 +1,30 @@
+{
+  "about": "constructed: a view that hides cards and charts, and the person's own set-up (smartview.attrs `attrs`) that decides which cards and charts exist",
+  "view": {
+    "id": "1763456792222",
+    "name": "Table only",
+    "search": "",
+    "filters": [],
+    "sort": null,
+    "groupBy": [],
+    "hidden": [],
+    "order": [],
+    "widths": {},
+    "kpis": false,
+    "charts": false
+  },
+  "attrs": {
+    "kind": "structure",
+    "name": "tickets",
+    "metadata": [],
+    "hyperlinks": [],
+    "kpis": [
+      { "caption": "Total amount", "agg": "sum", "column": "amount" },
+      { "caption": "Tickets", "agg": "count", "column": "" }
+    ],
+    "charts": [
+      { "caption": "Amount by stage", "chart": "donut", "groupBy": "stage", "agg": "sum", "column": "amount" },
+      { "caption": "Tickets by owner", "chart": "bar", "groupBy": "owner", "agg": "count", "column": "" }
+    ]
+  }
+}

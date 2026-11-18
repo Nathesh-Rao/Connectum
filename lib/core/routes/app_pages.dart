@@ -52,7 +52,15 @@ import '../../features/debug_tasks/debug_tasks_binding.dart';
 import '../../features/debug_tasks/debug_tasks_view.dart';
 import '../../features/debug_smart_drawer/debug_smart_drawer_binding.dart';
 import '../../features/debug_smart_drawer/debug_smart_drawer_view.dart';
+import '../../features/debug_smart_insights/debug_smart_insights_binding.dart';
+import '../../features/debug_smart_insights/debug_smart_insights_view.dart';
+import '../../features/debug_smart_files/debug_smart_files_binding.dart';
+import '../../features/debug_smart_files/debug_smart_files_view.dart';
+import '../../features/debug_smart_overview/debug_smart_overview_binding.dart';
+import '../../features/debug_smart_overview/debug_smart_overview_view.dart';
 import '../../features/debug_smart_query/debug_smart_query_binding.dart';
+import '../../features/debug_smart_views/debug_smart_views_binding.dart';
+import '../../features/debug_smart_views/debug_smart_views_view.dart';
 import '../../features/debug_smart_query/debug_smart_query_view.dart';
 import '../../features/debug_smart_table/debug_smart_table_binding.dart';
 import '../../features/debug_smart_table/debug_smart_table_view.dart';
@@ -85,6 +93,8 @@ import '../../features/security/security_binding.dart';
 import '../../features/security/security_view.dart';
 import '../../features/splash/splash_binding.dart';
 import '../../features/splash/splash_view.dart';
+import '../../features/struct_records/struct_records_binding.dart';
+import '../../features/struct_records/struct_records_view.dart';
 import '../../features/submission_detail/submission_detail_binding.dart';
 import '../../features/tasks/tasks_binding.dart';
 import '../../features/tasks/tasks_view.dart';
@@ -204,6 +214,12 @@ class AppPages {
       AppTransitionKind.push,
     ),
     _page(
+      AppRoutes.structRecords,
+      () => const StructRecordsView(),
+      StructRecordsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
       AppRoutes.form,
       () => FormView(launch: Get.arguments as FormLaunch),
       FormBinding(),
@@ -301,9 +317,33 @@ class AppPages {
         AppTransitionKind.push,
       ),
       _page(
+        AppRoutes.debugSmartInsights,
+        () => const DebugSmartInsightsView(),
+        DebugSmartInsightsBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartViews,
+        () => const DebugSmartViewsView(),
+        DebugSmartViewsBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
         AppRoutes.debugSmartQuery,
         () => const DebugSmartQueryView(),
         DebugSmartQueryBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartOverview,
+        () => const DebugSmartOverviewView(),
+        DebugSmartOverviewBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugSmartFiles,
+        () => const DebugSmartFilesView(),
+        DebugSmartFilesBinding(),
         AppTransitionKind.push,
       ),
       _page(

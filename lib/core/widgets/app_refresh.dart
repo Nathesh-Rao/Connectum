@@ -17,6 +17,7 @@ class AppRefresh extends StatelessWidget {
     this.spinnerSize = AppSpacing.spinnerPull,
     this.spinnerColor = kPullRefreshColor,
     this.wrapSpinner,
+    this.controller,
   });
 
   final Future<void> Function() onRefresh;
@@ -28,8 +29,12 @@ class AppRefresh extends StatelessWidget {
   /// spinner inside the part of the list that is on screen.
   final Widget Function(Widget spinner)? wrapSpinner;
 
+  /// The scroll position, for a page that scrolls to its top on request.
+  final ScrollController? controller;
+
   @override
   Widget build(BuildContext context) => CustomScrollView(
+    controller: controller,
     physics: const BouncingScrollPhysics(
       parent: AlwaysScrollableScrollPhysics(),
     ),

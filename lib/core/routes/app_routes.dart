@@ -12,6 +12,7 @@ class AppRoutes {
   static const conversation = '/conversation/:id';
   static const submissions = '/submissions';
   static const submissionDetail = '/submissions/:id';
+  static const structRecords = '/struct-records';
   static const workspace = '/workspace';
   static const smartView = '/smart-view';
   static const inbox = '/inbox';
@@ -53,6 +54,10 @@ class AppRoutes {
   static const debugSmartTable = '/debug/smarttable';
   static const debugSmartDrawer = '/debug/smartdrawer';
   static const debugSmartQuery = '/debug/smartquery';
+  static const debugSmartViews = '/debug/smartviews';
+  static const debugSmartOverview = '/debug/smartoverview';
+  static const debugSmartFiles = '/debug/smartfiles';
+  static const debugSmartInsights = '/debug/smartinsights';
 
   static String ticketOf(int id) => '/tickets/$id';
 

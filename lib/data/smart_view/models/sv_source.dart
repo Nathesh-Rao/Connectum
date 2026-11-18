@@ -1,3 +1,4 @@
+import '../../models/form_definition.dart';
 import '../../models/ids.dart';
 import '../../models/ticket.dart';
 
@@ -26,7 +27,9 @@ class SvField {
     return SvField(
       name: name,
       caption: caption.isEmpty ? name : caption,
-      type: idText(raw['type']).isEmpty ? 'text' : idText(raw['type']),
+      type: idText(raw['type']).isEmpty || FormFieldDef.isAutoFillMap(raw)
+          ? 'text'
+          : idText(raw['type']),
       section: raw['section'] == null ? null : idText(raw['section']),
       isRich: raw['rich'] == true,
     );

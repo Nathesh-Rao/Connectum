@@ -1,0 +1,21 @@
+{
+  "id": "1763456789012",
+  "name": "Open, big, recent",
+  "search": "acme",
+  "filters": [
+    { "col": "stage", "op": "in", "value": ["Open", "In progress"] },
+    { "col": "title", "op": "contains", "value": "invoice" },
+    { "col": "amount", "op": "between", "value": { "from": "500", "to": "" } },
+    { "col": "qty", "op": "gte", "value": "3" },
+    { "col": "due", "op": "between", "value": { "from": "2026-11-01", "to": "2026-11-30" } },
+    { "col": "urgent", "op": "true", "value": null },
+    { "col": "notes", "op": "filled", "value": null }
+  ],
+  "sort": { "col": "due", "dir": "asc" },
+  "groupBy": [],
+  "hidden": [],
+  "order": [],
+  "widths": {},
+  "kpis": true,
+  "charts": true
+}

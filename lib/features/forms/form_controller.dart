@@ -1101,6 +1101,10 @@ class FormController extends GetxController {
       Map<String, dynamic> context,
       Object? logicValue,
     ) async {
+      if (f.isAutoFill) {
+        state.error.value = null;
+        return null;
+      }
       var message =
           _fileProblem(state) ?? FormRules.check(f, state.value.value);
       if (message == null &&

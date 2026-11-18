@@ -280,7 +280,12 @@ class TicketDetailController extends GetxController {
     TicketOutcome outcome,
   ) {
     if (!outcome.shouldKeepRequestId) form.requestId = null;
-    form.error.value = failure.text;
+    if (form.isStatus && failure.text.contains('100% completion is only')) {
+      form.percentError.value = failure.text;
+      form.error.value = null;
+    } else {
+      form.error.value = failure.text;
+    }
     _tell(
       failure,
       retry: outcome.canRetry ? () => unawaited(submit(form)) : null,

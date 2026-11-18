@@ -78,6 +78,10 @@ class ApiClient {
   /// Fires when a call made with the stored session token gets a 401.
   Stream<void> get unauthorized => _unauthorized.stream;
 
+  /// For a call made outside this client (a file download) that the server
+  /// refused with a 401 for the stored session token.
+  void reportUnauthorized() => _unauthorized.add(null);
+
   Future<Map<String, dynamic>> get(
     String path, {
     Map<String, dynamic>? query,
@@ -182,7 +186,11 @@ class ApiClient {
             (data['error'] as Map?)?['details'] ??
             (retryAfter == null ? null : {'retryAfter': retryAfter}),
       );
-      if (isSessionCall && error.isUnauthorized) _unauthorized.add(null);
+      if (isSessionCall &&
+          error.isUnauthorized &&
+          !_isCredentialRefusal(error.code)) {
+        _unauthorized.add(null);
+      }
       return error;
     }
     if (isSessionCall && status == 401) _unauthorized.add(null);
@@ -200,6 +208,11 @@ class ApiClient {
       status: status,
     );
   }
+
+  /// A 401 that answers a wrong code or password is about that attempt, not
+  /// about the stored session.
+  static bool _isCredentialRefusal(String code) =>
+      code == 'otp_invalid' || code == 'invalid_credentials';
 
   Map<String, dynamic> _unwrap(Object? data, int? status) {
     if (data is Map && data['ok'] == true) {

@@ -6,6 +6,7 @@ import 'package:connectum/features/commands/command_runner.dart';
 import 'package:connectum/features/conversation/models/command_prompt.dart';
 import 'package:connectum/features/forms/models/form_launch.dart';
 import 'package:connectum/features/home_shell/home_shell_controller.dart';
+import 'package:connectum/features/struct_records/models/struct_records_launch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -65,12 +66,11 @@ void main() {
   late _Shell shell;
   late CommandRunner runner;
   FormLaunch? launched;
+  StructRecordsLaunch? recordsLaunch;
 
-  Future<void> boot(
-    WidgetTester tester, {
-    String? chat,
-  }) async {
+  Future<void> boot(WidgetTester tester, {String? chat}) async {
     launched = null;
+    recordsLaunch = null;
     commands = _Commands();
     submissions = _Submissions();
     shell = _Shell();
@@ -91,6 +91,13 @@ void main() {
             page: () {
               launched = Get.arguments as FormLaunch?;
               return const Scaffold(body: Text('form'));
+            },
+          ),
+          GetPage(
+            name: AppRoutes.structRecords,
+            page: () {
+              recordsLaunch = Get.arguments as StructRecordsLaunch?;
+              return const Scaffold(body: Text('records'));
             },
           ),
         ],
@@ -119,16 +126,26 @@ void main() {
     },
   );
 
-  testWidgets('#tstruct shows My Submissions of that form', (tester) async {
-    await boot(tester);
+  testWidgets('#tstruct opens the records screen of that structure, not the '
+      'Submits tab', (tester) async {
+    await boot(tester, chat: 'dm:ana');
     commands.next = _r(HashKind.records, 'Leave');
     late bool cleared;
     await tester.runAsync(
       () async => cleared = await runner.run('#tstruct Leave'),
     );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(cleared, isTrue);
-    expect(shell.opened, ['leave_request']);
+    expect(submissions.asked, ['Leave']);
+    expect(shell.opened, isEmpty);
+    expect(find.text('records'), findsOneWidget);
     expect(find.text('form'), findsNothing);
+    expect(recordsLaunch?.name, 'leave_request');
+    expect(recordsLaunch?.scope, 'user');
+    expect(recordsLaunch?.caption, 'Leave');
+    expect(recordsLaunch?.convId, 'dm:ana');
+    expect(recordsLaunch?.postChoiceTitle, 'Ana Lopez');
   });
 
   testWidgets('a structure that is gone keeps the text and opens nothing', (
@@ -187,10 +204,7 @@ void main() {
     expect(find.text('form'), findsNothing);
   });
 
-  Future<FormLaunch?> openFrom(
-    WidgetTester tester, {
-    String? chat,
-  }) async {
+  Future<FormLaunch?> openFrom(WidgetTester tester, {String? chat}) async {
     await boot(tester, chat: chat);
     commands.next = _r(HashKind.form, 'Leave');
     await tester.runAsync(() => runner.run('#tstruct-add Leave'));

@@ -1,3 +1,4 @@
+import '../models/form_definition.dart';
 import '../models/ids.dart';
 
 /// The one place where the form's values are put into the shape the logic
@@ -23,7 +24,9 @@ class FormLogicValues {
   ) {
     final types = {
       for (final f in fields)
-        idText(f['name']): idText(f['type']).toLowerCase(),
+        idText(f['name']): FormFieldDef.isAutoFillMap(f)
+            ? 'text'
+            : idText(f['type']).toLowerCase(),
     };
     final out = <String, dynamic>{};
     values.forEach((name, v) {

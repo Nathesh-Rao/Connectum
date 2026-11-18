@@ -36,7 +36,10 @@ class ChatsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: AppSpacing.headerHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.page,
+        right: AppSpacing.profileEdge,
+      ),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
@@ -95,6 +98,7 @@ class ChatsHeader extends StatelessWidget {
               onPressed: onOpenNotifications,
             ),
           ),
+          const SizedBox(width: AppSpacing.bellAvatarGap),
           Obx(
             () => AppProfileAvatar(
               name: profileName(),

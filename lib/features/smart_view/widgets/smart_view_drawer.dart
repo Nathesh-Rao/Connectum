@@ -20,6 +20,13 @@ class SmartViewDrawer extends StatelessWidget {
 
   static const emptyTitle = 'No smart views yet';
 
+  /// The one left/right inset of the title, Find, STRUCTURES and the rows.
+  static const inset = AppSpacing.md;
+
+  /// Where a row's label starts inside its pill: the Find field's own side
+  /// padding plus its 1 dp border, so labels sit under the search icon.
+  static const rowTextInset = AppSpacing.controlPaddingX + 1;
+
   @override
   Widget build(BuildContext context) {
     final c = controller;
@@ -31,29 +38,24 @@ class SmartViewDrawer extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(
-              AppSpacing.page,
+              SmartViewDrawer.inset,
               AppSpacing.md,
-              AppSpacing.page,
+              SmartViewDrawer.inset,
               AppSpacing.xs,
             ),
             child: Text('Smart view', style: AppText.title),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page,
+              SmartViewDrawer.inset,
               0,
-              AppSpacing.page,
+              SmartViewDrawer.inset,
               AppSpacing.xs,
             ),
             child: AppTextField(
               controller: c.findField,
               hint: 'Find',
               minHeight: AppSpacing.searchHeight,
-              fillColor: AppColors.searchFill,
-              borderColor: Colors.transparent,
-              borderRadius: const BorderRadius.all(
-                Radius.circular(AppRadius.xs),
-              ),
               leading: const Icon(
                 Icons.search,
                 size: 18,
@@ -102,7 +104,7 @@ class _List extends StatelessWidget {
         state: state,
         emptyTitle: SmartViewDrawer.emptyTitle,
         errorMessage: 'The list could not be loaded.',
-        onRetry: () => c.loadList(isForced: true),
+        onRetry: c.reload,
         child: _Rows(controller: c),
       );
     });
@@ -122,19 +124,22 @@ class _Rows extends StatelessWidget {
       final openName = c.current.value?.name;
       return ListView(
         padding: const EdgeInsets.fromLTRB(
+          SmartViewDrawer.inset,
           AppSpacing.xs,
-          AppSpacing.xs,
-          AppSpacing.xs,
+          SmartViewDrawer.inset,
           AppSpacing.lg,
         ),
         children: [
+          _DrawerRow(
+            key: const ValueKey('sv-drawer-overview'),
+            title: 'Overview',
+            icon: Icons.space_dashboard_outlined,
+            isSelected: c.isOverview,
+            onTap: c.showOverview,
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xs,
-              0,
-              AppSpacing.xs,
-              AppSpacing.xxs,
-            ),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
             child: Row(
               children: [
                 const Text('STRUCTURES', style: AppText.eyebrow),
@@ -154,7 +159,7 @@ class _Rows extends StatelessWidget {
             _DrawerRow(
               key: ValueKey('sv-drawer-${s.name}'),
               title: s.caption,
-              isSelected: s.name == openName,
+              isSelected: s.name == openName && !c.isOverview,
               onTap: () => c.show(s),
             ),
         ],
@@ -169,9 +174,11 @@ class _DrawerRow extends StatelessWidget {
     required this.title,
     required this.isSelected,
     required this.onTap,
+    this.icon,
   });
 
   final String title;
+  final IconData? icon;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -190,19 +197,35 @@ class _DrawerRow extends StatelessWidget {
             minHeight: AppSpacing.drawerRowHeight,
           ),
           margin: const EdgeInsets.only(bottom: AppSpacing.xxs),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: SmartViewDrawer.rowTextInset,
+          ),
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
             color: isSelected ? AppColors.violetTint : Colors.transparent,
             borderRadius: AppRadius.pillAll,
           ),
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.rowTitle.copyWith(
-              color: isSelected ? AppColors.violetStrong : AppColors.ink,
-            ),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected ? AppColors.violetStrong : AppColors.muted,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.rowTitle.copyWith(
+                    color: isSelected ? AppColors.violetStrong : AppColors.ink,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

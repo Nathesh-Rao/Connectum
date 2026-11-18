@@ -116,7 +116,7 @@ class _Fields extends StatelessWidget {
             keyboardType: TextInputType.visiblePassword,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.newPassword],
-            onChanged: (_) => c.changed(),
+            onChanged: (_) => c.passwordChanged(),
             onSubmitted: (_) => c.save(),
             suffix: IconButton(
               tooltip: c.isHidden.value ? 'Show password' : 'Hide password',
@@ -132,7 +132,7 @@ class _Fields extends StatelessWidget {
           ),
         ),
         Obx(() {
-          final error = c.error.value;
+          final error = c.error.value ?? c.hint.value;
           if (error == null) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),

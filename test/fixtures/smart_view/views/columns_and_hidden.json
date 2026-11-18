@@ -1,0 +1,13 @@
+{
+  "id": "1763456791234",
+  "name": "Compact with status",
+  "search": "",
+  "filters": [],
+  "sort": null,
+  "groupBy": [],
+  "hidden": ["notes", "story", "+With", "+Status", "+secret_note"],
+  "order": ["title", "stage", "+With", "amount"],
+  "widths": { "title": 320, "amount": 110 },
+  "kpis": true,
+  "charts": true
+}

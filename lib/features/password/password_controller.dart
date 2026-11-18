@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -11,7 +13,8 @@ import '../../data/session_store.dart';
 
 /// Set, change or remove the account's own password (the web's "Set a
 /// password" panel): a code emailed to the account confirms it, then the
-/// new password. No current password is asked and other sessions stay.
+/// new password. No current password is asked. This device stays signed in;
+/// the server ends the account's other sessions.
 class PasswordController extends GetxController {
   PasswordController({required this.auth, required this.store});
 
@@ -32,11 +35,17 @@ class PasswordController extends GetxController {
   final info = RxnString();
   final revision = 0.obs;
 
+  /// The server's own words about the typed password (`password/check`),
+  /// null while it is fine or unknown.
+  final hint = RxnString();
+  Timer? _checkTimer;
+  int _checkSeq = 0;
+
   bool get hasPassword => store.identity.value?.hasPassword ?? false;
 
   bool get canSave {
     revision.value;
-    return code.text.length == 6 && newPassword.text.length >= minLength;
+    return code.text.length == 6 && newPassword.text.runes.length >= minLength;
   }
 
   bool get canRemove {
@@ -47,6 +56,27 @@ class PasswordController extends GetxController {
   void changed() {
     error.value = null;
     revision.value++;
+  }
+
+  /// A debounced `password/check` of the new password. The password is sent
+  /// as typed and never kept; a failed check shows nothing.
+  void passwordChanged() {
+    changed();
+    _checkTimer?.cancel();
+    hint.value = null;
+    final text = newPassword.text;
+    if (text.isEmpty) return;
+    final seq = ++_checkSeq;
+    _checkTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final result = await auth.passwordCheck(text);
+        if (seq == _checkSeq && !isClosed) {
+          hint.value = result.isOk ? null : result.message;
+        }
+      } catch (_) {
+        // The save still asks the server again.
+      }
+    });
   }
 
   void toggleHidden() => isHidden.toggle();
@@ -65,11 +95,12 @@ class PasswordController extends GetxController {
   Future<void> save() async {
     if (isBusy.value) return;
     final text = newPassword.text;
-    if (text.length < minLength) {
+    final length = text.runes.length;
+    if (length < minLength) {
       error.value = 'Choose a password of at least $minLength characters.';
       return;
     }
-    if (text.length > maxLength) {
+    if (length > maxLength) {
       error.value =
           'That password is too long ($maxLength characters at most).';
       return;
@@ -104,7 +135,7 @@ class PasswordController extends GetxController {
     try {
       await body();
     } on ApiException catch (e) {
-      error.value = ApiMessages.of(e);
+      error.value = ApiMessages.ofPasswordChange(e);
     } catch (e) {
       debugPrint('password request failed: ${e.runtimeType}');
       if (!isClosed) error.value = "Something went wrong. Try again.";
@@ -115,6 +146,7 @@ class PasswordController extends GetxController {
 
   @override
   void onClose() {
+    _checkTimer?.cancel();
     code.dispose();
     newPassword.dispose();
     super.onClose();

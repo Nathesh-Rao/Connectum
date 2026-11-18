@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../../data/repositories/form_file_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/submission_repository.dart';
+import '../../data/repositories/sv_file_repository.dart';
+import '../../data/repositories/sv_saved_views_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/smart_view/sv_prefs.dart';
@@ -18,6 +20,12 @@ class SmartViewBinding extends Bindings {
         repo: Get.find<SmartViewRepository>(),
         tickets: Get.find<TicketRepository>(),
         submissions: Get.find<SubmissionRepository>(),
+        views: Get.isRegistered<SvSavedViewsRepository>()
+            ? Get.find<SvSavedViewsRepository>()
+            : null,
+        files: Get.isRegistered<SvFileRepository>()
+            ? Get.find<SvFileRepository>()
+            : null,
         prefs: Get.isRegistered<SmartViewPrefs>()
             ? Get.find<SmartViewPrefs>()
             : SmartViewPrefs(),

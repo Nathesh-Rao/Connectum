@@ -20,7 +20,39 @@ class FormFieldDef {
   /// rules (required, options, min, max, condition...) from here.
   final Map<String, dynamic> raw;
 
-  bool get isRequired => raw['required'] == true;
+  /// The kinds a fill can be made from (`autoFill: true` on any other kind
+  /// is ignored, as the server refuses it).
+  static const fillableKinds = {
+    'text',
+    'email',
+    'url',
+    'mobile',
+    'wholenumber',
+    'number',
+    'date',
+    'time',
+  };
+
+  /// Auto Fill: `autoFill == true` (a form saved now, the field keeps its own
+  /// kind) or `type == "fill"` (a form saved before). Read only, never asked
+  /// for, never checked as a date or number; the copied value is text.
+  static bool isAutoFillMap(Map raw) {
+    final type = idText(raw['type']);
+    return type == 'fill' ||
+        (raw['autoFill'] == true && fillableKinds.contains(type));
+  }
+
+  bool get isAutoFill => type == 'fill';
+
+  /// The kind the person chose: an old `fill` has none saved and shows as
+  /// text.
+  String get kind {
+    if (!isAutoFill) return type;
+    final chosen = idText(raw['type']);
+    return fillableKinds.contains(chosen) ? chosen : 'text';
+  }
+
+  bool get isRequired => raw['required'] == true && !isAutoFill;
   bool get isReadOnly => raw['readOnly'] == true;
   bool get isMulti => raw['multi'] == true;
   bool get isMultiline => raw['multiline'] == true;
@@ -145,7 +177,7 @@ class FormDefinition {
           FormFieldDef(
             name: n,
             caption: c.isEmpty ? n : c,
-            type: idText(f['type']),
+            type: FormFieldDef.isAutoFillMap(f) ? 'fill' : idText(f['type']),
             section: idText(f['section']),
             raw: f.cast<String, dynamic>(),
           ),
@@ -214,8 +246,6 @@ class FormDefinition {
           : f.section == section)
         f,
   ];
-
-  bool get allowsForward => raw['allowForward'] != false;
 
   bool isGridSection(String section) =>
       sections.any((s) => s.name == section && s.isGrid);

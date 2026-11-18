@@ -20,6 +20,7 @@ class AppDurations {
   static const scanSuccess = Duration(milliseconds: 300);
   static const chartGrow = Duration(milliseconds: 400);
   static const smartControls = Duration(milliseconds: 220);
+  static const fileFull = Duration(milliseconds: 240);
   static const smartChip = Duration(milliseconds: 190);
 }
 

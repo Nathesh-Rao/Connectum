@@ -1,0 +1,13 @@
+{
+  "charts": true,
+  "filters": [],
+  "groupBy": [],
+  "hidden": [],
+  "id": "__default",
+  "kpis": true,
+  "name": "Default View",
+  "order": [],
+  "search": "",
+  "sort": { "col": "due", "dir": "desc" },
+  "widths": {}
+}

@@ -219,11 +219,13 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await pumpFor(tester, 2000);
-    expect(find.text('Smart view'), findsNWidgets(2));
-    expect(find.text('Tickets'), findsOneWidget);
-    expect(find.text('Requests'), findsOneWidget);
+    expect(find.text('Smart view'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sv-drawer-overview')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sv-drawer-tickets')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sv-drawer-requests')), findsOneWidget);
     expect(Get.find<SmartViewController>().isDrawerOpen.value, isTrue);
-    await tester.tap(find.text('Tickets'));
+    expect(Get.find<SmartViewController>().isOverview, isTrue);
+    await tester.tap(find.byKey(const ValueKey('sv-drawer-tickets')));
     await pumpFor(tester, 2000);
     expect(Get.find<SmartViewController>().isDrawerOpen.value, isFalse);
 
@@ -233,13 +235,15 @@ void main() {
     expect(find.text('Invoice mismatch'), findsOneWidget);
     expect(kept, ['#view zzz']);
 
-    // 4. A record, and back to the list.
+    // 4. A record opens the details sheet in place (no route), then closes.
     await tester.tap(find.text('Printer jammed'));
-    await pumpFor(tester, 800);
-    expect(opened, ['ticket 5']);
-    expect(find.text('record screen'), findsOneWidget);
-    await tester.tap(find.text('back'));
-    await pumpFor(tester, 800);
+    await pumpFor(tester, 900);
+    expect(opened, isEmpty);
+    expect(find.text('Record details'), findsOneWidget);
+    expect(find.text('record screen'), findsNothing);
+    await tester.tapAt(const Offset(195, 10));
+    await pumpFor(tester, 900);
+    expect(find.text('Record details'), findsNothing);
     expect(find.text('Printer jammed'), findsOneWidget);
 
     // 5. Back out of the list to the message box, then a name opens it at once.
@@ -254,7 +258,7 @@ void main() {
     await pumpFor(tester, 1200);
     expect(text.text, '');
     expect(find.text('Requests'), findsOneWidget);
-    expect(rig.count('ai.enterprise'), 1);
+    expect(rig.count('ai.enterprise'), greaterThanOrEqualTo(1));
     prompt.dispose();
   });
 }

@@ -186,6 +186,7 @@ class _Card extends StatelessWidget {
               ? RecordCardActions(
                   recordId: c.recordIdOf(card)!,
                   tickets: c.tickets,
+                  summary: card.record,
                   onAction: (context, id) {
                     final detail = c.detailOf(card);
                     if (detail != null) {

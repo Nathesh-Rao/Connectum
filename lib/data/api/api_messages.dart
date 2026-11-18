@@ -18,6 +18,31 @@ class ApiMessages {
     _ => of(e),
   };
 
+  static const passwordOtpInvalid = "That code isn't valid. Request a new one.";
+  static const passwordWeak = 'Choose a stronger password (8–128 characters).';
+  static const passwordReused = "You can't reuse a recent password.";
+  static const passwordBusy = 'Try again in a minute.';
+  static const passwordTooMany =
+      'Too many tries. Please wait a minute and try again.';
+  static const passwordForgotSent =
+      'If an account with a password exists, a code was sent.';
+
+  /// Setting, changing or resetting a password: one wording per refusal.
+  static String ofPasswordChange(Object error) {
+    if (error is! ApiException) return of(error);
+    if (error.status == 429 || error.code == 'rate_limited') {
+      return passwordTooMany;
+    }
+    return switch (error.code) {
+      'otp_invalid' => passwordOtpInvalid,
+      'invalid' => passwordWeak,
+      'password_reused' => passwordReused,
+      'password_history_unavailable' => passwordBusy,
+      _ when error.status == 503 => passwordBusy,
+      _ => of(error),
+    };
+  }
+
   static String of(Object error) {
     if (error is! ApiException) {
       return 'Something went wrong. Please try again.';

@@ -233,9 +233,7 @@ void main() {
       expect(find.text('2.5 h'), findsOneWidget);
     });
 
-    testWidgets('a long remark shows three lines and Show more', (
-      tester,
-    ) async {
+    testWidgets('a long remark shows four lines and See more', (tester) async {
       final long = List.filled(40, 'remark').join(' ');
       await tester.pumpWidget(
         _timeline(
@@ -245,14 +243,14 @@ void main() {
           ]),
         ),
       );
-      expect(find.text('Show more'), findsOneWidget);
+      expect(find.text('See more'), findsOneWidget);
       expect(find.text('Short one'), findsOneWidget);
       final collapsed = tester
           .getSize(find.text(long, findRichText: true))
           .height;
-      await tester.tap(find.text('Show more'));
+      await tester.tap(find.text('See more'));
       await tester.pump();
-      expect(find.text('Show less'), findsOneWidget);
+      expect(find.text('See less'), findsOneWidget);
       expect(
         tester.getSize(find.text(long, findRichText: true)).height,
         greaterThan(collapsed),

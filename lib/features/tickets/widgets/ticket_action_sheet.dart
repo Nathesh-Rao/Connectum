@@ -180,17 +180,6 @@ class TicketActionSheet extends StatelessWidget {
               onTap: () => f.pickStatus(name),
             );
           }),
-        Obx(() {
-          final auto = f.autoFinal.value;
-          if (auto.isEmpty) return const SizedBox.shrink();
-          return Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.xxs),
-            child: Text(
-              TicketsTexts.autoFinalHint(auto),
-              style: AppText.caption.copyWith(color: AppColors.muted),
-            ),
-          );
-        }),
       ],
     );
   }
@@ -202,7 +191,9 @@ class TicketActionSheet extends StatelessWidget {
       final value = f.percent.value;
       final floor = f.minPercent;
       final locked = f.lockedBelow;
-      final isLocked = f.isPercentLocked;
+      final isLocked = f.isPercentLocked || f.isPercentFixed;
+      final reopening = f.isReopening.value;
+      final refusal = f.percentError.value;
       final duration = f.isPercentJump.value
           ? AppDurations.reduced
           : Duration.zero;
@@ -258,6 +249,19 @@ class TicketActionSheet extends StatelessWidget {
               ),
             ),
           ),
+          if (refusal != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
+              child: Text(refusal, style: AppText.error),
+            )
+          else if (reopening)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
+              child: Text(
+                TicketsTexts.reopenHint,
+                style: AppText.caption.copyWith(color: AppColors.muted),
+              ),
+            ),
           if (locked != null)
             Semantics(
               label: TicketsTexts.percentLockedSemantics(locked),

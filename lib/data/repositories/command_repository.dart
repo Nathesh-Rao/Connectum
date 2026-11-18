@@ -113,8 +113,8 @@ class CommandRepository extends GetxService {
   static const escapeNotice =
       'Messages starting with ## go to the general room, which is not available in the app.';
   static const comingSoon = 'This command is coming soon in the app.';
-  static const noStructure =
-      'Please provide the structure name, e.g. #tstruct-add leave-request.';
+  static String noStructure(String command) =>
+      'Please provide the struct name, e.g. #$command leave-request.';
   static const noPerson = 'No such person.';
   static const noGroup = 'No such group.';
 
@@ -392,7 +392,9 @@ class CommandRepository extends GetxService {
       case CommandMode.form:
       case CommandMode.records:
         final name = parsed.rest.trim();
-        if (name.isEmpty) return const HashResult(HashKind.usage, noStructure);
+        if (name.isEmpty) {
+          return HashResult(HashKind.usage, noStructure(cmd.name));
+        }
         return HashResult(
           handler.mode == CommandMode.form ? HashKind.form : HashKind.records,
           '',

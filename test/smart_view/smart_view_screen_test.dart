@@ -157,20 +157,54 @@ void main() {
     rig.socket.answers[_mine] = minePager({'with': with_}, pageSize: 50);
   }
 
+  screenTest('card position is 1-based in the filtered order', (tester) async {
+    serve([ownRow(2, ts: 1794833216651), ownRow(1, ts: 1794833216000)]);
+    await boot(tester, 'tickets');
+    Finder pos(String n) => find.descendant(
+      of: find.byKey(const ValueKey('sv-card-position')),
+      matching: find.text(n),
+    );
+    expect(pos('1'), findsOneWidget);
+    expect(pos('2'), findsOneWidget);
+    final c = Get.find<SmartViewController>();
+    c.setQuery(c.query.value.copyWith(search: 'Row 1'));
+    await pumpFor(tester, 600);
+    expect(find.text('Row 2'), findsNothing);
+    expect(find.text('Row 1'), findsOneWidget);
+    expect(pos('1'), findsOneWidget);
+    expect(pos('2'), findsNothing);
+  });
+
   screenTest('cards: title, number, who and when, own fields, count pill', (
     tester,
   ) async {
     serve([ownRow(2, ts: 1794833216651), ownRow(1, ts: 1794833216000)]);
     await boot(tester, 'tickets');
     expect(find.text('Tickets'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
+    // the count pill and the No. of record 2
+    expect(find.text('2'), findsNWidgets(3));
     expect(find.text('Row 2'), findsOneWidget);
     expect(find.text('Row 1'), findsOneWidget);
-    expect(find.text('No. 2'), findsOneWidget);
+    expect(find.text('No.'), findsNWidgets(2));
     expect(find.textContaining('Ann Rao'), findsNWidgets(2));
-    expect(find.byTooltip('Add a record'), findsNothing);
-    expect(find.bySemanticsLabel('Add a record'), findsOneWidget);
+    expect(find.bySemanticsLabel('Actions'), findsOneWidget);
     expect(rig.socket.calls.where((c) => c.action == _rows).length, 1);
+  });
+
+  screenTest('the last card scrolls clear of the speed dial', (tester) async {
+    serve([for (var i = 12; i >= 1; i--) ownRow(i, ts: 1794833216000 + i)]);
+    await boot(tester, 'tickets');
+    await tester.drag(
+      find.byType(CustomScrollView).last,
+      const Offset(0, -9000),
+    );
+    await pumpFor(tester, 600);
+    final lastCard = find.byType(SmartViewCard).last;
+    final dial = find.bySemanticsLabel('Actions');
+    expect(
+      tester.getRect(lastCard).bottom,
+      lessThanOrEqualTo(tester.getRect(dial).top),
+    );
   });
 
   screenTest('a hidden field never reaches the screen', (tester) async {
@@ -194,8 +228,6 @@ void main() {
     await pumpFor(tester);
     expect(find.text('There is nothing here yet'), findsOneWidget);
     expect(find.text('Add a record'), findsOneWidget);
-    // The one Add is the state's; the floating button is not drawn twice.
-    expect(find.bySemanticsLabel('Add a record'), findsOneWidget);
     await tester.tap(find.text('Add a record'));
     await pumpFor(tester);
     expect(submissions.asked, ['tickets']);
@@ -287,21 +319,23 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  screenTest('a record with a status opens the record screen, a plain one the '
-      'submission view, a received one the record screen', (tester) async {
+  screenTest('a tap on an own, a received or a status-less record opens the '
+      'details sheet and no screen', (tester) async {
     serve([ownRow(5)], with_: [mineRow(6)]);
     await boot(tester, 'tickets');
     await tester.tap(find.text('Row 5'));
-    await pumpFor(tester);
-    expect(opened, ['ticket 5']);
-    Get.back<void>();
-    await pumpFor(tester);
+    await pumpFor(tester, 900);
+    expect(find.text('Record details'), findsOneWidget);
+    expect(opened, isEmpty);
+    await tester.tapAt(const Offset(195, 10));
+    await pumpFor(tester, 900);
     await tester.tap(find.text('Received 6'));
-    await pumpFor(tester);
-    expect(opened, ['ticket 5', 'ticket 6']);
+    await pumpFor(tester, 900);
+    expect(find.text('Record details'), findsOneWidget);
+    expect(opened, isEmpty);
   });
 
-  screenTest('a structure with no status opens the submission view', (
+  screenTest('a structure with no status opens the details sheet too', (
     tester,
   ) async {
     rig.socket.answers[SvCmd.sources] = {
@@ -321,8 +355,9 @@ void main() {
     serve([ownRow(8, tstruct: 'plain')]);
     await boot(tester, 'plain');
     await tester.tap(find.text('Row 8'));
-    await pumpFor(tester);
-    expect(opened, ['submission 8']);
+    await pumpFor(tester, 900);
+    expect(find.text('Record details'), findsOneWidget);
+    expect(opened, isEmpty);
   });
 
   screenTest('Add opens the structure form and the saved record shows', (
@@ -330,7 +365,9 @@ void main() {
   ) async {
     serve([ownRow(1)]);
     await boot(tester, 'tickets');
-    await tester.tap(find.bySemanticsLabel('Add a record'));
+    await tester.tap(find.bySemanticsLabel('Actions'));
+    await pumpFor(tester, 600);
+    await tester.tap(find.text('Add record'));
     await pumpFor(tester);
     expect(submissions.asked, ['tickets']);
     expect(launch?.name, 'tickets');
@@ -348,7 +385,9 @@ void main() {
     await boot(tester, 'tickets');
     formResult = false;
     final before = rig.socket.calls.length;
-    await tester.tap(find.bySemanticsLabel('Add a record'));
+    await tester.tap(find.bySemanticsLabel('Actions'));
+    await pumpFor(tester, 600);
+    await tester.tap(find.text('Add record'));
     await pumpFor(tester);
     await tester.tap(find.text('save form'));
     await pumpFor(tester, 1600);

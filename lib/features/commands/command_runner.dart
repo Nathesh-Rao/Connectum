@@ -12,6 +12,7 @@ import '../../data/smart_view/models/sv_source.dart';
 import '../../data/socket/socket_service.dart';
 import '../smart_view/models/smart_view_entry.dart';
 import '../forms/models/form_launch.dart';
+import '../struct_records/models/struct_records_launch.dart';
 import '../home_shell/home_shell_controller.dart';
 import '../conversation/models/command_prompt.dart';
 import 'widgets/command_sheets.dart';
@@ -137,7 +138,18 @@ class CommandRunner {
       return false;
     }
     if (r.kind == HashKind.records) {
-      shell?.openSubmissionsOf(open.name);
+      Get.toNamed(
+        AppRoutes.structRecords,
+        arguments: StructRecordsLaunch(
+          name: open.name,
+          scope: open.scope,
+          caption: open.caption,
+          convId: _postableChat,
+          postChoiceTitle: _postableChat == null ? null : _chatName,
+          isPostedByDefault:
+              _postableChat != null && ChatThread.careUser(_groupName) != null,
+        ),
+      );
     } else {
       Get.toNamed(
         AppRoutes.form,

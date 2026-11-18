@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_sv.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_popup_menu.dart';
@@ -106,30 +107,25 @@ class SvFilterSheetBody extends StatelessWidget {
                           () => Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (draft.rows.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: AppSpacing.md,
-                                  ),
-                                  child: Text(
-                                    'No filters yet. Add one to narrow the list.',
-                                    style: AppText.supporting,
-                                  ),
-                                ),
+                              if (draft.rows.isEmpty) const _EmptyBlock(),
                               for (final r in draft.rows)
                                 _FadeSlideIn(
                                   key: ValueKey('sv-draft-${r.id}'),
                                   child: _FilterRow(draft: draft, row: r),
                                 ),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: AppButton.text(
-                                  label: 'Add filter',
-                                  leadingIcon: Icons.add,
-                                  tone: AppTextButtonTone.accent,
-                                  onPressed: draft.add,
-                                ),
-                              ),
+                              draft.rows.isEmpty
+                                  ? AppButton.primary(
+                                      label: 'Add filter',
+                                      leadingIcon: Icons.add,
+                                      isCentered: true,
+                                      onPressed: draft.add,
+                                    )
+                                  : AppButton.secondary(
+                                      label: 'Add filter',
+                                      leadingIcon: Icons.add,
+                                      onPressed: draft.add,
+                                    ),
+                              const SizedBox(height: AppSpacing.md),
                             ],
                           ),
                         ),
@@ -176,13 +172,28 @@ class _Header extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              const Expanded(child: Text('Filters', style: AppText.subtitle)),
-              Obx(
-                () => AppButton.text(
-                  label: 'Clear all',
-                  onPressed: draft.rows.isEmpty ? null : draft.clear,
+              Container(
+                width: AppSv.sheetIconCircle,
+                height: AppSv.sheetIconCircle,
+                decoration: const BoxDecoration(
+                  color: AppColors.violet,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.filter_list,
+                  size: AppSpacing.popupMenuIcon,
+                  color: AppColors.white,
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(child: Text('Filters', style: AppText.subtitle)),
+              Obx(
+                () => _ClearAll(
+                  isEnabled: draft.rows.isNotEmpty,
+                  onTap: draft.clear,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
             ],
           ),
         ],
@@ -276,17 +287,12 @@ class _FilterRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.surfaceSubtle,
-          borderRadius: AppRadius.mdAll,
-          border: Border.all(color: AppColors.line),
+          color: AppSv.filterCardFill,
+          borderRadius: AppRadius.cardAll,
+          border: Border.all(color: AppSv.cardBorder),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.sm,
-            AppSpacing.xxs,
-            AppSpacing.xxs,
-            AppSpacing.xs,
-          ),
+          padding: const EdgeInsets.all(AppSpacing.sm),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -319,24 +325,39 @@ class _FilterRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Remove filter',
-                    constraints: const BoxConstraints.tightFor(
-                      width: AppSpacing.badgedIconHit,
-                      height: AppSpacing.badgedIconHit,
+                  Semantics(
+                    button: true,
+                    label: 'Remove filter',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => draft.remove(row.id),
+                      child: SizedBox(
+                        width: AppSpacing.badgedIconHit - 8,
+                        height: AppSpacing.badgedIconHit - 8,
+                        child: Center(
+                          child: Container(
+                            width: AppSv.removeCircle,
+                            height: AppSv.removeCircle,
+                            decoration: const BoxDecoration(
+                              color: AppColors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    icon: const Icon(
-                      Icons.close,
-                      size: AppSpacing.popupMenuIcon,
-                      color: AppColors.muted,
-                    ),
-                    onPressed: () => draft.remove(row.id),
                   ),
                 ],
               ),
               if (kind != SvValueKind.none)
                 Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: _ValueEditor(
                     key: ValueKey('${row.id}-${kind.name}'),
                     draft: draft,
@@ -676,6 +697,83 @@ class _DateValue extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyBlock extends StatelessWidget {
+  const _EmptyBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Column(
+        children: [
+          Container(
+            width: AppSv.emptyCircle,
+            height: AppSv.emptyCircle,
+            decoration: const BoxDecoration(
+              color: AppColors.violetTint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.filter_list,
+              size: 26,
+              color: AppColors.violetStrong,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text('No filters yet', style: AppText.bodyStrong),
+          const SizedBox(height: AppSpacing.xxs),
+          const Text('Add one to narrow the list', style: AppText.supporting),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClearAll extends StatelessWidget {
+  const _ClearAll({required this.isEnabled, required this.onTap});
+
+  final bool isEnabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: isEnabled,
+      label: 'Clear all',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: isEnabled ? onTap : null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
+          child: Center(
+            child: AnimatedContainer(
+              duration: AppDurations.smartChip,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: isEnabled ? AppColors.violetTint : AppColors.fill,
+                borderRadius: AppRadius.pillAll,
+              ),
+              child: Text(
+                'Clear all',
+                style: AppText.buttonSmall.copyWith(
+                  color: isEnabled
+                      ? AppColors.violetStrong
+                      : AppColors.disabledInk,
+                ),
+              ),
+            ),
           ),
         ),
       ),

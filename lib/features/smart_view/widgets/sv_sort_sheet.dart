@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_sv.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
@@ -115,9 +116,7 @@ class _SortRow extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: AppDurations.smartChip,
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.badgedIconHit,
-          ),
+          constraints: const BoxConstraints(minHeight: AppSv.sheetRowHeight),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.violetTint : Colors.transparent,
@@ -125,16 +124,26 @@ class _SortRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                SvColIcon.of(column.type),
-                size: AppSpacing.popupMenuIcon,
-                color: isSelected ? AppColors.violetStrong : AppColors.muted,
+              Container(
+                width: AppSv.sheetIconCircle,
+                height: AppSv.sheetIconCircle,
+                decoration: const BoxDecoration(
+                  color: AppSv.sortIconFill,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  SvColIcon.of(column.type),
+                  size: AppSpacing.popupMenuIcon,
+                  color: isSelected ? AppColors.violetStrong : AppColors.muted,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   column.label,
                   style: AppText.body.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                     color: isSelected ? AppColors.violetStrong : AppColors.ink,
                   ),
                 ),

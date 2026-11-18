@@ -31,6 +31,22 @@ class RecordStatusBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!live.isKnown) {
+      // Not "No status": the record's state is not known yet.
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm,
+          0,
+          AppSpacing.sm,
+          AppSpacing.xs,
+        ),
+        child: Text(
+          TicketsTexts.unknownState,
+          semanticsLabel: TicketsTexts.unknownStateSemantics,
+          style: AppText.caption.copyWith(color: AppColors.cardMuted),
+        ),
+      );
+    }
     if (!live.isShown) return const SizedBox.shrink();
     final pct = live.completion;
     return Padding(

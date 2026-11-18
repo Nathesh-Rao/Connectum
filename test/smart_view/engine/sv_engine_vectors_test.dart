@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectum/data/smart_view/engine/sv_engine.dart';
+import 'package:connectum/data/smart_view/engine/sv_insights.dart';
 import 'package:connectum/data/smart_view/engine/sv_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -235,6 +236,44 @@ void main() {
     final w = SvEngine.rangeFor(DateTime(2026, 11, 22))['week']!;
     expect(w.from, sunday['from']);
     expect(w.to, sunday['to']);
+  });
+
+  group('definedCards and definedChart', () {
+    test('definedCards', () {
+      final c = v['definedCards'] as Map<String, dynamic>;
+      final got = SvInsights.definedCards(table, all, [
+        for (final d in c['input'] as List) (d as Map).cast<String, Object?>(),
+      ]);
+      final want = c['output'] as List;
+      expect(got.length, want.length);
+      for (var i = 0; i < want.length; i++) {
+        final w = want[i] as Map;
+        expect(got[i].id, w['id']);
+        expect(got[i].label, w['label']);
+        expect(got[i].value, closeTo((w['value'] as num).toDouble(), 1e-9));
+        expect(got[i].hasDecimals, w['decimals']);
+        expect(got[i].tone, w['tone']);
+        expect(got[i].icon, w['icon']);
+      }
+    });
+
+    test('definedChart', () {
+      final c = v['definedChart'] as Map<String, dynamic>;
+      final got = SvInsights.definedChart(
+        table,
+        all,
+        (c['input'] as Map).cast<String, Object?>(),
+      )!;
+      final w = c['output'] as Map;
+      expect(got.type, w['type']);
+      expect(got.title, w['title']);
+      expect(got.subtitle, w['subtitle']);
+      expect(got.labels, w['labels']);
+      final series = (w['series'] as List).single as Map;
+      expect(got.name, series['name']);
+      expect(got.values, series['values']);
+      expect(got.more, w['more']);
+    });
   });
 
   test('vector counts', () {

@@ -139,8 +139,124 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
 
   void _setLive(int id, RecordLive next, {bool isForced = false}) {
     final rx = liveOf(id);
+    // A read does not say when the record last changed: what the last summary
+    // said about that is kept, so a late older summary cannot undo the read.
+    if (next.summaryTs == 0 && rx.value.summaryTs > 0) {
+      next = next.copyWith(summaryTs: rx.value.summaryTs);
+    }
     if (!isForced && rx.value.sameAs(next)) return;
     rx.value = next;
+  }
+
+  /// Applies a `record` summary (an event, a card, `records.summary`) to the
+  /// card of record [id] at once, with no command. One older than or equal to
+  /// the last applied is ignored. When the record's status, holder or closing
+  /// changed, the cached actions are dropped (the bar hides now) and read
+  /// again if the card is on screen, or the next time the menu opens.
+  /// Returns whether it was applied.
+  bool applySummary(int id, RecordSummary summary, {String initiator = ''}) {
+    final cur = liveOf(id).value;
+    if (cur.summaryTs > 0 && summary.ts <= cur.summaryTs) return false;
+    final next = cur.withSummary(
+      summary,
+      initiator: initiator.isNotEmpty ? initiator : _known[id]?.by ?? '',
+    );
+    final isChanged =
+        cur.isKnown &&
+        (cur.status != next.status ||
+            cur.holder != next.holder ||
+            cur.isFinal != next.isFinal ||
+            cur.claimants.join(',') != next.claimants.join(','));
+    _setLive(id, next);
+    if (isChanged) {
+      _readAt.remove(id);
+      _menuAt.remove(id);
+      _states.remove(id);
+      _queue.markStale(id);
+    }
+    cardRevision.value++;
+    return true;
+  }
+
+  // ---- records.summary ----------------------------------------------------------
+
+  /// One `records.summary` takes at most this many ids.
+  static const summaryChunk = 50;
+
+  /// Gap between two summary calls: 30 commands per 10 s is the limit and the
+  /// actions queue and chat traffic share it.
+  static const summarySpacing = Duration(milliseconds: 500);
+  static const _summaryDebounce = Duration(milliseconds: 150);
+
+  final _summaryWanted = <int>{};
+  final _summaryInFlight = <int>{};
+  Timer? _summaryTimer;
+  bool _isSummaryRunning = false;
+
+  /// Commands `records.summary` sent so far (tests).
+  int summaryCalls = 0;
+
+  /// A card of record [id] came on screen with the `record` object it was
+  /// delivered with (applied now) or without one (the record is unknown: it is
+  /// asked for in a batch).
+  void showSummary(int id, RecordSummary? summary) {
+    if (summary != null) {
+      applySummary(id, summary);
+      return;
+    }
+    if (!liveOf(id).value.isKnown) requestSummaries([id]);
+  }
+
+  /// Ids whose summary is missing or old (no `record` came, a reconnect, a
+  /// thread opened): asked for in chunks of [summaryChunk], one call at a
+  /// time, [summarySpacing] apart; an id already asked for is not asked again.
+  void requestSummaries(Iterable<int> ids) {
+    for (final id in ids) {
+      if (id > 0 && !_summaryInFlight.contains(id)) _summaryWanted.add(id);
+    }
+    if (_summaryWanted.isEmpty) return;
+    _summaryTimer ??= Timer(_summaryDebounce, () {
+      _summaryTimer = null;
+      _pumpSummaries();
+    });
+  }
+
+  Future<void> _pumpSummaries() async {
+    if (_isSummaryRunning) return;
+    _isSummaryRunning = true;
+    try {
+      while (_summaryWanted.isNotEmpty) {
+        if (!(SeedTickets.isActive || _socket.isOnline)) return;
+        final chunk = _summaryWanted.take(summaryChunk).toList();
+        _summaryWanted.removeAll(chunk);
+        _summaryInFlight.addAll(chunk);
+        summaryCalls++;
+        try {
+          final data = await _call(RecordCmd.summary, {'ids': chunk});
+          final rows = data['summaries'];
+          if (rows is List) {
+            for (final row in rows) {
+              if (row is! Map) continue;
+              final id = idNumber(row['id']);
+              final summary = RecordSummary.tryParse(row['record']);
+              if (id != null && summary != null) applySummary(id, summary);
+            }
+          }
+        } on SocketCallError catch (e) {
+          if (e.code == 'rate_limited' || e.code == 'busy') {
+            _summaryWanted.addAll(chunk);
+            await Future<void>.delayed(summarySpacing * 4);
+          }
+        } finally {
+          _summaryInFlight.removeAll(chunk);
+        }
+        if (_summaryWanted.isNotEmpty) {
+          await Future<void>.delayed(summarySpacing);
+        }
+      }
+    } finally {
+      _isSummaryRunning = false;
+    }
   }
 
   /// Reads record [id] in full (`submission.get` + `record.actions`) when the
@@ -309,6 +425,8 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
     _menuReading.clear();
     _listed.clear();
     _live.clear();
+    _summaryWanted.clear();
+    _summaryInFlight.clear();
     _unopenableAt.clear();
     _names.clear();
     withTotal.value = 0;
@@ -319,6 +437,7 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
     _burst?.cancel();
+    _summaryTimer?.cancel();
     _queue.dispose();
     _events?.cancel();
     _online?.cancel();
@@ -363,6 +482,10 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
       if (live.isKnown) _setLive(id, live.copyWith(isStale: true));
     }
     _queue.markAllStale();
+    requestSummaries([
+      for (final id in _live.keys)
+        if (_queue.isVisible(id)) id,
+    ]);
   }
 
   /// An event named record [id]: only that record's cached reads are old and
@@ -383,6 +506,23 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
     _queue.markStale(id);
   }
 
+  /// The event's `record` object, applied to the card at once. False when it
+  /// had none (or an old one): the caller marks the record stale instead.
+  bool _applyEventSummary(
+    int id,
+    Map<dynamic, dynamic> data, {
+    String action = '',
+  }) {
+    final summary = RecordSummary.tryParse(data['record']);
+    if (summary == null) return false;
+    final applied = applySummary(id, summary);
+    if (applied && action.isNotEmpty) {
+      final live = liveOf(id).value;
+      _setLive(id, live.copyWith(lastAction: action));
+    }
+    return true;
+  }
+
   static const _watched = {
     RecordEvents.changed,
     RecordEvents.assigned,
@@ -401,19 +541,38 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
       if (assigned != null && !_assigned.isClosed) _assigned.add(assigned);
       // Only the new holder gets it: the record is with me now.
       if (assigned != null) {
-        _touch(assigned.id, action: assigned.action, holder: me);
+        if (!_applyEventSummary(assigned.id, data, action: assigned.action)) {
+          _touch(assigned.id, action: assigned.action, holder: me);
+          requestSummaries([assigned.id]);
+        }
       }
       scheduleRefresh(isAll: assigned == null);
       return;
     }
     if (name == RecordEvents.changed) {
       final id = idNumber(data['id']);
-      if (id != null) _touch(id, action: idText(data['action']));
+      if (id != null) {
+        final action = idText(data['action']);
+        if (action.toLowerCase() == 'deleted') {
+          _touch(id, action: action);
+        } else if (!_applyEventSummary(id, data, action: action)) {
+          _touch(id, action: action);
+          if (liveOf(id).value.isKnown || _queue.isVisible(id)) {
+            requestSummaries([id]);
+          }
+        }
+      }
       scheduleRefresh(isAll: id == null);
       return;
     }
-    // A card was posted or rewritten: the message repository draws it; the
-    // lists read again, no record is stale because of it.
+    // A card was posted or rewritten: it carries the record's state for a
+    // person who may read it; without one the record is unknown.
+    final form = data['form'];
+    if (form is Map) {
+      final id = idNumber(form['submissionId']);
+      final summary = RecordSummary.tryParse(form['record']);
+      if (id != null && summary != null) applySummary(id, summary);
+    }
     scheduleRefresh(isAll: false);
   }
 

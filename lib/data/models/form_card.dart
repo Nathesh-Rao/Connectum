@@ -5,6 +5,7 @@ import 'form_entry.dart';
 import 'form_submission.dart';
 import 'ids.dart';
 import 'message.dart';
+import 'record_live.dart';
 import 'ticket.dart';
 
 /// A submission as one card or one detail page: where it came from (a form
@@ -24,6 +25,7 @@ class FormCardData {
     this.status,
     this.canResubmit = false,
     this.isReadOnly = false,
+    this.record,
   });
 
   final String id;
@@ -46,6 +48,10 @@ class FormCardData {
 
   /// `form.readonly`: a record's history row, never a record itself.
   final bool isReadOnly;
+
+  /// `form.record`: where the record stands, added per person who may read it.
+  /// Null when the card had none: the record is unknown.
+  final RecordSummary? record;
 
   bool get isPending => id.startsWith('temp-');
 
@@ -155,6 +161,7 @@ class FormCardData {
       status: status,
       canResubmit: canResubmit,
       isReadOnly: form['readonly'] == true,
+      record: RecordSummary.tryParse(form['record']),
     );
   }
 

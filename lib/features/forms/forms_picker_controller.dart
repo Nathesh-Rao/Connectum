@@ -7,6 +7,7 @@ import '../../data/models/form_option.dart';
 import '../../data/repositories/form_options_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
+import '../home_shell/home_tab.dart';
 import 'models/form_launch.dart';
 
 /// The sheet behind the forms button: search, the forms used lately, the
@@ -20,8 +21,6 @@ class FormsPickerController extends GetxController {
     this.convId,
     this.isEncrypted,
   });
-
-  static const _submissionsTab = 2;
 
   final FormOptionsRepository options;
   final ConnectivityService connectivity;
@@ -105,7 +104,7 @@ class FormsPickerController extends GetxController {
   /// Leaves the conversation and shows the Submissions tab of the home.
   void openMySubmissions() {
     Get.until((r) => HomeShellController.tabRoutes.contains(r.settings.name));
-    shell?.select(_submissionsTab);
+    shell?.select(HomeTab.submits);
   }
 
   @override

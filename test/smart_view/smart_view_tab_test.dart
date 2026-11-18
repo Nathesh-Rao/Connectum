@@ -4,6 +4,7 @@ import 'package:connectum/core/debug/seed_smart_view.dart';
 import 'package:connectum/core/debug/seed_tickets.dart';
 import 'package:connectum/core/routes/app_routes.dart';
 import 'package:connectum/core/theme/app_colors.dart';
+import 'package:connectum/core/widgets/app_text_field.dart';
 import 'package:connectum/data/e2e/e2e_models.dart';
 import 'package:connectum/data/models/conversation.dart';
 import 'package:connectum/data/notifications/local_notification_service.dart';
@@ -18,12 +19,15 @@ import 'package:connectum/data/socket/connectivity_service.dart';
 import 'package:connectum/data/socket/socket_service.dart';
 import 'package:connectum/core/routes/deep_link_service.dart';
 import 'package:connectum/features/home_shell/home_shell_controller.dart';
+import 'package:connectum/features/home_shell/home_tab.dart';
 import 'package:connectum/features/notifications/notification_router.dart';
 import 'package:connectum/features/security/security_controller.dart';
 import 'package:connectum/features/smart_view/models/smart_view_entry.dart';
 import 'package:connectum/features/smart_view/smart_view_binding.dart';
 import 'package:connectum/features/smart_view/smart_view_controller.dart';
 import 'package:connectum/features/smart_view/smart_view_view.dart';
+import 'package:connectum/core/widgets/app_speed_dial.dart';
+import 'package:connectum/features/smart_view/widgets/sv_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -58,7 +62,7 @@ class _Security extends Fake implements SecurityController {
 
 class _Router extends Fake implements NotificationRouter {
   @override
-  void Function(int index)? selectTab;
+  void Function(HomeTab tab)? selectTab;
 
   @override
   void markHomeGone() {}
@@ -160,12 +164,12 @@ void main() {
     await boot(tester);
     shell.openSmartView(const SmartViewEntry.drawer());
     await pumpFor(tester);
-    expect(shell.index.value, HomeShellController.smartViewTab);
+    expect(shell.tab.value, HomeTab.smartView);
     expect(smart.isDrawerOpen.value, isTrue);
     expect(smart.isActive.value, isTrue);
-    expect(find.text('Tickets'), findsOneWidget);
-    expect(find.text('Requests'), findsOneWidget);
-    expect(rig.count(_rows), 0);
+    expect(smart.isOverview, isTrue);
+    expect(find.byKey(const ValueKey('sv-drawer-tickets')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sv-drawer-requests')), findsOneWidget);
   });
 
   testWidgets(
@@ -174,7 +178,7 @@ void main() {
       await boot(tester);
       shell.openSmartView(const SmartViewEntry.named('tickets'));
       await pumpFor(tester, 1500);
-      expect(shell.index.value, HomeShellController.smartViewTab);
+      expect(shell.tab.value, HomeTab.smartView);
       expect(smart.isDrawerOpen.value, isFalse);
       expect(smart.current.value?.name, 'tickets');
       expect(rig.count(_rows), greaterThan(0));
@@ -183,6 +187,7 @@ void main() {
         'tickets',
       );
       expect(find.text('Second'), findsOneWidget);
+      expect(find.byKey(const ValueKey('sv-page-overview')), findsNothing);
     },
   );
 
@@ -203,21 +208,108 @@ void main() {
     expect(pushes.count, before);
   });
 
-  testWidgets('the tab alone: the last view if any, else the list opens', (
+  testWidgets('the tab alone: the Overview, drawer closed; returning resets', (
     tester,
   ) async {
     await boot(tester);
-    shell.select(HomeShellController.smartViewTab);
-    await pumpFor(tester);
-    expect(smart.isDrawerOpen.value, isTrue);
-    await tester.tap(find.text('Tickets'));
+    shell.select(HomeTab.smartView);
     await pumpFor(tester, 1500);
     expect(smart.isDrawerOpen.value, isFalse);
-    shell.select(0);
-    shell.select(HomeShellController.smartViewTab);
+    expect(smart.isOverview, isTrue);
+    expect(find.text('Overview'), findsWidgets);
+    expect(find.byType(SvControls), findsNothing);
+    expect(find.byType(AppSpeedDial), findsNothing);
+    smart.openDrawer();
+    await pumpFor(tester);
+    await tester.tap(find.byKey(const ValueKey('sv-drawer-tickets')));
+    await pumpFor(tester, 1500);
+    expect(smart.current.value?.name, 'tickets');
+    expect(find.byType(SvControls), findsOneWidget);
+    expect(find.byType(AppSpeedDial), findsOneWidget);
+    final reads = rig.count(SvCmd.sources);
+    shell.select(HomeTab.chats);
+    shell.select(HomeTab.smartView);
+    await pumpFor(tester, 1500);
+    expect(smart.isDrawerOpen.value, isFalse);
+    expect(smart.current.value, isNull);
+    expect(smart.table.value, isNull);
+    expect(smart.isOverview, isTrue);
+    expect(rig.count(SvCmd.sources), greaterThan(reads));
+  });
+
+  testWidgets('the drawer: a separate Overview row above STRUCTURES', (
+    tester,
+  ) async {
+    await boot(tester);
+    shell.openSmartView(const SmartViewEntry.drawer());
+    await pumpFor(tester, 1500);
+    final row = find.byKey(const ValueKey('sv-drawer-overview'));
+    expect(row, findsOneWidget);
+    expect(
+      tester.getTopLeft(row).dy,
+      lessThan(tester.getTopLeft(find.text('STRUCTURES')).dy),
+    );
+    Color? fill(String name) {
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(ValueKey('sv-drawer-$name')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      return (box.decoration as BoxDecoration).color;
+    }
+
+    expect(fill('overview'), AppColors.violetTint);
+    expect(fill('tickets'), Colors.transparent);
+    await tester.tap(find.byKey(const ValueKey('sv-drawer-tickets')));
+    await pumpFor(tester, 1500);
+    smart.openDrawer();
+    await pumpFor(tester);
+    expect(fill('overview'), Colors.transparent);
+    expect(fill('tickets'), AppColors.violetTint);
+    await tester.tap(row);
+    await pumpFor(tester, 700);
+    expect(smart.isOverview, isTrue);
+    expect(smart.isDrawerOpen.value, isFalse);
+  });
+
+  testWidgets('re-tapping the tab: a view goes back to the Overview', (
+    tester,
+  ) async {
+    await boot(tester);
+    shell.select(HomeTab.smartView);
+    await pumpFor(tester, 1500);
+    unawaited(smart.show(smart.sources.first));
+    await pumpFor(tester, 800);
+    expect(smart.isOverview, isFalse);
+    shell.select(HomeTab.smartView);
+    await pumpFor(tester, 500);
+    expect(smart.isOverview, isTrue);
+    expect(smart.table.value, isNull);
+  });
+
+  testWidgets('back: drawer first, then a view to the Overview', (
+    tester,
+  ) async {
+    await boot(tester);
+    shell.select(HomeTab.smartView);
+    await pumpFor(tester, 1500);
+    unawaited(smart.show(smart.sources.first));
+    await pumpFor(tester, 800);
+    smart.openDrawer();
+    await pumpFor(tester);
+    expect(smart.canLeave, isFalse);
+    await tester.binding.handlePopRoute();
     await pumpFor(tester);
     expect(smart.isDrawerOpen.value, isFalse);
-    expect(smart.current.value?.name, 'tickets');
+    expect(smart.isOverview, isFalse);
+    expect(smart.canLeave, isFalse);
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 500);
+    expect(smart.isOverview, isTrue);
+    expect(smart.canLeave, isTrue);
   });
 
   testWidgets('back closes the drawer first, then leaves it to the route', (
@@ -236,7 +328,7 @@ void main() {
     await boot(tester);
     shell.openSmartView(const SmartViewEntry.drawer());
     await pumpFor(tester);
-    shell.select(0);
+    shell.select(HomeTab.chats);
     await pumpFor(tester);
     expect(smart.isDrawerOpen.value, isFalse);
     expect(smart.isActive.value, isFalse);
@@ -247,16 +339,19 @@ void main() {
       await boot(tester);
       shell.openSmartView(const SmartViewEntry.drawer());
       await pumpFor(tester);
-      expect(find.text('Tickets'), findsOneWidget);
-      expect(find.text('Requests'), findsOneWidget);
+      Finder row(String n) => find.byKey(ValueKey('sv-drawer-$n'));
+      expect(row('tickets'), findsOneWidget);
+      expect(row('requests'), findsOneWidget);
       final calls = rig.socket.calls.length;
       await tester.enterText(find.byType(TextField), 'TICK');
       await pumpFor(tester, 100);
-      expect(find.text('Tickets'), findsOneWidget);
-      expect(find.text('Requests'), findsNothing);
+      expect(row('tickets'), findsOneWidget);
+      expect(row('requests'), findsNothing);
+      expect(row('overview'), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'zzzz');
       await pumpFor(tester, 100);
       expect(find.text('Nothing matches.'), findsOneWidget);
+      expect(row('overview'), findsOneWidget);
       expect(rig.socket.calls.length, calls);
     });
 
@@ -266,23 +361,61 @@ void main() {
       await boot(tester);
       shell.openSmartView(const SmartViewEntry.named('tickets'));
       await pumpFor(tester, 1500);
-      shell.openSmartView(const SmartViewEntry.drawer());
+      smart.openDrawer();
       await pumpFor(tester);
-      Color? fillOf(String text) {
+      Color? fillOf(String name) {
         final box = tester.widget<Container>(
           find
-              .ancestor(of: find.text(text), matching: find.byType(Container))
+              .descendant(
+                of: find.byKey(ValueKey('sv-drawer-$name')),
+                matching: find.byType(Container),
+              )
               .first,
         );
         return (box.decoration as BoxDecoration).color;
       }
 
-      expect(fillOf('Tickets'), AppColors.violetTint);
-      expect(fillOf('Requests'), Colors.transparent);
-      await tester.tap(find.text('Requests'));
+      expect(fillOf('tickets'), AppColors.violetTint);
+      expect(fillOf('requests'), Colors.transparent);
+      expect(fillOf('overview'), Colors.transparent);
+      await tester.tap(find.byKey(const ValueKey('sv-drawer-requests')));
       await pumpFor(tester, 1500);
       expect(smart.isDrawerOpen.value, isFalse);
       expect(smart.current.value?.name, 'requests');
+    });
+
+    testWidgets('Find and the rows share the same edges; labels sit under '
+        'the search icon', (tester) async {
+      await boot(tester);
+      shell.openSmartView(const SmartViewEntry.named('tickets'));
+      await pumpFor(tester, 1500);
+      smart.openDrawer();
+      await pumpFor(tester);
+      final find0 = tester.getRect(find.byType(AppTextField));
+      final pill = tester.getRect(
+        find.byKey(const ValueKey('sv-drawer-tickets')),
+      );
+      expect(pill.left, find0.left);
+      expect(pill.right, find0.right);
+      final label = tester
+          .getTopLeft(
+            find.descendant(
+              of: find.byKey(const ValueKey('sv-drawer-tickets')),
+              matching: find.text('Tickets'),
+            ),
+          )
+          .dx;
+      final icon = tester
+          .getTopLeft(
+            find.descendant(
+              of: find.byType(AppTextField),
+              matching: find.byIcon(Icons.search),
+            ),
+          )
+          .dx;
+      expect(label, closeTo(icon, 1));
+      expect(tester.getTopLeft(find.text('Smart view')).dx, find0.left);
+      expect(tester.getTopLeft(find.text('STRUCTURES')).dx, find0.left);
     });
 
     testWidgets('golden: the open drawer, the open view as a violet pill', (
@@ -291,7 +424,7 @@ void main() {
       await boot(tester);
       shell.openSmartView(const SmartViewEntry.named('tickets'));
       await pumpFor(tester, 1500);
-      shell.openSmartView(const SmartViewEntry.drawer());
+      smart.openDrawer();
       await pumpFor(tester);
       await expectLater(
         find.byType(GetMaterialApp),
@@ -319,8 +452,8 @@ void main() {
       });
       shell.openSmartView(const SmartViewEntry.drawer());
       await pumpFor(tester);
-      expect(find.text('Leave request'), findsOneWidget);
-      expect(find.text('Expense claim'), findsOneWidget);
+      expect(find.byKey(const ValueKey('sv-drawer-leave')), findsOneWidget);
+      expect(find.byKey(const ValueKey('sv-drawer-expense')), findsOneWidget);
     });
   });
 }

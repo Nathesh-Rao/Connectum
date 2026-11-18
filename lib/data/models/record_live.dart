@@ -2,6 +2,52 @@ import 'ids.dart';
 import 'record_state.dart';
 import 'ticket.dart';
 
+/// The `record` object of an event, a form card or `records.summary`:
+/// `{status, holder, claimants, completion, final, ts, by}`. `status` and
+/// `completion` are null for a form without a status.
+class RecordSummary {
+  const RecordSummary({
+    this.status = '',
+    this.holder = '',
+    this.claimants = const [],
+    this.completion,
+    this.isFinal = false,
+    this.ts = 0,
+    this.by = '',
+  });
+
+  final String status;
+  final String holder;
+  final List<String> claimants;
+  final int? completion;
+  final bool isFinal;
+
+  /// Milliseconds of the record's last change; orders late events.
+  final int ts;
+  final String by;
+
+  /// Null when [raw] is not a `record` object: the record is then unknown, not
+  /// without a status.
+  static RecordSummary? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final claimants = raw['claimants'];
+    final completion = raw['completion'];
+    return RecordSummary(
+      status: idText(raw['status']),
+      holder: idText(raw['holder']),
+      claimants: [
+        if (claimants is List)
+          for (final c in claimants)
+            if (idText(c).isNotEmpty) idText(c),
+      ],
+      completion: completion == null ? null : intOf(completion).clamp(0, 100),
+      isFinal: raw['final'] == true,
+      ts: intOf(raw['ts']),
+      by: idText(raw['by']),
+    );
+  }
+}
+
 /// What a record card shows about its record: the status, who it is with,
 /// how far it is and the last update. It is filled from data that is already
 /// at hand (a `record.actions` read, a `records.mine` page, the answer of my
@@ -22,6 +68,7 @@ class RecordLive {
     this.isFinal = false,
     this.isStale = false,
     this.isKnown = false,
+    this.summaryTs = 0,
   });
 
   final String status;
@@ -45,6 +92,10 @@ class RecordLive {
 
   /// Something was read or received; false for a record nothing is known of.
   final bool isKnown;
+
+  /// The `ts` of the last summary applied; a summary with an older or equal
+  /// one is ignored. 0 when none came.
+  final int summaryTs;
 
   bool get isShared => claimants.isNotEmpty;
 
@@ -77,6 +128,7 @@ class RecordLive {
     String? lastAction,
     bool? isFinal,
     bool? isStale,
+    int? summaryTs,
   }) => RecordLive(
     status: status ?? this.status,
     holder: holder ?? this.holder,
@@ -90,7 +142,26 @@ class RecordLive {
     isFinal: isFinal ?? this.isFinal,
     isStale: isStale ?? this.isStale,
     isKnown: true,
+    summaryTs: summaryTs ?? this.summaryTs,
   );
+
+  /// The state a `record` summary says: status, holder, claimants, completion
+  /// and the final flag, with the last change's author and time. The last
+  /// remarks belong to an older update and go.
+  RecordLive withSummary(RecordSummary r, {String initiator = ''}) =>
+      RecordLive(
+        status: r.status,
+        holder: r.holder,
+        initiator: this.initiator.isNotEmpty ? this.initiator : initiator,
+        claimants: r.claimants,
+        completion: r.completion,
+        lastBy: r.by.isNotEmpty ? r.by : lastBy,
+        lastTs: r.ts > 0 ? r.ts : lastTs,
+        lastAction: lastAction,
+        isFinal: r.isFinal,
+        isKnown: true,
+        summaryTs: r.ts,
+      );
 
   /// From a full `record.actions` read.
   static RecordLive fromState(RecordState s) {
@@ -151,5 +222,6 @@ class RecordLive {
       isFinal == o.isFinal &&
       isStale == o.isStale &&
       isKnown == o.isKnown &&
+      summaryTs == o.summaryTs &&
       claimants.join(',') == o.claimants.join(',');
 }

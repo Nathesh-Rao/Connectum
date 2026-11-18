@@ -22,6 +22,13 @@ class AppSpacing {
   static const double fabScrollThreshold = 12;
   static const double badgedIconHit = 48;
   static const double bellCircle = 30;
+
+  /// Profile avatar of a top bar: outer size, ring width and white gap.
+  static const double profileAvatar = 38;
+  static const double profileRing = 2;
+  static const double profileRingGap = 2;
+  static const double profileEdge = 3;
+  static const double bellAvatarGap = 8;
   static const double bellPill = 36;
   static const double bellBadge = 24;
   static const double compactPillHeight = 28;

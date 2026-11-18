@@ -16,6 +16,7 @@ import '../../data/session_store.dart';
 import 'feed_actions.dart';
 import 'models/feed_item.dart';
 import 'widgets/feed_detail_sheet.dart';
+import '../home_shell/home_tab.dart';
 
 enum DestinationKind {
   chat,
@@ -115,9 +116,7 @@ class NotificationRouter extends GetxService {
   final TicketRepository _tickets;
 
   /// Set by the home shell: selects a tab of the home.
-  void Function(int index)? selectTab;
-
-  static const submissionsTab = 2;
+  void Function(HomeTab tab)? selectTab;
 
   Destination? _pending;
   String? _pendingOwner;
@@ -257,7 +256,7 @@ class NotificationRouter extends GetxService {
         ConversationRoute.open(d.conversationId!);
       case DestinationKind.submissions:
         Get.until((r) => r.isFirst);
-        selectTab?.call(submissionsTab);
+        selectTab?.call(HomeTab.submits);
       case DestinationKind.approvals:
         _openScreen(AppRoutes.approvals);
       case DestinationKind.tasks:

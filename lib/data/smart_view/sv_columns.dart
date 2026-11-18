@@ -2,6 +2,7 @@ import 'models/sv_row.dart';
 import 'models/sv_source.dart';
 import 'sv_card_content.dart';
 import 'sv_cell_format.dart';
+import 'sv_file.dart';
 
 enum SvColType {
   text,
@@ -40,10 +41,14 @@ class SvColumn {
 /// A cell: the text to show (never null; [SmartViewColumns.empty] when blank)
 /// and the value as the row holds it.
 class SvCellValue {
-  const SvCellValue(this.text, this.typed);
+  const SvCellValue(this.text, this.typed, {this.files = const []});
 
   final String text;
   final Object? typed;
+
+  /// The files of a file field (empty for any other cell). A hidden field is
+  /// not a column, so it never gives files.
+  final List<SvFile> files;
 
   bool get isEmpty => text == SmartViewColumns.empty;
 }
@@ -54,6 +59,7 @@ class SvCardData {
     required this.title,
     required this.status,
     required this.ticketStatus,
+    this.ticketLabel = 'Status',
     required this.number,
     required this.by,
     required this.submitted,
@@ -67,6 +73,9 @@ class SvCardData {
 
   /// The value of the structure's status field; empty when it has none.
   final String ticketStatus;
+
+  /// The caption of the structure's status field.
+  final String ticketLabel;
   final String number;
   final String by;
   final String submitted;
@@ -164,6 +173,59 @@ class SmartViewColumns {
     _ => SvColType.unknown,
   };
 
+  /// The columns a view's column list can show or hide and order: every one
+  /// but the record number, which is always the first.
+  List<SvColumn> get listable => [
+    for (final c in columns)
+      if (c.key != noKey) c,
+  ];
+
+  /// The same columns as a view lays them out: [hidden] and [order] hold the
+  /// web's keys (`By`, `On`, `Status`, own fields; a leading `+` only marks a
+  /// quiet column turned on and is ignored here). A key that is not a column
+  /// here (a field the form keeps hidden, one that is gone) is skipped, so
+  /// nothing outside this list can appear. At least one column stays.
+  SmartViewColumns laidOut({
+    List<String> hidden = const [],
+    List<String> order = const [],
+  }) {
+    if (hidden.isEmpty && order.isEmpty) return this;
+    String web(SvColumn c) => _web(c.key);
+    final off = {
+      for (final h in hidden)
+        if (!h.startsWith('+')) h,
+    };
+    final list = [
+      for (final c in listable)
+        if (!off.contains(web(c))) c,
+    ];
+    final ranked = <SvColumn>[];
+    for (final o in order) {
+      final key = o.startsWith('+') ? o.substring(1) : o;
+      for (final c in list) {
+        if (web(c) == key && !ranked.contains(c)) ranked.add(c);
+      }
+    }
+    final shown = [
+      ...ranked,
+      for (final c in list)
+        if (!ranked.contains(c)) c,
+    ];
+    if (shown.isEmpty) return this;
+    return SmartViewColumns._(source, [
+      for (final c in columns)
+        if (c.key == noKey) c,
+      ...shown,
+    ]);
+  }
+
+  static String _web(String key) => switch (key) {
+    byKey => 'By',
+    submittedKey => 'On',
+    statusKey => 'Status',
+    _ => key,
+  };
+
   List<SvColumn> get ownColumns => [
     for (final c in columns)
       if (!c.isMeta) c,
@@ -189,9 +251,13 @@ class SmartViewColumns {
     final f = source.fieldOf(column.key);
     if (f == null) return const SvCellValue(empty, null);
     final raw = row.values[f.name];
+    final files = column.type == SvColType.file
+        ? SvFile.listOf(raw, row.files[f.name])
+        : const <SvFile>[];
     return SvCellValue(
       _shown(SvCell.of(f, raw, labels: row.labels, files: row.files)),
       raw,
+      files: files,
     );
   }
 
@@ -223,6 +289,9 @@ class SmartViewColumns {
       title: c.title,
       status: row.approval,
       ticketStatus: ticket == SvCell.dash ? '' : ticket,
+      ticketLabel: statusField == null
+          ? 'Status'
+          : (source.fieldOf(statusField)?.caption ?? 'Status'),
       number: c.number,
       by: c.by.isEmpty ? empty : c.by,
       submitted: _shown(c.submitted),

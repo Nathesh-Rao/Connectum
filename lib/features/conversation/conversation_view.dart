@@ -220,6 +220,7 @@ Widget _message(BuildContext context, ConversationController c, ChatItem item) {
                 ? RecordCardActions(
                     recordId: c.recordIdOf(card)!,
                     tickets: c.tickets,
+                    summary: card.record,
                     onAction: (context, id) {
                       final detail = c.ticketDetailOf(card);
                       if (detail != null) {

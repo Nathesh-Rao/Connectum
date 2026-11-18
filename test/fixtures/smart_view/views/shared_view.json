@@ -1,0 +1,15 @@
+{
+  "id": "s1763456793333",
+  "name": "Open by stage",
+  "by": "ann",
+  "mine": false,
+  "search": "",
+  "filters": [ { "col": "stage", "op": "not", "value": "Closed" } ],
+  "sort": null,
+  "groupBy": ["stage"],
+  "hidden": [],
+  "order": [],
+  "widths": {},
+  "kpis": true,
+  "charts": true
+}

@@ -45,6 +45,9 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
+import '../../data/repositories/sv_saved_views_repository.dart';
+import '../debug/seed_saved_views.dart';
+import '../../data/repositories/sv_file_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/workspace_repository.dart';
 import '../../features/tickets/saved_record_notice.dart';
@@ -63,6 +66,7 @@ import '../../demo/demo_services.dart';
 import '../../data/smart_view/sv_prefs.dart';
 import '../debug/seed_qr.dart';
 import '../debug/seed_tasks.dart';
+import '../debug/seed_smart_files.dart';
 import '../debug/seed_smart_view.dart';
 import '../debug/seed_tickets.dart';
 
@@ -151,6 +155,14 @@ class InitialBinding extends Bindings {
     );
     commands.sourceSuggester = smartView.suggestions;
     Get.put(
+      SvSavedViewsRepository(
+        call: isDemo
+            ? (SeedSavedViews()..armConflict()).callWithConflict
+            : smartView.gated,
+      ),
+      permanent: true,
+    );
+    Get.put(
       WorkspaceRepository(
         socket,
         store,
@@ -210,6 +222,18 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     AvatarImages.cache = attachmentCache;
+    Get.put(
+      SvFileRepository(
+        dio: attachments.dio,
+        token: () => store.token,
+        origin: AppConfig.baseUrl,
+        cache: attachmentCache,
+        onUnauthorized: api.reportUnauthorized,
+        store: store,
+        fetcher: isDemo ? SeedSmartFiles.fetcher : null,
+      ),
+      permanent: true,
+    );
     Get.put(PeopleAvatars(db, store, socket, conversations), permanent: true);
     Get.put<ProfilePhotoRepository>(
       isDemo

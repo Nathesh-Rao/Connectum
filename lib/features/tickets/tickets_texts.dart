@@ -131,8 +131,9 @@ class TicketsTexts {
       'Completion $v percent, minimum $min';
   static String percentLockedSemantics(int v) =>
       'Completion is locked below $v percent';
-  static String autoFinalHint(String status) =>
-      'Set to $status because completion is 100%';
+  static const unknownState = '—';
+  static const unknownStateSemantics = 'Status loading';
+  static const reopenHint = 'Reopening sets completion to 99%';
   static const closingWarning =
       'Closing this ticket sets completion to 100%. After it is closed, only an administrator can change it.';
 

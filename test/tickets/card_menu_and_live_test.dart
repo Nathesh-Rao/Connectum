@@ -54,7 +54,6 @@ void main() {
     test('my own settled record card in a direct chat or group', () {
       final items = CardMenu.build(
         canReply: true,
-        canForward: true,
         canCopy: true,
         isMarkable: true,
         isPinnable: true,
@@ -66,7 +65,6 @@ void main() {
       );
       expect(_ids(items), [
         'reply',
-        'forward',
         'copy',
         'save',
         'pin',
@@ -82,7 +80,6 @@ void main() {
     test('a card from someone else: Mark as unread, no Edit or Delete', () {
       final items = CardMenu.build(
         canReply: true,
-        canForward: true,
         canCopy: true,
         isMarkable: true,
         isPinnable: true,
@@ -90,7 +87,6 @@ void main() {
       );
       expect(_ids(items), [
         'reply',
-        'forward',
         'copy',
         'save',
         'pin',
@@ -101,14 +97,24 @@ void main() {
     });
 
     test('the general room has no Pin; a team chat has none of the marks', () {
-      final global = CardMenu.build(
-        canForward: true,
+      final global = CardMenu.build(canCopy: true, isMarkable: true);
+      expect(_ids(global), ['copy', 'save', 'unread']);
+      final team = CardMenu.build(canCopy: true);
+      expect(_ids(team), ['copy']);
+    });
+
+    test('a form or record card has no Forward row, whatever else is on', () {
+      final items = CardMenu.build(
+        canReply: true,
         canCopy: true,
         isMarkable: true,
+        isPinnable: true,
+        record: _state(),
+        canEdit: true,
+        canOpenHistory: true,
+        canDelete: true,
       );
-      expect(_ids(global), ['forward', 'copy', 'save', 'unread']);
-      final team = CardMenu.build(canForward: true, canCopy: true);
-      expect(_ids(team), ['forward', 'copy']);
+      expect(_ids(items), isNot(contains('forward')));
     });
 
     test('Save, Pin and Mark as unread are the coming-soon rows', () {
@@ -166,7 +172,7 @@ void main() {
     });
 
     test('a record\'s history row has no record to act on', () {
-      final items = CardMenu.build(canForward: true, canCopy: true);
+      final items = CardMenu.build(canCopy: true);
       expect(items.any((i) => i.isRecordAction), isFalse);
     });
   });
@@ -371,25 +377,31 @@ void main() {
       expect(live.isStale, isFalse);
     });
 
-    test('20 events in a burst: no command, one list refresh', () async {
-      await repo.actions(24);
-      socket.calls.clear();
-      var refreshes = 0;
-      final sub = repo.refreshes.listen((_) => refreshes++);
-      addTearDown(sub.cancel);
-      for (var i = 0; i < 20; i++) {
-        repo.onEvent(
-          _event('submissions_changed', {
-            'id': 24 + (i % 4),
-            'tstruct': 'help_ticket',
-            'action': 'Status update',
-          }),
-        );
-      }
-      await Future<void>.delayed(TicketRepository.burst * 2);
-      expect(socket.calls, isEmpty);
-      expect(refreshes, 1);
-    });
+    test(
+      '20 events without a record: one batched summary, one refresh',
+      () async {
+        await repo.actions(24);
+        socket.calls.clear();
+        var refreshes = 0;
+        final sub = repo.refreshes.listen((_) => refreshes++);
+        addTearDown(sub.cancel);
+        for (var i = 0; i < 20; i++) {
+          repo.onEvent(
+            _event('submissions_changed', {
+              'id': 24 + (i % 4),
+              'tstruct': 'help_ticket',
+              'action': 'Status update',
+            }),
+          );
+        }
+        await Future<void>.delayed(TicketRepository.burst * 2);
+        final sent = socket.calls.where((c) => c.action == RecordCmd.summary);
+        expect(sent.length, 1);
+        expect(socket.calls.length, 1);
+        expect((sent.single.args['ids'] as List).toSet(), {24, 25, 26, 27});
+        expect(refreshes, 1);
+      },
+    );
 
     test('form_message_updated changes no record and sends nothing', () async {
       await repo.actions(24);
@@ -522,9 +534,12 @@ void main() {
       expect(find.byType(Text), findsNothing);
     });
 
-    testWidgets('nothing before anything is known', (tester) async {
+    testWidgets('an unknown record shows a neutral dash, never "No status"', (
+      tester,
+    ) async {
       await show(tester, const RecordLive());
-      expect(find.byType(Text), findsNothing);
+      expect(find.text('—'), findsOneWidget);
+      expect(find.textContaining('No status'), findsNothing);
     });
 
     testWidgets('a message that only has a state from history shows it', (

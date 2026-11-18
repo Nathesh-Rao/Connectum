@@ -31,7 +31,6 @@ class CardMenuItem {
   /// The id of a record action row (`send`, `status`).
   static const actionPrefix = 'act-';
   static const reply = 'reply';
-  static const forward = 'forward';
   static const copy = 'copy';
   static const save = 'save';
   static const pin = 'pin';
@@ -45,7 +44,8 @@ class CardMenuItem {
 }
 
 /// What the menu of a form or record card offers, in the web's order
-/// (`MessageList.jsx` `menuItems`): Reply, Forward, Copy; Save, Pin, Mark as
+/// (`MessageList.jsx` `menuItems`): Reply, Copy (no Forward: a form or record
+/// card is never forwarded); Save, Pin, Mark as
 /// unread; the record's own actions from `record.actions` (Send, Update
 /// status, each with the server's `why` when off); then Edit or Fix and send
 /// again, History and Delete, which the web draws as buttons on the card. The
@@ -56,7 +56,6 @@ class CardMenu {
 
   static List<CardMenuItem> build({
     bool canReply = false,
-    bool canForward = false,
     bool canCopy = false,
     bool isMarkable = false,
     bool isPinnable = false,
@@ -70,8 +69,6 @@ class CardMenu {
     final items = <CardMenuItem>[
       if (canReply)
         const CardMenuItem(CardMenuItem.reply, 'Reply', Icons.reply),
-      if (canForward)
-        const CardMenuItem(CardMenuItem.forward, 'Forward', Icons.shortcut),
       if (canCopy) const CardMenuItem(CardMenuItem.copy, 'Copy', Icons.copy),
     ];
     if (isMarkable) {

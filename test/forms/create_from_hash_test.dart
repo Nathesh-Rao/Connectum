@@ -16,6 +16,7 @@ import 'package:connectum/data/socket/socket_service.dart';
 import 'package:connectum/features/forms/form_controller.dart';
 import 'package:connectum/features/forms/models/form_launch.dart';
 import 'package:connectum/features/home_shell/home_shell_controller.dart';
+import 'package:connectum/features/home_shell/home_tab.dart';
 import 'package:connectum/features/submission_detail/submission_detail_controller.dart';
 import 'package:connectum/features/submissions/submissions_controller.dart';
 import 'package:connectum/data/repositories/command_repository.dart';
@@ -328,21 +329,24 @@ void main() {
       expect(c.chatToSend, 'dm:ana');
     });
 
-    test('an encrypted chat: the box works the same, chat sent when ticked', () {
-      final c = controller(
-        FormLaunch(
-          name: 'leave_request',
-          scope: 'user',
-          caption: 'Leave Request',
-          convId: 'group:sales',
-          postChoiceTitle: 'Sales',
-          isEncryptedChat: true,
-        ),
-      );
-      expect(c.chatToSend, isNull);
-      c.isPostedToChat.value = true;
-      expect(c.chatToSend, 'group:sales');
-    });
+    test(
+      'an encrypted chat: the box works the same, chat sent when ticked',
+      () {
+        final c = controller(
+          FormLaunch(
+            name: 'leave_request',
+            scope: 'user',
+            caption: 'Leave Request',
+            convId: 'group:sales',
+            postChoiceTitle: 'Sales',
+            isEncryptedChat: true,
+          ),
+        );
+        expect(c.chatToSend, isNull);
+        c.isPostedToChat.value = true;
+        expect(c.chatToSend, 'group:sales');
+      },
+    );
 
     test('ticked by default in a care thread, and can be unticked', () {
       final c = controller(hashLaunch(isDefault: true, conv: 'group:care-ana'));
@@ -560,44 +564,58 @@ void main() {
       },
     );
 
-    testWidgets('#ts shows the submissions of that form only', (tester) async {
-      final shell = _Shell();
-      final list = _Subs();
-      list.submissions.assignAll([
-        for (final (id, name) in [('1', 'leave_request'), ('2', 'expense')])
-          FormSubmission(
-            submissionId: id,
-            tstruct: name,
-            byUser: 'me',
-            ts: 1,
-            valuesJson: jsonEncode({'x': id}),
-            syncState: 'synced',
-          ),
-      ]);
-      list.isLoaded.value = true;
-      final controller = SubmissionsController(
-        submissions: list,
-        connectivity: FakeConnectivity(),
-        shell: shell,
-      );
-      controller.onInit();
-      expect(controller.rows, hasLength(2));
+    testWidgets(
+      '#ts opens the records screen and leaves My Submissions alone',
+      (tester) async {
+        final shell = _Shell();
+        final list = _Subs();
+        list.submissions.assignAll([
+          for (final (id, name) in [('1', 'leave_request'), ('2', 'expense')])
+            FormSubmission(
+              submissionId: id,
+              tstruct: name,
+              byUser: 'me',
+              ts: 1,
+              valuesJson: jsonEncode({'x': id}),
+              syncState: 'synced',
+            ),
+        ]);
+        list.isLoaded.value = true;
+        final controller = SubmissionsController(
+          submissions: list,
+          connectivity: FakeConnectivity(),
+          shell: shell,
+        );
+        controller.onInit();
+        expect(controller.rows, hasLength(2));
 
-      final commands = _Commands()..line = HashKind.records;
-      final runner = CommandRunner(
-        commands,
-        CommandPrompt(commands),
-        submissions: list,
-        shell: shell,
-      );
-      await tester.pumpWidget(const GetMaterialApp(home: Scaffold()));
-      await tester.runAsync(() => runner.run('#ts Leave Request'));
-      await tester.pump();
-      expect(shell.opened, ['leave_request']);
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(controller.rows.map((r) => r.card.structure), ['leave_request']);
-      controller.onClose();
-    });
+        final commands = _Commands()..line = HashKind.records;
+        final runner = CommandRunner(
+          commands,
+          CommandPrompt(commands),
+          submissions: list,
+          shell: shell,
+        );
+        await tester.pumpWidget(
+          GetMaterialApp(
+            home: const Scaffold(),
+            getPages: [
+              GetPage(
+                name: AppRoutes.structRecords,
+                page: () => const Scaffold(body: Text('records')),
+              ),
+            ],
+          ),
+        );
+        await tester.runAsync(() => runner.run('#ts Leave Request'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('records'), findsOneWidget);
+        expect(shell.opened, isEmpty);
+        expect(controller.rows, hasLength(2));
+        controller.onClose();
+      },
+    );
   });
 
   group('delete from the detail screen', () {
@@ -709,7 +727,7 @@ class _Shell extends Fake implements HomeShellController {
   @override
   final submissionsForm = RxnString();
   @override
-  final index = 0.obs;
+  final tab = HomeTab.chats.obs;
 
   final opened = <String>[];
 

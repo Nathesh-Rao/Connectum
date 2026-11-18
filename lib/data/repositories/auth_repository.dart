@@ -26,6 +26,15 @@ class UnsupportedStep implements Exception {
   final List<String> reasons;
 }
 
+/// The answer of `password/check`: the server's own words when the password
+/// does not meet its rules (8 to 128 characters).
+class PasswordCheck {
+  const PasswordCheck({required this.isOk, this.message = ''});
+
+  final bool isOk;
+  final String message;
+}
+
 class SetupResult {
   const SetupResult(this.enterpriseId, this.name);
 
@@ -154,6 +163,47 @@ class AuthRepository extends GetxService {
           ? 300
           : intOf(data['expiresInSec']),
     );
+  }
+
+  /// Asks the server whether a password meets its rules (nothing is stored).
+  /// Sent exactly as typed. A refusal is a result, not an error; anything else
+  /// (no connection, a limit) throws.
+  Future<PasswordCheck> passwordCheck(String password) async {
+    try {
+      await _api.post('/password/check', body: {'password': password});
+      return const PasswordCheck(isOk: true);
+    } on ApiException catch (e) {
+      if (e.code == 'invalid') {
+        return PasswordCheck(isOk: false, message: e.message);
+      }
+      rethrow;
+    }
+  }
+
+  /// Emails a reset code. The answer is `{sent:true}` for every address, so
+  /// the caller shows the same neutral message whatever happens on the server.
+  Future<void> passwordForgot(String email) async {
+    await _api.post('/password/forgot', body: {'email': email});
+  }
+
+  /// Sets a new password with the emailed code and signs the person in (the
+  /// same answer as the code sign-in). Nothing is kept on a refusal, so the
+  /// caller can retry with the same code.
+  Future<IdentityInfo> passwordReset(
+    String email,
+    String otp,
+    String newPassword,
+  ) async {
+    final data = await _api.post(
+      '/password/reset',
+      body: {
+        'email': email,
+        'otp': otp,
+        'newPassword': newPassword,
+        'deviceId': await _store.deviceId(),
+      },
+    );
+    return _finishLogin(data, email);
   }
 
   Future<void> setPassword(String otp, String newPassword) async {

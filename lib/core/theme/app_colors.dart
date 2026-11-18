@@ -24,6 +24,9 @@ class AppColors {
 
   /// Tint of [violet] over white (13 %) and its readable shade.
   static const violetTint = Color(0xFFF0EAFE);
+
+  /// The profile avatar's ring: [violet] at 35 %.
+  static const violetRing = Color(0x598B5CF6);
   static const violetStrong = Color(0xFF5B21B6);
 
   /// Soft violet glow behind the selected bottom navigation icon (20 %).

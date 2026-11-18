@@ -1,3 +1,8 @@
+import 'package:connectum/core/theme/app_colors.dart';
+import 'package:connectum/core/theme/app_radius.dart';
+import 'package:connectum/core/widgets/app_bubble_surface.dart';
+import 'package:connectum/core/widgets/app_button.dart';
+import 'package:connectum/core/widgets/app_text_field.dart';
 import 'package:connectum/data/repositories/form_file_repository.dart';
 import 'package:connectum/data/repositories/smart_view_repository.dart';
 import 'package:connectum/data/repositories/submission_repository.dart';
@@ -210,7 +215,12 @@ void main() {
     await t.tapAt(const Offset(10, 300));
     await pumpFor(t, 300);
     // Switch the field to Title (text): text operators.
-    await t.tap(find.text('No.').first);
+    await t.tap(
+      find.descendant(
+        of: find.byType(SvFilterSheetBody),
+        matching: find.text('No.'),
+      ),
+    );
     await pumpFor(t, 300);
     await t.tap(find.text('Title').last);
     await pumpFor(t, 300);
@@ -312,6 +322,7 @@ void main() {
     // Cards use the same order.
     c.setSort('title', isAscending: true);
     c.mode.value = SvViewMode.cards;
+    t.view.physicalSize = const Size(390 * 2, 3000 * 2);
     await pumpFor(t, 500);
     final ys = [
       for (final n in ['Alpha invoice', 'Badge lost', 'Laptop request'])
@@ -355,6 +366,99 @@ void main() {
     expect(find.text('Router down'), findsOneWidget);
   });
 
+  group('polish 2', () {
+    BoxDecoration? borderOf(WidgetTester t, Finder inside) {
+      final boxes = find
+          .descendant(of: inside, matching: find.byType(DecoratedBox))
+          .evaluate()
+          .map((e) => (e.widget as DecoratedBox).decoration)
+          .whereType<BoxDecoration>()
+          .where((d) => d.border != null);
+      return boxes.isEmpty ? null : boxes.first;
+    }
+
+    queryTest('Add filter: the standard primary button, no gradient; with '
+        'filters the secondary one', (t) async {
+      await t.tap(find.byIcon(Icons.filter_list));
+      await pumpFor(t, 800);
+      final add = find.widgetWithText(AppButton, 'Add filter');
+      expect(add, findsOneWidget);
+      expect(
+        find.descendant(of: add, matching: find.byType(AppBubbleSurface)),
+        findsOneWidget,
+      );
+      final gradients = find
+          .descendant(of: add, matching: find.byType(DecoratedBox))
+          .evaluate()
+          .map((e) => (e.widget as DecoratedBox).decoration)
+          .whereType<BoxDecoration>()
+          .where((d) => d.gradient != null);
+      expect(gradients, isEmpty);
+      expect(
+        find.descendant(of: add, matching: find.byIcon(Icons.add)),
+        findsOneWidget,
+      );
+      await t.tap(add);
+      await pumpFor(t, 400);
+      final again = find.widgetWithText(AppButton, 'Add filter');
+      expect(
+        find.descendant(of: again, matching: find.byType(AppBubbleSurface)),
+        findsNothing,
+      );
+    });
+
+    queryTest('search field, scope chip and close use the standard border', (
+      t,
+    ) async {
+      await openSearch(t);
+      final field = find.byType(AppTextField);
+      final d = borderOf(t, field)!;
+      final focused = (d.border! as Border).top;
+      expect(d.borderRadius, AppRadius.controlAll);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await pumpFor(t, 300);
+      final rest = (borderOf(t, field)!.border! as Border).top;
+      expect(rest.color, AppColors.inputBorder);
+      expect(rest.width, 1);
+      // the app's own default field, focused and at rest
+      await t.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: AppTextField(hint: 'x', autofocus: true)),
+        ),
+      );
+      await pumpFor(t, 300);
+      final std = borderOf(t, find.byType(AppTextField))!;
+      expect((std.border! as Border).top.color, focused.color);
+      expect((std.border! as Border).top.width, focused.width);
+      expect(std.borderRadius, d.borderRadius);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await pumpFor(t, 300);
+      final stdRest =
+          (borderOf(t, find.byType(AppTextField))!.border! as Border).top;
+      expect(stdRest.color, rest.color);
+      expect(stdRest.width, rest.width);
+    });
+
+    queryTest('the scope chip and the close button have the hairline too', (
+      t,
+    ) async {
+      await openSearch(t);
+      final chip = borderOf(t, find.byType(SvPill))!;
+      expect((chip.border! as Border).top.color, AppColors.inputBorder);
+      expect(chip.borderRadius, AppRadius.controlAll);
+      final close = find.bySemanticsLabel('Close search');
+      final box = t
+          .widgetList<Container>(
+            find.descendant(of: close, matching: find.byType(Container)),
+          )
+          .map((c) => c.decoration)
+          .whereType<BoxDecoration>()
+          .first;
+      expect((box.border! as Border).top.color, AppColors.inputBorder);
+      expect(box.borderRadius, AppRadius.controlAll);
+    });
+  });
+
   group('goldens', () {
     queryTest('golden: the filter sheet with two rows', (t) async {
       c.setConditions(const [
@@ -391,6 +495,36 @@ void main() {
       );
     });
 
+    queryTest('golden: the controls row at rest', (t) async {
+      await pumpFor(t, 300);
+      await expectLater(
+        find.byType(GetMaterialApp),
+        matchesGoldenFile('goldens/sv_controls_rest.png'),
+      );
+    });
+
+    queryTest('golden: the filter sheet with no filters', (t) async {
+      await t.tap(find.byIcon(Icons.filter_list));
+      await pumpFor(t, 900);
+      expect(find.text('No filters yet'), findsOneWidget);
+      expect(find.text('Add one to narrow the list'), findsOneWidget);
+      await expectLater(
+        find.byType(GetMaterialApp),
+        matchesGoldenFile('goldens/sv_filter_empty.png'),
+      );
+    });
+
+    queryTest('golden: the sort sheet', (t) async {
+      c.setSort('hours', isAscending: false);
+      await pumpFor(t, 300);
+      await t.tap(find.byIcon(Icons.swap_vert));
+      await pumpFor(t, 900);
+      await expectLater(
+        find.byType(GetMaterialApp),
+        matchesGoldenFile('goldens/sv_sort_sheet.png'),
+      );
+    });
+
     queryTest('golden: no records match', (t) async {
       c.setQuery(c.query.value.copyWith(search: 'zzzz'));
       await pumpFor(t, 500);
@@ -399,6 +533,63 @@ void main() {
         matchesGoldenFile('goldens/sv_no_match.png'),
       );
     });
+  });
+
+  queryTest('the three buttons are 40 dp circles in a 48 dp tap box, tinted '
+      'differently, and press scales them down', (t) async {
+    for (final icon in [Icons.search, Icons.filter_list, Icons.swap_vert]) {
+      final box = t.getSize(
+        find
+            .ancestor(of: find.byIcon(icon), matching: find.byType(SizedBox))
+            .first,
+      );
+      expect(box.height, greaterThanOrEqualTo(48));
+    }
+    final fills = [
+      for (final icon in [Icons.search, Icons.filter_list, Icons.swap_vert])
+        (t
+                    .widget<AnimatedContainer>(
+                      find
+                          .ancestor(
+                            of: find.byIcon(icon),
+                            matching: find.byType(AnimatedContainer),
+                          )
+                          .first,
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color,
+    ];
+    expect(fills.toSet().length, 3);
+    for (final f in fills) {
+      expect(f!.a, closeTo(0.11, 0.01));
+    }
+    final gesture = await t.startGesture(
+      t.getCenter(find.byIcon(Icons.search)),
+    );
+    await pumpFor(t, 200);
+    expect(
+      t.widget<AnimatedScale>(find.byType(AnimatedScale).first).scale,
+      0.94,
+    );
+    await gesture.up();
+    await pumpFor(t, 300);
+    c.setQuery(c.query.value.copyWith(search: 'a'));
+    await pumpFor(t, 300);
+    final active =
+        (t
+                    .widget<AnimatedContainer>(
+                      find
+                          .ancestor(
+                            of: find.byIcon(Icons.search),
+                            matching: find.byType(AnimatedContainer),
+                          )
+                          .first,
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color!;
+    expect(active.a, closeTo(0.20, 0.01));
   });
 
   test('the query is kept per view and restored', () async {

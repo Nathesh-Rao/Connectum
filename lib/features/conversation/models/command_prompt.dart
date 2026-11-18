@@ -93,7 +93,10 @@ class CommandPrompt {
       _suggestSources(cmd, rest);
       return;
     }
-    final isText = arg.isRest || arg.type == 'text' && at >= args.length - 1;
+    final isStructName = cmd.name == 'tstruct' || cmd.name == 'tstruct-add';
+    final isText =
+        !isStructName &&
+        (arg.isRest || arg.type == 'text' && at >= args.length - 1);
     if (isText) {
       _suggester.cancel();
       items.clear();
@@ -158,7 +161,8 @@ class CommandPrompt {
     _suggester.request(_input, page: _page + 1);
   }
 
-  /// The text with [item] in place of the word being written, and one space.
+  /// The text with [item] in place of the word being written, and one space
+  /// (none after the one name `#tstruct` / `#tstruct-add` take, as on the web).
   String insert(CommandSuggestion item) {
     var base = _input;
     final cmd = command.value;
@@ -172,7 +176,9 @@ class CommandPrompt {
       final cut = base.lastIndexOf(' ');
       base = base.substring(0, cut + 1);
     }
-    return '$base${item.value} ';
+    final isLastArg =
+        cmd != null && (cmd.name == 'tstruct' || cmd.name == 'tstruct-add');
+    return isLastArg ? '$base${item.value}' : '$base${item.value} ';
   }
 
   /// [text] with the command name replaced by [name] (a suggested one).

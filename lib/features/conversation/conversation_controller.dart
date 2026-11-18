@@ -56,6 +56,7 @@ import '../../core/widgets/app_notices.dart';
 import '../../data/models/record_state.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../tickets/models/card_menu.dart';
+import '../tickets/models/card_destination.dart';
 import '../tickets/models/record_card_rule.dart';
 import '../tickets/models/record_history_card.dart';
 import '../tickets/ticket_detail_controller.dart';
@@ -585,7 +586,6 @@ class ConversationController extends GetxController
     final recordId = recordIdOf(d);
     return CardMenu.build(
       canReply: canReply && isSettled && !m.isDeleted,
-      canForward: canForward(m),
       canCopy: !m.isDeleted && m.text.trim().isNotEmpty,
       isMarkable: isMarkable && isSettled,
       isPinnable: isPinnable,
@@ -634,25 +634,8 @@ class ConversationController extends GetxController
   }
 
   void openForm(Message m, FormCardData d) {
-    if (RecordHistoryCard.isCard(d)) {
-      // Read-only: its submissionId is the history row. The record is the
-      // card's own "Record" field.
-      final record = RecordHistoryCard.recordIdOf(d);
-      if (record != null) Get.toNamed(AppRoutes.ticketOf(record));
-      return;
-    }
-    final ticketId = recordIdOf(d);
-    if (ticketId != null) {
-      Get.toNamed(AppRoutes.ticketOf(ticketId));
-      return;
-    }
-    Get.toNamed(
-      AppRoutes.submissionDetailOf(
-        d.id,
-        convId: conversationId,
-        msgId: m.msgId,
-      ),
-    );
+    final route = CardDestination.of(d, convId: conversationId, msgId: m.msgId);
+    if (route != null) Get.toNamed<dynamic>(route);
   }
 
   Message? originalOf(Message m) => m.replyTo == null ? null : _byId[m.replyTo];

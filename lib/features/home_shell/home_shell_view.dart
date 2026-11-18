@@ -14,16 +14,17 @@ import '../inbox/inbox_view.dart';
 import '../smart_view/smart_view_view.dart';
 import '../submissions/submissions_view.dart';
 import 'home_shell_controller.dart';
+import 'home_tab.dart';
 
 class HomeShellView extends GetView<HomeShellController> {
   const HomeShellView({super.key});
 
   static const _screens = <Widget>[
     ChatsView(),
-    AiAgentsView(),
-    SubmissionsView(),
     SmartViewView(),
     InboxView(),
+    AiAgentsView(),
+    SubmissionsView(),
   ];
 
   /// The bar's items, in tab order (the order of [_screens]).
@@ -35,16 +36,6 @@ class HomeShellView extends GetView<HomeShellController> {
       showDot: hasUnread,
     ),
     AppNavItem(
-      label: 'Agents',
-      selectedAsset: AppIcons.bottomNav.aiSelected,
-      unselectedAsset: AppIcons.bottomNav.aiUnselected,
-    ),
-    AppNavItem(
-      label: 'Submits',
-      selectedAsset: AppIcons.bottomNav.submissionsSelected,
-      unselectedAsset: AppIcons.bottomNav.submissionsUnselected,
-    ),
-    AppNavItem(
       label: 'Smart view',
       selectedAsset: AppIcons.bottomNav.smartViewSelected,
       unselectedAsset: AppIcons.bottomNav.smartViewUnselected,
@@ -53,6 +44,16 @@ class HomeShellView extends GetView<HomeShellController> {
       label: 'Inbox',
       selectedAsset: AppIcons.bottomNav.inboxSelected,
       unselectedAsset: AppIcons.bottomNav.inboxUnselected,
+    ),
+    AppNavItem(
+      label: 'Agents',
+      selectedAsset: AppIcons.bottomNav.aiSelected,
+      unselectedAsset: AppIcons.bottomNav.aiUnselected,
+    ),
+    AppNavItem(
+      label: 'Submits',
+      selectedAsset: AppIcons.bottomNav.submissionsSelected,
+      unselectedAsset: AppIcons.bottomNav.submissionsUnselected,
     ),
   ];
 
@@ -88,15 +89,15 @@ class HomeShellView extends GetView<HomeShellController> {
                       ),
                     ),
                     child: Obx(() {
-                      final active = c.index.value;
+                      final active = c.tab.value;
                       return Stack(
                         children: [
                           for (var i = 0; i < _screens.length; i++)
                             if (c.isBuilt[i])
                               _TabLayer(
                                 animation: c.crossfade,
-                                isActive: i == active,
-                                isLeaving: i == c.previous,
+                                isActive: HomeTab.values[i] == active,
+                                isLeaving: HomeTab.values[i] == c.previous,
                                 child: _screens[i],
                               ),
                         ],
@@ -106,8 +107,8 @@ class HomeShellView extends GetView<HomeShellController> {
                 ),
                 Obx(
                   () => AppBottomNav(
-                    index: c.index.value,
-                    onSelected: c.select,
+                    index: c.tab.value.index,
+                    onSelected: (i) => c.select(HomeTab.values[i]),
                     items: navItems(hasUnread: c.hasUnread.value),
                   ),
                 ),
