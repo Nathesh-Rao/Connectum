@@ -11,6 +11,8 @@ import '../../features/conversation/conversation_binding.dart';
 import '../../features/conversation/conversation_view.dart';
 import '../../features/debug_ai/debug_ai_binding.dart';
 import '../../features/debug_photo_crop/debug_photo_crop_binding.dart';
+import '../../features/debug_crashtest/debug_crashtest_binding.dart';
+import '../../features/debug_crashtest/debug_crashtest_view.dart';
 import '../../features/debug_refresh/debug_refresh_binding.dart';
 import '../../features/debug_refresh/debug_refresh_view.dart';
 import '../../features/debug_photo_crop/debug_photo_crop_view.dart';
@@ -296,6 +298,12 @@ class AppPages {
         AppRoutes.debugRefresh,
         () => const DebugRefreshView(),
         DebugRefreshBinding(),
+        AppTransitionKind.push,
+      ),
+      _page(
+        AppRoutes.debugCrashTest,
+        () => const DebugCrashTestView(),
+        DebugCrashTestBinding(),
         AppTransitionKind.push,
       ),
       _page(

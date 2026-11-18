@@ -5,12 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'core/config/app_config.dart';
+import 'core/crash/crash_bootstrap.dart';
+import 'core/crash/crash_hooks.dart';
+import 'core/crash/crash_route_observer.dart';
+import 'core/crash/crash_service.dart';
 import 'core/debug/seed_ui.dart';
 import 'core/routes/app_pages.dart';
 import 'core/routes/conversation_route.dart';
 import 'core/routes/home_reload.dart';
 import 'core/routes/initial_binding.dart';
 import 'core/theme/app_scroll_behavior.dart';
+import 'core/utils/app_settings.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_config_error.dart';
 import 'core/widgets/app_connectivity_scope.dart';
@@ -22,6 +27,17 @@ import 'demo/demo_services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final reporter = await createCrashReporter(isDemo: DemoMode.isActive);
+  CrashService.current = CrashService(reporter);
+  installCrashHooks(reporter);
+  if (reporter.isEnabled) {
+    unawaited(
+      AppSettings.version().then(
+        (v) => reporter.setKey('app_version', v ?? ''),
+        onError: (_) {},
+      ),
+    );
+  }
   final configError = AppConfig.validate();
   if (configError != null) {
     runApp(AppConfigError(message: configError));
@@ -63,7 +79,11 @@ class ConnectumApp extends StatelessWidget {
       ),
       initialRoute: AppPages.initial,
       getPages: AppPages.pages,
-      navigatorObservers: [ConversationRoute.observer, HomeReload.observer],
+      navigatorObservers: [
+        ConversationRoute.observer,
+        HomeReload.observer,
+        CrashRouteObserver(),
+      ],
       builder: (context, child) {
         final app = AppConnectivityScope(
           state: connectivity.state,

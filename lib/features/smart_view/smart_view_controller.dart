@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../core/crash/crash_breadcrumbs.dart';
+
 import '../../core/debug/records_log.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_notices.dart';
@@ -169,6 +171,11 @@ class SmartViewController extends GetxController {
   void setMode(SvViewMode value) {
     if (mode.value == value) return;
     mode.value = value;
+    CrashBreadcrumbs.add(
+      value == SvViewMode.table
+          ? Crumb.smartviewModeTable
+          : Crumb.smartviewModeCards,
+    );
     unawaited(prefs.setMode(value));
   }
 
@@ -196,6 +203,7 @@ class SmartViewController extends GetxController {
   /// closed. `#view`: the Overview, drawer open. `#view <name>`: that view
   /// (read afresh), drawer closed.
   Future<void> enter(SmartViewEntry entry) async {
+    CrashBreadcrumbs.add(Crumb.smartviewOpen);
     setActive(true);
     _resetTab();
     switch (entry.kind) {
@@ -388,6 +396,9 @@ class SmartViewController extends GetxController {
   void setQuery(SmartViewQuery q, {bool isLogged = false}) {
     final before = query.value;
     query.value = q;
+    if (q.isFiltering && q != before) {
+      CrashBreadcrumbs.add(Crumb.smartviewFilterApplied);
+    }
     _keep();
     if (isLogged) _logQuery(before, q);
   }

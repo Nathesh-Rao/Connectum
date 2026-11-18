@@ -6,6 +6,7 @@ import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/crash/crash_service.dart';
 import '../session_store.dart';
 
 class ApiException implements Exception {
@@ -137,12 +138,14 @@ class ApiClient {
           bearer: bearer,
           timeout: timeout,
         );
-      } on DioException catch (e) {
+      } on DioException catch (e, s) {
         if (shouldRetry && _isRestart(e) && tries < retryDelays.length) {
           await Future<void>.delayed(retryDelays[tries++]);
           continue;
         }
-        throw _toException(e, bearer);
+        final failure = _toException(e, bearer);
+        CrashService.nonFatal(e, s);
+        throw failure;
       }
     }
   }
@@ -218,7 +221,13 @@ class ApiClient {
     if (data is Map && data['ok'] == true) {
       return (data['data'] as Map?)?.cast<String, dynamic>() ?? {};
     }
-    throw ApiException('bad_response', 'Unexpected response', status: status);
+    final failure = ApiException(
+      'bad_response',
+      'Unexpected response',
+      status: status,
+    );
+    CrashService.nonFatal(failure);
+    throw failure;
   }
 
   Future<Map<String, dynamic>> enter(

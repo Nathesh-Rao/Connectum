@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../core/crash/crash_service.dart';
+
 import '../../core/debug/records_log.dart';
 import '../models/ticket.dart';
 import '../records/paged_read.dart';
@@ -187,7 +189,8 @@ class WorkspaceRepository extends GetxService with WidgetsBindingObserver {
     var isOk = true;
     try {
       isOk = await syncOwn();
-    } on Object catch (e) {
+    } on Object catch (e, s) {
+      CrashService.nonFatal(e, s);
       RecordsLog.line('workspace own records failed: $e');
       isOk = false;
     }

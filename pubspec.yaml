@@ -1,7 +1,7 @@
 name: connectum
 description: "A new Flutter project."
 publish_to: "none"
-version: 0.1.1+6
+version: 1.5.0+6
 
 environment:
   sdk: ^3.10.3
@@ -42,6 +42,8 @@ dependencies:
   pdfrx: ^2.2.24
   video_player: ^2.11.1
   archive: ^4.7.1
+  firebase_core: ^5.1.0
+  firebase_crashlytics: ^6.0.1
 
 dev_dependencies:
   flutter_test:

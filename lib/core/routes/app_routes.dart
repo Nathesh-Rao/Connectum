@@ -50,6 +50,7 @@ class AppRoutes {
   static const debugAi = '/debug/ai';
   static const debugPhotoCrop = '/debug/photo-crop';
   static const debugRefresh = '/debug/refresh';
+  static const debugCrashTest = '/debug/crashtest';
   static const debugSmartView = '/debug/smartview';
   static const debugSmartTable = '/debug/smarttable';
   static const debugSmartDrawer = '/debug/smartdrawer';

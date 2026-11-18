@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
+import '../../core/crash/crash_breadcrumbs.dart';
 import '../../core/routes/app_routes.dart';
+import '../../data/commands/command_line.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../data/models/chat_thread.dart';
@@ -61,6 +63,8 @@ class CommandRunner {
   Future<bool> run(String body, {bool isConfirmed = false}) async {
     if (isRunning.value) return false;
     isRunning.value = true;
+    final name = CommandLine.parse(body)?.name;
+    if (name != null) CrashBreadcrumbs.add(Crumb.command, code: name);
     try {
       final result = await _commands.run(
         body,

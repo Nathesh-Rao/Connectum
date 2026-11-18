@@ -20,6 +20,8 @@ import '../notifications/notification_router.dart';
 import '../notifications/widgets/notification_permission_sheet.dart';
 import '../security/security_controller.dart';
 import '../smart_view/models/smart_view_entry.dart';
+import '../../core/crash/crash_breadcrumbs.dart';
+import '../../core/crash/crash_service.dart';
 import 'home_tab.dart';
 import '../smart_view/smart_view_controller.dart';
 import '../security/widgets/security_sheets.dart';
@@ -221,6 +223,8 @@ class HomeShellController extends GetxController
     final isMoving = next != tab.value;
     if (isMoving) {
       previous = tab.value;
+      CrashBreadcrumbs.add(Crumb.tab, code: next.name);
+      CrashService.key('tab', next.name);
       isBuilt[next.index] = true;
       tab.value = next;
       crossfade.forward(from: 0);

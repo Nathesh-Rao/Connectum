@@ -11,6 +11,8 @@ import 'package:get/get.dart';
 import '../../data/api/api_client.dart';
 import '../../data/attachment_cache.dart';
 import '../config/app_config.dart';
+import '../crash/crash_identity_binder.dart';
+import '../crash/crash_service.dart';
 import '../debug/seed_ui.dart';
 import '../../data/db/app_database.dart';
 import '../../data/e2e/e2e_key_store.dart';
@@ -85,6 +87,11 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.put(smartViewPrefs, permanent: true);
+    Get.put(CrashService.current, permanent: true);
+    Get.put(
+      CrashIdentityBinder(store, CrashService.current.reporter),
+      permanent: true,
+    );
     store.identity.value = SeedUi.identity();
     final links = Get.put(
       DeepLinkService(

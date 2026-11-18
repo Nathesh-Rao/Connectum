@@ -73,6 +73,10 @@
 - Icon: made from the 1206x1305 web logo (`connectum.app/connectum-logo.png`, speckle cleaned, white background); sources in `branding/icon/`, regenerate with `dart run flutter_launcher_icons`, then `git checkout ios/Runner.xcodeproj/project.pbxproj` (the tool edits it). `ic_launcher_round.png` and `branding/play_store_icon_512.png` came from a Pillow script outside the repo. Follow-ups: themed (monochrome) icon layer, a branded native splash (Android 12 splash icon, iOS LaunchImage is a 1x1 placeholder), a vector or higher-res logo source.
 - Permissions: the release manifest has only INTERNET and ACCESS_NETWORK_STATE (connectivity_plus) plus androidx's own `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. Future features: QR scanner needs CAMERA and `uses-feature camera required=false` (and `NSCameraUsageDescription` on iOS); push needs POST_NOTIFICATIONS (Android 13+); typed location stays manual (no location permission).
 
+## Crash reporting
+- Crashlytics (`lib/core/crash/`, `mobile-handoff/crashlytics.md`): never put sensitive data (tokens, message text, record values, file names, URLs, phone numbers) in Crashlytics keys or logs; breadcrumbs only through the `Crumb` enum; non-fatals only via `CrashService.nonFatal` (sanitized).
+- Before release remove the `/debug/crashtest` route and `lib/features/debug_crashtest/`.
+
 ## Dev environment
 - Against the BE dev machine: see `mobile-handoff/dev-environment.md` (run command, cleartext limited to debug/profile and the dev host, retry rules, guards). Debug and profile builds print one `debugPrint` line with the server environment and release from `GET /version` at startup (`_logEnvironment` in `initial_binding.dart`); no UI.
 - Integration tests start with `DevGuard.assertDevOnly(baseUrl)` and follow `test/README.md`.

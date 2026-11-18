@@ -93,6 +93,7 @@ class GalleryView extends GetView<GalleryController> {
     'debug/ai': AppRoutes.debugAi,
     'debug/photo-crop': AppRoutes.debugPhotoCrop,
     'debug/refresh': AppRoutes.debugRefresh,
+    'debug/crashtest': AppRoutes.debugCrashTest,
   };
 
   @override

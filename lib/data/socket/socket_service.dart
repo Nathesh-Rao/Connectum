@@ -9,6 +9,8 @@ import 'package:get/get.dart';
 import 'package:web_socket_channel/io.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/crash/crash_breadcrumbs.dart';
+import '../../core/crash/crash_service.dart';
 import '../api/api_client.dart';
 import '../redact.dart';
 import '../session_store.dart';
@@ -93,7 +95,10 @@ class SocketService extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    ever(connection, (state) => debugPrint('notifyflow: socket state=$state'));
+    ever(connection, (state) {
+      debugPrint('notifyflow: socket state=$state');
+      if (state == SocketState.online) CrashBreadcrumbs.add(Crumb.wsConnected);
+    });
     ever(_connectivity.hasNetwork, (hasNetwork) {
       if (!_wantConnected) return;
       if (hasNetwork) {
@@ -114,6 +119,10 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.inactive &&
+        state != AppLifecycleState.hidden) {
+      CrashBreadcrumbs.add(Crumb.lifecycle, code: state.name);
+    }
     debugPrint(
       'notifyflow: socket lifecycle=$state connection=${connection.value} '
       'wantConnected=$_wantConnected (the socket is not closed or paused on '
@@ -208,7 +217,8 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     final Object? decoded;
     try {
       decoded = jsonDecode(raw);
-    } catch (_) {
+    } catch (e, s) {
+      CrashService.nonFatal(e, s, 'ws frame parse');
       return;
     }
     if (decoded is! Map) return;
@@ -304,6 +314,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   void _onClosed(IOWebSocketChannel channel) {
     if (!identical(channel, _channel)) return;
+    CrashBreadcrumbs.add(Crumb.wsClosed, code: '${channel.closeCode ?? ''}');
     final state = connection.value;
     final keep = _isEnded(state);
     _drop(keep ? state : SocketState.offline, retry: !keep);
@@ -350,6 +361,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     final base = backoff(_attempt).inMilliseconds;
     final delay = (base * (0.8 + _random.nextDouble() * 0.4)).round();
     _attempt = min(_attempt + 1, 10);
+    CrashBreadcrumbs.add(Crumb.wsReconnect);
     _retryTimer = Timer(Duration(milliseconds: delay), connectNow);
   }
 

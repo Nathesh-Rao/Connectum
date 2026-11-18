@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../core/crash/crash_breadcrumbs.dart';
 import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../data/attachment_cache.dart';
@@ -85,6 +86,7 @@ class SvFilePreviewController extends GetxController {
   @override
   void onReady() {
     super.onReady();
+    CrashBreadcrumbs.add(Crumb.filePreview, code: current.file.kind.name);
     _autoLoad(index.value);
   }
 
