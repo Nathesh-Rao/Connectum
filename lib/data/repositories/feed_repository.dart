@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -228,11 +229,13 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
       case 'feed_item':
         final item = FeedItem.tryParse(data['notification']);
         _setCounts(data['counts']);
-        debugPrint(
-          'notifyflow: feed_item event id=${item?.id} priority=${item?.priority} '
-          'category=${item?.category} actionType=${item?.actionType} '
-          'chatId=${item?.chatId}',
-        );
+        if (kDebugMode) {
+          debugPrint(
+            'notifyflow: feed_item event id=${item?.id} priority=${item?.priority} '
+            'category=${item?.category} actionType=${item?.actionType} '
+            'chatId=${item?.chatId}',
+          );
+        }
         if (item == null) {
           scheduleRefresh();
           return;

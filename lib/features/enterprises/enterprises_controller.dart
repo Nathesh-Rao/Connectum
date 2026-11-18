@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -350,7 +351,9 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
         message.value = ApiMessages.of(e);
       }
     } catch (e, stack) {
-      debugPrint('enter ${tapped.enterprise} failed: $e\n$stack');
+      if (kDebugMode) {
+        debugPrint('enter ${tapped.enterprise} failed: $e\n$stack');
+      }
       _retryEntry = tapped;
       _failInvite(
         "Couldn't open {name}. Check your connection and try again.",

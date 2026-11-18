@@ -64,7 +64,7 @@ class PeopleAvatars extends GetxService {
         for (final r in rows) idText(r['username']): idText(r['avatar']),
       });
     } catch (e) {
-      debugPrint('people avatars: $e');
+      if (kDebugMode) debugPrint('people avatars: $e');
     }
   }
 
@@ -100,7 +100,7 @@ class PeopleAvatars extends GetxService {
       }
       if (isKept) await _conversations.setPeerAvatar(who, url);
     } catch (e) {
-      debugPrint('people avatars: $e');
+      if (kDebugMode) debugPrint('people avatars: $e');
     }
   }
 

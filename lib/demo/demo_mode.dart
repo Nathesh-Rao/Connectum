@@ -10,7 +10,12 @@ class DemoMode {
 
   static const _requested = bool.fromEnvironment('DEMO_MODE');
 
-  static bool get isActive => !kReleaseMode && _requested;
+  /// The single place `DEMO_MODE` is read: a release build ignores it.
+  static bool resolve({required bool isRelease, required bool requested}) =>
+      !isRelease && requested;
+
+  static bool get isActive =>
+      resolve(isRelease: kReleaseMode, requested: _requested);
 
   static const otpHint = '123456';
   static const username = 'alex';

@@ -115,9 +115,24 @@ import 'app_transitions.dart';
 class AppPages {
   AppPages._();
 
-  static String get initial => kDebugMode && AppConfig.startRoute.isNotEmpty
-      ? AppConfig.startRoute
-      : AppRoutes.splash;
+  /// The route table. Release builds get only the app's own routes; `/gallery`
+  /// and every `/debug/*` route exist outside release (`isRelease` is injected
+  /// by tests; the default is the compile-time `kReleaseMode`).
+  static List<GetPage<dynamic>> build({bool isRelease = kReleaseMode}) => [
+    ..._core(),
+    if (!isRelease) ..._debug(),
+  ];
+
+  /// `START_ROUTE` is honoured outside release only.
+  static String initialFor({
+    bool isRelease = kReleaseMode,
+    String startRoute = AppConfig.startRoute,
+  }) => !isRelease && startRoute.isNotEmpty ? startRoute : AppRoutes.splash;
+
+  static String get initial =>
+      kReleaseMode ? AppRoutes.splash : initialFor(isRelease: false);
+
+  static final pages = kReleaseMode ? _core() : build(isRelease: false);
 
   static GetPage<dynamic> _page(
     String name,
@@ -146,7 +161,7 @@ class AppPages {
     );
   }
 
-  static final pages = <GetPage<dynamic>>[
+  static List<GetPage<dynamic>> _core() => <GetPage<dynamic>>[
     _page(
       AppRoutes.splash,
       () => const SplashView(),
@@ -269,216 +284,206 @@ class AppPages {
       SecurityBinding(),
       AppTransitionKind.push,
     ),
-    if (kDebugMode) ...[
-      _page(
-        AppRoutes.gallery,
-        () => const GalleryView(),
-        GalleryBinding(),
-        AppTransitionKind.fade,
-      ),
-      _page(
-        AppRoutes.galleryAuth,
-        () => const GalleryAuthView(),
-        GalleryAuthBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugNotifications,
-        () => const DebugNotificationsView(),
-        DebugNotificationsBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugCommands,
-        () => const DebugCommandsView(),
-        DebugCommandsBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugRefresh,
-        () => const DebugRefreshView(),
-        DebugRefreshBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugCrashTest,
-        () => const DebugCrashTestView(),
-        DebugCrashTestBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.photoCrop,
-        () => const ProfilePhotoCropView(),
-        ProfilePhotoCropBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugPhotoCrop,
-        () => const DebugPhotoCropView(),
-        DebugPhotoCropBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugAi,
-        () => const DebugAiView(),
-        DebugAiBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartInsights,
-        () => const DebugSmartInsightsView(),
-        DebugSmartInsightsBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartViews,
-        () => const DebugSmartViewsView(),
-        DebugSmartViewsBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartQuery,
-        () => const DebugSmartQueryView(),
-        DebugSmartQueryBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartOverview,
-        () => const DebugSmartOverviewView(),
-        DebugSmartOverviewBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartFiles,
-        () => const DebugSmartFilesView(),
-        DebugSmartFilesBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartDrawer,
-        () => const DebugSmartDrawerView(),
-        DebugSmartDrawerBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartView,
-        () => const DebugSmartViewView(),
-        DebugSmartViewBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSmartTable,
-        () => const DebugSmartTableView(),
-        DebugSmartTableBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugTickets,
-        () => const DebugTicketsView(),
-        DebugTicketsBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugTasks,
-        () => const DebugTasksView(),
-        DebugTasksBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugChat,
-        () => const DebugChatView(),
-        DebugChatBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugAssets,
-        () => const DebugAssetsView(),
-        DebugAssetsBinding(),
-        AppTransitionKind.push,
-      ),
-      _page(
-        AppRoutes.debugSocket,
-        () => const DebugSocketView(),
-        DebugSocketBinding(),
-        AppTransitionKind.push,
-      ),
-    ],
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugE2e,
-        () => const DebugE2eView(),
-        DebugE2eBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugFormLogic,
-        () => const DebugFormLogicView(),
-        DebugFormLogicBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugConnect,
-        () => const DebugConnectView(),
-        DebugConnectBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugLogoIntro,
-        () => const DebugLogoIntroView(),
-        DebugLogoIntroBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugPalette,
-        () => const DebugPaletteView(),
-        DebugPaletteBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugDecor,
-        () => const DebugDecorView(),
-        DebugDecorBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugOnboarding,
-        () => const DebugOnboardingView(),
-        DebugOnboardingBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugOnboardingAnim,
-        () => const DebugOnboardingAnimView(),
-        DebugOnboardingAnimBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugAuth,
-        () => const DebugAuthView(),
-        DebugAuthBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugQr,
-        () => const DebugQrView(),
-        DebugQrBinding(),
-        AppTransitionKind.push,
-      ),
-    if (kDebugMode)
-      _page(
-        AppRoutes.debugForms,
-        () => const DebugFormsView(),
-        DebugFormsBinding(),
-        AppTransitionKind.push,
-      ),
+  ];
+
+  static List<GetPage<dynamic>> _debug() => <GetPage<dynamic>>[
+    _page(
+      AppRoutes.gallery,
+      () => const GalleryView(),
+      GalleryBinding(),
+      AppTransitionKind.fade,
+    ),
+    _page(
+      AppRoutes.galleryAuth,
+      () => const GalleryAuthView(),
+      GalleryAuthBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugNotifications,
+      () => const DebugNotificationsView(),
+      DebugNotificationsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugCommands,
+      () => const DebugCommandsView(),
+      DebugCommandsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugRefresh,
+      () => const DebugRefreshView(),
+      DebugRefreshBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugCrashTest,
+      () => const DebugCrashTestView(),
+      DebugCrashTestBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.photoCrop,
+      () => const ProfilePhotoCropView(),
+      ProfilePhotoCropBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugPhotoCrop,
+      () => const DebugPhotoCropView(),
+      DebugPhotoCropBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugAi,
+      () => const DebugAiView(),
+      DebugAiBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartInsights,
+      () => const DebugSmartInsightsView(),
+      DebugSmartInsightsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartViews,
+      () => const DebugSmartViewsView(),
+      DebugSmartViewsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartQuery,
+      () => const DebugSmartQueryView(),
+      DebugSmartQueryBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartOverview,
+      () => const DebugSmartOverviewView(),
+      DebugSmartOverviewBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartFiles,
+      () => const DebugSmartFilesView(),
+      DebugSmartFilesBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartDrawer,
+      () => const DebugSmartDrawerView(),
+      DebugSmartDrawerBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartView,
+      () => const DebugSmartViewView(),
+      DebugSmartViewBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSmartTable,
+      () => const DebugSmartTableView(),
+      DebugSmartTableBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugTickets,
+      () => const DebugTicketsView(),
+      DebugTicketsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugTasks,
+      () => const DebugTasksView(),
+      DebugTasksBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugChat,
+      () => const DebugChatView(),
+      DebugChatBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugAssets,
+      () => const DebugAssetsView(),
+      DebugAssetsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugSocket,
+      () => const DebugSocketView(),
+      DebugSocketBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugE2e,
+      () => const DebugE2eView(),
+      DebugE2eBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugFormLogic,
+      () => const DebugFormLogicView(),
+      DebugFormLogicBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugConnect,
+      () => const DebugConnectView(),
+      DebugConnectBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugLogoIntro,
+      () => const DebugLogoIntroView(),
+      DebugLogoIntroBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugPalette,
+      () => const DebugPaletteView(),
+      DebugPaletteBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugDecor,
+      () => const DebugDecorView(),
+      DebugDecorBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugOnboarding,
+      () => const DebugOnboardingView(),
+      DebugOnboardingBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugOnboardingAnim,
+      () => const DebugOnboardingAnimView(),
+      DebugOnboardingAnimBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugAuth,
+      () => const DebugAuthView(),
+      DebugAuthBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugQr,
+      () => const DebugQrView(),
+      DebugQrBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.debugForms,
+      () => const DebugFormsView(),
+      DebugFormsBinding(),
+      AppTransitionKind.push,
+    ),
   ];
 }

@@ -96,7 +96,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     ever(connection, (state) {
-      debugPrint('notifyflow: socket state=$state');
+      if (kDebugMode) debugPrint('notifyflow: socket state=$state');
       if (state == SocketState.online) CrashBreadcrumbs.add(Crumb.wsConnected);
     });
     ever(_connectivity.hasNetwork, (hasNetwork) {
@@ -123,11 +123,13 @@ class SocketService extends GetxService with WidgetsBindingObserver {
         state != AppLifecycleState.hidden) {
       CrashBreadcrumbs.add(Crumb.lifecycle, code: state.name);
     }
-    debugPrint(
-      'notifyflow: socket lifecycle=$state connection=${connection.value} '
-      'wantConnected=$_wantConnected (the socket is not closed or paused on '
-      'lifecycle changes)',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        'notifyflow: socket lifecycle=$state connection=${connection.value} '
+        'wantConnected=$_wantConnected (the socket is not closed or paused on '
+        'lifecycle changes)',
+      );
+    }
     if (state == AppLifecycleState.resumed &&
         (_session.current.value?.isExpired ?? false)) {
       _drop(SocketState.expired);

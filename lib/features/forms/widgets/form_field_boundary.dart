@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -48,7 +49,11 @@ class _FormFieldBoundaryState extends State<FormFieldBoundary> {
 
     (context as Element).visitChildren(visit);
     if (!hasError) return;
-    debugPrint('Form field "${widget.id}" (${widget.type}) could not be built');
+    if (kDebugMode) {
+      debugPrint(
+        'Form field "${widget.id}" (${widget.type}) could not be built',
+      );
+    }
     setState(() => _isBroken = true);
   }
 }

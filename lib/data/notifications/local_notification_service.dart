@@ -71,7 +71,9 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
 
   static String channelId(String channel) => '$channel$_channelSuffix';
 
-  static void _log(String line) => debugPrint('notifyflow: $line');
+  static void _log(String line) {
+    if (kDebugMode) debugPrint('notifyflow: $line');
+  }
 
   Future<LocalNotificationService> start() async {
     WidgetsBinding.instance.addObserver(this);
