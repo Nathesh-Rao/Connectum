@@ -8,6 +8,7 @@ import 'package:connectum/features/forms/models/form_launch.dart';
 import 'package:connectum/features/home_shell/home_shell_controller.dart';
 import 'package:connectum/features/struct_records/models/struct_records_launch.dart';
 import 'package:flutter/material.dart';
+import 'package:connectum/features/forms/models/form_chat_rule.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -145,7 +146,6 @@ void main() {
     expect(recordsLaunch?.scope, 'user');
     expect(recordsLaunch?.caption, 'Leave');
     expect(recordsLaunch?.convId, 'dm:ana');
-    expect(recordsLaunch?.postChoiceTitle, 'Ana Lopez');
   });
 
   testWidgets('a structure that is gone keeps the text and opens nothing', (
@@ -213,50 +213,32 @@ void main() {
     return launched;
   }
 
-  testWidgets('from a direct chat the box is offered, unticked', (
-    tester,
-  ) async {
-    final l = await openFrom(tester, chat: 'dm:ana');
-    expect(l?.hasPostChoice, isTrue);
-    expect(l?.convId, 'dm:ana');
-    expect(l?.postChoiceTitle, 'Ana Lopez');
-    expect(l?.isPostedByDefault, isFalse);
-  });
-
-  testWidgets('from a group the box is offered, unticked', (tester) async {
-    final l = await openFrom(tester, chat: 'group:sales');
-    expect(l?.hasPostChoice, isTrue);
-    expect(l?.convId, 'group:sales');
-    expect(l?.isPostedByDefault, isFalse);
-  });
-
-  testWidgets("in a person's care thread the box starts ticked", (
-    tester,
-  ) async {
-    final l = await openFrom(tester, chat: 'group:care-ana.lopez');
-    expect(l?.hasPostChoice, isTrue);
-    expect(l?.isPostedByDefault, isTrue);
-  });
-
-  for (final chat in const [null, 'global', 'host:hr']) {
-    testWidgets('no box in the Work Space, global room or team ($chat)', (
+  for (final chat in const ['dm:ana', 'group:sales']) {
+    testWidgets('from $chat no chat is sent and no box is offered', (
       tester,
     ) async {
       final l = await openFrom(tester, chat: chat);
-      expect(l?.name, 'leave_request');
-      expect(l?.hasPostChoice, isFalse);
-      expect(l?.convId, isNull);
+      expect(l?.convId, chat);
+      expect(FormChatRule.chatFor(l?.convId), isNull);
     });
   }
 
-  for (final chat in const ['dm:ana', 'group:sales']) {
-    testWidgets('an encrypted chat gets the box too, as on the web ($chat)', (
+  for (final chat in const ['group:care-ana.lopez', 'group:rec-ticket-3']) {
+    testWidgets('in a shared thread ($chat) chat is always sent', (
       tester,
     ) async {
       final l = await openFrom(tester, chat: chat);
-      expect(l?.hasPostChoice, isTrue);
-      expect(l?.convId, chat);
-      expect(l?.isPostedByDefault, isFalse);
+      expect(FormChatRule.chatFor(l?.convId), chat);
+    });
+  }
+
+  for (final chat in const [null, 'global', 'host:hr']) {
+    testWidgets('nothing is sent from the Work Space, global room or team '
+        '($chat)', (tester) async {
+      final l = await openFrom(tester, chat: chat);
+      expect(l?.name, 'leave_request');
+      expect(l?.convId, isNull);
+      expect(FormChatRule.chatFor(l?.convId), isNull);
     });
   }
 }

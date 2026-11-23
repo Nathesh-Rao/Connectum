@@ -282,8 +282,6 @@ void main() {
           scope: 'user',
           caption: 'Leave request',
           convId: 'dm:ana',
-          postChoiceTitle: 'Ana Lopez',
-          isPostedByDefault: true,
         ),
       );
       await boot(tester, rig, controller: c);
@@ -298,8 +296,6 @@ void main() {
       expect(launch.mode, FormMode.create);
       expect(launch.submissionId, isNull);
       expect(launch.convId, 'dm:ana');
-      expect(launch.postChoiceTitle, 'Ana Lopez');
-      expect(launch.isPostedByDefault, isTrue);
     });
 
     testWidgets('a saved record reads the list again', (tester) async {

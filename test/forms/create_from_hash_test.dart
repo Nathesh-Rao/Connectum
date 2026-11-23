@@ -276,12 +276,12 @@ void main() {
       expect(args.containsKey('meta'), isFalse);
     });
 
-    test('chat only when the box was ticked', () {
+    test('chat is carried when the payload has one (a shared thread)', () {
       final args = SubmissionRepository.submitArgs({
         ...payload,
-        'chat': 'dm:ana',
+        'chat': 'group:care-ana',
       }, 'm-1');
-      expect(args['chat'], 'dm:ana');
+      expect(args['chat'], 'group:care-ana');
       expect(args.keys.toSet(), {'name', 'values', 'chat', 'cid'});
     });
 
@@ -307,69 +307,58 @@ void main() {
       files: FakeFiles(),
     );
 
-    FormLaunch hashLaunch({bool isDefault = false, String? conv = 'dm:ana'}) =>
+    FormLaunch launchIn(String? conv) => FormLaunch(
+      name: 'leave_request',
+      scope: 'user',
+      caption: 'Leave Request',
+      convId: conv,
+    );
+
+    test('no dm: is ever sent, from any entry', () {
+      for (final conv in ['dm:ana', 'host:hr', 'global', null]) {
+        expect(controller(launchIn(conv)).chatToSend, isNull, reason: '$conv');
+      }
+    });
+
+    test('a team group sends no chat and has no box', () {
+      final c = controller(launchIn('group:sales'));
+      expect(c.chatToSend, isNull);
+    });
+
+    test('an encrypted team group: still no chat', () {
+      final c = controller(
         FormLaunch(
           name: 'leave_request',
           scope: 'user',
           caption: 'Leave Request',
-          convId: conv,
-          postChoiceTitle: conv == null ? null : 'Ana',
-          isPostedByDefault: isDefault,
-        );
-
-    test('unticked by default: no chat is sent', () {
-      final c = controller(hashLaunch());
-      expect(c.isPostedToChat.value, isFalse);
+          convId: 'group:sales',
+          isEncryptedChat: true,
+        ),
+      );
       expect(c.chatToSend, isNull);
     });
 
-    test('ticked: the chat is sent', () {
-      final c = controller(hashLaunch());
-      c.isPostedToChat.value = true;
-      expect(c.chatToSend, 'dm:ana');
+    test('a shared thread always sends group:<name>, no box', () {
+      expect(
+        controller(launchIn('group:care-ana')).chatToSend,
+        'group:care-ana',
+      );
+      expect(
+        controller(launchIn('group:rec-ticket-12')).chatToSend,
+        'group:rec-ticket-12',
+      );
     });
 
-    test(
-      'an encrypted chat: the box works the same, chat sent when ticked',
-      () {
-        final c = controller(
-          FormLaunch(
-            name: 'leave_request',
-            scope: 'user',
-            caption: 'Leave Request',
-            convId: 'group:sales',
-            postChoiceTitle: 'Sales',
-            isEncryptedChat: true,
-          ),
-        );
-        expect(c.chatToSend, isNull);
-        c.isPostedToChat.value = true;
-        expect(c.chatToSend, 'group:sales');
-      },
-    );
-
-    test('ticked by default in a care thread, and can be unticked', () {
-      final c = controller(hashLaunch(isDefault: true, conv: 'group:care-ana'));
-      expect(c.chatToSend, 'group:care-ana');
-      c.isPostedToChat.value = false;
-      expect(c.chatToSend, isNull);
-    });
-
-    test('the forms button always posts into its chat (no choice offered)', () {
+    test('an edit never posts', () {
       final c = controller(
         FormLaunch(
           name: 'leave_request',
           scope: 'user',
           caption: 'Leave',
-          convId: 'dm:ana',
+          mode: FormMode.edit,
+          convId: 'group:care-ana',
         ),
       );
-      expect(c.chatToSend, 'dm:ana');
-    });
-
-    test('from the Work Space nothing is posted', () {
-      final c = controller(hashLaunch(conv: null));
-      expect(c.launch.hasPostChoice, isFalse);
       expect(c.chatToSend, isNull);
     });
   });
