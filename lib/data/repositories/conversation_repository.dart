@@ -12,6 +12,8 @@ import '../models/thread_names.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 class ConversationRepository extends GetxService {
   ConversationRepository(this._db, this._session, this._socket, this._e2e);
@@ -56,7 +58,10 @@ class ConversationRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent);
+    _socket.events.listen(
+      (event) => fireAndLog('conversation_repository', () async => _onEvent(event)),
+      onError: streamOnError('conversation_repository'),
+    );
     _scope = '${_session.orgId}/${_session.userId}';
     ever(_session.current, (_) {
       final scope = '${_session.orgId}/${_session.userId}';
@@ -106,7 +111,8 @@ class ConversationRepository extends GetxService {
       conversations.assignAll(list);
       loadError.value = null;
       isLoaded.value = true;
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('conversation_repository', e, st, 'read chats');
       loadError.value = 'Could not read your chats.';
       isLoaded.value = true;
     }
@@ -168,7 +174,11 @@ class ConversationRepository extends GetxService {
     final Map<String, dynamic> data;
     try {
       data = await _socket.sdCall('conv.list', {'full': true});
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('conversation_repository', 'socket ${e.code}');
+      return;
+    } catch (e, st) {
+      AppLog.e('conversation_repository', e, st);
       return;
     }
     final changed = <String>[];
@@ -255,7 +265,11 @@ class ConversationRepository extends GetxService {
     final Map<String, dynamic> data;
     try {
       data = await _socket.sdCall('record.names', {});
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('conversation_repository', 'socket ${e.code}');
+      return;
+    } catch (e, st) {
+      AppLog.e('conversation_repository', e, st);
       return;
     }
     if (org != _session.orgId || user != _session.userId) return;
@@ -304,10 +318,18 @@ class ConversationRepository extends GetxService {
     var orgName = '';
     try {
       orgName = CareNames.orgFromReply(await _socket.sdCall('org.name', {}));
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('conversation_repository', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('conversation_repository', e, st);
+    }
     try {
       names = CareNames.fromReply(await _socket.sdCall('care.names', {}));
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('conversation_repository', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('conversation_repository', e, st);
+    }
     if (org != _session.orgId || user != _session.userId) return;
     final me = user.toLowerCase();
     final titles = {...names, if (orgName.isNotEmpty) me: orgName};
@@ -709,7 +731,7 @@ class ConversationRepository extends GetxService {
             );
           }
         });
-        unawaited(_decryptPreviews((e['list'] as List? ?? []).cast<Map>()));
+        fireAndLog('conversation_repository', () => _decryptPreviews((e['list'] as List? ?? []).cast<Map>()));
       case 'groups':
         await _db.transaction((sql) async {
           for (final g in (e['list'] as List? ?? []).cast<Map>()) {
@@ -721,7 +743,7 @@ class ConversationRepository extends GetxService {
         await _db.transaction((sql) => _upsertGroup(sql, org, user, e));
       case 'group_system':
         // Not a stored message; the full member list comes from /groups.
-        unawaited(_socket.sendCommand('/groups'));
+        fireAndLog('conversation_repository', () => _socket.sendCommand('/groups'));
         return;
       case 'left_group':
         await _db.update(

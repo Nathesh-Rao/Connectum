@@ -13,6 +13,7 @@ import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
 import 'models/chat_person.dart';
+import '../../core/log/app_log.dart';
 
 class NewChatController extends GetxController {
   NewChatController({
@@ -92,7 +93,11 @@ class NewChatController extends GetxController {
     try {
       final data = await api.session();
       _mode = idText(data['mode']);
-    } on ApiException catch (_) {}
+    } on ApiException catch (e) {
+      AppLog.w('new_chat_controller', '${e.runtimeType}');
+    } catch (e, st) {
+      AppLog.e('new_chat_controller', e, st);
+    }
     try {
       final data = await socket.sdCall('assoc.list', {});
       connections.assignAll([
@@ -104,7 +109,11 @@ class NewChatController extends GetxController {
               source: 'connection',
             ),
       ]);
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('new_chat_controller', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('new_chat_controller', e, st);
+    }
   }
 
   void onQueryChanged(String value) {
@@ -145,7 +154,8 @@ class NewChatController extends GetxController {
                   : null,
             ),
       ]);
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('new_chat_controller', 'socket ${e.code}');
       if (seq == _seq) hits.clear();
     } finally {
       if (seq == _seq) isSearching.value = false;

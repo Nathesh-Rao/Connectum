@@ -22,6 +22,8 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 enum ConnectMode { scan, manual }
 
@@ -119,9 +121,9 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     phase.value = ConnectPhase.entry;
     WidgetsBinding.instance.addObserver(this);
     if (link != null) {
-      unawaited(resolve(link));
+      fireAndLog('connect_controller', () => resolve(link));
     } else {
-      unawaited(startCamera());
+      fireAndLog('connect_controller', () => startCamera());
     }
   }
 
@@ -140,22 +142,22 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
         pending != null &&
         _link!.linkText == pending.linkText &&
         !isKept) {
-      unawaited(links.clear());
+      fireAndLog('connect_controller', () => links.clear());
     }
     WidgetsBinding.instance.removeObserver(this);
     _noticeTimer?.cancel();
     _debounce?.cancel();
     queryFocus.unfocus();
-    unawaited(stopCamera());
+    fireAndLog('connect_controller', () => stopCamera());
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_isOpen) return;
     if (state == AppLifecycleState.paused) {
-      unawaited(stopCamera(keepState: true));
+      fireAndLog('connect_controller', () => stopCamera(keepState: true));
     } else if (state == AppLifecycleState.resumed && _isScanning) {
-      unawaited(startCamera());
+      fireAndLog('connect_controller', () => startCamera());
     }
   }
 
@@ -164,7 +166,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
 
   void showManual() {
     mode.value = ConnectMode.manual;
-    unawaited(stopCamera());
+    fireAndLog('connect_controller', () => stopCamera());
     Future<void>.delayed(const Duration(milliseconds: 220), () {
       if (_isOpen && mode.value == ConnectMode.manual) {
         queryFocus.requestFocus();
@@ -175,20 +177,20 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   void showScanner() {
     queryFocus.unfocus();
     mode.value = ConnectMode.scan;
-    if (phase.value == ConnectPhase.entry) unawaited(startCamera());
+    if (phase.value == ConnectPhase.entry) fireAndLog('connect_controller', () => startCamera());
   }
 
   /// Back to the entry step (scanner or manual) from a failure or the card.
   void backToEntry() {
     if (keptPersonLink != null) {
       keptPersonLink = null;
-      unawaited(links.clear());
+      fireAndLog('connect_controller', () => links.clear());
     }
     _isJoinOnly = false;
     phase.value = ConnectPhase.entry;
     card.value = null;
     isScanSuccess.value = false;
-    if (mode.value == ConnectMode.scan) unawaited(startCamera());
+    if (mode.value == ConnectMode.scan) fireAndLog('connect_controller', () => startCamera());
   }
 
   // ---- camera ---------------------------------------------------------------------
@@ -204,7 +206,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     );
     _scanner = scanner;
     scanner.addListener(_onCameraValue);
-    _detections = scanner.barcodes.listen(_onDetect);
+    _detections = scanner.barcodes.listen(_onDetect, onError: streamOnError('connect_controller'));
     camera.value = scanner;
     try {
       await scanner.start();
@@ -214,7 +216,8 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
           ? ConnectCameraState.denied
           : ConnectCameraState.unavailable;
       await stopCamera(keepState: true);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
       if (_scanner != scanner) return;
       cameraState.value = ConnectCameraState.unavailable;
       await stopCamera(keepState: true);
@@ -236,7 +239,9 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     _detections = null;
     try {
       await scanner.stop();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
+    }
     await scanner.dispose();
   }
 
@@ -260,7 +265,9 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   Future<void> toggleTorch() async {
     try {
       await _scanner?.toggleTorch();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
+    }
   }
 
   Future<void> openSettings() => AppSettings.open();
@@ -381,7 +388,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     _link = link;
     phase.value = ConnectPhase.resolving;
     scanNotice.value = null;
-    unawaited(stopCamera());
+    fireAndLog('connect_controller', () => stopCamera());
     if (isOffline) {
       _fail(ConnectFailure.offline);
       return;
@@ -566,7 +573,11 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   Future<void> _refreshMe() async {
     try {
       await auth.refreshMe();
-    } on ApiException catch (_) {}
+    } on ApiException catch (e) {
+      AppLog.w('connect_controller', '${e.runtimeType}');
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
+    }
   }
 
   void _seedAdd(ConnectCard found, String category, String status) {
