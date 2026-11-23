@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
+import '../../core/utils/web_data_cleaner.dart';
 import '../api/api_client.dart';
 import '../attachment_cache.dart';
 import '../db/app_database.dart';
@@ -143,6 +144,7 @@ class SessionRepository extends GetxService {
       E2eRepository.noticeKeyFor(info.orgId, info.userId),
     );
     await _attachmentCache.clear();
+    await WebDataCleaner.clear();
     await _links.clear();
     await _store.clear();
     _goToLogin(replacedNotice);
@@ -171,6 +173,7 @@ class SessionRepository extends GetxService {
       E2eRepository.noticeKeyFor(info.orgId, info.userId),
     );
     await _attachmentCache.clear();
+    await WebDataCleaner.clear();
     await _links.clear();
     await _store.clear();
     _goToLogin(null);
@@ -209,6 +212,7 @@ class SessionRepository extends GetxService {
     await _socket.stop();
     await _db.wipeAll();
     await _attachmentCache.clear();
+    await WebDataCleaner.clear();
     await _links.clear();
     await _store.clear();
     await _store.clearIdentity();

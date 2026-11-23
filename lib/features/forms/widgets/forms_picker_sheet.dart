@@ -6,18 +6,20 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_list_row.dart';
+import '../../../core/widgets/app_search_field.dart';
 import '../../../core/widgets/app_skeleton.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_state_view.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../../data/models/form_option.dart';
 import '../forms_picker_controller.dart';
+import 'form_chip.dart';
+import 'form_chip_section.dart';
 
-/// The forms button's sheet, as the prototype has it: a search field, Recent,
-/// then every form and My Submissions last.
+/// The forms button's sheet: search, the forms as chips, the options that are
+/// not available on mobile, and a pinned bar with My Submissions.
 class FormsPickerSheet extends StatelessWidget {
   const FormsPickerSheet({super.key, required this.controller});
+
+  static const int collapseAfter = 12;
 
   final FormsPickerController controller;
 
@@ -26,9 +28,8 @@ class FormsPickerSheet extends StatelessWidget {
     FormsPickerController controller,
   ) {
     controller.prepare();
-    return AppBottomSheet.show<void>(
+    return AppBottomSheet.showPinned<void>(
       context,
-      title: 'Forms',
       child: FormsPickerSheet(controller: controller),
     );
   }
@@ -43,188 +44,424 @@ class FormsPickerSheet extends StatelessWidget {
       AppStateImageKind.noResults,
     ], size: AppSpacing.stateImageSmall);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppTextField(
-          controller: c.queryField,
-          hint: 'Search forms',
-          minHeight: AppSpacing.searchHeight,
-          fillColor: AppColors.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(AppRadius.md)),
-          leading: const Icon(Icons.search, size: 18, color: AppColors.muted),
-          textInputAction: TextInputAction.search,
-          onChanged: (v) => c.query.value = v,
+        const _Header(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: AppSearchField(
+            controller: c.queryField,
+            hint: 'Search forms',
+            onChanged: (v) => c.query.value = v,
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Obx(() {
-          final state = c.viewState;
-          if (state != AppViewState.content) {
-            return SizedBox(
-              height: 300,
-              child: AppStateView(
-                state: state,
-                emptyTitle: 'No forms for you yet',
-                emptyMessage: 'Forms you can fill show up here.',
-                errorMessage: "We couldn't load your forms.",
-                onRetry: c.options.refresh,
-                loadingChild: const _Skeleton(),
-                child: const SizedBox.shrink(),
-              ),
-            );
-          }
-          return _List(controller: c);
-        }),
+        Flexible(
+          child: Obx(() {
+            final state = c.viewState;
+            if (state != AppViewState.content) {
+              return SizedBox(
+                height: 300,
+                child: AppStateView(
+                  state: state,
+                  emptyTitle: 'No forms for you yet',
+                  emptyMessage: 'Forms you can fill show up here.',
+                  errorMessage: "We couldn't load your forms.",
+                  onRetry: c.options.refresh,
+                  loadingChild: const _Skeleton(),
+                  child: const SizedBox.shrink(),
+                ),
+              );
+            }
+            return _Content(controller: c);
+          }),
+        ),
       ],
     );
   }
 }
 
-class _List extends StatelessWidget {
-  const _List({required this.controller});
+class _Content extends StatelessWidget {
+  const _Content({required this.controller});
 
   final FormsPickerController controller;
 
   @override
-  Widget build(BuildContext context) => Obx(() => _content(context));
-
-  Widget _content(BuildContext context) {
+  Widget build(BuildContext context) => Obx(() {
     final c = controller;
     final isSearching = c.query.value.trim().isNotEmpty;
     final recents = isSearching ? const [] : c.recents;
     final shown = c.shown;
-    final hasNothing = shown.isEmpty && !c.showsMySubmissions;
-    if (hasNothing) {
-      return const SizedBox(
-        height: 320,
-        child: AppStateView(
-          state: AppViewState.noResults,
-          emptyTitle: 'No forms match',
-          emptyMessage: 'Try another word.',
-          child: SizedBox.shrink(),
-        ),
-      );
-    }
+    final available = [
+      for (final o in shown)
+        if (c.isAvailable(o)) o,
+    ];
+    final unavailable = [
+      for (final o in shown)
+        if (!c.isAvailable(o)) o,
+    ];
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (recents.isNotEmpty) ...[
-          const _Label('Recent'),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: [
-              for (final r in recents)
-                _RecentChip(
-                  label: r.caption.isEmpty ? r.name : r.caption,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    c.openRecent(r);
-                  },
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        if (!isSearching && shown.isNotEmpty) const _Label('All forms'),
-        for (final o in shown) _OptionRow(controller: c, option: o),
-        if (c.showsMySubmissions)
-          AppListRow(
-            title: 'My Submissions',
-            minHeight: AppSpacing.settingRowHeight,
-            titleStyle: AppText.rowTitle,
-            leading: const Icon(
-              Icons.history,
-              size: 18,
-              color: AppColors.muted,
+        _LinkStatus(controller: c),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.md,
             ),
-            trailing: const _Chevron(),
-            onTap: () {
-              Navigator.of(context).pop();
-              c.openMySubmissions();
-            },
+            child: shown.isEmpty
+                ? const _NoResults()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (recents.isNotEmpty) ...[
+                        FormChipSection(
+                          label: 'Recent',
+                          chips: [
+                            for (final r in recents)
+                              FormChip(
+                                label: r.caption.isEmpty ? r.name : r.caption,
+                                icon: Icons.history,
+                                tintKey: r.name,
+                                semanticsLabel:
+                                    'Open ${r.caption.isEmpty ? r.name : r.caption}',
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  c.openRecent(r);
+                                },
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (available.isNotEmpty)
+                        FormChipSection(
+                          label: 'Forms',
+                          collapseAfter: isSearching
+                              ? null
+                              : FormsPickerSheet.collapseAfter,
+                          chips: [
+                            for (final o in available)
+                              FormChip(
+                                label: o.caption,
+                                icon: c.iconOf(o),
+                                tintKey: o.id,
+                                onTap: o.isLink
+                                    ? () => c.openLink(
+                                        o,
+                                        closeSheet: () =>
+                                            Navigator.of(context).pop(),
+                                      )
+                                    : () {
+                                        Navigator.of(context).pop();
+                                        c.open(o);
+                                      },
+                              ),
+                          ],
+                        ),
+                      if (unavailable.isNotEmpty) ...[
+                        if (available.isNotEmpty) const _DashedDivider(),
+                        FormChipSection(
+                          label: 'Not available on mobile yet',
+                          chips: [
+                            for (final o in unavailable)
+                              FormChip(
+                                label: o.caption,
+                                icon: Icons.link,
+                                tintKey: o.id,
+                                semanticsLabel:
+                                    '${o.caption}, not available on mobile',
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
           ),
+        ),
+        _BottomBar(
+          count: available.length,
+          onMySubmissions: () {
+            Navigator.of(context).pop();
+            c.openMySubmissions();
+          },
+        ),
       ],
     );
-  }
+  });
 }
 
-class _OptionRow extends StatelessWidget {
-  const _OptionRow({required this.controller, required this.option});
+class _LinkStatus extends StatelessWidget {
+  const _LinkStatus({required this.controller});
 
   final FormsPickerController controller;
-  final FormOption option;
+
+  @override
+  Widget build(BuildContext context) => Obx(() {
+    final c = controller;
+    final notice = c.linkNotice.value;
+    if (c.isLinkOpening.value) {
+      return const LinearProgressIndicator(
+        minHeight: 2,
+        color: AppColors.primary,
+        backgroundColor: AppColors.line,
+      );
+    }
+    if (notice == null) return const SizedBox.shrink();
+    return Semantics(
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.xs,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                notice,
+                style: const TextStyle(
+                  fontFamily: AppText.fontFamily,
+                  fontSize: AppText.sizeReadable,
+                  height: 1.3,
+                  color: AppColors.error,
+                ),
+              ),
+            ),
+            if (c.linkToCopy.value != null)
+              TextButton(
+                onPressed: c.copyLinkToClipboard,
+                child: const Text('Copy link'),
+              ),
+          ],
+        ),
+      ),
+    );
+  });
+}
+
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.count, required this.onMySubmissions});
+
+  final int count;
+  final VoidCallback onMySubmissions;
 
   @override
   Widget build(BuildContext context) {
-    final c = controller;
-    final isAvailable = c.isAvailable(option);
-    final row = AppListRow(
-      title: option.caption,
-      subtitle: isAvailable ? null : "Isn't available on mobile yet",
-      minHeight: AppSpacing.settingRowHeight,
-      leading: Icon(c.iconOf(option), size: 18, color: AppColors.muted),
-      trailing: isAvailable ? const _Chevron() : null,
-      onTap: isAvailable
-          ? () {
-              Navigator.of(context).pop();
-              c.open(option);
-            }
-          : null,
+    final media = MediaQuery.of(context);
+    final inset = media.viewInsets.bottom > 0 ? 0.0 : media.padding.bottom;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
+      child: Padding(
+        padding: EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
+          AppSpacing.xs + inset,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '$count',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    TextSpan(text: count == 1 ? ' form' : ' forms'),
+                  ],
+                ),
+                style: const TextStyle(
+                  fontFamily: AppText.fontFamily,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.muted,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onMySubmissions,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, AppSpacing.minTapTarget),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                foregroundColor: AppColors.primary,
+                overlayColor: AppColors.primary,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppRadius.mdAll,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.history, size: 18),
+                  const SizedBox(width: AppSpacing.xxs + 2),
+                  const Text(
+                    'My Submissions',
+                    style: TextStyle(
+                      fontFamily: AppText.fontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 16,
+                    color: AppColors.primary.withAlpha(150),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-    return isAvailable ? row : Opacity(opacity: 0.55, child: row);
   }
 }
 
-class _Chevron extends StatelessWidget {
-  const _Chevron();
+class _DashedDivider extends StatelessWidget {
+  const _DashedDivider();
 
   @override
-  Widget build(BuildContext context) =>
-      const Icon(Icons.chevron_right, size: 20, color: AppColors.rowChevron);
-}
-
-class _Label extends StatelessWidget {
-  const _Label(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-    child: Text(
-      text.toUpperCase(),
-      style: AppText.eyebrow.copyWith(fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+    child: SizedBox(
+      height: 1,
+      child: CustomPaint(painter: _DashPainter(), size: Size.fromHeight(1)),
     ),
   );
 }
 
-class _RecentChip extends StatelessWidget {
-  const _RecentChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
+class _DashPainter extends CustomPainter {
+  const _DashPainter();
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: 'Open $label',
-    excludeSemantics: true,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          border: Border.all(color: AppColors.line),
-          borderRadius: AppRadius.pillAll,
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.line
+      ..strokeWidth = 1;
+    for (var x = 0.0; x < size.width; x += 8) {
+      canvas.drawLine(Offset(x, 0), Offset(x + 4, 0), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashPainter oldDelegate) => false;
+}
+
+class _NoResults extends StatelessWidget {
+  const _NoResults();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.search_off, size: 28, color: AppColors.muted),
+        SizedBox(height: AppSpacing.xs),
+        Text(
+          'No forms found',
+          style: TextStyle(
+            fontFamily: AppText.fontFamily,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.ink,
+          ),
         ),
-        child: Center(
-          widthFactor: 1,
-          child: Text(label, style: AppText.readable),
+        SizedBox(height: AppSpacing.xxs),
+        Text(
+          'Try a different name',
+          style: TextStyle(
+            fontFamily: AppText.fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            color: AppColors.muted,
+          ),
         ),
-      ),
+      ],
+    ),
+  );
+}
+
+class _Header extends StatelessWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsetsDirectional.only(
+      start: AppSpacing.md,
+      end: AppSpacing.xxs,
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: const Text(
+                    'Forms',
+                    style: TextStyle(
+                      fontFamily: AppText.fontFamily,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ),
+                const Text(
+                  'Choose a form to fill in',
+                  style: TextStyle(
+                    fontFamily: AppText.fontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    height: 1.3,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Semantics(
+          button: true,
+          label: 'Close',
+          excludeSemantics: true,
+          child: InkResponse(
+            onTap: () => Navigator.of(context).pop(),
+            radius: AppSpacing.minTapTarget / 2,
+            child: const SizedBox(
+              width: AppSpacing.minTapTarget,
+              height: AppSpacing.minTapTarget,
+              child: Icon(Icons.close, size: 22, color: AppColors.muted),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -234,26 +471,20 @@ class _Skeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppSkeletonScope(
-    child: Column(
-      children: [
-        for (var i = 0; i < 5; i++)
-          SizedBox(
-            height: AppSpacing.settingRowHeight,
-            child: Row(
-              children: [
-                const AppSkeleton(width: 18, height: 18),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: 0.4 + (i % 3) * 0.15,
-                    child: const AppSkeleton(height: AppSpacing.sm),
-                  ),
-                ),
-              ],
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xs,
+        children: [
+          for (var i = 0; i < 8; i++)
+            AppSkeleton(
+              width: 80.0 + (i % 3) * 30,
+              height: FormChip.height,
+              radius: AppRadius.pill,
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }

@@ -19,6 +19,7 @@ class AppBottomSheet {
     Widget? titleWidget,
     bool hasClose = true,
     bool hasHeader = true,
+    double contentPaddingX = AppSpacing.sheetPaddingX,
     VoidCallback? onDispose,
   }) {
     return showModalBottomSheet<T>(
@@ -47,8 +48,61 @@ class AppBottomSheet {
             titleWidget: titleWidget,
             hasClose: hasClose,
             hasHeader: hasHeader,
+            paddingX: contentPaddingX,
             child: child,
           ),
+        ),
+      ),
+    );
+  }
+
+  /// A sheet that wraps its content up to [maxHeightFraction] of the screen:
+  /// handle, then [child], which lays itself out in a bounded column (a
+  /// scrolling middle, a pinned bar). The keyboard lifts the whole sheet.
+  static Future<T?> showPinned<T>(
+    BuildContext context, {
+    required Widget child,
+    double maxHeightFraction = 0.85,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.white,
+      barrierColor: AppColors.sheetBackdrop,
+      elevation: 0,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
+      clipBehavior: Clip.antiAlias,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * maxHeightFraction,
+      ),
+      sheetAnimationStyle: AnimationStyle(
+        duration: AppDurations.slow,
+        reverseDuration: AppDurations.base,
+        curve: AppCurves.sheet,
+        reverseCurve: AppCurves.out,
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.sheetPaddingTop),
+            Center(
+              child: Container(
+                width: AppSpacing.handleWidth,
+                height: AppSpacing.handleHeight,
+                decoration: const BoxDecoration(
+                  color: AppColors.sheetHandle,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+            ),
+            Flexible(child: child),
+          ],
         ),
       ),
     );
@@ -171,8 +225,10 @@ class _SheetBody extends StatelessWidget {
     this.titleWidget,
     this.hasClose = true,
     this.hasHeader = true,
+    this.paddingX = AppSpacing.sheetPaddingX,
   });
 
+  final double paddingX;
   final String title;
   final Widget? titleWidget;
   final bool hasClose;
@@ -204,9 +260,9 @@ class _SheetBody extends StatelessWidget {
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
-              AppSpacing.sheetPaddingX,
+              paddingX,
               AppSpacing.sheetPaddingTop,
-              AppSpacing.sheetPaddingX,
+              paddingX,
               AppSpacing.sheetPaddingBottom +
                   MediaQuery.paddingOf(context).bottom,
             ),

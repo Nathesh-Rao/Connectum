@@ -15,6 +15,7 @@ class FormOption {
   });
 
   static const formType = 'data_input';
+  static const linkType = 'link';
 
   final String id;
   final String caption;
@@ -27,6 +28,9 @@ class FormOption {
   final int order;
 
   bool get isForm => type == formType && target.isNotEmpty;
+
+  /// An option an administrator pointed at a link (`target` is the link's id).
+  bool get isLink => type == linkType && id.isNotEmpty;
 
   factory FormOption.fromMap(Map data) {
     final target = idText(data['target']);

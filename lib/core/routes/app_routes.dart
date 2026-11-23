@@ -17,6 +17,7 @@ class AppRoutes {
   static const smartView = '/smart-view';
   static const inbox = '/inbox';
   static const form = '/form';
+  static const linkBrowser = '/link-browser';
   static const profile = '/profile';
   static const photoCrop = '/profile/photo-crop';
   static const notifications = '/notifications';

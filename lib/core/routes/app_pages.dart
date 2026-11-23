@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../config/app_config.dart';
+import '../../features/link_browser/link_browser_binding.dart';
+import '../../features/link_browser/link_browser_view.dart';
 import '../../features/approvals/approvals_binding.dart';
 import '../../features/approvals/approvals_view.dart';
 import '../../features/authentication/authentication_binding.dart';
@@ -235,6 +237,12 @@ class AppPages {
       () => const StructRecordsView(),
       StructRecordsBinding(),
       AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.linkBrowser,
+      () => const LinkBrowserView(),
+      LinkBrowserBinding(),
+      AppTransitionKind.slideUp,
     ),
     _page(
       AppRoutes.form,

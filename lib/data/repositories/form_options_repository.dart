@@ -7,6 +7,7 @@ import '../../core/debug/seed_sample_forms.dart';
 import '../../core/debug/seed_ui.dart';
 import '../db/app_database.dart';
 import '../models/form_option.dart';
+import '../models/link_target.dart';
 import '../models/ids.dart';
 import '../models/slot_day.dart';
 import '../session_store.dart';
@@ -91,6 +92,55 @@ class FormOptionsRepository extends GetxService {
     });
     _socket.listenOnline('form options', refresh);
     unawaited(load());
+  }
+
+  /// Runs a link option: `option.run` says which link it is, `link.open`
+  /// gives its address (the server puts the person's details and a one-time
+  /// ticket in it). A link that asks for details first isn't opened here.
+  Future<LinkTarget> resolveLink(String optionId) async {
+    try {
+      final run = await _socket.sdCall('option.run', {
+        'id': optionId,
+      }, timeout: const Duration(seconds: 40));
+      final link = run['link'];
+      if (link is! Map) {
+        throw const LinkOpenError(
+          'That option has nothing to open here.',
+          isRetryable: false,
+        );
+      }
+      final id = idText(link['id']);
+      if (id.isEmpty) {
+        throw const LinkOpenError(
+          'That option has nothing to open here.',
+          isRetryable: false,
+        );
+      }
+      if (idText(link['structure']).isNotEmpty) {
+        throw const LinkOpenError(
+          'This link asks for a few details first, which the app can\'t do yet.',
+          isRetryable: false,
+        );
+      }
+      final opened = await _socket.sdCall('link.open', {
+        'id': id,
+      }, timeout: const Duration(seconds: 20));
+      final url = idText(opened['url']);
+      if (url.isEmpty) {
+        throw const LinkOpenError('That link has no address.');
+      }
+      final name = idText(opened['name']);
+      return LinkTarget(url: url, name: name.isEmpty ? idText(link['name']) : name);
+    } on SocketCallError catch (e) {
+      throw LinkOpenError(switch (e.code) {
+        'no_access' => "You don't have access to that link.",
+        'not_found' => 'That link no longer exists.',
+        'not_configured' => 'That option has nothing to open yet.',
+        'rate_limited' => 'Too many tries. Wait a minute and try again.',
+        _ when e.isConnectionGap => "Couldn't reach the server. Try again.",
+        _ => e.message.isEmpty ? "That link couldn't be opened." : e.message,
+      }, isRetryable: e.code != 'no_access' && e.code != 'not_found');
+    }
   }
 
   /// Reads the cache, then refreshes it when online.
