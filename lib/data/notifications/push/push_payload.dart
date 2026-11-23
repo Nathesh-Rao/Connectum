@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../models/ids.dart';
+import '../../../core/log/app_log.dart';
 
 /// The small, text-free hint a push or a local notification carries:
 /// enough to route the tap, never the message. Values arrive as strings from
@@ -27,7 +28,8 @@ class PushPayload {
       if (json.isEmpty) return null;
       try {
         json = jsonDecode(json);
-      } catch (_) {
+      } catch (e, st) {
+        AppLog.e('push_payload', e, st);
         return null;
       }
     }

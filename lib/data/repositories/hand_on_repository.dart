@@ -112,7 +112,10 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent, onError: streamOnError('hand_on_repository'));
+    _socket.events.listen(
+      (event) => fireAndLog('hand_on_repository', () async => _onEvent(event)),
+      onError: streamOnError('hand_on_repository'),
+    );
     _socket.listenOnline('hand on', () {
       _schedule();
       if (phase.value == HandOnPhase.paused && _isAutoResume) {

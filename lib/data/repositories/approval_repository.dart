@@ -46,7 +46,10 @@ class ApprovalRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent, onError: streamOnError('approval_repository'));
+    _events = _socket.events.listen(
+      (event) => fireAndLog('approval_repository', () async => onEvent(event)),
+      onError: streamOnError('approval_repository'),
+    );
     _online = _socket.onOnline.listen((_) => scheduleRefresh(), onError: streamOnError('approval_repository'));
   }
 

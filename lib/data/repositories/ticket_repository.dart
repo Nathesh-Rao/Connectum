@@ -383,7 +383,10 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent, onError: streamOnError('ticket_repository'));
+    _events = _socket.events.listen(
+      (event) => fireAndLog('ticket_repository', () async => onEvent(event)),
+      onError: streamOnError('ticket_repository'),
+    );
     SeedTickets.emit = onEvent;
     _online = _socket.onOnline.listen((_) {
       _queue.resume();

@@ -28,7 +28,10 @@ class PeopleAvatars extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent, onError: streamOnError('people_avatars'));
+    _socket.events.listen(
+      (event) => fireAndLog('people_avatars', () async => _onEvent(event)),
+      onError: streamOnError('people_avatars'),
+    );
     _scope = _scopeNow;
     ever(_session.current, (_) {
       if (_scope == _scopeNow) return;

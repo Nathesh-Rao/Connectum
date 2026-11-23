@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../core/log/safe.dart';
 import 'ids.dart';
 
 class OutboxEntry {
@@ -18,6 +19,7 @@ class OutboxEntry {
     this.attemptTs,
     this.cid,
     this.firstAttemptTs,
+    this.isUnreadable = false,
   });
 
   final int id;
@@ -34,6 +36,9 @@ class OutboxEntry {
   final int? attemptTs;
   final String? cid;
   final int? firstAttemptTs;
+
+  /// The stored payload could not be read; it is never sent.
+  final bool isUnreadable;
 
   bool get isChat => kind == 'message' || kind == 'reply' || kind == 'edit';
 
@@ -53,22 +58,34 @@ class OutboxEntry {
     }
   }
 
-  factory OutboxEntry.fromRow(Map<String, Object?> r) => OutboxEntry(
-    id: intOf(r['id']),
-    convId: idText(r['conv_id']),
-    kind: idText(r['kind']),
-    payload: jsonDecode(idText(r['payload_json'])) as Map<String, dynamic>,
-    refId: idText(r['ref_id']),
-    status: idText(r['status']),
-    retryCount: intOf(r['retry_count']),
-    nextAttemptTs: intOf(r['next_attempt_ts']),
-    createdTs: intOf(r['created_ts']),
-    lastError: r['last_error'] as String?,
-    cursorAtSend: r['cursor_at_send'] as String?,
-    attemptTs: r['attempt_ts'] == null ? null : intOf(r['attempt_ts']),
-    cid: r['cid'] as String?,
-    firstAttemptTs: r['first_attempt_ts'] == null
-        ? null
-        : intOf(r['first_attempt_ts']),
-  );
+  static Map<String, dynamic>? _payloadOf(Object? raw) {
+    final p = safeSync<Object?>('outbox_entry', () => jsonDecode(idText(raw)));
+    return p is Map ? p.cast<String, dynamic>() : null;
+  }
+
+  factory OutboxEntry.fromRow(Map<String, Object?> r) {
+    final payload = _payloadOf(r['payload_json']);
+    return OutboxEntry._row(r, payload);
+  }
+
+  factory OutboxEntry._row(Map<String, Object?> r, Map<String, dynamic>? p) =>
+      OutboxEntry(
+        isUnreadable: p == null,
+        id: intOf(r['id']),
+        convId: idText(r['conv_id']),
+        kind: idText(r['kind']),
+        payload: p ?? <String, dynamic>{},
+        refId: idText(r['ref_id']),
+        status: idText(r['status']),
+        retryCount: intOf(r['retry_count']),
+        nextAttemptTs: intOf(r['next_attempt_ts']),
+        createdTs: intOf(r['created_ts']),
+        lastError: r['last_error'] as String?,
+        cursorAtSend: r['cursor_at_send'] as String?,
+        attemptTs: r['attempt_ts'] == null ? null : intOf(r['attempt_ts']),
+        cid: r['cid'] as String?,
+        firstAttemptTs: r['first_attempt_ts'] == null
+            ? null
+            : intOf(r['first_attempt_ts']),
+      );
 }

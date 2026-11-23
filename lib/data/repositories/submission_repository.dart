@@ -711,6 +711,10 @@ class SubmissionRepository extends GetxService {
   }
 
   Future<void> _send(OutboxEntry entry) async {
+    if (entry.isUnreadable) {
+      await _fail(entry, 'unreadable');
+      return;
+    }
     if (_isPastCidMemory(entry)) {
       await _fail(entry, couldNotConfirm);
       return;
@@ -782,6 +786,10 @@ class SubmissionRepository extends GetxService {
       }
     } on SocketCallError catch (e) {
       await _onSendError(entry, e);
+    } catch (e, st) {
+      // An answer of an unexpected shape: the row stays as it is (sending) and
+      // is settled by the next online recovery, never re-sent here.
+      AppLog.e('submission_repository', e, st, 'send answer');
     }
   }
 

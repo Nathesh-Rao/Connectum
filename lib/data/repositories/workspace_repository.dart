@@ -88,7 +88,10 @@ class WorkspaceRepository extends GetxService with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _key = _scope;
-    _events = _socket.events.listen(onEvent, onError: streamOnError('workspace_repository'));
+    _events = _socket.events.listen(
+      (event) => fireAndLog('workspace_repository', () async => onEvent(event)),
+      onError: streamOnError('workspace_repository'),
+    );
     _online = _socket.onOnline.listen((_) => request(), onError: streamOnError('workspace_repository'));
     ever(_store.current, (_) => _reset());
   }

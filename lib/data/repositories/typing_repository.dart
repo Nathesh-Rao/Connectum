@@ -22,7 +22,10 @@ class TypingRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent, onError: streamOnError('typing_repository'));
+    _socket.events.listen(
+      (event) => fireAndLog('typing_repository', () async => _onEvent(event)),
+      onError: streamOnError('typing_repository'),
+    );
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _clearAll();
     });

@@ -783,6 +783,10 @@ class MessageRepository extends GetxService {
           _cidMemory.inMilliseconds;
 
   Future<_Outcome> _send(OutboxEntry entry) async {
+    if (entry.isUnreadable) {
+      await _fail(entry, 'unreadable');
+      return _Outcome.finished;
+    }
     if (entry.retryCount >= _maxAttempts) {
       await _fail(entry, 'too many attempts');
       return _Outcome.finished;

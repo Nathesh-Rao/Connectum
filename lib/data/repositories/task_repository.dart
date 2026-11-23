@@ -56,7 +56,10 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent, onError: streamOnError('task_repository'));
+    _events = _socket.events.listen(
+      (event) => fireAndLog('task_repository', () async => onEvent(event)),
+      onError: streamOnError('task_repository'),
+    );
     _online = _socket.onOnline.listen((_) => scheduleRefresh(), onError: streamOnError('task_repository'));
   }
 

@@ -7,7 +7,7 @@ Rules: CLAUDE.md "Error handling". To-do list: docs/error-handling-audit.md. Bas
 | 0 foundation (app_log, safe, CLAUDE.md rules) | done (earlier run, was uncommitted) | see git log "errors: foundation" | - | message_repository.dart:115,147 converted via runGuarded (reports non-fatal in all modes + debugPrint); kept as is, covered by test/core/errors/message_queue_guard_test.dart |
 | 1 socket / decryption / network | done | see git log "errors: socket" | 11 unawaited->fireAndLog sites (+ all), 21 listen onError, ~14 empty/`_` catches logged, ~14 general catches after SocketCallError/ApiException, 8 other catches logged | analyze 14 = baseline; golden/scan test failures in tickets, smart_view are pre-existing UI WIP, not from this layer |
 | 2 database and storage | done | see git log "errors: storage" | app_database open+migrate (log, rethrow, no data touched), session_store load x2 (corrupt session -> signed out, data kept), 8 empty/`_` catches logged, 1 unawaited, 3 onError | DB open failure still propagates to callers: needs your decision |
-| 3 parsing and casts | not done | | | |
+| 3 parsing and casts | done | see git log "errors: parsing" | OutboxEntry tolerant payload (+isUnreadable -> failed 'unreadable' in both outbox sends), submission _send general catch, 10 socket-event listeners wrapped (fireAndLog), push_payload catch, session_store (layer 2) | most jsonDecode sites were already guarded by FormatException |
 | 4 crypto | not done | | | |
 | 5 connect and sync | not done | | | |
 | 6 controllers init, notifications, nav, platform | not done | | | |
@@ -19,3 +19,6 @@ Rules: CLAUDE.md "Error handling". To-do list: docs/error-handling-audit.md. Bas
 - CLAUDE.md first 3 Error-handling bullets (AppError/runGuarded/pattern doc) contradict the new rules; not edited.
 - feed_repository.dart:425 catch (_) rethrows (kept).
 - `.then()` chains in message_repository/smart_view_repository/command_repository pass errors to the caller (left).
+- form_logic_runner.dart:40 (`jsonDecode(json) as Map` after Isolate.run, dev conformance runner) left unguarded: return type non-null.
+- int.parse on regex digit groups (sv_cell_format 176-180, sv_preview_parsers 189-193,290) could throw on huge digit runs; left.
+- Inline listen closures (non-identifier handlers) only got onError, not a wrapped body.

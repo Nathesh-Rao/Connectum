@@ -119,7 +119,10 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent, onError: streamOnError('smart_view_repository'));
+    _events = _socket.events.listen(
+      (event) => fireAndLog('smart_view_repository', () async => onEvent(event)),
+      onError: streamOnError('smart_view_repository'),
+    );
     SeedSmartView.emit = onEvent;
     _online = _socket.onOnline.listen((_) => _reconnected(), onError: streamOnError('smart_view_repository'));
     ever(_store.current, (_) => _reset());
