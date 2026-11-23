@@ -5,7 +5,6 @@ import '../../core/routes/app_routes.dart';
 import '../../data/commands/command_line.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../core/widgets/app_notices.dart';
-import '../../data/models/chat_thread.dart';
 import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
@@ -149,9 +148,6 @@ class CommandRunner {
           scope: open.scope,
           caption: open.caption,
           convId: _postableChat,
-          postChoiceTitle: _postableChat == null ? null : _chatName,
-          isPostedByDefault:
-              _postableChat != null && ChatThread.careUser(_groupName) != null,
         ),
       );
     } else {
@@ -162,9 +158,6 @@ class CommandRunner {
           scope: open.scope,
           caption: open.caption,
           convId: _postableChat,
-          postChoiceTitle: _postableChat == null ? null : _chatName,
-          isPostedByDefault:
-              _postableChat != null && ChatThread.careUser(_groupName) != null,
         ),
       );
     }
@@ -211,18 +204,6 @@ class CommandRunner {
     final kind = ConversationRepository.kindOf(id);
     if (kind != 'dm' && kind != 'group') return null;
     return id;
-  }
-
-  String get _chatName {
-    final t = chatTitle?.call() ?? '';
-    return t.isNotEmpty ? t : ConversationRepository.targetOf(chatConvId ?? '');
-  }
-
-  String get _groupName {
-    final id = chatConvId ?? '';
-    return ConversationRepository.kindOf(id) == 'group'
-        ? ConversationRepository.targetOf(id)
-        : '';
   }
 
   void _openDraft(HashResult r) {

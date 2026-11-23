@@ -173,8 +173,6 @@ class StructRecordsController extends GetxController {
         scope: launch.scope,
         caption: launch.caption,
         convId: launch.convId,
-        postChoiceTitle: launch.postChoiceTitle,
-        isPostedByDefault: launch.isPostedByDefault,
       ),
     );
     if (result == true) unawaited(load(isQuiet: true));

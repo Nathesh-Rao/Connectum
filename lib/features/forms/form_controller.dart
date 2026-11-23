@@ -12,6 +12,7 @@ import '../../core/widgets/app_state_view.dart';
 import '../../data/form_logic/form_logic_service.dart';
 import '../../data/form_logic/form_logic_values.dart';
 import '../../data/form_logic/sample_forms.dart';
+import '../../core/routes/app_routes.dart';
 import '../../data/models/form_definition.dart';
 import '../../data/models/form_option.dart';
 import '../../data/models/ids.dart';
@@ -23,6 +24,7 @@ import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import 'form_rules.dart';
 import 'models/field_input.dart';
+import 'models/form_chat_rule.dart';
 import 'models/form_launch.dart';
 
 /// One open form: the answers, the checks and the send. It lives under the
@@ -110,16 +112,10 @@ class FormController extends GetxController {
   /// a retry. The sample data always says so, to be seen without a server.
   bool get isConnectNeeded => isOffline || SeedUi.isActive;
 
-  /// The "Also post this to the chat" box (only for a form started from `#`
-  /// in a chat). Unticked unless the launch says otherwise.
-  late final isPostedToChat = launch.isPostedByDefault.obs;
-
-  /// What goes out as `chat`: the forms button always posts into its chat; a
-  /// form started from `#` only when the box is ticked; the Work Space never.
-  String? get chatToSend => launch.postChoiceTitle == null
-      ? launch.convId
-      : launch.hasPostChoice && isPostedToChat.value
-      ? launch.convId
+  /// What goes out as `chat`: only a shared thread's own id (`FormChatRule`);
+  /// never a direct chat, a team group or the Work Space.
+  String? get chatToSend => launch.mode == FormMode.create
+      ? FormChatRule.chatFor(launch.convId)
       : null;
 
   bool get isEncryptedChat => launch.convId != null && launch.isEncryptedChat;
@@ -1341,6 +1337,10 @@ class FormController extends GetxController {
       }
       _isClosing = true;
       Get.back<bool>(result: true);
+      if (launch.mode == FormMode.create &&
+          FormChatRule.returnsToWorkspace(launch.convId)) {
+        unawaited(Get.toNamed(AppRoutes.workspace));
+      }
     } on Object {
       banner.value = "That couldn't be saved. Try again.";
     } finally {

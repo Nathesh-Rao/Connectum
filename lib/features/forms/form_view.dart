@@ -15,7 +15,6 @@ import '../../core/widgets/app_state_view.dart';
 import '../../data/models/form_definition.dart';
 import 'form_controller.dart';
 import 'models/form_launch.dart';
-import 'widgets/form_box.dart';
 import 'widgets/form_field_row.dart';
 import 'widgets/form_grid_editor.dart';
 
@@ -300,27 +299,6 @@ class _Footer extends StatelessWidget {
                 child: Text(
                   'Waiting for connection to fill ${waiting.join(', ')}',
                   style: AppText.caption.copyWith(color: AppColors.muted),
-                ),
-              ),
-            if (launch.hasPostChoice)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Obx(
-                  () => FormBox(
-                    boxKey: const ValueKey('post-to-chat'),
-                    onTap: () => c.isPostedToChat.toggle(),
-                    trailing: IgnorePointer(
-                      child: Switch(
-                        value: c.isPostedToChat.value,
-                        activeThumbColor: AppColors.primaryBright,
-                        onChanged: (_) {},
-                      ),
-                    ),
-                    child: Text(
-                      'Also post this to the chat with ${launch.postChoiceTitle}',
-                      style: AppText.input,
-                    ),
-                  ),
                 ),
               ),
             AppButton.primary(
