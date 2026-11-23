@@ -2,9 +2,10 @@
 
 | Need | Read |
 |---|---|
+| **Reading the docs in Obsidian** (optional visual viewer: search, backlinks, coloured graph; one-minute setup, shared settings) | [OBSIDIAN.md](OBSIDIAN.md) |
 | Starting out: names, setup, checks, conventions | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Where things live in the repo | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) |
-| **Colours, the one light theme, the design pack's tokens, the guards, the report service palette** (read before any UI change) | [THEME.md](THEME.md), [UI_DESIGN.md](UI_DESIGN.md), [LIQUID_GLASS_STYLE_GUIDE.md](LIQUID_GLASS_STYLE_GUIDE.md), [../theme/README.md](../theme/README.md) |
+| **Colours, the one light theme, the design pack's tokens, the guards, the report service palette** (read before any UI change) | [THEME.md](THEME.md), [UI_DESIGN.md](UI_DESIGN.md), [UI_TESTING.md](UI_TESTING.md) (screenshot baselines and browser checks), [LIQUID_GLASS_STYLE_GUIDE.md](LIQUID_GLASS_STYLE_GUIDE.md), [../theme/README.md](../theme/README.md) |
 | What is built, what is next, who owns it | [REQUIREMENTS_STATUS.md](REQUIREMENTS_STATUS.md) (tracker), [REQUIREMENTS.md](REQUIREMENTS.md) (the product document), [SPRINT.md](SPRINT.md), [STATUS.md](STATUS.md) (generated) |
 | **"Scripts" in tstructs** (what to use instead of scripts: calculations, rules, conditions, fetch, approval branching; tested examples) | [TSTRUCT_STATUS_AND_SCRIPTS.md](TSTRUCT_STATUS_AND_SCRIPTS.md) |
 | **People drop-downs: Show, Save, who is offered** (list people by an alias or code, save by a field that takes no duplicates, the conditions of "From another form", the rules) | [PEOPLE_DROPDOWN_SHOW_SAVE.md](PEOPLE_DROPDOWN_SHOW_SAVE.md) |
@@ -36,11 +37,14 @@
 | **The consumer system** (queues, bridges, the Erlang consumer, Axpert save, approval questions): what everything is and where it lives | [CONSUMER_SYSTEM_GUIDE.md](CONSUMER_SYSTEM_GUIDE.md), [RABBITMQ_REAL_SAMPLES.md](RABBITMQ_REAL_SAMPLES.md) (real JSON), then [RABBITMQ_CONSUMER_CONTRACT.md](RABBITMQ_CONSUMER_CONTRACT.md), [consumer-erlang/README.md](../consumer-erlang/README.md), [ONE_SCHEMA_PER_ORGANISATION.md](ONE_SCHEMA_PER_ORGANISATION.md) (one room per organisation in the database: the runbook), [APPROVALS_NOTIFICATIONS_LOGIC.md](APPROVALS_NOTIFICATIONS_LOGIC.md) |
 | **Plugins** (sold separately, not part of this source): how they plug in, how to build with and without them | [PLUGINS.md](PLUGINS.md) (and `connectum-plugins/README.md` beside this folder) |
 | **The data registry (who is part of which organisation) and the two clouds (shared and private)** | [REGISTRY.md](REGISTRY.md) |
+| **The API call log (every API plugin call kept per organisation: flow, table, partitions, reading, switching on)** | [API_CALL_LOG.md](API_CALL_LOG.md) |
+| **Moving data out of PostgreSQL (design, not built): records, messages and form tables to Oracle Object Storage, the API call log to a log tool; OCI facts, layout, settings, file-level checklist** | [DATA_TO_OBJECT_STORAGE.md](DATA_TO_OBJECT_STORAGE.md) |
 | **Moving to a managed Redis** (what it must offer, the steps, the rollback) | [MANAGED_REDIS.md](MANAGED_REDIS.md) |
 | Speed, load testing, scaling plan | [PERFORMANCE.md](PERFORMANCE.md), [LOAD_TEST_VM.md](LOAD_TEST_VM.md) (full VM load-test report: users, messages, connections, Redis, two devices, how to get past the limits) |
 | Autonomous, supervised work (overnight runs, workers, watchdog) | [AUTONOMOUS_WORK.md](AUTONOMOUS_WORK.md), [../tools/autonomy/](../tools/autonomy/README.md) |
-| CI/CD, branches, backups, e-mail | [CI_CD.md](CI_CD.md), [BRANCH_RULES.md](BRANCH_RULES.md), [BACKUPS.md](BACKUPS.md), [EMAIL_SETUP.md](EMAIL_SETUP.md) |
+| CI/CD, branches, backups, e-mail | [CI_CD.md](CI_CD.md), [CI_MINUTES.md](CI_MINUTES.md) (minutes, the CI runner, security scans), [BRANCH_RULES.md](BRANCH_RULES.md), [BACKUPS.md](BACKUPS.md), [EMAIL_SETUP.md](EMAIL_SETUP.md) |
 | Product history and notes | [NEXT_STEPS.md](NEXT_STEPS.md), [MIGRATION.md](MIGRATION.md), [DEMO_GUIDE.md](DEMO_GUIDE.md), [PROGRESS.md](PROGRESS.md), [EXTRACTION_NOTES.md](EXTRACTION_NOTES.md) |
 | Original documents and images | `source-documents/` (the product `.docx` files), `assets/` (logos, reference images) |
 | The form studio (`form-studio/`) | [../form-studio/docs/](../form-studio/docs/README.md) |
 | The backend | [../connectum-backend/README.md](../connectum-backend/README.md) and `../connectum-backend/docs/` |
+- [PRIVACY_POLICY_PAGE.md](PRIVACY_POLICY_PAGE.md): the privacy policy page (published at /privacy.html, not enforced)
