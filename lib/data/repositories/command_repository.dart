@@ -16,6 +16,8 @@ import '../socket/connectivity_service.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
 import 'message_repository.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 enum HashKind {
   unknown,
@@ -168,9 +170,9 @@ class CommandRepository extends GetxService {
     _socket.events.listen((e) {
       if (e['type'] == 'sd_event' && e['event'] == 'permissions_changed') {
         _isFresh = false;
-        unawaited(ensureLoaded());
+        fireAndLog('command_repository', () => ensureLoaded());
       }
-    });
+    }, onError: streamOnError('command_repository'));
     ever(_store.current, (_) {
       _isFresh = false;
       _loadedOrg = null;
@@ -240,7 +242,9 @@ class CommandRepository extends GetxService {
       ];
       categories.assignAll(_categoriesOf(data['categories']));
       catalog.assignAll([...all, ...CommandMenu.localEntries(all)]);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('command_repository', e, st, 'catalog');
+    }
   }
 
   static List<CommandCategory> _categoriesOf(Object? list) => [
@@ -271,7 +275,11 @@ class CommandRepository extends GetxService {
           custom.add(c);
         }
       }
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('command_repository', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('command_repository', e, st);
+    }
     final all = [...builtIn, ...custom];
     categories.assignAll([
       ..._categoriesOf(event['categories']),
@@ -298,7 +306,11 @@ class CommandRepository extends GetxService {
         for (final p in (data['permissions'] as List? ?? const [])) idText(p),
       };
       isAdmin.value = data['isAdmin'] == true;
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('command_repository', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('command_repository', e, st);
+    }
   }
 
   Future<Map<String, dynamic>?> _next(
@@ -308,7 +320,7 @@ class CommandRepository extends GetxService {
     final done = Completer<Map<String, dynamic>?>();
     final sub = _socket.events.listen((e) {
       if (isMine(e) && !done.isCompleted) done.complete(e);
-    });
+    }, onError: streamOnError('command_repository'));
     return done.future
         .timeout(timeout, onTimeout: () => null)
         .whenComplete(sub.cancel);
@@ -581,7 +593,11 @@ class CommandRepository extends GetxService {
       return (data['users'] as List? ?? const []).whereType<Map>().any(
         (u) => idText(u['username']).toLowerCase() == user,
       );
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('command_repository', 'socket ${e.code}');
+      return false;
+    } catch (e, st) {
+      AppLog.e('command_repository', e, st);
       return false;
     }
   }
@@ -617,7 +633,7 @@ class CommandRepository extends GetxService {
     final sub = _socket.events.listen((e) {
       final r = CommandReply.fromFrame(e, name: name, replies: replies);
       if (r != null && !reply.isCompleted) reply.complete(r);
-    });
+    }, onError: streamOnError('command_repository'));
     try {
       if (isSd) {
         final call = _socket
@@ -900,7 +916,14 @@ class CommandRepository extends GetxService {
         );
       }
       return null;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('command_repository', 'socket ${e.code}');
+      return HashResult(
+        HashKind.error,
+        "Couldn't check @$user right now. Try again.",
+      );
+    } catch (e, st) {
+      AppLog.e('command_repository', e, st);
       return HashResult(
         HashKind.error,
         "Couldn't check @$user right now. Try again.",

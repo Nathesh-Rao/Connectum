@@ -15,6 +15,7 @@ import '../smart_view/models/sv_source.dart';
 import '../smart_view/smart_view_commands.dart';
 import '../socket/socket_service.dart';
 import 'ticket_repository.dart';
+import '../../core/log/safe.dart';
 
 enum SvPhase { loading, ready, empty, error, offline, noAccess }
 
@@ -118,9 +119,9 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent);
+    _events = _socket.events.listen(onEvent, onError: streamOnError('smart_view_repository'));
     SeedSmartView.emit = onEvent;
-    _online = _socket.onOnline.listen((_) => _reconnected());
+    _online = _socket.onOnline.listen((_) => _reconnected(), onError: streamOnError('smart_view_repository'));
     ever(_store.current, (_) => _reset());
   }
 
@@ -628,11 +629,9 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
 
   void _scheduleFlush() {
     final gen = ++_debounceGen;
-    unawaited(
-      _delay(_debounce).then((_) {
+    fireAndLog('smart_view_repository', () => _delay(_debounce).then((_) {
         if (gen == _debounceGen) _flushAll();
-      }),
-    );
+      }));
   }
 
   void _flushAll() {
@@ -642,7 +641,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       ..._needsFull,
     }.where(_tables.contains).toList();
     for (final t in all) {
-      if (_flushing.add(t)) unawaited(_flush(t));
+      if (_flushing.add(t)) fireAndLog('smart_view_repository', () => _flush(t));
     }
   }
 

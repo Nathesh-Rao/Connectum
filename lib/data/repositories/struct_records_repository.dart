@@ -4,6 +4,7 @@ import '../models/struct_records.dart';
 import '../records/record_commands.dart';
 import '../smart_view/models/sv_row.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/app_log.dart';
 
 /// The records screen of `#tstruct <name>`: every record of one structure the
 /// server lets this person see, read page by page (`submissions.list`, the
@@ -86,7 +87,11 @@ class StructRecordsRepository {
           }
         }
         rows.sort((a, b) => b.ts.compareTo(a.ts));
-      } on SocketCallError catch (_) {
+      } on SocketCallError catch (e) {
+        AppLog.w('struct_records_repository', 'socket ${e.code}');
+        // The records are what this screen is for; the extras are best effort.
+      } catch (e, st) {
+        AppLog.e('struct_records_repository', e, st);
         // The records are what this screen is for; the extras are best effort.
       }
     }

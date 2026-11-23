@@ -7,6 +7,7 @@ import '../models/identity_info.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import 'session_repository.dart';
+import '../../core/log/app_log.dart';
 
 enum LoginStartKind { codeSent, trusted, throttled }
 
@@ -357,7 +358,11 @@ class AuthRepository extends GetxService {
   Future<String?> membershipStatus(ConnectCode target) async {
     try {
       await refreshMe();
-    } on ApiException catch (_) {}
+    } on ApiException catch (e) {
+      AppLog.w('auth_repository', '${e.runtimeType}');
+    } catch (e, st) {
+      AppLog.e('auth_repository', e, st);
+    }
     String plain(String id) => id.replaceAll('-', '').toUpperCase();
     final org = plain(target.org ?? target.code);
     for (final m in _store.identity.value?.enterprises ?? const []) {
@@ -493,7 +498,9 @@ class AuthRepository extends GetxService {
     if (token != null) {
       try {
         await _api.post('/logout', bearer: token);
-      } catch (_) {}
+      } catch (e, st) {
+        AppLog.e('auth_repository', e, st, 'logout');
+      }
     }
     await _session.clearConnectTarget();
     await _store.clearIdentity();

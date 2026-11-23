@@ -12,6 +12,8 @@ import '../models/ids.dart';
 import '../models/slot_day.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// One list `form.options` gave, as kept for a form, a field and the values of
 /// the fields it depends on.
@@ -77,21 +79,21 @@ class FormOptionsRepository extends GetxService {
       final last = _lastScope;
       // A different organisation or person: what was kept for the last one goes.
       if (scope != null && last != null && scope != last) {
-        unawaited(clearScope(last.$1, last.$2));
+        fireAndLog('form_options_repository', () => clearScope(last.$1, last.$2));
       }
       if (scope != null) _lastScope = scope;
-      unawaited(load());
+      fireAndLog('form_options_repository', () => load());
     });
     _lastScope = _session.current.value == null
         ? null
         : (_session.current.value!.orgId, _session.current.value!.userId);
     _socket.events.listen((e) {
       if (e['type'] == 'sd_event' && e['event'] == 'options_changed') {
-        unawaited(clearOrg());
+        fireAndLog('form_options_repository', () => clearOrg());
       }
-    });
+    }, onError: streamOnError('form_options_repository'));
     _socket.listenOnline('form options', refresh);
-    unawaited(load());
+    fireAndLog('form_options_repository', () => load());
   }
 
   /// Runs a link option: `option.run` says which link it is, `link.open`
@@ -221,7 +223,8 @@ class FormOptionsRepository extends GetxService {
       });
       hasError.value = false;
       isLoaded.value = true;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('form_options_repository', 'socket ${e.code}');
       hasError.value = options.isEmpty;
     } finally {
       _isFetching = false;
@@ -283,7 +286,11 @@ class FormOptionsRepository extends GetxService {
       final list = await _fetchChoices(source);
       if (list != null) _choices[source] = list;
       return list;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('form_options_repository', 'socket ${e.code}');
+      return null;
+    } catch (e, st) {
+      AppLog.e('form_options_repository', e, st);
       return null;
     }
   }
@@ -564,7 +571,11 @@ class FormOptionsRepository extends GetxService {
                   SlotTime(idText(t['time']), t['free'] == true),
             ]),
       ];
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('form_options_repository', 'socket ${e.code}');
+      return null;
+    } catch (e, st) {
+      AppLog.e('form_options_repository', e, st);
       return null;
     }
   }

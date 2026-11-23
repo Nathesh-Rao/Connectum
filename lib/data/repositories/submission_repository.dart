@@ -22,6 +22,8 @@ import '../session_store.dart';
 import 'form_options_repository.dart';
 import 'message_repository.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// A submission the server accepted: [isPending] when it waits for approval.
 class SavedRecord {
@@ -288,7 +290,7 @@ class SubmissionRepository extends GetxService {
     });
     await reload();
     if (chat != null && !isDraft) await _messages.reloadAfterLocalChange();
-    if (!isDraft) unawaited(flush());
+    if (!isDraft) fireAndLog('submission_repository', () => flush());
   }
 
   Future<void> _putPendingMessage(
@@ -442,7 +444,7 @@ class SubmissionRepository extends GetxService {
         await _forget(id);
         return 'That submission no longer exists.';
       }
-      unawaited(syncFromServer());
+      fireAndLog('submission_repository', () => syncFromServer());
       return switch (e.code) {
         'submission_locked' =>
           "It can't be deleted while it waits for approval or after it was approved.",
@@ -452,7 +454,7 @@ class SubmissionRepository extends GetxService {
       };
     }
     await _forget(id);
-    unawaited(syncFromServer());
+    fireAndLog('submission_repository', () => syncFromServer());
     return null;
   }
 
@@ -514,7 +516,7 @@ class SubmissionRepository extends GetxService {
       );
     });
     await reload();
-    unawaited(flush());
+    fireAndLog('submission_repository', () => flush());
   }
 
   /// Fixes a submission that never reached the server (it was refused, or
@@ -571,7 +573,7 @@ class SubmissionRepository extends GetxService {
     });
     await reload();
     await _messages.reloadAfterLocalChange();
-    if (!isDraft) unawaited(flush());
+    if (!isDraft) fireAndLog('submission_repository', () => flush());
   }
 
   /// What a failed or waiting submission was filled in with, and the server's
@@ -626,7 +628,7 @@ class SubmissionRepository extends GetxService {
       );
     });
     await _messages.reloadAfterLocalChange();
-    unawaited(flush());
+    fireAndLog('submission_repository', () => flush());
   }
 
   Future<void> retry(String refId) async {
@@ -642,7 +644,7 @@ class SubmissionRepository extends GetxService {
       );
     });
     await _messages.reloadAfterLocalChange();
-    unawaited(flush());
+    fireAndLog('submission_repository', () => flush());
   }
 
   /// Drops a submission that was never sent: its entry, its row and its card.
@@ -860,7 +862,7 @@ class SubmissionRepository extends GetxService {
       [reason, e.id],
     );
     await _setMessageStatus(e, 'failed', reason: reason);
-    if (e.kind == 'form_submit') unawaited(reload());
+    if (e.kind == 'form_submit') fireAndLog('submission_repository', () => reload());
     if (e.kind != 'form_submit') {
       // A refused edit leaves the server's version in place.
       await _db.update(
@@ -870,7 +872,7 @@ class SubmissionRepository extends GetxService {
       notice.value = reason == couldNotConfirm
           ? "An edit couldn't be confirmed. Check the submission."
           : 'An edit was not saved: $reason';
-      unawaited(syncFromServer());
+      fireAndLog('submission_repository', () => syncFromServer());
     }
   }
 
@@ -1342,9 +1344,11 @@ class SubmissionRepository extends GetxService {
             idText(data['rev']),
           );
           return parsed;
-        } on SocketCallError catch (_) {
+        } on SocketCallError catch (e) {
+          AppLog.w('submission_repository', 'socket ${e.code}');
           continue;
-        } on TypeError catch (_) {
+        } on TypeError catch (e, st) {
+          AppLog.e('submission_repository', e, st, 'structure parse');
           continue;
         }
       }
@@ -1456,7 +1460,8 @@ class SubmissionRepository extends GetxService {
         isOffline: e.isConnectionGap,
         code: e.code,
       );
-    } on TypeError catch (_) {
+    } on TypeError catch (e, st) {
+      AppLog.e('submission_repository', e, st, 'structure parse');
       return const StructureOpen.failed('');
     }
   }

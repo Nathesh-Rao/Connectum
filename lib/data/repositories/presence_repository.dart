@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../models/ids.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/safe.dart';
 
 enum PresenceDot { none, online, offline }
 
@@ -25,7 +26,7 @@ class PresenceRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _socket.events.listen(_onEvent);
+    _socket.events.listen(_onEvent, onError: streamOnError('presence_repository'));
     _socket.listenOnline('presence', refresh);
     ever(_socket.connection, (state) {
       if (state == SocketState.online) return;

@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:get/get.dart';
 
 import 'socket_service.dart';
+import '../../core/log/safe.dart';
 
 enum AppConnectivity { online, offline, connecting }
 
@@ -20,7 +21,7 @@ class ConnectivityService extends GetxService {
     super.onInit();
     final connectivity = Connectivity();
     _apply(await connectivity.checkConnectivity());
-    _subscription = connectivity.onConnectivityChanged.listen(_apply);
+    _subscription = connectivity.onConnectivityChanged.listen(_apply, onError: streamOnError('connectivity_service'));
     ever(hasNetwork, (_) => _recompute());
     ever(simulateOffline, (_) => _recompute());
   }

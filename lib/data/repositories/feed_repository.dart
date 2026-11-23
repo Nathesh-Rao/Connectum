@@ -12,6 +12,8 @@ import '../../core/debug/records_log.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// The workspace feed (`feed.*`): the items, the counts behind the bell, and
 /// the three live events. In memory only: the server is the source, and
@@ -69,8 +71,8 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent);
-    _online = _socket.onOnline.listen((_) => scheduleRefresh());
+    _events = _socket.events.listen(onEvent, onError: streamOnError('feed_repository'));
+    _online = _socket.onOnline.listen((_) => scheduleRefresh(), onError: streamOnError('feed_repository'));
     ever(_store.current, (_) => _reset());
     ever(counts, (c) => unread.value = c.unread);
   }
@@ -111,7 +113,7 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
   /// Bursts of events become one read.
   void scheduleRefresh() {
     _burst?.cancel();
-    _burst = Timer(burst, () => unawaited(refresh()));
+    _burst = Timer(burst, () => fireAndLog('feed_repository', () => refresh()));
   }
 
   /// The summary and the latest [firstReadSize] items, replacing the local
@@ -142,7 +144,8 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
         ..clear()
         ..[_key('all', false)] = page.hasMore;
       hasError.value = false;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('feed_repository', 'socket ${e.code}');
       if (items.isEmpty) hasError.value = true;
     } finally {
       isLoading.value = false;

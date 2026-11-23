@@ -12,6 +12,7 @@ import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'ticket_repository.dart';
+import '../../core/log/safe.dart';
 
 /// The records that were SENT to this person, for My Work Space, inside the
 /// organisation of the session. The workspace is not a server object: it is
@@ -87,8 +88,8 @@ class WorkspaceRepository extends GetxService with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _key = _scope;
-    _events = _socket.events.listen(onEvent);
-    _online = _socket.onOnline.listen((_) => request());
+    _events = _socket.events.listen(onEvent, onError: streamOnError('workspace_repository'));
+    _online = _socket.onOnline.listen((_) => request(), onError: streamOnError('workspace_repository'));
     ever(_store.current, (_) => _reset());
   }
 
@@ -154,7 +155,7 @@ class WorkspaceRepository extends GetxService with WidgetsBindingObserver {
     isSyncing.value = true;
     _timer = Timer(wait, () {
       _timer = null;
-      unawaited(syncNow());
+      fireAndLog('workspace_repository', () => syncNow());
     });
   }
 

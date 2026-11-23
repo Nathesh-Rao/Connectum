@@ -8,6 +8,7 @@ import '../models/approval.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'feed_repository.dart';
+import '../../core/log/safe.dart';
 
 /// A `request_created` or `request_resolved` event.
 class ApprovalChange {
@@ -45,8 +46,8 @@ class ApprovalRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent);
-    _online = _socket.onOnline.listen((_) => scheduleRefresh());
+    _events = _socket.events.listen(onEvent, onError: streamOnError('approval_repository'));
+    _online = _socket.onOnline.listen((_) => scheduleRefresh(), onError: streamOnError('approval_repository'));
   }
 
   @override

@@ -5,6 +5,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
+import '../../core/errors/run_guarded.dart';
+import '../../core/log/safe.dart';
 import '../../core/utils/attachment_tag.dart';
 import '../db/app_database.dart';
 import '../models/ids.dart';
@@ -17,6 +19,7 @@ import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_models.dart';
 import 'e2e_repository.dart';
 import 'encryption_policy.dart';
+import '../../core/log/app_log.dart';
 
 /// How a file for a chat is made: uploaded as it is, or sealed first.
 enum AttachMode { plain, encrypted }
@@ -112,12 +115,14 @@ class MessageRepository extends GetxService {
     _socket.events.listen((e) {
       _queue = _queue
           .then((_) => _socket.isCurrent(e) ? _handle(e) : null)
-          .catchError((Object _) {});
-    });
+          .catchError(
+            (Object err, StackTrace s) => _logDropped(err, s, 'message event'),
+          );
+    }, onError: streamOnError('message_repository'));
     _socket.listenOnline('messages', _onOnline);
-    _e2e.unlockRequests.listen((_) => unawaited(_unlockLocked()));
-    _e2e.registrations.listen((_) => unawaited(reopenNoDevice()));
-    _conversations.receiptsChanged.listen(applyReceipts);
+    _e2e.unlockRequests.listen((_) => fireAndLog('messages.unlock', _unlockLocked), onError: streamOnError('message_repository'));
+    _e2e.registrations.listen((_) => fireAndLog('messages.reopen', reopenNoDevice), onError: streamOnError('message_repository'));
+    _conversations.receiptsChanged.listen(applyReceipts, onError: streamOnError('message_repository'));
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _onDropped();
     });
@@ -143,8 +148,15 @@ class MessageRepository extends GetxService {
   void _scheduleDecrypt() {
     _decrypting = _decrypting
         .then((_) => _decryptPending())
-        .catchError((Object _) {});
+        .catchError(
+          (Object err, StackTrace s) => _logDropped(err, s, 'decrypt pass'),
+        );
   }
+
+  /// The queue keeps going after a failed step; the failure is logged and
+  /// reported, never dropped silently.
+  void _logDropped(Object e, StackTrace s, String reason) =>
+      runGuarded(() => Future<void>.error(e, s), reason: reason);
 
   /// After "Trust new key": messages of [convId] that were hidden because the
   /// sender's key had changed are opened again against the pins as they are
@@ -529,7 +541,7 @@ class MessageRepository extends GetxService {
     lastCid = cid;
     await _reload(convId);
     await _conversations.reload();
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
     return SendResult.queued;
   }
 
@@ -665,7 +677,7 @@ class MessageRepository extends GetxService {
       });
     }
     await _reload(message.convId);
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
     return true;
   }
 
@@ -686,7 +698,7 @@ class MessageRepository extends GetxService {
       );
     });
     await _reloadAll();
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
   }
 
   /// Another repository changed message rows (a pending form card): the open
@@ -827,12 +839,13 @@ class MessageRepository extends GetxService {
           entry.convId,
           '${entry.payload['text']}',
         );
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-            'e2e: could not encrypt (${e is E2eException ? e.code : e.runtimeType})',
-          );
-        }
+      } catch (e, st) {
+        AppLog.e(
+          'message_repository',
+          e,
+          st,
+          'encrypt ${e is E2eException ? e.code : ''}',
+        );
         await _fail(
           entry,
           '${E2eSendDecision.failTag}${E2eSendDecision.cantSend}: encryption failed',
@@ -1021,7 +1034,7 @@ class MessageRepository extends GetxService {
       }
     });
     await _reload(e.convId);
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
   }
 
   void _onDropped() {
@@ -1041,7 +1054,7 @@ class MessageRepository extends GetxService {
     if (entry == null || !_socket.isOnline) return;
     _settle(outboxId);
     await _recover(entry, countAttempt: true);
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
   }
 
   // ---- reconnect and recovery ---------------------------------------------
@@ -1146,7 +1159,10 @@ class MessageRepository extends GetxService {
     if (existing != null) {
       return existing.future
           .then<_History?>((h) => h)
-          .catchError((Object _) => null);
+          .catchError((Object e, StackTrace st) {
+            AppLog.w('message_repository', 'history wait ${e.runtimeType}');
+            return null;
+          });
     }
     final kind = ConversationRepository.kindOf(convId);
     final target = ConversationRepository.targetOf(convId);
@@ -1159,7 +1175,8 @@ class MessageRepository extends GetxService {
       );
       if (!sent) return null;
       return await waiter.future.timeout(const Duration(seconds: 10));
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('message_repository', e, st, 'history');
       return null;
     } finally {
       if (identical(_historyWaiters[key], waiter)) _historyWaiters.remove(key);
@@ -1362,9 +1379,7 @@ class MessageRepository extends GetxService {
           await _onReceipt((e['data'] as Map?)?.cast<String, dynamic>() ?? {});
         }
         if (event == 'submission_rejected') {
-          await _onRejected(
-            (e['data'] as Map?)?.cast<String, dynamic>() ?? {},
-          );
+          await _onRejected((e['data'] as Map?)?.cast<String, dynamic>() ?? {});
         }
         if (event == 'form_message' || event == 'form_message_updated') {
           await _onFormMessage(
@@ -1410,7 +1425,7 @@ class MessageRepository extends GetxService {
       delivered: delivered,
       moveCursor: e['duplicate'] != true,
     );
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
   }
 
   Future<void> _adopt(
@@ -1571,7 +1586,7 @@ class MessageRepository extends GetxService {
     if (kDebugMode) debugPrint('e2e: stale devices, resend $tries');
     _settle(entry.id);
     await _backToPending(entry, countAttempt: false);
-    unawaited(flush());
+    fireAndLog('message_repository', () => flush());
   }
 
   /// "These people have not set up secure messaging yet: a, b." -> "a, b
@@ -1734,7 +1749,7 @@ class MessageRepository extends GetxService {
       if (entry.kind == 'edit' && entry.refId == id) {
         _settle(entry.id);
         await _db.update('DELETE FROM outbox WHERE id = ?', [entry.id]);
-        unawaited(flush());
+        fireAndLog('message_repository', () => flush());
       }
     }
     await _reloadAll();
@@ -1789,7 +1804,7 @@ class MessageRepository extends GetxService {
       await _setCursor(sql, convId, id);
     });
     if (idText(e['from']).toLowerCase() != user.toLowerCase()) {
-      unawaited(_conversations.noteDelivered(convId, id));
+      fireAndLog('message_repository', () => _conversations.noteDelivered(convId, id));
     }
     await _reload(convId);
     await _conversations.reload();
@@ -1950,7 +1965,7 @@ class MessageRepository extends GetxService {
             idText(i['id']),
       ];
       if (fromOthers.isNotEmpty) {
-        unawaited(_conversations.noteDelivered(convId, fromOthers.last));
+        fireAndLog('message_repository', () => _conversations.noteDelivered(convId, fromOthers.last));
       }
     }
     await _applyReceipts(convId);

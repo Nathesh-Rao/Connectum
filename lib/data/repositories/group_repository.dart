@@ -9,6 +9,8 @@ import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// Creating a group and adding people. `/creategroup` and `/addmember` take no
 /// `cid`, so nothing here is queued or retried by itself: each command is sent
@@ -121,7 +123,11 @@ class GroupRepository extends GetxService {
         '/creategroup $name',
         (e) => e['type'] == 'group_created' && idText(e['name']) == name,
       );
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('group_repository', 'socket ${e.code}');
+      return const GroupCreateResult(GroupCreateStatus.offline);
+    } catch (e, st) {
+      AppLog.e('group_repository', e, st);
       return const GroupCreateResult(GroupCreateStatus.offline);
     }
     if (reply == null) {
@@ -151,7 +157,15 @@ class GroupRepository extends GetxService {
                 idText(e['group']) == group &&
                 idText(e['user']).toLowerCase() == user),
       );
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('group_repository', 'socket ${e.code}');
+      return GroupAddResult(
+        person,
+        GroupAddStatus.failed,
+        'Not sent: the connection was lost.',
+      );
+    } catch (e, st) {
+      AppLog.e('group_repository', e, st);
       return GroupAddResult(
         person,
         GroupAddStatus.failed,
@@ -191,7 +205,11 @@ class GroupRepository extends GetxService {
     final Map<String, dynamic>? reply;
     try {
       reply = await _command('/groups', (e) => e['type'] == 'groups');
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('group_repository', 'socket ${e.code}');
+      return null;
+    } catch (e, st) {
+      AppLog.e('group_repository', e, st);
       return null;
     }
     if (reply == null || reply['type'] != 'groups') return null;
@@ -218,7 +236,7 @@ class GroupRepository extends GetxService {
     final sub = _socket.events.listen((e) {
       final isMine = isReply(e) || (e['type'] == 'error' && e['conv'] == null);
       if (isMine && !reply.isCompleted) reply.complete(e);
-    });
+    }, onError: streamOnError('group_repository'));
     try {
       final isSent = await _socket.sendCommand(line);
       _lastSent = DateTime.now();

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../db/app_database.dart';
@@ -6,6 +5,8 @@ import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// People's picture addresses, by lower-case username. The server pushes a
 /// `profile` event (`{user, avatar|null}`) when anyone changes their picture,
@@ -27,7 +28,7 @@ class PeopleAvatars extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent);
+    _socket.events.listen(_onEvent, onError: streamOnError('people_avatars'));
     _scope = _scopeNow;
     ever(_session.current, (_) {
       if (_scope == _scopeNow) return;
@@ -63,8 +64,8 @@ class PeopleAvatars extends GetxService {
       urls.addAll({
         for (final r in rows) idText(r['username']): idText(r['avatar']),
       });
-    } catch (e) {
-      if (kDebugMode) debugPrint('people avatars: $e');
+    } catch (e, st) {
+      AppLog.e('people_avatars', e, st, 'load');
     }
   }
 
@@ -99,8 +100,8 @@ class PeopleAvatars extends GetxService {
         }
       }
       if (isKept) await _conversations.setPeerAvatar(who, url);
-    } catch (e) {
-      if (kDebugMode) debugPrint('people avatars: $e');
+    } catch (e, st) {
+      AppLog.e('people_avatars', e, st, 'save');
     }
   }
 

@@ -33,3 +33,7 @@ void fireAndLog(String tag, Future<void> Function() body) {
 
   run();
 }
+
+/// `onError` for `Stream.listen`: logs and keeps the subscription alive.
+void Function(Object, StackTrace) streamOnError(String tag) =>
+    (Object e, StackTrace st) => AppLog.e(tag, e, st);

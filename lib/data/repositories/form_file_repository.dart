@@ -7,6 +7,7 @@ import '../models/ids.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
 import 'attachment_repository.dart';
+import '../../core/log/app_log.dart';
 
 /// A file the server holds for a form's file field.
 class FormUploadedFile {
@@ -106,7 +107,9 @@ class FormFileRepository {
       if (path.startsWith(Directory.systemTemp.path)) {
         await File(path).delete();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('form_file_repository', e, st, 'delete temp');
+    }
   }
 
   AttachmentException _fail(DioException e) {

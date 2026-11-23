@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../models/ids.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/safe.dart';
 
 /// Who is typing, per conversation, from `typing_dm`, `group_typing` and
 /// `typing` (the global room). A name disappears five seconds after its last
@@ -21,7 +22,7 @@ class TypingRepository extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent);
+    _socket.events.listen(_onEvent, onError: streamOnError('typing_repository'));
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _clearAll();
     });

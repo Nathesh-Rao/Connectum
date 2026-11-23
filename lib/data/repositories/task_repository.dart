@@ -8,6 +8,7 @@ import '../models/task.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/safe.dart';
 
 /// A `task_assigned` or `task_updated` event.
 class TaskChange {
@@ -55,8 +56,8 @@ class TaskRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent);
-    _online = _socket.onOnline.listen((_) => scheduleRefresh());
+    _events = _socket.events.listen(onEvent, onError: streamOnError('task_repository'));
+    _online = _socket.onOnline.listen((_) => scheduleRefresh(), onError: streamOnError('task_repository'));
   }
 
   @override

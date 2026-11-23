@@ -15,6 +15,8 @@ import '../api/api_client.dart';
 import '../redact.dart';
 import '../session_store.dart';
 import 'connectivity_service.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 enum SocketState {
   connecting,
@@ -209,7 +211,8 @@ class SocketService extends GetxService with WidgetsBindingObserver {
       _handshakeTimer = Timer(_handshakeTimeout, () {
         if (!_hasWelcome) _drop(SocketState.offline, retry: true);
       });
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('socket_service', e, st, 'connect');
       _drop(SocketState.offline, retry: true);
     }
   }
@@ -391,12 +394,14 @@ class SocketService extends GetxService with WidgetsBindingObserver {
             _logGap(name, e);
           } on StateError catch (e) {
             _logGap(name, e);
+          } catch (e, st) {
+            AppLog.e('socket_service', e, st, 'online listener');
           }
         } while (isAgain && isOnline);
       } finally {
         isRunning = false;
       }
-    });
+    }, onError: streamOnError('socket_service'));
   }
 
   void _logGap(String name, Object error) {

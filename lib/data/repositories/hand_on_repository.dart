@@ -11,6 +11,8 @@ import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 enum HandOnPhase {
   idle,
@@ -110,7 +112,7 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent);
+    _socket.events.listen(_onEvent, onError: streamOnError('hand_on_repository'));
     _socket.listenOnline('hand on', () {
       _schedule();
       if (phase.value == HandOnPhase.paused && _isAutoResume) {
@@ -159,7 +161,7 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
 
   void _schedule() {
     _debounce?.cancel();
-    _debounce = Timer(_discoverDebounce, () => unawaited(discover()));
+    _debounce = Timer(_discoverDebounce, () => fireAndLog('hand_on_repository', () => discover()));
   }
 
   // ---- finding a waiting device ----------------------------------------
@@ -466,7 +468,7 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
       _handled.add(target.id);
       message.value = '';
       phase.value = HandOnPhase.done;
-      unawaited(_e2e.refreshStatus());
+      fireAndLog('hand_on_repository', () => _e2e.refreshStatus());
     } on HandOnCancelled {
       _isAutoResume = false;
       phase.value = HandOnPhase.cancelled;
@@ -503,7 +505,7 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
         final id = offer.value?.id;
         if (id != null) {
           _handled.add(id);
-          unawaited(_saveCheckpoint(id, null));
+          fireAndLog('hand_on_repository', () => _saveCheckpoint(id, null));
         }
         message.value = f.message;
         phase.value = HandOnPhase.gone;
@@ -528,7 +530,8 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
     if (isIsolateOn && !_isIsolateBroken) {
       try {
         return await handOnRewrapInIsolate(work);
-      } catch (_) {
+      } catch (e, st) {
+        AppLog.e('hand_on_repository', e, st, 'isolate rewrap');
         _isIsolateBroken = true;
       }
     }

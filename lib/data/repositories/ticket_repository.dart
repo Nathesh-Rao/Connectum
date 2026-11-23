@@ -15,6 +15,7 @@ import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
+import '../../core/log/safe.dart';
 
 typedef _Read = ({Map<String, dynamic>? data, SocketCallError? error});
 
@@ -382,13 +383,13 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _events = _socket.events.listen(onEvent);
+    _events = _socket.events.listen(onEvent, onError: streamOnError('ticket_repository'));
     SeedTickets.emit = onEvent;
     _online = _socket.onOnline.listen((_) {
       _queue.resume();
       _logSession();
       scheduleRefresh();
-    });
+    }, onError: streamOnError('ticket_repository'));
     ever(_store.current, (_) => _reset());
   }
 

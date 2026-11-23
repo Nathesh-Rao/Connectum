@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 
 import '../../core/config/app_config.dart';
 import '../session_store.dart';
+import '../../core/log/app_log.dart';
 
 enum AttachSource { library, camera, document }
 
@@ -133,7 +134,15 @@ class AttachmentRepository {
         maxWidth: 2048,
         maxHeight: 2048,
       );
-    } on Exception catch (_) {
+    } on Exception catch (e) {
+      AppLog.w('attachment_repository', '${e.runtimeType}');
+      throw AttachmentException(
+        source == AttachSource.camera
+            ? "The camera isn't available."
+            : "The photo library isn't available.",
+      );
+    } catch (e, st) {
+      AppLog.e('attachment_repository', e, st);
       throw AttachmentException(
         source == AttachSource.camera
             ? "The camera isn't available."
@@ -181,7 +190,11 @@ class AttachmentRepository {
         type: FileType.custom,
         allowedExtensions: documentMimes.keys.toList(),
       );
-    } on Exception catch (_) {
+    } on Exception catch (e) {
+      AppLog.w('attachment_repository', '${e.runtimeType}');
+      throw const AttachmentException("The file picker isn't available.");
+    } catch (e, st) {
+      AppLog.e('attachment_repository', e, st);
       throw const AttachmentException("The file picker isn't available.");
     }
     if (picked == null) return null;
