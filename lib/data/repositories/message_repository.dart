@@ -1361,6 +1361,11 @@ class MessageRepository extends GetxService {
         if (event == 'receipt') {
           await _onReceipt((e['data'] as Map?)?.cast<String, dynamic>() ?? {});
         }
+        if (event == 'submission_rejected') {
+          await _onRejected(
+            (e['data'] as Map?)?.cast<String, dynamic>() ?? {},
+          );
+        }
         if (event == 'form_message' || event == 'form_message_updated') {
           await _onFormMessage(
             (e['data'] as Map?)?.cast<String, dynamic>() ?? {},
@@ -1811,6 +1816,32 @@ class MessageRepository extends GetxService {
     await _applyReceipts(convId);
     await _reload(convId);
     await _conversations.reload();
+  }
+
+  /// A rejected submission never gets a card posted, so the local card that
+  /// waited for approval goes (`submission_rejected {submissionId, ...}`).
+  Future<void> _onRejected(Map<String, dynamic> data) async {
+    final id = idText(data['submissionId']);
+    if (id.isEmpty || _org == null || _me == null) return;
+    final waiting = await _db.query(
+      "SELECT msg_id, conv_id, form_json FROM messages WHERE org_id = ? AND user_id = ? AND kind = 'form' "
+      "AND msg_id LIKE 'temp-%' AND status = 'sent'",
+      [_org, _me],
+    );
+    for (final w in waiting) {
+      try {
+        final f = jsonDecode(idText(w['form_json']));
+        if (f is Map && idText(f['submissionId']) == id) {
+          await _db.update(
+            'DELETE FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+            [_org, _me, w['msg_id']],
+          );
+          await _reload(idText(w['conv_id']));
+        }
+      } on FormatException {
+        continue;
+      }
+    }
   }
 
   /// A submission that waited for approval kept a local card; the real form
