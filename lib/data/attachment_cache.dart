@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../core/utils/attachment_tag.dart';
 import 'repositories/attachment_repository.dart';
+import '../core/log/app_log.dart';
 
 enum OpenOutcome { opened, noApp, failed }
 
@@ -101,7 +102,9 @@ class AttachmentCache {
         await const MethodChannel(
           'connectum/device',
         ).invokeMethod<bool>('excludeFromBackup', dir.path);
-      } catch (_) {}
+      } catch (e, st) {
+        AppLog.e('attachment_cache', e, st);
+      }
     }
     return _folder = dir;
   }
@@ -185,7 +188,8 @@ class AttachmentCache {
         ResultType.noAppToOpen => OpenOutcome.noApp,
         _ => OpenOutcome.failed,
       };
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('attachment_cache', e, st);
       return OpenOutcome.failed;
     }
   }
@@ -197,7 +201,8 @@ class AttachmentCache {
       await SharePlus.instance.share(
         ShareParams(files: [XFile(file.path)], fileNameOverrides: [name]),
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('attachment_cache', e, st);
       return;
     }
   }
@@ -280,7 +285,9 @@ class AttachmentCache {
           await const MethodChannel(
             'connectum/device',
           ).invokeMethod<bool>('excludeFromBackup', dir.parent.path);
-        } catch (_) {}
+        } catch (e, st) {
+          AppLog.e('attachment_cache', e, st);
+        }
       }
       await file.writeAsBytes(bytes, flush: true);
       return file;

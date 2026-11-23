@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/log/app_log.dart';
 
 enum SvViewMode { cards, table }
 
@@ -38,7 +39,8 @@ class SmartViewPrefs {
             ? SvViewMode.table
             : SvViewMode.cards,
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('sv_prefs', e, st);
       return SmartViewPrefs();
     }
   }
@@ -47,6 +49,8 @@ class SmartViewPrefs {
     _mode = value;
     try {
       await _write(value.name);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('sv_prefs', e, st);
+    }
   }
 }

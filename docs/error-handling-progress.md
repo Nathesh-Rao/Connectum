@@ -6,7 +6,7 @@ Rules: CLAUDE.md "Error handling". To-do list: docs/error-handling-audit.md. Bas
 |---|---|---|---|---|
 | 0 foundation (app_log, safe, CLAUDE.md rules) | done (earlier run, was uncommitted) | see git log "errors: foundation" | - | message_repository.dart:115,147 converted via runGuarded (reports non-fatal in all modes + debugPrint); kept as is, covered by test/core/errors/message_queue_guard_test.dart |
 | 1 socket / decryption / network | done | see git log "errors: socket" | 11 unawaited->fireAndLog sites (+ all), 21 listen onError, ~14 empty/`_` catches logged, ~14 general catches after SocketCallError/ApiException, 8 other catches logged | analyze 14 = baseline; golden/scan test failures in tickets, smart_view are pre-existing UI WIP, not from this layer |
-| 2 database and storage | not done | | | |
+| 2 database and storage | done | see git log "errors: storage" | app_database open+migrate (log, rethrow, no data touched), session_store load x2 (corrupt session -> signed out, data kept), 8 empty/`_` catches logged, 1 unawaited, 3 onError | DB open failure still propagates to callers: needs your decision |
 | 3 parsing and casts | not done | | | |
 | 4 crypto | not done | | | |
 | 5 connect and sync | not done | | | |

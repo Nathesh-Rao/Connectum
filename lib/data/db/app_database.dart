@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../models/ids.dart';
+import '../../core/log/app_log.dart';
 
 typedef Row = Map<String, Object?>;
 
@@ -186,23 +187,37 @@ class AppDatabase {
         await const MethodChannel(
           'connectum/device',
         ).invokeMethod<bool>('excludeFromBackup', folder);
-      } catch (_) {}
+      } catch (e, st) {
+        AppLog.e('app_database', e, st, 'exclude from backup');
+      }
     }
-    return openDatabase(
-      p.join(folder, 'connectum.db'),
-      version: _version,
-      onCreate: (db, _) => migrate(db, 0, _version),
-      onUpgrade: migrate,
-    );
+    try {
+      return await openDatabase(
+        p.join(folder, 'connectum.db'),
+        version: _version,
+        onCreate: (db, _) => migrate(db, 0, _version),
+        onUpgrade: migrate,
+      );
+    } catch (e, st) {
+      // Nothing is deleted or reset here; the caller cannot go on without it.
+      AppLog.e('app_database', e, st, 'open or migrate');
+      rethrow;
+    }
   }
 
   @visibleForTesting
   static Future<void> migrate(Database db, int from, int to) async {
-    for (var v = from + 1; v <= to; v++) {
-      for (final statement in _migrations[v]!) {
-        await db.execute(statement);
+    var v = from;
+    try {
+      for (v = from + 1; v <= to; v++) {
+        for (final statement in _migrations[v]!) {
+          await db.execute(statement);
+        }
+        if (v == 2) await _backfillCids(db);
       }
-      if (v == 2) await _backfillCids(db);
+    } catch (e, st) {
+      AppLog.e('app_database', e, st, 'migration to v$v');
+      rethrow;
     }
   }
 

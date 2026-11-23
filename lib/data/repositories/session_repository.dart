@@ -14,6 +14,8 @@ import '../redact.dart';
 import 'e2e_repository.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/app_log.dart';
+import '../../core/log/safe.dart';
 
 class SessionRepository extends GetxService {
   SessionRepository(
@@ -54,7 +56,10 @@ class SessionRepository extends GetxService {
   @override
   Future<void> onInit() async {
     super.onInit();
-    _api.unauthorized.listen((_) => handleAuthFailed());
+    _api.unauthorized.listen(
+      (_) => handleAuthFailed(),
+      onError: streamOnError('session_repository'),
+    );
     ever(_socket.connection, (state) {
       if (state == SocketState.sessionReplaced) handleSessionReplaced();
       if (state == SocketState.authFailed) handleAuthFailed();
@@ -125,8 +130,9 @@ class SessionRepository extends GetxService {
       [info.orgId, info.userId],
     );
     if (endOnServer && token != null) {
-      unawaited(
-        _api.post('/logout', bearer: token).then((_) {}, onError: (_) {}),
+      fireAndLog(
+        'session_repository',
+        () => _api.post('/logout', bearer: token),
       );
     }
     await _store.clear();
@@ -166,7 +172,9 @@ class SessionRepository extends GetxService {
     _isHandling = true;
     try {
       await _api.logout();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('session_repository', e, st);
+    }
     await _socket.stop();
     await _db.wipeScope(info.orgId, info.userId);
     await _store.deleteValue(
@@ -207,7 +215,11 @@ class SessionRepository extends GetxService {
           _api
               .post('/logout', bearer: token)
               .timeout(const Duration(seconds: 3))
-              .then((_) {}, onError: (_) {}),
+              .then(
+                (_) {},
+                onError: (Object e, StackTrace st) =>
+                    AppLog.w('session_repository', 'logout ${e.runtimeType}'),
+              ),
     ]);
     await _socket.stop();
     await _db.wipeAll();

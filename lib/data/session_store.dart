@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import 'models/identity_info.dart';
 import 'models/session_info.dart';
+import '../core/log/app_log.dart';
 
 class SessionStore {
   // Never restored onto another device from a backup.
@@ -30,18 +31,23 @@ class SessionStore {
 
   Future<void> load() async {
     await _loadIdentity();
-    final raw = await _storage.read(key: _currentKey);
-    if (raw == null) return;
-    final json = jsonDecode(raw) as Map<String, dynamic>;
-    final info = SessionInfo(
-      orgId: json['orgId'] as String,
-      userId: json['userId'] as String,
-      expiresTs: json['expiresTs'] as int?,
-    );
-    final token = await _storage.read(key: 'token.${info.orgId}');
-    if (token == null) return;
-    _token = token;
-    current.value = info;
+    try {
+      final raw = await _storage.read(key: _currentKey);
+      if (raw == null) return;
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final info = SessionInfo(
+        orgId: json['orgId'] as String,
+        userId: json['userId'] as String,
+        expiresTs: json['expiresTs'] as int?,
+      );
+      final token = await _storage.read(key: 'token.${info.orgId}');
+      if (token == null) return;
+      _token = token;
+      current.value = info;
+    } catch (e, st) {
+      // Unreadable stored session: start signed out, keep the stored data.
+      AppLog.e('session_store', e, st, 'load session');
+    }
   }
 
   Future<void> save(SessionInfo info, String token) async {
@@ -67,13 +73,17 @@ class SessionStore {
   }
 
   Future<void> _loadIdentity() async {
-    final token = await _storage.read(key: 'identity.token');
-    final raw = await _storage.read(key: 'identity.data');
-    if (token == null || raw == null) return;
-    identity.value = IdentityInfo.fromJson(
-      token,
-      jsonDecode(raw) as Map<String, dynamic>,
-    );
+    try {
+      final token = await _storage.read(key: 'identity.token');
+      final raw = await _storage.read(key: 'identity.data');
+      if (token == null || raw == null) return;
+      identity.value = IdentityInfo.fromJson(
+        token,
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    } catch (e, st) {
+      AppLog.e('session_store', e, st, 'load identity');
+    }
   }
 
   Future<void> saveIdentity(IdentityInfo info) async {
