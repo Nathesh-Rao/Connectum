@@ -6,6 +6,7 @@ import 'package:webcrypto/webcrypto.dart';
 
 import 'e2e_crypto.dart';
 import 'e2e_models.dart';
+import '../../core/log/app_log.dart';
 
 /// The numbers of the older-device hand-on, from the backend docs
 /// (`E2E_NEW_DEVICE_AND_HISTORY.md` 3.2). Budgets are kept below the server's
@@ -207,7 +208,8 @@ class HandOnCheckpoint {
         skipped: count(json['skipped']),
         already: count(json['already']),
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('hand_on', e, st);
       return null;
     }
   }
@@ -307,7 +309,8 @@ class HandOnScan {
         } else {
           unreadable++;
         }
-      } catch (_) {
+      } catch (e, st) {
+        AppLog.e('hand_on', e, st);
         unreadable++;
       }
     }
@@ -382,7 +385,8 @@ Future<HandOnPageResult> handOnRewrapPage(HandOnWork work) async {
           target: target,
         ),
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('hand_on', e, st);
       skipped++;
     }
   }

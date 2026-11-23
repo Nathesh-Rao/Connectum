@@ -8,7 +8,7 @@ Rules: CLAUDE.md "Error handling". To-do list: docs/error-handling-audit.md. Bas
 | 1 socket / decryption / network | done | see git log "errors: socket" | 11 unawaited->fireAndLog sites (+ all), 21 listen onError, ~14 empty/`_` catches logged, ~14 general catches after SocketCallError/ApiException, 8 other catches logged | analyze 14 = baseline; golden/scan test failures in tickets, smart_view are pre-existing UI WIP, not from this layer |
 | 2 database and storage | done | see git log "errors: storage" | app_database open+migrate (log, rethrow, no data touched), session_store load x2 (corrupt session -> signed out, data kept), 8 empty/`_` catches logged, 1 unawaited, 3 onError | DB open failure still propagates to callers: needs your decision |
 | 3 parsing and casts | done | see git log "errors: parsing" | OutboxEntry tolerant payload (+isUnreadable -> failed 'unreadable' in both outbox sends), submission _send general catch, 10 socket-event listeners wrapped (fireAndLog), push_payload catch, session_store (layer 2) | most jsonDecode sites were already guarded by FormatException |
-| 4 crypto | not done | | | |
+| 4 crypto | done | see git log "errors: crypto" | e2e_crypto 6 catches log op + exception type (same null/false/E2eException results), hand_on 3, device label, encryption_policy 3, e2e_repository 2 + 8 unawaited + event listener | AppLog.e prints only type + short op, never keys/plaintext |
 | 5 connect and sync | not done | | | |
 | 6 controllers init, notifications, nav, platform | not done | | | |
 | 7 final sweep | not done | | | |

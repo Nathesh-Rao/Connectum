@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import '../../core/log/app_log.dart';
 
 /// The label this phone registers under: `Connectum mobile (model)`. The
 /// model comes from a small platform channel (Android `Build.MODEL`, iOS
@@ -14,7 +15,9 @@ class E2eDeviceLabel {
     var model = '';
     try {
       model = (await _channel.invokeMethod<String>('model') ?? '').trim();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('e2e_device_label', e, st);
+    }
     if (model.isEmpty) model = Platform.isIOS ? 'iOS' : 'Android';
     return 'Connectum mobile ($model)';
   }

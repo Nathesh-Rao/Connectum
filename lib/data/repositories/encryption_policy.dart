@@ -5,6 +5,7 @@ import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
+import '../../core/log/app_log.dart';
 
 enum EncryptionVerdict { encrypted, plain, unknown }
 
@@ -269,7 +270,16 @@ class EncryptionPolicy {
           peer,
           me,
         ], maxAge: E2eRepository.sendListTtl);
-      } on SocketCallError catch (_) {
+      } on SocketCallError catch (e) {
+        AppLog.w('encryption_policy', 'socket ${e.code}');
+        if (!_socket.isOnline) return const E2eSendDecision.unknown();
+        return E2eSendDecision.blocked(
+          E2eSendDecision.cantSend,
+          reason: "couldn't check $peer's devices",
+          isTransient: true,
+        );
+      } catch (e, st) {
+        AppLog.e('encryption_policy', e, st);
         if (!_socket.isOnline) return const E2eSendDecision.unknown();
         return E2eSendDecision.blocked(
           E2eSendDecision.cantSend,
@@ -357,7 +367,11 @@ class EncryptionPolicy {
         _isModeFresh = true;
         await _store.writeValue(key, mode);
       }
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('encryption_policy', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('encryption_policy', e, st);
+    }
   }
 
   Future<void> _lookupPeer(String convId) async {
@@ -389,6 +403,10 @@ class EncryptionPolicy {
         );
       }
       _peers[convId] = (hasKeys: hasKeys, at: DateTime.now());
-    } on SocketCallError catch (_) {}
+    } on SocketCallError catch (e) {
+      AppLog.w('encryption_policy', 'socket ${e.code}');
+    } catch (e, st) {
+      AppLog.e('encryption_policy', e, st);
+    }
   }
 }

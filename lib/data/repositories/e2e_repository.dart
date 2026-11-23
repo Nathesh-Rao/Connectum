@@ -14,6 +14,8 @@ import '../e2e/e2e_texts.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
+import '../../core/log/app_log.dart';
+import '../../core/log/safe.dart';
 
 enum E2eRegisterResult {
   registered,
@@ -155,7 +157,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
-    _socket.events.listen(_onEvent);
+    _socket.events.listen(
+      (event) => fireAndLog('e2e_repository', () async => _onEvent(event)),
+      onError: streamOnError('e2e_repository'),
+    );
     _socket.listenOnline('e2e', ensureSetup);
     ever(_session.current, (_) => _reset());
     WidgetsBinding.instance.addObserver(this);
@@ -176,7 +181,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _isForeground = state == AppLifecycleState.resumed;
-    if (_isForeground && isLate.value) unawaited(_pollOnce());
+    if (_isForeground && isLate.value) fireAndLog('e2e_repository', () => _pollOnce());
   }
 
   void _reset() {
@@ -217,12 +222,12 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     invalidate([user]);
     if (user != _me) return;
     if (phase.value != E2eSetupPhase.ready) {
-      unawaited(ensureSetup());
+      fireAndLog('e2e_repository', () => ensureSetup());
       return;
     }
     // A burst of events (a device finishing, then a removal) is read once.
     _eventTimer?.cancel();
-    _eventTimer = Timer(_eventDebounce, () => unawaited(_pollOnce()));
+    _eventTimer = Timer(_eventDebounce, () => fireAndLog('e2e_repository', () => _pollOnce()));
   }
 
   /// This device's keys, read from the key store (never generated here).
@@ -278,7 +283,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
           data['recovery'] == true || all.any((d) => d.isRecovery);
       isStatusKnown.value = true;
       lastError.value = '';
-      unawaited(_saveStatus());
+      fireAndLog('e2e_repository', () => _saveStatus());
       await _applyLate(all);
       return true;
     } on SocketCallError catch (e) {
@@ -329,7 +334,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
             ),
         ],
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_repository', e, st);
       return null;
     }
   }
@@ -410,8 +416,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
 
   void _startPolling() {
     if (_pollTimer?.isActive ?? false) return;
-    unawaited(refreshPending());
-    _pollTimer = Timer.periodic(_pollEvery, (_) => unawaited(_pollOnce()));
+    fireAndLog('e2e_repository', () => refreshPending());
+    _pollTimer = Timer.periodic(_pollEvery, (_) => fireAndLog('e2e_repository', () => _pollOnce()));
   }
 
   /// One slow-poll step: the status (late may have ended) and the helpers. Only
@@ -478,7 +484,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
         _lookups[name] = done.future;
       }
       waits.add(done.future);
-      unawaited(_fetchDevices(missing, done));
+      fireAndLog('e2e_repository', () => _fetchDevices(missing, done));
     }
     for (final wait in waits) {
       await wait;
@@ -863,7 +869,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       if (e.code == 'rate_limited') {
         _retryAfter = DateTime.now().add(_backoff);
         _retryTimer?.cancel();
-        _retryTimer = Timer(_backoff, () => unawaited(ensureSetup()));
+        _retryTimer = Timer(_backoff, () => fireAndLog('e2e_repository', () => ensureSetup()));
         _backoff = _backoff * 2 > _backoffCap ? _backoffCap : _backoff * 2;
         phase.value = E2eSetupPhase.idle;
         return;
@@ -1125,7 +1131,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     } on SocketCallError catch (e) {
       if (isOffline) return const E2eReading.pending();
       return _logged(E2eReading.cannot('directory_${e.code}'));
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_repository', e, st);
       return _logged(const E2eReading.cannot('decrypt_failed'));
     }
   }

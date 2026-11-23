@@ -5,6 +5,7 @@ import 'package:webcrypto/webcrypto.dart';
 
 import 'e2e_models.dart';
 import 'e2e_random.dart';
+import '../../core/log/app_log.dart';
 
 /// The end-to-end primitives, byte for byte as `mobile-handoff/e2e.md`
 /// describes them: no networking, no storage.
@@ -44,7 +45,8 @@ class E2eCrypto {
       final json = jsonDecode(text!.substring(prefix.length));
       final mid = json is Map ? json['mid'] : null;
       return mid is String && mid.isNotEmpty ? mid : null;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_crypto', e, st, 'read message id');
       return null;
     }
   }
@@ -157,7 +159,8 @@ class E2eCrypto {
     final key = await _importSignPublic(signPub);
     try {
       return await key.verifyBytes(decode(signature), data, Hash.sha256);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_crypto', e, st, 'verify signature');
       return false;
     }
   }
@@ -344,7 +347,8 @@ class E2eCrypto {
     final Object? decoded;
     try {
       decoded = jsonDecode(text.substring(prefix.length));
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_crypto', e, st, 'parse envelope');
       throw const E2eException('bad_envelope', 'unreadable envelope');
     }
     const bad = E2eException(
@@ -468,7 +472,8 @@ class E2eCrypto {
       payloadText = t;
     } on E2eException {
       rethrow;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_crypto', e, st, 'decrypt message');
       throw const E2eException(
         'decrypt_failed',
         'the message could not be decrypted',
@@ -516,7 +521,8 @@ class E2eCrypto {
       return Uint8List.fromList(raw);
     } on E2eException {
       rethrow;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_crypto', e, st, 'open message key');
       throw const E2eException(
         'decrypt_failed',
         'the message key could not be opened',
@@ -600,7 +606,8 @@ class E2eCrypto {
         decode(iv),
         additionalData: _fileAad,
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('e2e_crypto', e, st, 'decrypt file');
       throw const E2eException(
         'file_decrypt_failed',
         'the attachment could not be decrypted (damaged or wrong key)',
