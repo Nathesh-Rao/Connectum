@@ -78,6 +78,19 @@
 - Crashlytics (`lib/core/crash/`, `mobile-handoff/crashlytics.md`): never put sensitive data (tokens, message text, record values, file names, URLs, phone numbers) in Crashlytics keys or logs; breadcrumbs only through the `Crumb` enum; non-fatals only via `CrashService.nonFatal` (sanitized).
 - Before release remove the `/debug/crashtest` route and `lib/features/debug_crashtest/`.
 
+## Error handling
+- Follow `docs/error-handling-pattern.md`. Catch at boundaries with a specific `on` type; every catch handles (state + notice), translates (`AppError.from`) or rethrows. No `catch (_) {}`.
+- Repositories translate and never touch UI; controllers hold `AppViewState` + retry and use `AppNotices` for messages; widgets never try/catch business logic.
+- Reset loading flags and locks in `finally`. Fire-and-forget uses `runGuarded`, never a bare `unawaited(x())`.
+- Outside data (server, SQLite, prefs, platform) is parsed tolerantly: no `!` or `as` on it; `tryParse`, `is` checks, `firstOrNull`.
+- Never put tokens, keys, message text or record values in logs; report only via `CrashService.nonFatal`.
+- Every call that can throw (network/socket, DB/storage, file/IO, platform channels, permissions, JSON parsing/casts, crypto, async init) is wrapped in try/catch at the nearest sensible place.
+- `catch (e, st)` -> ALWAYS log with `AppLog.e(tag, e, st)` (`lib/core/log/`); never an empty catch; then return a safe fallback or keep the current state; reset loading flags in `finally`; rethrow only if the caller must react. Helpers: `safeCall`, `safeSync`, `fireAndLog`.
+- Fire-and-forget uses `fireAndLog`, never bare `unawaited()` or `catchError((_) {})`.
+- Keep existing good handlers (the outbox `_onSendError` / `CallProblem` path) as they are.
+- No new user-facing messages unless the screen already has an error/notice mechanism.
+- Never log secrets or message plaintext.
+
 ## Dev environment
 - Against the BE dev machine: see `mobile-handoff/dev-environment.md` (run command, cleartext limited to debug/profile and the dev host, retry rules, guards). Debug and profile builds print one `debugPrint` line with the server environment and release from `GET /version` at startup (`_logEnvironment` in `initial_binding.dart`); no UI.
 - Integration tests start with `DevGuard.assertDevOnly(baseUrl)` and follow `test/README.md`.
