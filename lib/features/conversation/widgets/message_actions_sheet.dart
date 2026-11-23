@@ -119,7 +119,21 @@ class MessageActionsSheet extends StatelessWidget {
                 ),
         ),
         if (isFailedForm) ...[
-          if (c.isInvalidFailure(m))
+          if (c.isNotPostedFailure(m))
+            AppListRow(
+              title: 'Save without posting',
+              minHeight: AppSpacing.settingRowHeight,
+              leading: const Icon(
+                Icons.save_outlined,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                c.saveWithoutPosting(m);
+              },
+            )
+          else if (c.isInvalidFailure(m))
             AppListRow(
               title: 'Edit and resend',
               minHeight: AppSpacing.settingRowHeight,

@@ -445,9 +445,19 @@ class ConversationController extends GetxController
   };
 
   /// What a failed card says under its fields.
-  String formProblemOf(Message m) => isInvalidFailure(m)
+  String formProblemOf(Message m) => isNotPostedFailure(m)
+      ? "Couldn't post to this chat. Nothing was saved. Tap to save without posting"
+      : isInvalidFailure(m)
       ? 'Not sent. Some answers need fixing. Tap to edit and resend'
       : 'Not sent. ${m.failReason == SubmissionRepository.couldNotConfirm ? "Couldn't confirm delivery. " : ""}Tap to retry';
+
+  bool isNotPostedFailure(Message m) =>
+      m.failReason == SubmissionRepository.notPostedReason;
+
+  /// The chat refused the target before anything was saved: the same form is
+  /// saved with no `chat` and a new `cid`.
+  Future<void> saveWithoutPosting(Message m) =>
+      submissions.saveWithoutPosting(m.msgId);
 
   bool isInvalidFailure(Message m) =>
       m.failReason == SubmissionRepository.invalidReason;
@@ -464,7 +474,9 @@ class ConversationController extends GetxController
   /// Tapping a card opens it; a failed one is fixed or sent again instead.
   void tapForm(Message m, FormCardData d) {
     if (m.status != MessageStatus.failed) return openForm(m, d);
-    if (isInvalidFailure(m)) {
+    if (isNotPostedFailure(m)) {
+      unawaited(saveWithoutPosting(m));
+    } else if (isInvalidFailure(m)) {
       unawaited(editAndResend(m));
     } else {
       unawaited(retryForm(m));

@@ -145,6 +145,8 @@ class TicketsTexts {
   static const assignedMoved = 'A ticket is now with you.';
   static const saved = 'Saved';
   static const savedWaiting = 'Waiting for approval';
+  static const savedNotPosted =
+      "Saved, but it couldn't be posted to the chat";
   static String sentOn(List<String> names) => names.length == 1
       ? 'Sent to ${names.first}.'
       : 'Shared with ${names.join(', ')}.';

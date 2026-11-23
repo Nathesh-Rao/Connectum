@@ -30,6 +30,7 @@ class SavedRecord {
     required this.tstruct,
     this.isPending = false,
     this.isDuplicate = false,
+    this.isNotPosted = false,
   });
 
   final int id;
@@ -38,6 +39,10 @@ class SavedRecord {
 
   /// The answer to a repeated `cid`: nothing was saved twice.
   final bool isDuplicate;
+
+  /// A chat was given and the record was saved, but the server could not
+  /// post the card (`message: null`).
+  final bool isNotPosted;
 }
 
 class SubmissionRepository extends GetxService {
@@ -51,6 +56,8 @@ class SubmissionRepository extends GetxService {
 
   static const couldNotConfirm = "couldn't confirm delivery";
   static const invalidReason = 'Some answers need fixing.';
+  static const notPostedReason =
+      "Couldn't post to this chat. Nothing was saved.";
 
   /// The server remembers a client id for one day; an entry first sent longer
   /// ago than this can no longer be sent safely again.
@@ -597,6 +604,31 @@ class SubmissionRepository extends GetxService {
     );
   }
 
+  /// Sends a refused post-to-chat save again with no `chat` and a new `cid`
+  /// (the old one belongs to the refused attempt); the card leaves the chat.
+  Future<void> saveWithoutPosting(String refId) async {
+    final rows = await _db.query(
+      "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ? AND kind = 'form_submit' AND status = 'failed'",
+      [_org, _me, refId],
+    );
+    if (rows.isEmpty) return;
+    final entry = OutboxEntry.fromRow(rows.first);
+    final payload = {...entry.payload, 'chat': null};
+    await _db.transaction((sql) async {
+      await sql.update(
+        "UPDATE outbox SET payload_json = ?, conv_id = '', cid = ?, status = 'pending', retry_count = 0, "
+        'next_attempt_ts = 0, last_error = NULL, first_attempt_ts = NULL WHERE id = ?',
+        [jsonEncode(payload), newCid(), entry.id],
+      );
+      await sql.update(
+        'DELETE FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+        [_org, _me, refId],
+      );
+    });
+    await _messages.reloadAfterLocalChange();
+    unawaited(flush());
+  }
+
   Future<void> retry(String refId) async {
     await _db.transaction((sql) async {
       await sql.update(
@@ -718,6 +750,11 @@ class SubmissionRepository extends GetxService {
               tstruct: name,
               isPending: data['recordStatus'] == 'pending',
               isDuplicate: data['duplicate'] == true,
+              isNotPosted:
+                  idText(entry.payload['chat']).isNotEmpty &&
+                  data.containsKey('message') &&
+                  data['message'] == null &&
+                  data['recordStatus'] != 'pending',
             ),
           );
         }
@@ -770,6 +807,13 @@ class SubmissionRepository extends GetxService {
         ],
       );
       await _setMessageStatus(entry, 'pending');
+      return;
+    }
+    if (entry.kind == 'form_submit' &&
+        idText(entry.payload['chat']).isNotEmpty &&
+        (e.code == 'not_found' || e.code == 'invalid')) {
+      // A bad chat target is checked before saving: nothing was saved.
+      await _fail(entry, notPostedReason);
       return;
     }
     if (e.code == 'invalid_values') await _dropRefusedLists(entry, e.details);

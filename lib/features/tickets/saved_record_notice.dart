@@ -35,7 +35,11 @@ class SavedRecordNotice extends GetxService {
       AppNotices.info(TicketsTexts.savedWaiting);
       return;
     }
-    AppNotices.success(TicketsTexts.saved);
+    if (r.isNotPosted) {
+      AppNotices.warning(TicketsTexts.savedNotPosted);
+    } else {
+      AppNotices.success(TicketsTexts.saved);
+    }
     final state = await _tickets.afterSave(r.id);
     if (state == null) return;
     final holders = state.claimants.isNotEmpty
