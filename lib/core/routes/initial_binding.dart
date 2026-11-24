@@ -47,6 +47,7 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../data/repositories/inbox_repository.dart';
+import '../../data/repositories/inbox_views_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/sv_saved_views_repository.dart';
 import '../debug/seed_saved_views.dart';
@@ -200,6 +201,7 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.put(InboxRepository(socket, store, readGate), permanent: true);
+    Get.put(InboxViewsRepository(socket, store, readGate), permanent: true);
     commands.sourceSuggester = smartView.suggestions;
     Get.put(
       SvSavedViewsRepository(
@@ -242,7 +244,10 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     final tasks = Get.put(TaskRepository(socket, store), permanent: true);
-    Get.put(ApprovalRepository(socket, store, feed), permanent: true);
+    Get.put(
+      ApprovalRepository(socket, store, feed, gate: readGate),
+      permanent: true,
+    );
     final notificationRouter = Get.put(
       NotificationRouter(store, feed, tasks, tickets),
       permanent: true,

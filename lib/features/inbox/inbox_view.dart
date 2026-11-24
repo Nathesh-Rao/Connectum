@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -6,6 +7,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
+import '../../core/widgets/app_badged_icon_button.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_filter_chips.dart';
 import '../../core/widgets/app_spinner.dart';
@@ -16,11 +18,15 @@ import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'inbox_controller.dart';
+import 'approval_texts.dart';
+import 'widgets/approvals_pane.dart';
+import 'widgets/inbox_filter_sheet.dart';
+import 'widgets/inbox_view_dialogs.dart';
+import 'widgets/inbox_views_sheet.dart';
 import 'widgets/inbox_card.dart';
 
 /// The Inbox tab: the person's records (Me) or the team's (My Team) as cards,
-/// newest first. Room is kept in the header for the Filter, Views and
-/// Approvals buttons of the next phases.
+/// newest first. The Approvals button swaps the list for the Approvals pane.
 class InboxView extends GetView<InboxController> {
   const InboxView({super.key});
 
@@ -33,6 +39,36 @@ class InboxView extends GetView<InboxController> {
       AppStateImageKind.noResults,
       AppStateImageKind.offline,
     ]);
+    return InboxPromptHost(
+      controller: c,
+      child: Obx(
+        () => PopScope(
+          canPop: !c.isBackBlocked,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _leave(context, c);
+          },
+          child: _screen(context, c),
+        ),
+      ),
+    );
+  }
+
+  /// Back or the back gesture with a change that is not saved: ask first,
+  /// then leave.
+  Future<void> _leave(BuildContext context, InboxController c) async {
+    if (!await c.confirmLeave()) return;
+    c.isLeaving.value = true;
+    if (!context.mounted) return;
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      await SystemNavigator.pop();
+    }
+    c.isLeaving.value = false;
+  }
+
+  Widget _screen(BuildContext context, InboxController c) {
     return AppScaffold(
       hasOuterBottomBar: true,
       isScrollable: false,
@@ -59,6 +95,36 @@ class InboxView extends GetView<InboxController> {
                         )
                       : const SizedBox.shrink(),
                 ),
+                Obx(
+                  () => AppBadgedIconButton(
+                    icon: Icons.filter_list,
+                    semanticLabel: c.filterCount > 0
+                        ? 'Filter and sort, ${c.filterCount} set'
+                        : 'Filter and sort',
+                    count: c.filterCount,
+                    onPressed: () => InboxFilterSheet.show(context, c),
+                  ),
+                ),
+                Obx(
+                  () => AppBadgedIconButton(
+                    icon: Icons.bookmark_border,
+                    semanticLabel: c.isViewChanged ? 'Views, changed' : 'Views',
+                    hasDot: c.isViewChanged,
+                    onPressed: () => InboxViewsSheet.show(context, c),
+                  ),
+                ),
+                Obx(
+                  () => AppBadgedIconButton(
+                    icon: c.isApprovalsOpen.value
+                        ? Icons.fact_check
+                        : Icons.fact_check_outlined,
+                    semanticLabel: c.approvals.count > 0
+                        ? '${ApprovalTexts.buttonLabel}, ${c.approvals.count} waiting for you'
+                        : ApprovalTexts.buttonLabel,
+                    count: c.approvals.count,
+                    onPressed: c.toggleApprovals,
+                  ),
+                ),
                 AppButton.icon(
                   icon: Icons.refresh,
                   semanticLabel: 'Refresh',
@@ -69,9 +135,23 @@ class InboxView extends GetView<InboxController> {
           ),
           const AppOfflineBar(),
           _Search(controller: c),
-          _Scope(controller: c),
-          _Summary(controller: c),
-          Expanded(child: _Body(controller: c)),
+          Obx(
+            () => c.isApprovalsOpen.value
+                ? const SizedBox.shrink()
+                : Column(
+                    children: [
+                      _Scope(controller: c),
+                      _Summary(controller: c),
+                    ],
+                  ),
+          ),
+          Expanded(
+            child: Obx(
+              () => c.isApprovalsOpen.value
+                  ? ApprovalsPane(controller: c.approvals)
+                  : _Body(controller: c),
+            ),
+          ),
         ],
       ),
     );
@@ -147,8 +227,10 @@ class _Scope extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
         child: AppFilterChips(
-          chips: [for (final s in InboxScope.values) AppFilterChip(label: s.label)],
-          selected: c.scope.value.index,
+          chips: [
+            for (final s in InboxScope.values) AppFilterChip(label: s.label),
+          ],
+          selected: c.filter.value.wheres.isNotEmpty ? -1 : c.scope.value.index,
           onSelected: (i) => c.selectScope(InboxScope.values[i]),
         ),
       );
@@ -210,7 +292,7 @@ class _Body extends StatelessWidget {
           state: state,
           emptyTitle: state == AppViewState.noResults
               ? InboxController.noMatchTitle
-              : InboxController.emptyTitle,
+              : c.emptyText,
           errorMessage: InboxController.errorText,
           onRetry: c.retry,
           child: _List(controller: c),
@@ -233,7 +315,7 @@ class _List extends StatelessWidget {
       onRefresh: c.refreshList,
       slivers: [
         Obx(() {
-          final rows = c.rows;
+          final items = c.listItems;
           final isMore = c.isLoadingMore.value;
           return SliverPadding(
             padding: const EdgeInsets.fromLTRB(
@@ -243,15 +325,30 @@ class _List extends StatelessWidget {
               AppSpacing.lg,
             ),
             sliver: SliverList.builder(
-              itemCount: rows.length + (isMore ? 1 : 0),
+              itemCount: items.length + (isMore ? 1 : 0),
               itemBuilder: (context, i) {
-                if (i >= rows.length) {
+                if (i >= items.length) {
                   return const Padding(
                     padding: EdgeInsets.all(AppSpacing.md),
                     child: Center(child: AppSpinner()),
                   );
                 }
-                final row = rows[i];
+                final heading = items[i].heading;
+                if (heading != null) {
+                  return Semantics(
+                    header: true,
+                    child: Padding(
+                      key: ValueKey('day-$heading'),
+                      padding: const EdgeInsets.only(
+                        top: AppSpacing.xs,
+                        bottom: AppSpacing.xs,
+                      ),
+                      child: Text(heading, style: AppText.fieldLabel),
+                    ),
+                  );
+                }
+                final row = items[i].row;
+                if (row == null) return const SizedBox.shrink();
                 return Padding(
                   key: ValueKey(row.id),
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),

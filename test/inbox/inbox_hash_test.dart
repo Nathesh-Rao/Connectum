@@ -58,6 +58,9 @@ class _Router extends Fake implements NotificationRouter {
   void Function(HomeTab tab)? selectTab;
 
   @override
+  void Function()? openApprovals;
+
+  @override
   void markHomeGone() {}
 
   @override
@@ -125,6 +128,7 @@ void main() {
   late SmartViewController smart;
   late HomeShellController shell;
   late CommandRunner runner;
+  late _Router router;
 
   Future<void> boot(WidgetTester tester) async {
     Get.reset();
@@ -150,7 +154,7 @@ void main() {
       security: _Security(),
       links: _Links(),
       notifications: _Notifications(),
-      notificationRouter: _Router(),
+      notificationRouter: router = _Router(),
       smartView: smart,
     )..onInit();
     final commands = _Commands();
@@ -184,6 +188,39 @@ void main() {
     await pumpFor(tester);
     expect(shell.tab.value, HomeTab.inbox);
     expect(shell.isBuilt[HomeTab.inbox.index], isTrue);
+  });
+
+  testWidgets(
+    'openInbox(approvals: true) shows the Inbox and asks for the pane',
+    (tester) async {
+      await boot(tester);
+      expect(shell.approvalsRequest.value, isFalse);
+      shell.openInbox(approvals: true);
+      await pumpFor(tester);
+      expect(shell.tab.value, HomeTab.inbox);
+      expect(shell.approvalsRequest.value, isTrue);
+    },
+  );
+
+  testWidgets('plain openInbox (#inbox) does not ask for the pane', (
+    tester,
+  ) async {
+    await boot(tester);
+    shell.openInbox();
+    await pumpFor(tester);
+    expect(shell.tab.value, HomeTab.inbox);
+    expect(shell.approvalsRequest.value, isFalse);
+  });
+
+  testWidgets('a notification tap (the router hook) opens the Inbox pane', (
+    tester,
+  ) async {
+    await boot(tester);
+    expect(router.openApprovals, isNotNull);
+    router.openApprovals!();
+    await pumpFor(tester);
+    expect(shell.tab.value, HomeTab.inbox);
+    expect(shell.approvalsRequest.value, isTrue);
   });
 
   testWidgets('#view still selects Smart view; each tab keeps its state', (

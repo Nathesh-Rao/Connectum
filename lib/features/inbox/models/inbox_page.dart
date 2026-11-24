@@ -141,6 +141,47 @@ class InboxPeople {
   );
 }
 
+/// What the filter panel's lists offer, from a `records.query` asked with
+/// `facets:true` (`loadFacets`): how many records each form has under the
+/// other lines, and who is on those records for each people line.
+class InboxFacets {
+  const InboxFacets({this.forms = const {}, this.people = const {}});
+
+  /// Form -> records (only forms with at least one).
+  final Map<String, int> forms;
+
+  /// `createdBy`, `sentBy`, `sentTo`, `taggedTo` -> user names (the caller is
+  /// `me`).
+  final Map<String, List<String>> people;
+
+  List<String> peopleOf(String key) => people[key] ?? const [];
+
+  static InboxFacets parse(Map<String, dynamic> data) {
+    final raw = data['formCounts'];
+    final who = data['people'];
+    List<String> names(String key) => [
+      if (who is Map && who[key] is List)
+        for (final u in who[key] as List)
+          if (u is String && u.isNotEmpty) u,
+    ];
+    return InboxFacets(
+      forms: {
+        if (raw is Map)
+          for (final e in raw.entries)
+            if (e.key is String &&
+                (e.key as String).isNotEmpty &&
+                e.value is num &&
+                (e.value as num) > 0)
+              e.key as String: (e.value as num).toInt(),
+      },
+      people: {
+        for (final k in const ['createdBy', 'sentBy', 'sentTo', 'taggedTo'])
+          k: names(k),
+      },
+    );
+  }
+}
+
 /// One person of `people.cards`.
 class PersonCard {
   const PersonCard({

@@ -28,6 +28,8 @@ class InboxQuery {
     this.to = '',
     this.status = '',
     this.views = const [],
+    this.groups = const [],
+    this.isFacets = false,
   });
 
   /// `me` and/or `team`; empty is both (the server's default).
@@ -48,6 +50,13 @@ class InboxQuery {
   /// Each entry is one view object (`scope`, `createdBy`, `status`,
   /// `escalated`); a record is listed when any view holds it.
   final List<Map<String, dynamic>> views;
+
+  /// The Advanced blocks as the server reads them (`groups`, at most 10).
+  final List<Map<String, dynamic>> groups;
+
+  /// Also ask what the panel's lists offer (`facets:true`): `formCounts` and
+  /// `people`. Sent with limit 1, offset 0.
+  final bool isFacets;
 
   /// The whole request. [limit] 1-200, [offset] 0-1,000,000. Throws
   /// [InboxQueryError] when something breaks a server limit.
@@ -82,6 +91,11 @@ class InboxQuery {
     if (status.isNotEmpty && status != 'open' && status != 'closed') {
       throw InboxQueryError('status must be open or closed');
     }
+    if (groups.length > RecordLimits.queryMaxGroups) {
+      throw InboxQueryError(
+        'at most ${RecordLimits.queryMaxGroups} groups, got ${groups.length}',
+      );
+    }
     final lists = {
       'forms': forms,
       'createdBy': createdBy,
@@ -102,6 +116,8 @@ class InboxQuery {
       // One view with nothing in it is every record: no `views` at all.
       if (views.isNotEmpty && !(views.length == 1 && views.first.isEmpty))
         'views': views,
+      if (groups.isNotEmpty) 'groups': groups,
+      if (isFacets) 'facets': true,
       'limit': limit,
       'offset': offset,
     };

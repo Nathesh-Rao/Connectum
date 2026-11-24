@@ -86,7 +86,13 @@ void main() {
       chip: 'Open',
     ),
     'waiting': (
-      row: rowOf(record(3, status: 'pending', values: values(stage: ''))),
+      row: rowOf(
+        record(
+          3,
+          status: 'pending',
+          values: values(stage: ''),
+        ),
+      ),
       tone: AppTones.violet,
       chip: 'Waiting for approval',
     ),
@@ -154,10 +160,7 @@ void main() {
         matching: find.byType(Container),
       ),
     );
-    expect(
-      (dot.decoration as BoxDecoration).color,
-      AppTones.red.solid,
-    );
+    expect((dot.decoration as BoxDecoration).color, AppTones.red.solid);
   });
 
   testWidgets('no dot without a priority', (tester) async {

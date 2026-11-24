@@ -88,7 +88,11 @@ class InboxCard extends StatelessWidget {
 }
 
 class _Band extends StatelessWidget {
-  const _Band({required this.controller, required this.row, required this.tone});
+  const _Band({
+    required this.controller,
+    required this.row,
+    required this.tone,
+  });
 
   final InboxController controller;
   final InboxRow row;
@@ -365,7 +369,11 @@ class InboxMenu {
             if (item.id == CardMenuItem.history) {
               c.open(row);
             } else if (item.isRecordAction) {
-              TicketActionSheet.show(root, c.detailOf(row), item.recordActionId);
+              TicketActionSheet.show(
+                root,
+                c.detailOf(row),
+                item.recordActionId,
+              );
             }
           },
         ),

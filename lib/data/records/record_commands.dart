@@ -23,6 +23,12 @@ class RecordCmd {
   static const queryPeople = 'records.people';
   static const peopleCards = 'people.cards';
 
+  /// The Inbox's saved views (`sd_inboxview.erl`).
+  static const viewsGet = 'inbox.views.get';
+  static const viewsSave = 'inbox.views.save';
+  static const viewsDelete = 'inbox.views.delete';
+  static const viewsDefault = 'inbox.views.default';
+
   static const submit = 'tstruct.submit';
   static const userSubmit = 'tstruct.user.submit';
   static const openStructure = 'tstruct.user.open';
@@ -91,10 +97,11 @@ class RecordLimits {
   /// `records.query` (`sd_recquery.erl`): limit 1-200, people names at most 50
   /// of at most 200 characters, at most 8 views. The page the Inbox asks.
   static const queryMaxLimit = 200;
-  static const queryPageSize = 50;
+  static const queryPageSize = 100;
   static const queryMaxNames = 50;
   static const queryMaxNameChars = 200;
   static const queryMaxViews = 8;
+  static const queryMaxGroups = 10;
   static const queryMaxOffset = 1000000;
 
   /// `people.cards`: at most this many user names in one call.

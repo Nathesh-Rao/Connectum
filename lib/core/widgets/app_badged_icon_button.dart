@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'app_button.dart';
 import 'app_unread_badge.dart';
@@ -14,6 +15,7 @@ class AppBadgedIconButton extends StatelessWidget {
     required this.semanticLabel,
     required this.onPressed,
     this.count = 0,
+    this.hasDot = false,
   });
 
   final IconData icon;
@@ -22,6 +24,9 @@ class AppBadgedIconButton extends StatelessWidget {
 
   /// Nothing is shown at zero; 99+ is the cap.
   final int count;
+
+  /// A small dot in the corner instead of a number.
+  final bool hasDot;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +45,22 @@ class AppBadgedIconButton extends StatelessWidget {
               semanticLabel: semanticLabel,
               onPressed: onPressed,
             ),
+            if (hasDot && count <= 0)
+              Positioned(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+                child: IgnorePointer(
+                  child: Container(
+                    key: const ValueKey('badge-dot'),
+                    width: AppSpacing.xs,
+                    height: AppSpacing.xs,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
             if (count > 0)
               Positioned(
                 top: AppSpacing.xxs,

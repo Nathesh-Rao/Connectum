@@ -36,23 +36,28 @@ void main() {
       expect(c.totalLabel, '3 records');
     });
 
-    test('opens with records.query, records.counts, people.cards only', () async {
-      final r = InboxRig();
-      r.routes['records.query'] = (_) => queryReply([record(1)]);
-      start(r);
-      await settle();
-      expect(r.asked.toSet(), {
-        'records.query',
-        'records.counts',
-        'people.cards',
-      });
-      expect(r.argsOf('records.query').single, {
-        'scope': ['me'],
-        'limit': 50,
-        'offset': 0,
-      });
-      expect(r.argsOf('people.cards').single['usernames'], ['ana']);
-    });
+    test(
+      'opens with records.query, records.counts, people.cards, the views and the approvals read only',
+      () async {
+        final r = InboxRig();
+        r.routes['records.query'] = (_) => queryReply([record(1)]);
+        start(r);
+        await settle();
+        expect(r.asked.toSet(), {
+          'records.query',
+          'records.counts',
+          'people.cards',
+          'req.list',
+          'inbox.views.get',
+        });
+        expect(r.argsOf('records.query').single, {
+          'scope': ['me'],
+          'limit': 100,
+          'offset': 0,
+        });
+        expect(r.argsOf('people.cards').single['usernames'], ['ana']);
+      },
+    );
 
     test('empty', () async {
       final r = InboxRig();
@@ -94,8 +99,10 @@ void main() {
       expect(c.hasError.value, isTrue);
       expect(c.viewState.value, AppViewState.content);
       expect(rig.ids, [2, 1]);
-      expect(InboxController.errorText,
-          'The records could not be read. Use Refresh to try again.');
+      expect(
+        InboxController.errorText,
+        'The records could not be read. Use Refresh to try again.',
+      );
     });
 
     test('offline with nothing read shows the offline state', () async {
@@ -181,25 +188,28 @@ void main() {
       expect(rig.ids, [1]);
     });
 
-    test('with reports the switch asks scope team and replaces the list', () async {
-      final r = InboxRig();
-      r.routes['records.counts'] = (_) => countsReply(reports: 2);
-      r.routes['records.query'] = (a) => (a['scope'] as List).first == 'team'
-          ? queryReply([record(9, holder: 'ben')])
-          : queryReply([record(1)]);
-      final c = start(r);
-      await settle();
-      expect(c.isTeamShown, isTrue);
-      c.selectScope(InboxScope.team);
-      expect(c.page.value, isNull);
-      await settle();
-      expect(r.argsOf('records.query').last['scope'], ['team']);
-      expect(rig.ids, [9]);
-      c.selectScope(InboxScope.me);
-      await settle();
-      expect(r.argsOf('records.query').last['scope'], ['me']);
-      expect(rig.ids, [1]);
-    });
+    test(
+      'with reports the switch asks scope team and replaces the list',
+      () async {
+        final r = InboxRig();
+        r.routes['records.counts'] = (_) => countsReply(reports: 2);
+        r.routes['records.query'] = (a) => (a['scope'] as List).first == 'team'
+            ? queryReply([record(9, holder: 'ben')])
+            : queryReply([record(1)]);
+        final c = start(r);
+        await settle();
+        expect(c.isTeamShown, isTrue);
+        c.selectScope(InboxScope.team);
+        expect(c.page.value, isNull);
+        await settle();
+        expect(r.argsOf('records.query').last['scope'], ['team']);
+        expect(rig.ids, [9]);
+        c.selectScope(InboxScope.me);
+        await settle();
+        expect(r.argsOf('records.query').last['scope'], ['me']);
+        expect(rig.ids, [1]);
+      },
+    );
 
     test('an answer for a scope that was left is dropped', () async {
       final r = InboxRig();
@@ -245,7 +255,7 @@ void main() {
       await settle();
       expect(r.argsOf('records.query').last, {
         'scope': ['me'],
-        'limit': 50,
+        'limit': 100,
         'offset': 3,
       });
       expect(rig.ids, [5, 4, 3, 2, 1]);
@@ -292,7 +302,11 @@ void main() {
       await settle();
       await c.refreshList();
       await settle();
-      expect(r.argsOf('records.query').last['limit'], 100);
+      expect(
+        r.argsOf('records.query').last['limit'],
+        120,
+        reason: 'a page of 100 and 20 more',
+      );
     });
   });
 

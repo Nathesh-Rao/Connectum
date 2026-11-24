@@ -11,7 +11,7 @@ void main() {
   });
 
   test('an empty ask sends only the page', () {
-    expect(const InboxQuery().toArgs(), {'limit': 50, 'offset': 0});
+    expect(const InboxQuery().toArgs(), {'limit': 100, 'offset': 0});
   });
 
   test('every shared field is sent, only when set', () {

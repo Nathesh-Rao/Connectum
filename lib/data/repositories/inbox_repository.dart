@@ -46,6 +46,9 @@ class InboxRepository extends GetxService {
   final counts = InboxRead<InboxCounts>();
   final people = InboxRead<InboxPeople>();
 
+  /// The filter panel's lists (`records.query` with `facets:true`).
+  final facets = InboxRead<InboxFacets>();
+
   final _cards = <String, PersonCard>{};
   final _asked = <String>{};
 
@@ -64,6 +67,7 @@ class InboxRepository extends GetxService {
     list._reset();
     counts._reset();
     people._reset();
+    facets._reset();
     _cards.clear();
     _asked.clear();
     cardRevision.value++;
@@ -91,6 +95,11 @@ class InboxRepository extends GetxService {
           : page,
     );
   }
+
+  /// What the filter panel's lists offer under [q] (`facets:true`, limit 1,
+  /// offset 0); null when a newer ask replaced it.
+  Future<InboxFacets?> queryFacets(InboxQuery q) async =>
+      _read(facets, RecordCmd.query, q.toArgs(limit: 1), InboxFacets.parse);
 
   /// `records.counts`; null when dropped. An answer without me, team and all
   /// as numbers is a failed read (the screen then counts what it holds).
