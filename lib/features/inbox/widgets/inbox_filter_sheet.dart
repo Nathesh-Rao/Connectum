@@ -385,6 +385,51 @@ class _Advanced extends StatelessWidget {
                 ? _Blocks(panel: panel)
                 : const SizedBox.shrink(),
           ),
+          Obx(
+            () => panel.isAdvanced.value && panel.isApprovalOffered
+                ? _ApprovalTicks(panel: panel)
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Advanced > Approval: the answers of the approval flow of a form named in
+/// a block, shown only when one is named that has such a flow.
+class _ApprovalTicks extends StatelessWidget {
+  const _ApprovalTicks({required this.panel});
+
+  final InboxFilterController panel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            InboxFilterController.approvalLabel,
+            style: AppText.fieldLabel,
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Obx(() {
+            final picked = panel.draft.value.approvalPick;
+            return Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                for (final id in InboxApprovalAnswer.all)
+                  _Chip(
+                    label: InboxApprovalAnswer.labels[id] ?? id,
+                    isSelected: picked.contains(id),
+                    onTap: () => panel.toggleApprovalPick(id),
+                  ),
+              ],
+            );
+          }),
         ],
       ),
     );

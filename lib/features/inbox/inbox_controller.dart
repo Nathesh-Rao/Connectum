@@ -6,6 +6,7 @@ import '../../core/log/safe.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
+import '../../data/models/approval.dart';
 import '../../data/models/record_live.dart';
 import '../../data/records/record_commands.dart';
 import '../../data/repositories/inbox_field_kinds.dart';
@@ -20,6 +21,7 @@ import '../tickets/ticket_detail_controller.dart';
 import 'inbox_approvals_controller.dart';
 import 'inbox_filter_controller.dart';
 import 'inbox_views_controller.dart';
+import 'models/inbox_approval_rows.dart';
 import 'models/inbox_filter.dart';
 import 'models/inbox_page.dart';
 import 'models/inbox_query.dart';
@@ -64,6 +66,10 @@ class InboxController extends GetxController {
   static const noFilterMatchTitle = 'No records match the filter.';
   static const errorText =
       'The records could not be read. Use Refresh to try again.';
+  static const approvalsHeading = 'Approvals';
+  static const approvalsLoadingText = 'Reading approvals...';
+  static const approvalsErrorText =
+      'The approvals could not be read. Use Refresh to try again.';
   static const pageSize = RecordLimits.queryPageSize;
   static const _moreAt = 600.0;
   static const _staleAfter = Duration(seconds: 30);
@@ -139,6 +145,9 @@ class InboxController extends GetxController {
         _update();
       }),
       ever(shell.approvalsRequest, (_) => _takeApprovalsRequest()),
+      ever(approvals.approvals.all, (_) => _update()),
+      ever(approvals.approvals.hasRead, (_) => _update()),
+      ever(approvals.approvals.hasError, (_) => _update()),
       ever(shell.tab, (t) {
         if (t == HomeTab.inbox) _enter();
       }),
@@ -165,17 +174,58 @@ class InboxController extends GetxController {
   /// "My Team" is offered only to a person who has reports.
   bool get isTeamShown => (counts.value?.reports ?? 0) > 0;
 
-  /// What the header says about the list: "12 records", "1000+ records".
+  /// What the header says about the list: "12 records", "1000+ records",
+  /// and with approvals under them "12 records, 3 approvals".
   String get totalLabel {
     final p = page.value;
     if (p == null) return '';
+    final records = isRecordsOff ? '' : _recordsLabel(p);
+    final n = _approvalCount;
+    final approvalsText = n > 0
+        ? '$n ${n == 1 ? 'approval' : 'approvals'}'
+        : '';
+    return [records, approvalsText].where((t) => t.isNotEmpty).join(', ');
+  }
+
+  String _recordsLabel(InboxPage p) {
     final n = p.isCapped ? '${counts.value?.cap ?? 1000}+' : '${p.total}';
     return '$n ${p.total == 1 && !p.isCapped ? 'record' : 'records'}';
   }
 
+  int get _approvalCount => _plan.wantsApprovals ? approvalCards.length : 0;
+
   /// The loaded records that match the search.
   List<InboxRow> get rows =>
       sortInboxRows(_matching(page.value?.rows ?? const []), filter.value.sort);
+
+  InboxApprovalRows get _plan => InboxApprovalRows(filter.value);
+
+  /// Does "Search in" name only approvals (no record is asked for, the web's
+  /// `recordsOff`)?
+  bool get isRecordsOff =>
+      filter.value.wheres.isNotEmpty && filter.value.serverViews(_team).isEmpty;
+
+  /// Is one approval entry the choice (a list of approvals alone)?
+  bool get isApprovalList => _plan.isStageList;
+
+  /// The approvals drawn under the records (or alone), as the filter says.
+  List<Approval> get approvalCards => approvals.cardsFor(filter.value);
+
+  /// Does the list have an approvals part?
+  bool get hasApprovalsPart => _plan.wantsApprovals;
+
+  /// Is the approvals part still being read for the first time?
+  bool get isApprovalsLoading =>
+      hasApprovalsPart && !approvals.isRead && !approvals.hasFailedRead;
+
+  /// Did the first read of the approvals fail (the part says so, with Retry)?
+  bool get isApprovalsFailed => hasApprovalsPart && approvals.hasFailedRead;
+
+  /// A later read failed: the rows stay and the header says so.
+  bool get isApprovalsStale =>
+      hasApprovalsPart && approvals.isRead && approvals.hasError;
+
+  bool isApprovalLeaving(Approval a) => approvals.isLeavingFor(filter.value, a);
 
   /// Is Timeline the "Search in" choice (a heading for each day)?
   bool get isTimeline => filter.value.wheres.contains(InboxWhere.timeline);
@@ -197,8 +247,25 @@ class InboxController extends GetxController {
   int get filterCount => filter.value.filterCount();
 
   /// The empty text: "No records match the filter." with a filter set.
-  String get emptyText =>
-      filter.value.isServerFilter ? noFilterMatchTitle : emptyTitle;
+  String get emptyText {
+    final f = filter.value;
+    if (_plan.isStageList) return _stageEmptyText;
+    return f.isServerFilter || f.approvalPick.isNotEmpty
+        ? noFilterMatchTitle
+        : emptyTitle;
+  }
+
+  /// `No pending approvals for those forms.` (the web's words).
+  String get _stageEmptyText {
+    final kind = switch (_plan.stage) {
+      'pending' => 'pending ',
+      'approved' => 'approved ',
+      'rejected' => 'rejected ',
+      _ => '',
+    };
+    final forms = _plan.dataForms.isNotEmpty ? ' for those forms' : '';
+    return 'No ${kind}approvals$forms.';
+  }
 
   bool get hasMore => page.value?.hasMore ?? false;
 
@@ -272,6 +339,11 @@ class InboxController extends GetxController {
       await _ensureTeam();
       if (mine != _ask) return;
     }
+    final isOff = isRecordsOff;
+    if (isOff && page.value == null) {
+      page.value = InboxPage.empty;
+      _update();
+    }
     final had = page.value;
     if (had == null && !isSilent) viewState.value = AppViewState.loading;
     isRefreshing.value = true;
@@ -280,7 +352,9 @@ class InboxController extends GetxController {
     final limit = shown.clamp(pageSize, RecordLimits.queryMaxLimit);
     try {
       final results = await Future.wait([
-        inbox.query(_queryFor(scope.value), limit: limit),
+        isOff
+            ? Future<InboxPage?>.value(InboxPage.empty)
+            : inbox.query(_queryFor(scope.value), limit: limit),
         inbox.loadCounts().then<InboxCounts?>(
           (c) => c,
           onError: (Object e) {
@@ -389,6 +463,7 @@ class InboxController extends GetxController {
   /// read: the bar says so and the list stays.
   Future<void> refreshList() async {
     if (isApprovalsOpen.value) return approvals.reload();
+    if (hasApprovalsPart) fireAndLog('inbox_controller', approvals.reload);
     if (!isOnline) {
       if (page.value == null) viewState.value = AppViewState.offline;
       return;
@@ -396,7 +471,8 @@ class InboxController extends GetxController {
     await load(isSilent: true);
   }
 
-  Future<void> retry() => isApprovalsOpen.value ? approvals.reload() : load();
+  Future<void> retry() =>
+      isApprovalsOpen.value || isRecordsOff ? approvals.reload() : load();
 
   void _learnPeople(List<InboxRow> rows) {
     fireAndLog(
@@ -621,9 +697,12 @@ class InboxController extends GetxController {
       isTeamShown: isTeamShown,
       fieldKinds: fieldKinds,
       forms: {
+        for (final a in approvals.approvals.all)
+          if (a.formId.isNotEmpty && a.caption.isNotEmpty) a.formId: a.caption,
         for (final e in (page?.forms ?? const <String, InboxForm>{}).entries)
           e.key: e.value.caption,
       },
+      approvals: approvals,
       onApply: applyFilter,
       onClear: clearFilter,
     )..onInit();
@@ -684,19 +763,35 @@ class InboxController extends GetxController {
   String _nameOf(InboxRow r) => inbox.cardOf(r.who)?.name ?? '';
 
   void _update() {
-    if (page.value == null) {
+    final p = page.value;
+    if (p == null) {
       if (viewState.value != AppViewState.error &&
           viewState.value != AppViewState.offline) {
         viewState.value = AppViewState.loading;
       }
       return;
     }
-    final all = page.value!.rows;
-    viewState.value = all.isEmpty
+    if (isRecordsOff && !approvals.isRead) {
+      // No record is asked for: the approvals are the whole screen.
+      viewState.value = approvals.viewState;
+      return;
+    }
+    final all = p.rows;
+    if (rows.isNotEmpty) {
+      viewState.value = AppViewState.content;
+      return;
+    }
+    // Nothing of the records matched: the approvals part (its rows, or its
+    // own loading and error line) still has the list.
+    if (hasApprovalsPart &&
+        (approvalCards.isNotEmpty || isApprovalsLoading || isApprovalsFailed)) {
+      viewState.value = AppViewState.content;
+      return;
+    }
+    final isSearchingApprovals = hasApprovalsPart && query.value.isNotEmpty;
+    viewState.value = all.isEmpty && !isSearchingApprovals
         ? AppViewState.empty
-        : rows.isEmpty
-        ? AppViewState.noResults
-        : AppViewState.content;
+        : AppViewState.noResults;
   }
 
   // ---- paging -------------------------------------------------------------------

@@ -27,6 +27,7 @@ class Approval {
     this.resolvedBy,
     this.resolvedByName = '',
     this.resolvedByDesignation,
+    this.formId = '',
     this.caption = '',
     this.message = '',
     this.reason = '',
@@ -64,6 +65,10 @@ class Approval {
   final String? resolvedBy;
   final String resolvedByName;
   final String? resolvedByDesignation;
+
+  /// The form a submission request is for (`tstruct`, top level or in
+  /// `data`); '' for the other kinds.
+  final String formId;
 
   // What the request's `data` carries.
   final String caption;
@@ -106,6 +111,7 @@ class Approval {
     resolvedBy: resolvedBy ?? this.resolvedBy,
     resolvedByName: resolvedByName ?? this.resolvedByName,
     resolvedByDesignation: resolvedByDesignation ?? this.resolvedByDesignation,
+    formId: formId,
     caption: caption,
     message: message,
     reason: reason ?? this.reason,
@@ -158,6 +164,9 @@ class Approval {
       resolvedByDesignation: json['resolvedByDesignation'] == null
           ? null
           : _text(json['resolvedByDesignation']),
+      formId: _text(json['tstruct']).isNotEmpty
+          ? _text(json['tstruct'])
+          : _text(data['tstruct']),
       caption: _text(data['caption']),
       message: _text(data['message']),
       reason: _text(data['reason']),

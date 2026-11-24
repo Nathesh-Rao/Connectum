@@ -468,11 +468,32 @@ void main() {
         await start();
         expect(
           [for (final x in open().searchInChoices) x.id],
-          ['me', 'requests', 'completed', 'escalations', 'timeline'],
+          [
+            'me',
+            'requests',
+            'allapprovals',
+            'approvals',
+            'approved',
+            'rejected',
+            'completed',
+            'escalations',
+            'timeline',
+          ],
         );
         expect(
           [for (final x in open(isTeam: true).searchInChoices) x.id],
-          ['me', 'team', 'requests', 'completed', 'escalations', 'timeline'],
+          [
+            'me',
+            'team',
+            'requests',
+            'allapprovals',
+            'approvals',
+            'approved',
+            'rejected',
+            'completed',
+            'escalations',
+            'timeline',
+          ],
         );
       },
     );

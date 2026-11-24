@@ -126,7 +126,7 @@ class InboxViewRules {
 
 /// The setup of the Inbox as one plain map (the web's `setupOf`,
 /// `restoreOf`, `setupKey`). The phone models only part of it; the keys it
-/// does not model (`kinds`, `lens`, `approvalPick`, `teamMembers`,
+/// does not model (`kinds`, `lens`, `teamMembers`,
 /// `dataForms`, a task or broadcast `folder`, the period and hours of
 /// `timing`) are passed through from the view that was opened, so editing on
 /// the phone never destroys what the web saved.
@@ -149,13 +149,7 @@ class InboxSetup {
     'timing',
   ];
 
-  static const _carried = [
-    'lens',
-    'kinds',
-    'dataForms',
-    'approvalPick',
-    'teamMembers',
-  ];
+  static const _carried = ['lens', 'kinds', 'dataForms', 'teamMembers'];
 
   /// Folders the phone cannot show as a "Search in" entry.
   static const _keptFolders = ['task', 'broadcast'];

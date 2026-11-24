@@ -510,20 +510,21 @@ void main() {
     });
 
     test(
-      'the panel offers Me, My Team, Requests, Completed, Escalations, Timeline; the model holds the rest',
+      'the panel offers every entry but Reminders; the model holds that one too',
       () {
         expect(InboxWhere.offered, [
           'me',
           'team',
           'requests',
+          'allapprovals',
+          'approvals',
+          'approved',
+          'rejected',
           'completed',
           'escalations',
           'timeline',
         ]);
-        expect(
-          InboxWhere.known,
-          containsAll(['approvals', 'approved', 'rejected', 'reminders']),
-        );
+        expect(InboxWhere.known, contains('reminders'));
       },
     );
   });

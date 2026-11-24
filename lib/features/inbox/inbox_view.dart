@@ -19,6 +19,7 @@ import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'inbox_controller.dart';
 import 'approval_texts.dart';
+import 'widgets/approval_card.dart';
 import 'widgets/approvals_pane.dart';
 import 'widgets/inbox_filter_sheet.dart';
 import 'widgets/inbox_view_dialogs.dart';
@@ -250,7 +251,10 @@ class _Summary extends StatelessWidget {
     return Obx(() {
       final total = c.totalLabel;
       final hasError = c.hasError.value && c.page.value != null;
-      if (total.isEmpty && !hasError) return const SizedBox.shrink();
+      final isStale = c.isApprovalsStale;
+      if (total.isEmpty && !hasError && !isStale) {
+        return const SizedBox.shrink();
+      }
       return Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.page,
@@ -265,6 +269,11 @@ class _Summary extends StatelessWidget {
             if (hasError)
               Text(
                 InboxController.errorText,
+                style: AppText.caption.copyWith(color: AppColors.error),
+              ),
+            if (isStale)
+              Text(
+                InboxController.approvalsErrorText,
                 style: AppText.caption.copyWith(color: AppColors.error),
               ),
           ],
@@ -358,7 +367,86 @@ class _List extends StatelessWidget {
             ),
           );
         }),
+        Obx(() => _approvalsSliver(c)),
       ],
+    );
+  }
+
+  /// The approvals under the records (or alone): their cards, and their own
+  /// loading or error line; a failed read never blocks the records above.
+  Widget _approvalsSliver(InboxController c) {
+    if (!c.hasApprovalsPart) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final cards = c.approvalCards;
+    final isLoading = c.isApprovalsLoading;
+    final isFailed = c.isApprovalsFailed;
+    final hasHeading = cards.isNotEmpty && c.rows.isNotEmpty;
+    final count =
+        (hasHeading ? 1 : 0) + cards.length + (isLoading || isFailed ? 1 : 0);
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        0,
+        AppSpacing.page,
+        AppSpacing.lg,
+      ),
+      sliver: SliverList.builder(
+        itemCount: count,
+        itemBuilder: (context, i) {
+          if (hasHeading && i == 0) {
+            return Semantics(
+              header: true,
+              child: const Padding(
+                padding: EdgeInsets.only(
+                  top: AppSpacing.xs,
+                  bottom: AppSpacing.xs,
+                ),
+                child: Text(
+                  InboxController.approvalsHeading,
+                  style: AppText.fieldLabel,
+                ),
+              ),
+            );
+          }
+          final at = i - (hasHeading ? 1 : 0);
+          if (at >= cards.length) {
+            return isLoading
+                ? const Padding(
+                    padding: EdgeInsets.all(AppSpacing.md),
+                    child: Center(child: AppSpinner()),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          InboxController.approvalsErrorText,
+                          style: AppText.caption.copyWith(
+                            color: AppColors.error,
+                          ),
+                        ),
+                        AppButton.text(
+                          label: 'Retry',
+                          tone: AppTextButtonTone.accent,
+                          onPressed: () => c.approvals.reload(),
+                        ),
+                      ],
+                    ),
+                  );
+          }
+          final a = cards[at];
+          return ApprovalSlot(
+            key: ValueKey('approval-${a.id}'),
+            controller: c.approvals,
+            request: a,
+            isLeavingNow: () => c.isApprovalLeaving(a),
+          );
+        },
+      ),
     );
   }
 }

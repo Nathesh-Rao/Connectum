@@ -5,9 +5,12 @@ import 'package:get/get.dart';
 
 import '../../core/log/app_log.dart';
 import '../../core/log/safe.dart';
+import '../../data/models/approval.dart';
 import '../../data/repositories/inbox_field_kinds.dart';
 import '../../data/repositories/inbox_repository.dart';
 import '../../data/socket/socket_service.dart';
+import 'inbox_approvals_controller.dart';
+import 'models/inbox_approval_rows.dart';
 import 'models/inbox_filter.dart';
 import 'models/inbox_page.dart';
 import 'models/inbox_query.dart';
@@ -48,6 +51,7 @@ class InboxFilterController extends GetxController {
     required this.onApply,
     required this.onClear,
     this.fieldKinds,
+    this.approvals,
     this.wait = const Duration(milliseconds: 150),
   }) : draft = Rx<InboxFilter>(
          initial.wheres.isEmpty
@@ -68,6 +72,7 @@ class InboxFilterController extends GetxController {
   static const dateLabel = 'Date';
   static const sortLabel = 'Sort';
   static const advancedLabel = 'Advanced';
+  static const approvalLabel = 'Approval';
   static const searchInHint = 'All records';
   static const anybody = 'Anybody';
   static const countingText = 'Counting the forms...';
@@ -100,6 +105,10 @@ class InboxFilterController extends GetxController {
   /// The field kinds for conditions; null when there is no source for them.
   final InboxFieldKinds? fieldKinds;
 
+  /// The shared approval list, for the Data counts of the approval entries
+  /// and the Advanced ticks; null when the panel has none.
+  final InboxApprovals? approvals;
+
   final Rx<InboxFilter> draft;
   final _answer = Rxn<_Answer>();
 
@@ -121,15 +130,28 @@ class InboxFilterController extends GetxController {
   void onInit() {
     super.onInit();
     _workers.addAll([
-      ever(draft, (_) => _plan()),
+      ever(draft, (_) {
+        _plan();
+        _settle();
+      }),
       // The reports are part of the Requests ask; a plan that reads the same
       // is left as it is.
       ever(inbox.people.last, (_) => _plan()),
     ]);
-    isAdvanced.value = draft.value.blocks.any((b) => b.isActive);
+    isAdvanced.value =
+        draft.value.blocks.any((b) => b.isActive) ||
+        draft.value.approvalPick.isNotEmpty;
+    final a = approvals;
+    if (a != null) {
+      _workers.addAll([
+        ever(a.approvals.all, (_) => _onApprovals()),
+        ever(a.approvals.hasRead, (_) => _onApprovals()),
+      ]);
+    }
     _ensureKinds();
     fireAndLog('inbox_filter_controller', _loadPeople);
     _plan();
+    _settle();
   }
 
   // ---- the lists ----------------------------------------------------------------
@@ -168,11 +190,46 @@ class InboxFilterController extends GetxController {
     return a.key == _keyOf(draft.value);
   }
 
-  /// The forms with records under the other lines, with their counts. While
+  // ---- the approvals' part of the lists ---------------------------------------
+
+  List<Approval> get _approvalList => approvals?.approvals.all ?? const [];
+
+  bool get _hasApprovalEntry => InboxApprovalRows(draft.value).hasApprovalEntry;
+
+  /// The approvals are needed for the counts and not read yet.
+  bool get _isWaitingForApprovals =>
+      _hasApprovalEntry && approvals != null && !approvals!.isRead;
+
+  /// How many approvals each form has under the panel as it stands
+  /// (`approvalFormCounts`); empty when no approval entry is chosen.
+  Map<String, int> get ownCounts =>
+      InboxApprovalRows(draft.value).formCounts(_approvalList);
+
+  /// The forms with a record or an approval under the other lines, with how
+  /// many (a record counts once; the approval entries add their own). While
   /// they are counted nothing is offered (the whole list would be wrong for
   /// a moment); when they cannot be counted every form is.
+  Map<String, int>? get _counts {
+    final own = ownCounts;
+    if (!isOnServer) {
+      if (!_hasApprovalEntry) return null;
+      return _isWaitingForApprovals ? null : own;
+    }
+    final server = _shown?.facets.forms;
+    if (server == null) return null;
+    if (_isWaitingForApprovals) return null;
+    return {
+      for (final id in {...server.keys, ...own.keys})
+        id: (server[id] ?? 0) + (own[id] ?? 0),
+    };
+  }
+
+  bool get _hasCountFailed =>
+      hasFailed.value ||
+      (_isWaitingForApprovals && (approvals?.hasFailedRead ?? false));
+
   List<InboxChoice> get formChoices {
-    final counts = _shown?.facets.forms;
+    final counts = _counts;
     final known = [for (final e in knownForms.entries) e]
       ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
     if (counts != null) {
@@ -185,7 +242,7 @@ class InboxFilterController extends GetxController {
             InboxChoice(id, '${knownForms[id] ?? id} (${counts[id]})'),
       ];
     }
-    return hasFailed.value
+    return _hasCountFailed
         ? [for (final e in known) InboxChoice(e.key, e.value)]
         : const [];
   }
@@ -199,9 +256,9 @@ class InboxFilterController extends GetxController {
       InboxChoice(e.key, e.value),
   ];
 
-  String get formsEmptyText => _shown != null
+  String get formsEmptyText => _counts != null
       ? noFormText
-      : hasFailed.value
+      : _hasCountFailed
       ? noFormsYetText
       : countingText;
 
@@ -424,7 +481,51 @@ class InboxFilterController extends GetxController {
   int get count => draft.value.filterCount(baseWhere: baseWhere);
 
   /// How many Advanced blocks say something.
-  int get advancedCount => draft.value.blocks.where((b) => b.isActive).length;
+  int get advancedCount =>
+      draft.value.blocks.where((b) => b.isActive).length +
+      (draft.value.approvalPick.isNotEmpty ? 1 : 0);
+
+  // ---- Advanced > Approval ------------------------------------------------------
+
+  /// Is a form named that has an approval flow (its answers are offered, and
+  /// not before)?
+  bool get isApprovalOffered =>
+      InboxApprovalRows(draft.value).hasApprovalForm(_approvalList);
+
+  void toggleApprovalPick(String id) {
+    final now = draft.value.approvalPick;
+    draft.value = draft.value.copyWith(
+      approvalPick: now.contains(id)
+          ? [
+              for (final a in now)
+                if (a != id) a,
+            ]
+          : [...now, id],
+    );
+  }
+
+  void _onApprovals() => _settle();
+
+  /// What the web's effects do when the lists change: a form that has no
+  /// record or approval here any more is let go, and the ticks go when no
+  /// named form has an approval flow. Only once the approvals are read.
+  void _settle() {
+    final a = approvals;
+    if (a == null || !a.isRead) return;
+    var next = draft.value;
+    if (next.approvalPick.isNotEmpty && !isApprovalOffered) {
+      next = next.copyWith(approvalPick: const []);
+    }
+    final counts = _counts;
+    if (counts != null && (!isOnServer || isFresh)) {
+      final kept = [
+        for (final id in next.forms)
+          if ((counts[id] ?? 0) > 0) id,
+      ];
+      if (kept.length != next.forms.length) next = next.copyWith(forms: kept);
+    }
+    if (!identical(next, draft.value)) draft.value = next;
+  }
 
   /// Nothing was applied before; the draft goes to the Inbox.
   void apply() {
@@ -494,10 +595,13 @@ class InboxFilterController extends GetxController {
   void _dropGone(InboxFacets read) {
     var next = draft.value;
     var isChanged = false;
-    final forms = [
-      for (final id in next.forms)
-        if ((read.forms[id] ?? 0) > 0) id,
-    ];
+    final own = ownCounts;
+    final forms = _isWaitingForApprovals
+        ? next.forms
+        : [
+            for (final id in next.forms)
+              if ((read.forms[id] ?? 0) + (own[id] ?? 0) > 0) id,
+          ];
     if (forms.length != next.forms.length) {
       next = next.copyWith(forms: forms);
       isChanged = true;

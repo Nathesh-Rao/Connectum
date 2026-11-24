@@ -12,6 +12,8 @@ import '../../data/socket/call_problem.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
 import 'models/approval_pane.dart';
+import 'models/inbox_approval_rows.dart';
+import 'models/inbox_filter.dart';
 import 'models/approval_reducer.dart';
 import 'models/approval_rules.dart';
 
@@ -125,6 +127,50 @@ class InboxApprovals extends GetxController {
   }
 
   bool isEscalated(Approval a) => ApprovalPane.isEscalated(a, _now());
+
+  // ---- in the Inbox list -----------------------------------------------------
+
+  /// The approvals the Inbox list draws for [f]: under the records, or alone
+  /// (`InboxApprovalRows`). Answered cards that are still sliding out stay
+  /// where they were until the list is read again.
+  List<Approval> cardsFor(InboxFilter f) {
+    inbox.cardRevision.value;
+    final plan = InboxApprovalRows(f);
+    final base = plan.cards(
+      approvals.all,
+      query: query.value,
+      nameOf: _nameOf,
+      now: _now(),
+    );
+    if (leaving.isEmpty) return base;
+    final ids = {for (final a in base) a.id};
+    final out = [...base];
+    for (final a in ApprovalReducer.sorted(approvals.all)) {
+      if (!leaving.contains(a.id) || ids.contains(a.id)) continue;
+      final at = out.indexWhere((x) => x.createdTs < a.createdTs);
+      out.insert(at < 0 ? out.length : at, a);
+    }
+    return out;
+  }
+
+  /// This card was answered and no longer belongs to the Inbox list for [f].
+  bool isLeavingFor(InboxFilter f, Approval a) =>
+      leaving.contains(a.id) &&
+      !InboxApprovalRows(f)
+          .cards(
+            approvals.all,
+            query: query.value,
+            nameOf: _nameOf,
+            now: _now(),
+          )
+          .any((x) => x.id == a.id);
+
+  /// The shared list was read at least once.
+  bool get isRead => approvals.hasRead.value;
+
+  /// The first read failed (nothing to show yet).
+  bool get hasFailedRead =>
+      !approvals.hasRead.value && approvals.hasError.value;
 
   // ---- reading ---------------------------------------------------------------
 

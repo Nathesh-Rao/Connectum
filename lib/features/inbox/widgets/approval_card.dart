@@ -350,15 +350,20 @@ class ApprovalSlot extends StatelessWidget {
     super.key,
     required this.controller,
     required this.request,
+    this.isLeavingNow,
   });
 
   final InboxApprovals controller;
   final Approval request;
 
+  /// Says whether the card has left the list it is drawn in (the Inbox list
+  /// has its own rules); the pane's own filter when null.
+  final bool Function()? isLeavingNow;
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final isLeaving = controller.isLeaving(request);
+      final isLeaving = isLeavingNow?.call() ?? controller.isLeaving(request);
       return AnimatedSize(
         duration: AppDurations.fast,
         curve: AppCurves.out,

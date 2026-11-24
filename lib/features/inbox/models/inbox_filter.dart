@@ -2,8 +2,7 @@ import 'inbox_query.dart';
 
 /// The entries of "Search in" (`SEARCH_IN`, `WHERES` in the web's
 /// `InboxFilterFab.jsx` / `inboxQuery.js`). The model holds every one; the
-/// panel offers [offered] for now (Approvals come with Phase 4, Reminders are
-/// out of scope).
+/// panel offers [offered] (Reminders are out of scope).
 class InboxWhere {
   InboxWhere._();
 
@@ -36,7 +35,27 @@ class InboxWhere {
   ];
 
   /// What the panel offers now.
-  static const offered = [me, team, requests, completed, escalations, timeline];
+  static const offered = [
+    me,
+    team,
+    requests,
+    allApprovals,
+    approvals,
+    approved,
+    rejected,
+    completed,
+    escalations,
+    timeline,
+  ];
+
+  /// The entries read from the approval list, not from records (`APPROVAL_STAGE`):
+  /// the answer each holds (`any` is every request).
+  static const stageOf = {
+    allApprovals: 'any',
+    approvals: 'pending',
+    approved: 'approved',
+    rejected: 'rejected',
+  };
 
   static const labels = {
     all: 'All records',
@@ -364,6 +383,21 @@ class InboxBlock {
   }
 }
 
+/// The answers of an approval flow Advanced > Approval ticks.
+class InboxApprovalAnswer {
+  InboxApprovalAnswer._();
+
+  static const pending = 'pending';
+  static const approved = 'approved';
+  static const rejected = 'rejected';
+  static const all = [pending, approved, rejected];
+  static const labels = {
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+  };
+}
+
 /// The four orders of Sort (client side only, `SORTS`) and the two statuses
 /// the server cuts to.
 class InboxSort {
@@ -415,6 +449,7 @@ class InboxFilter {
     this.sort = InboxSort.latest,
     this.status = '',
     this.blocks = const [],
+    this.approvalPick = const [],
   });
 
   static const none = InboxFilter();
@@ -437,6 +472,10 @@ class InboxFilter {
   final String status;
   final List<InboxBlock> blocks;
 
+  /// Advanced > Approval: the answers ticked (`pending`, `approved`,
+  /// `rejected`); a client side cut of the approval list. None is off.
+  final List<String> approvalPick;
+
   InboxFilter copyWith({
     List<String>? wheres,
     List<String>? forms,
@@ -449,6 +488,7 @@ class InboxFilter {
     String? sort,
     String? status,
     List<InboxBlock>? blocks,
+    List<String>? approvalPick,
   }) => InboxFilter(
     wheres: wheres ?? this.wheres,
     forms: forms ?? this.forms,
@@ -461,6 +501,7 @@ class InboxFilter {
     sort: sort ?? this.sort,
     status: status ?? this.status,
     blocks: blocks ?? this.blocks,
+    approvalPick: approvalPick ?? this.approvalPick,
   );
 
   /// One of a people line by its key (`createdBy`, `sentBy`, `sentTo`,
@@ -512,7 +553,8 @@ class InboxFilter {
         (hasDays ? 1 : 0) +
         (status.isNotEmpty ? 1 : 0) +
         (sort != InboxSort.latest ? 1 : 0) +
-        blocks.where((b) => b.isActive).length;
+        blocks.where((b) => b.isActive).length +
+        (approvalPick.isNotEmpty ? 1 : 0);
   }
 
   /// Does anything narrow the list (other than the Me / My Team switch)?
@@ -614,7 +656,7 @@ class InboxFilter {
   /// The filter in the web's saved-view keys (`setupOf`): `folder`,
   /// `scopePick` (one of me / team), `wheres` (two or more), `dataForms`,
   /// `filters`, `sort`, `timing`, `blocks`, and the keys the phone does not
-  /// model, empty (`lens`, `kinds`, `approvalPick`, `teamMembers`), so the
+  /// model, empty (`lens`, `kinds`, `teamMembers`), so the
   /// shape is the web's whole `setupOf`. `InboxSetup.compose` puts the keys
   /// of an opened view back over them.
   Map<String, dynamic> toSetup() {
@@ -623,7 +665,7 @@ class InboxFilter {
       'folder': InboxWhere.folderOf[one] ?? 'data',
       'lens': '',
       'kinds': <String>[],
-      'approvalPick': <String>[],
+      'approvalPick': approvalPick,
       'teamMembers': <String>[],
       'scopePick': one == InboxWhere.me || one == InboxWhere.team
           ? [one]
@@ -683,6 +725,10 @@ class InboxFilter {
           ? f['status'] as String
           : '',
       blocks: InboxBlock.revive(raw['blocks']),
+      approvalPick: [
+        for (final a in _texts(raw['approvalPick']).toSet())
+          if (InboxApprovalAnswer.all.contains(a)) a,
+      ],
     );
   }
 }
