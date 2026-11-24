@@ -73,6 +73,8 @@ import '../debug/seed_smart_view.dart';
 import '../debug/seed_tickets.dart';
 import '../log/safe.dart';
 import '../log/app_log.dart';
+import '../log/log_bootstrap.dart';
+import '../log/log_formatter.dart';
 
 class InitialBinding extends Bindings {
   InitialBinding(this.connectivity, {SmartViewPrefs? smartViewPrefs})
@@ -81,6 +83,36 @@ class InitialBinding extends Bindings {
   final ConnectivityService connectivity;
   final SmartViewPrefs smartViewPrefs;
 
+  /// Keeps the log header's user and organisation current: one `CONTEXT`
+  /// line on sign-in, sign-out and an organisation switch.
+  static void _bindLogContext(SessionStore store) {
+    void sync() {
+      final identity = store.identity.value;
+      final orgId = store.orgId;
+      String? org;
+      if (orgId != null) {
+        org = orgId;
+        for (final m in identity?.enterprises ?? const []) {
+          if (m.enterprise == orgId) org = m.name;
+        }
+      }
+      final name = identity?.name ?? '';
+      LogContextHolder.set(
+        LogContext(
+          user: identity == null
+              ? null
+              : '${name.isEmpty ? identity.username : name} <${identity.email}>',
+          org: org,
+          isKnown: true,
+        ),
+      );
+    }
+
+    ever(store.identity, (_) => sync());
+    ever(store.current, (_) => sync());
+    sync();
+  }
+
   @override
   void dependencies() {
     final isDemo = DemoMode.isActive;
@@ -88,6 +120,8 @@ class InitialBinding extends Bindings {
       isDemo ? DemoSessionStore() : SessionStore(),
       permanent: true,
     );
+    _bindLogContext(store);
+    Get.put(LogBootstrap.current(), permanent: true);
     Get.put(smartViewPrefs, permanent: true);
     Get.put(CrashService.current, permanent: true);
     Get.put(

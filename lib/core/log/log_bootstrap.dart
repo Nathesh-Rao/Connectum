@@ -47,12 +47,7 @@ class LogBootstrap {
   /// observer. Never throws.
   static Future<LogFileSink?> install() async {
     try {
-      final sink = LogFileSink(
-        directory: () async =>
-            Directory('${(await getApplicationSupportDirectory()).path}/logs'),
-        context: () => LogContextHolder.current,
-        environment: environment,
-      );
+      final sink = create();
       AppLog.file = sink;
       await sink.init();
       WidgetsBinding.instance.addObserver(LogLifecycleObserver());
@@ -63,6 +58,17 @@ class LogBootstrap {
       return null;
     }
   }
+
+  static LogFileSink create() => LogFileSink(
+    directory: () async =>
+        Directory('${(await getApplicationSupportDirectory()).path}/logs'),
+    context: () => LogContextHolder.current,
+    environment: environment,
+  );
+
+  /// The running sink, or a not-started one (no file, so the viewer shows its
+  /// empty state) when install failed.
+  static LogFileSink current() => AppLog.file ?? create();
 
   static Future<LogEnvironment> environment() async {
     final version = await AppSettings.version() ?? 'unknown';
