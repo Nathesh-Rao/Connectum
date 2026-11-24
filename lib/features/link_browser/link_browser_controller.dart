@@ -9,6 +9,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/utils/link_launcher.dart';
 import '../../core/utils/link_open_policy.dart';
 import 'models/link_browser_args.dart';
+import '../../core/log/safe.dart';
 
 enum LinkBrowserError { offline, ssl, http, other }
 
@@ -66,7 +67,7 @@ class LinkBrowserController extends GetxController {
     currentUrl.value = args.url;
     final w = web;
     if (w == null) return;
-    unawaited(_start(w));
+    fireAndLog('link_browser_controller', () => _start(w));
   }
 
   Future<void> _start(WebViewController w) async {
@@ -82,7 +83,7 @@ class LinkBrowserController extends GetxController {
         onUrlChange: (c) {
           final url = c.url;
           if (url != null) currentUrl.value = url;
-          unawaited(_syncBack());
+          fireAndLog('link_browser_controller', () => _syncBack());
         },
       ),
     );

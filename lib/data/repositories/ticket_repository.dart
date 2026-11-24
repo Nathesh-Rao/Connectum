@@ -16,6 +16,7 @@ import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
 import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 typedef _Read = ({Map<String, dynamic>? data, SocketCallError? error});
 
@@ -334,7 +335,8 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
       }
       RecordsLog.line('card id=$id record.actions -> ${e.code}, no actions');
       _states.remove(id);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('ticket_repository', e, st);
       RecordsLog.line('card id=$id record.actions unreadable ($e), no actions');
       _states.remove(id);
     }

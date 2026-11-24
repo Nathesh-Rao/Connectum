@@ -13,6 +13,7 @@ import '../../data/socket/socket_service.dart';
 import 'approvals_texts.dart';
 import 'models/approval_reducer.dart';
 import 'models/approval_rules.dart';
+import '../../core/log/safe.dart';
 
 /// The Approvals screen: "To review" and "Sent by me", a history filter, and
 /// the answers. An answer is sent once and never replayed: a failure is shown
@@ -73,9 +74,9 @@ class ApprovalsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _changes = approvals.changes.listen(_onChange);
-    _refreshes = approvals.refreshes.listen((_) => unawaited(load()));
-    unawaited(load(isQuiet: false));
+    _changes = approvals.changes.listen(_onChange, onError: streamOnError('approvals_controller'));
+    _refreshes = approvals.refreshes.listen((_) => fireAndLog('approvals_controller', () => load()), onError: streamOnError('approvals_controller'));
+    fireAndLog('approvals_controller', () => load(isQuiet: false));
   }
 
   @override
@@ -138,7 +139,7 @@ class ApprovalsController extends GetxController {
     _loaded = 0;
     _seq++;
     viewState.value = AppViewState.loading;
-    unawaited(load(isQuiet: false));
+    fireAndLog('approvals_controller', () => load(isQuiet: false));
   }
 
   void _settle() {
@@ -206,7 +207,7 @@ class ApprovalsController extends GetxController {
         items.assignAll(ApprovalReducer.remove(items.toList(), r.id));
         _settle();
       } else if (problem.shouldRefresh) {
-        unawaited(load());
+        fireAndLog('approvals_controller', () => load());
       }
       return false;
     } finally {
@@ -222,7 +223,7 @@ class ApprovalsController extends GetxController {
           ? AppNoticeVariant.warning
           : AppNoticeVariant.error,
       actionLabel: problem.canRetry ? ApprovalsTexts.retry : null,
-      onAction: problem.canRetry ? () => unawaited(retry()) : null,
+      onAction: problem.canRetry ? () => fireAndLog('approvals_controller', () => retry()) : null,
     );
   }
 }

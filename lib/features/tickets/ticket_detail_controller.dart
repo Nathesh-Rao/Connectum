@@ -25,6 +25,7 @@ import '../chats/models/chat_person.dart';
 import 'models/ticket_input.dart';
 import 'ticket_action_form.dart';
 import 'tickets_texts.dart';
+import '../../core/log/safe.dart';
 
 /// How an action ended, for the sheet that asked.
 enum ActionResult { done, failed, gone }
@@ -120,8 +121,8 @@ class TicketDetailController extends GetxController {
       state.value = tickets.stateOf(ticketId);
       viewState.value = AppViewState.content;
     }
-    _refreshes = tickets.refreshes.listen((_) => unawaited(reload()));
-    unawaited(reload(isQuiet: known != null));
+    _refreshes = tickets.refreshes.listen((_) => fireAndLog('ticket_detail_controller', () => reload()), onError: streamOnError('ticket_detail_controller'));
+    fireAndLog('ticket_detail_controller', () => reload(isQuiet: known != null));
   }
 
   @override
@@ -288,7 +289,7 @@ class TicketDetailController extends GetxController {
     }
     _tell(
       failure,
-      retry: outcome.canRetry ? () => unawaited(submit(form)) : null,
+      retry: outcome.canRetry ? () => fireAndLog('ticket_detail_controller', () => submit(form)) : null,
     );
     if (outcome.shouldBackOff) _coolDown();
     if (outcome.shouldLeave) {
@@ -296,7 +297,7 @@ class TicketDetailController extends GetxController {
       tickets.scheduleRefresh();
       return ActionResult.gone;
     }
-    if (outcome.shouldReload) unawaited(_refreshForm(form));
+    if (outcome.shouldReload) fireAndLog('ticket_detail_controller', () => _refreshForm(form));
     return ActionResult.failed;
   }
 
@@ -331,7 +332,7 @@ class TicketDetailController extends GetxController {
       ),
     );
     // Only a patch comes back: the record and its history are read again.
-    unawaited(reload());
+    fireAndLog('ticket_detail_controller', () => reload());
     tickets.scheduleRefresh();
   }
 
@@ -375,7 +376,7 @@ class TicketDetailController extends GetxController {
         savedValues: t.values,
       ),
     );
-    unawaited(reload());
+    fireAndLog('ticket_detail_controller', () => reload());
   }
 
   // ---- people and files ------------------------------------------------------
@@ -437,7 +438,7 @@ class TicketDetailController extends GetxController {
       mime: picked.mime,
     );
     form.files.add(item);
-    unawaited(_upload(form, item));
+    fireAndLog('ticket_detail_controller', () => _upload(form, item));
   }
 
   Future<void> _upload(TicketActionForm form, FormFileItem item) async {
@@ -470,7 +471,7 @@ class TicketDetailController extends GetxController {
 
   void retryFile(TicketActionForm form, FormFileItem item) {
     item.cancel = CancelToken();
-    unawaited(_upload(form, item));
+    fireAndLog('ticket_detail_controller', () => _upload(form, item));
   }
 
   void removeFile(TicketActionForm form, FormFileItem item) {

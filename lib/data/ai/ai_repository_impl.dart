@@ -12,6 +12,7 @@ import 'ai_relay.dart';
 import 'ai_repository.dart';
 import 'ai_transcript.dart';
 import 'care_summary_text.dart';
+import '../../core/log/safe.dart';
 
 /// The real calls: `ai.agents` for the setup and `assistant.relay` for the
 /// answer. The server never sees "which chat": the transcript is built here
@@ -26,8 +27,8 @@ class AiRepositoryImpl implements AiRepository {
     this.displayNameOf,
     DateTime Function()? clock,
   }) : _now = clock ?? DateTime.now {
-    _events = _socket.events.listen(onEvent);
-    _online = _socket.onOnline.listen((_) => _changed.add(null));
+    _events = _socket.events.listen(onEvent, onError: streamOnError('ai_repository_impl'));
+    _online = _socket.onOnline.listen((_) => _changed.add(null), onError: streamOnError('ai_repository_impl'));
   }
 
   final SocketService _socket;
@@ -87,7 +88,7 @@ class AiRepositoryImpl implements AiRepository {
   Stream<AiSummaryChunk> summarize(AiSummaryRequest request) {
     final id = ++_run;
     final out = StreamController<AiSummaryChunk>();
-    unawaited(_summarize(id, request, out));
+    fireAndLog('ai_repository_impl', () => _summarize(id, request, out));
     return out.stream;
   }
 

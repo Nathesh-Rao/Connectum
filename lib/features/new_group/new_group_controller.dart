@@ -14,6 +14,7 @@ import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
 import '../chats/models/chat_person.dart';
+import '../../core/log/app_log.dart';
 
 enum NewGroupPhase { editing, creating, adding, unconfirmed, done }
 
@@ -181,7 +182,12 @@ class NewGroupController extends GetxController {
       listState.value = people.isEmpty && _query.length < 3
           ? (_query.isEmpty ? AppViewState.empty : AppViewState.noResults)
           : AppViewState.content;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('new_group_controller', 'socket ${e.code}');
+      if (seq == _seq) listState.value = AppViewState.error;
+      return;
+    } catch (e, st) {
+      AppLog.e('new_group_controller', e, st);
       if (seq == _seq) listState.value = AppViewState.error;
       return;
     }
@@ -199,7 +205,11 @@ class NewGroupController extends GetxController {
           found.where((p) => !listed.contains(p.username.toLowerCase())),
         ),
       );
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('new_group_controller', 'socket ${e.code}');
+      if (seq != _seq) return;
+    } catch (e, st) {
+      AppLog.e('new_group_controller', e, st);
       if (seq != _seq) return;
     }
     listState.value = people.isEmpty && extras.isEmpty
@@ -218,7 +228,8 @@ class NewGroupController extends GetxController {
       people.addAll(_withoutMembers(page.people));
       hasMore.value = page.hasMore;
       _next = page.next;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('new_group_controller', 'socket ${e.code}');
       hasMore.value = false;
     } finally {
       isLoadingMore.value = false;

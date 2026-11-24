@@ -5,6 +5,8 @@ import 'package:get/get_navigation/src/router_report.dart';
 
 import '../debug/connect_flow_log.dart';
 import 'app_routes.dart';
+import '../log/app_log.dart';
+import '../log/safe.dart';
 
 /// Reloads the home area (after an enterprise switch) without the new home
 /// sharing controllers with the old one.
@@ -82,7 +84,8 @@ class HomeReload {
       ConnectFlowLog.log('homereload start', {'running': _running});
       try {
         await body();
-      } catch (_) {
+      } catch (e, st) {
+        AppLog.e('home_reload', e, st);
         _isAgain = false;
         restore?.call();
         rethrow;
@@ -125,7 +128,7 @@ class HomeReload {
       overlay.close();
     }
     homes.forEach(RouterReportManager.reportRouteDispose);
-    Get.offAllNamed(AppRoutes.chats);
+    fireAndLog('home_reload', () async => Get.offAllNamed(AppRoutes.chats));
     await WidgetsBinding.instance.endOfFrame;
   }
 }

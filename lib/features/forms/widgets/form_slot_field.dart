@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,6 +11,7 @@ import '../../../data/models/ids.dart';
 import '../form_controller.dart';
 import '../models/field_input.dart';
 import 'form_box.dart';
+import '../../../core/log/safe.dart';
 
 /// A booking time: the days and times the person named by another field can
 /// be booked, minus what is already taken. The value is `yyyy-mm-dd HH:MM`.
@@ -80,7 +80,7 @@ class FormSlotField extends StatelessWidget {
 
   void _open(BuildContext context) {
     final own = idText(input.value.value);
-    unawaited(controller.loadSlots(input, row: row));
+    fireAndLog('form_slot_field', () => controller.loadSlots(input, row: row));
     AppBottomSheet.show<void>(
       context,
       title: input.def.caption,

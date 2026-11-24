@@ -7,6 +7,7 @@ import '../../core/theme/app_motion.dart';
 import '../../data/session_store.dart';
 import '../invite_code/invite_code_sheet.dart';
 import '../splash/splash_controller.dart';
+import '../../core/log/safe.dart';
 
 class OnboardingSlide {
   const OnboardingSlide(this.title, this.copy, this.animation);
@@ -87,7 +88,7 @@ class OnboardingController extends GetxController {
     if (isReplay) {
       Get.back<void>();
     } else {
-      Get.offNamed(AppRoutes.authentication);
+      fireAndLog('onboarding_controller', () async => Get.offNamed(AppRoutes.authentication));
     }
   }
 

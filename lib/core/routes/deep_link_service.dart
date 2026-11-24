@@ -16,6 +16,8 @@ import '../widgets/app_notice_card.dart';
 import '../widgets/app_notices.dart';
 import 'app_routes.dart';
 import 'home_reload.dart';
+import '../log/safe.dart';
+import '../log/app_log.dart';
 
 /// The one receiver of Connectum links: the cold-start link, links while the
 /// app runs, and codes handed over by the in-app scanner. Raw text only ever
@@ -118,13 +120,14 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
     ever(_connectivity.state, (state) {
       if (state == AppConnectivity.online) resume();
     });
-    await _load();
+    await safeCall('deep_link_service', _load);
     _subscription = _appLinks.uriLinkStream.listen(
-      (uri) => receive(uri.toString()),
-    );
+      (uri) => receive(uri.toString()), onError: streamOnError('deep_link_service'));
     try {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) receive(initial.toString());
+    } catch (e, st) {
+      AppLog.e('deep_link_service', e, st, 'initial link');
     } finally {
       _ready.complete();
     }
@@ -140,7 +143,9 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
     var read = const ReferrerRead.inconclusive();
     try {
       read = await _referrer.read().timeout(const Duration(seconds: 4));
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('deep_link_service', e, st);
+    }
     if (!read.isConclusive) return;
     await _store.writeValue(_firstStartKey, 'done');
     await startWith(read.referrer);
@@ -174,7 +179,8 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
       } else if (pending.value == null) {
         keep(target);
       }
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('deep_link_service', e, st);
       isClaimInvalid.value = true;
     }
   }
@@ -236,13 +242,11 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
       'by': ConnectFlowLog.caller(),
     });
     _savedAt = DateTime.now();
-    unawaited(_store.writeValue(_storageKey, target.linkText));
-    unawaited(
-      _store.writeValue(
+    fireAndLog('deep_link_service', () => _store.writeValue(_storageKey, target.linkText));
+    fireAndLog('deep_link_service', () => _store.writeValue(
         _savedAtKey,
         _savedAt!.millisecondsSinceEpoch.toString(),
-      ),
-    );
+      ));
   }
 
   /// A raw link or scanned text. Unreadable text is ignored.
@@ -337,17 +341,13 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
       }
       // After a switch the confirmed link scans at once, from here: a sheet
       // that is lost does not lose the answer.
-      unawaited(
-        scanIfConfirmed(next).then((result) {
+      fireAndLog('deep_link_service', () => scanIfConfirmed(next).then((result) {
           if (result != null) _noticeIfNoSheet();
-        }),
-      );
+        }));
       _isSheetOpen = true;
       _userClosed = null;
       ConnectFlowLog.log('sheet opened', {'person': next.isPersonLink});
-      unawaited(
-        ConnectTargetSheet.show(ready, next).then((_) => _afterSheet()),
-      );
+      fireAndLog('deep_link_service', () => ConnectTargetSheet.show(ready, next).then((_) => _afterSheet()));
     } finally {
       releaseSheetClaim();
     }
@@ -417,7 +417,7 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
     _isSheetOpen = false;
     switch (next) {
       case SheetClose.reopen:
-        unawaited(resume());
+        fireAndLog('deep_link_service', () => resume());
       case SheetClose.notice:
         _noticeIfNoSheet();
       case SheetClose.none:
@@ -437,7 +437,7 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
     if (isUser) {
       _reopens = 0;
       outcome.value = null;
-      if (!isKept) unawaited(clear());
+      if (!isKept) fireAndLog('deep_link_service', () => clear());
       return SheetClose.none;
     }
     if (pending.value != null && _reopens < _maxReopens) {

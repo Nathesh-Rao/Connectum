@@ -425,7 +425,8 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
     apply();
     try {
       await send();
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('feed_repository', e, st);
       items.assignAll(oldItems);
       counts.value = oldCounts;
       rethrow;

@@ -17,6 +17,7 @@ import 'feed_actions.dart';
 import 'models/feed_item.dart';
 import 'widgets/feed_detail_sheet.dart';
 import '../home_shell/home_tab.dart';
+import '../../core/log/safe.dart';
 
 enum DestinationKind {
   chat,
@@ -272,7 +273,7 @@ class NotificationRouter extends GetxService {
           Get.toNamed(AppRoutes.tasks, arguments: TasksController.showTickets);
         }
       case DestinationKind.ticket:
-        unawaited(_openTicket(d));
+        fireAndLog('notification_router', () => _openTicket(d));
       // TODO: open a submission itself when its screen takes a link; the
       // sheet meanwhile.
       case DestinationKind.submission:
@@ -311,7 +312,7 @@ class NotificationRouter extends GetxService {
       }
     }
     final route = AppRoutes.ticketOf(id);
-    if (Get.currentRoute != route) Get.toNamed(route);
+    if (Get.currentRoute != route) fireAndLog('notification_router', () async => Get.toNamed(route));
   }
 
   /// The ticket id of a ticket destination; null when it is not a number.

@@ -26,6 +26,7 @@ import 'form_rules.dart';
 import 'models/field_input.dart';
 import 'models/form_chat_rule.dart';
 import 'models/form_launch.dart';
+import '../../core/log/safe.dart';
 
 /// One open form: the answers, the checks and the send. It lives under the
 /// launch's own tag, so two forms never share one. A form keeps its own copy
@@ -130,11 +131,11 @@ class FormController extends GetxController {
     _onlineWorker = ever(connectivity.state, (state) {
       _updateDraftState();
       if (state != AppConnectivity.online) return;
-      if (viewState.value == AppViewState.offline) unawaited(_load());
+      if (viewState.value == AppViewState.offline) fireAndLog('form_controller', () => _load());
       if (definition != null) _refreshSources();
     });
     _personWorker = ever(logic.personVersion, (_) => _scheduleCalc());
-    unawaited(_load());
+    fireAndLog('form_controller', () => _load());
   }
 
   Future<void> retry() => _load();
@@ -170,7 +171,7 @@ class FormController extends GetxController {
     if (_isDisposed) return;
     _initial = _snapshot();
     if (launch.errorDetails != null) showServerErrors(launch.errorDetails);
-    unawaited(options.markUsed(launch.name, def.scope, def.caption));
+    fireAndLog('form_controller', () => options.markUsed(launch.name, def.scope, def.caption));
     _updateDraftState();
     viewState.value = AppViewState.content;
   }
@@ -460,9 +461,9 @@ class FormController extends GetxController {
   void _prepare(FieldInput input, {RowInput? row}) {
     switch (input.def.type) {
       case 'list':
-        unawaited(loadChoices(input));
+        fireAndLog('form_controller', () => loadChoices(input));
       case 'selection':
-        unawaited(loadSelection(input, row: row));
+        fireAndLog('form_controller', () => loadSelection(input, row: row));
       case 'file':
         final ids = input.value.value;
         if (ids is List) {
@@ -492,10 +493,10 @@ class FormController extends GetxController {
     for (final (input, row) in pairs) {
       if (input.def.type == 'selection' &&
           (input.hasChoicesFailed.value || input.isStaleChoices.value)) {
-        unawaited(loadSelection(input, row: row));
+        fireAndLog('form_controller', () => loadSelection(input, row: row));
       }
       if (input.def.type == 'list' && input.hasChoicesFailed.value) {
-        unawaited(retryChoices(input));
+        fireAndLog('form_controller', () => retryChoices(input));
       }
       if (row == null &&
           FormRules.hasFetch(input.def) &&
@@ -623,12 +624,12 @@ class FormController extends GetxController {
     f.choicesTimer?.cancel();
     final (_, waiting) = _sourceValues(f.def, 'source', row: row);
     if (waiting.isNotEmpty) {
-      unawaited(loadSelection(f, row: row));
+      fireAndLog('form_controller', () => loadSelection(f, row: row));
       return;
     }
     f.choicesTimer = Timer(
       sourceDelay,
-      () => unawaited(loadSelection(f, row: row)),
+      () => fireAndLog('form_controller', () => loadSelection(f, row: row)),
     );
   }
 
@@ -876,7 +877,7 @@ class FormController extends GetxController {
     );
     f.files.add(item);
     _syncFiles(f);
-    unawaited(_upload(f, item));
+    fireAndLog('form_controller', () => _upload(f, item));
   }
 
   Future<void> _upload(FieldInput f, FormFileItem item) async {
@@ -908,7 +909,7 @@ class FormController extends GetxController {
 
   void retryFile(FieldInput f, FormFileItem item) {
     item.cancel = CancelToken();
-    unawaited(_upload(f, item));
+    fireAndLog('form_controller', () => _upload(f, item));
   }
 
   void removeFile(FieldInput f, FormFileItem item) {
@@ -947,7 +948,7 @@ class FormController extends GetxController {
 
   void _scheduleCalc() {
     _calcTimer?.cancel();
-    _calcTimer = Timer(calcDelay, () => unawaited(_calc()));
+    _calcTimer = Timer(calcDelay, () => fireAndLog('form_controller', () => _calc()));
   }
 
   /// The answers as the editor holds them, by field name; a grid is a list
@@ -1162,13 +1163,11 @@ class FormController extends GetxController {
   void _scrollTo(GlobalKey? key) {
     final ctx = key?.currentContext;
     if (ctx == null) return;
-    unawaited(
-      Scrollable.ensureVisible(
+    fireAndLog('form_controller', () => Scrollable.ensureVisible(
         ctx,
         alignment: 0.1,
         duration: const Duration(milliseconds: 250),
-      ),
-    );
+      ));
   }
 
   /// What is sent: shown fields, and hidden ones made for the person (calc,
@@ -1339,7 +1338,7 @@ class FormController extends GetxController {
       Get.back<bool>(result: true);
       if (launch.mode == FormMode.create &&
           FormChatRule.returnsToWorkspace(launch.convId)) {
-        unawaited(Get.toNamed(AppRoutes.workspace));
+        fireAndLog('form_controller', () async => Get.toNamed(AppRoutes.workspace));
       }
     } on Object {
       banner.value = "That couldn't be saved. Try again.";

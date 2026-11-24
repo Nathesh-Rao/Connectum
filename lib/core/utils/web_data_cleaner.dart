@@ -1,4 +1,5 @@
 import 'package:webview_flutter/webview_flutter.dart';
+import '../log/app_log.dart';
 
 /// Drops what the in-app browser kept (cookies, cache, local storage) so a
 /// signed-out phone holds nothing of the last person's web sessions.
@@ -11,7 +12,8 @@ class WebDataCleaner {
       final web = WebViewController();
       await web.clearCache();
       await web.clearLocalStorage();
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('web_data_cleaner', e, st);
       // Best effort: a sign out never waits on the web view.
     }
   }

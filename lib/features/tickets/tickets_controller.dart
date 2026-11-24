@@ -14,6 +14,7 @@ import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
 import 'models/ticket_reducer.dart';
 import 'tickets_texts.dart';
+import '../../core/log/safe.dart';
 
 /// One tab's list.
 class TicketList {
@@ -63,8 +64,8 @@ class TicketsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _refreshes = tickets.refreshes.listen((_) => unawaited(refreshAll()));
-    unawaited(refreshAll());
+    _refreshes = tickets.refreshes.listen((_) => fireAndLog('tickets_controller', () => refreshAll()), onError: streamOnError('tickets_controller'));
+    fireAndLog('tickets_controller', () => refreshAll());
   }
 
   @override
@@ -254,7 +255,7 @@ class TicketsController extends GetxController {
           ? AppNoticeVariant.warning
           : AppNoticeVariant.error,
       actionLabel: problem.canRetry ? TicketsTexts.retry : null,
-      onAction: problem.canRetry ? () => unawaited(retry()) : null,
+      onAction: problem.canRetry ? () => fireAndLog('tickets_controller', () => retry()) : null,
     );
   }
 }

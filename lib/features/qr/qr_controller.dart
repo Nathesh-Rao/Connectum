@@ -7,6 +7,8 @@ import '../../core/widgets/app_state_view.dart';
 import '../../data/repositories/qr_repository.dart';
 import '../../data/socket/socket_service.dart';
 import 'models/qr_models.dart';
+import '../../core/log/app_log.dart';
+import '../../core/log/safe.dart';
 
 class QrController extends GetxController {
   QrController({
@@ -58,7 +60,8 @@ class QrController extends GetxController {
             : kinds.first;
       }
       state.value = kinds.isEmpty ? AppViewState.empty : AppViewState.content;
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('qr_controller', e, st);
       person.value = null;
       organisation.value = null;
       errorMessage.value = _message(e);
@@ -87,7 +90,8 @@ class QrController extends GetxController {
     isSharing.value = true;
     try {
       await share.shareImage(data, origin: origin);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('qr_controller', e, st);
       AppNotices.error('Could not create the image.');
     } finally {
       isSharing.value = false;
@@ -100,7 +104,7 @@ class QrController extends GetxController {
     final data = current;
     if (data == null) return;
     await Clipboard.setData(ClipboardData(text: data.display));
-    HapticFeedback.lightImpact();
+    fireAndLog('qr_controller', () async => HapticFeedback.lightImpact());
     AppNotices.success('Code copied');
   }
 }

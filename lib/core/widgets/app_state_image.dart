@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import 'app_animation_placeholder.dart';
+import '../log/app_log.dart';
 
 /// Every state picture, with its file and display scale. The only place that
 /// maps a state to a file.
@@ -55,7 +56,12 @@ class AppStateImage extends StatefulWidget {
   }) {
     final ratio = MediaQuery.devicePixelRatioOf(context);
     for (final kind in kinds) {
-      precacheImage(_provider(kind, size, ratio), context, onError: (_, _) {});
+      precacheImage(
+        _provider(kind, size, ratio),
+        context,
+        onError: (Object e, StackTrace? st) =>
+            AppLog.w('app_state_image', 'precache ${e.runtimeType}'),
+      );
     }
   }
 

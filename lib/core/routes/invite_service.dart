@@ -10,6 +10,7 @@ import '../debug/seed_connect.dart';
 import '../debug/seed_ui.dart';
 import '../utils/connect_code.dart';
 import 'deep_link_service.dart';
+import '../log/safe.dart';
 
 enum InviteStatus { none, hint, loading, ready, invalid, rateLimited, failed }
 
@@ -75,19 +76,19 @@ class InviteService extends GetxService {
     if (_cache.containsKey(key)) {
       _apply(_cache[key]);
     } else if (_loading != key) {
-      unawaited(_load(target));
+      fireAndLog('invite_service', () => _load(target));
     }
   }
 
   void retry() {
     final target = _links.pending.value;
-    if (target != null && _isVisible) unawaited(_load(target));
+    if (target != null && _isVisible) fireAndLog('invite_service', () => _load(target));
   }
 
   /// Forgets the invite (or, for the hint, only the hint).
   void dismiss() {
     if (_links.pending.value != null) {
-      unawaited(_links.clear());
+      fireAndLog('invite_service', () => _links.clear());
     } else {
       _links.showScanHint.value = false;
       _links.isClaimInvalid.value = false;

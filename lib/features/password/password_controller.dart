@@ -10,6 +10,7 @@ import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/session_store.dart';
+import '../../core/log/app_log.dart';
 
 /// Set, change or remove the account's own password (the web's "Set a
 /// password" panel): a code emailed to the account confirms it, then the
@@ -73,7 +74,8 @@ class PasswordController extends GetxController {
         if (seq == _checkSeq && !isClosed) {
           hint.value = result.isOk ? null : result.message;
         }
-      } catch (_) {
+      } catch (e, st) {
+        AppLog.e('password_controller', e, st);
         // The save still asks the server again.
       }
     });
@@ -136,7 +138,8 @@ class PasswordController extends GetxController {
       await body();
     } on ApiException catch (e) {
       error.value = ApiMessages.ofPasswordChange(e);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('password_controller', e, st);
       debugPrint('password request failed: ${e.runtimeType}');
       if (!isClosed) error.value = "Something went wrong. Try again.";
     } finally {

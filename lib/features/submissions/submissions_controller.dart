@@ -11,6 +11,7 @@ import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
 import '../home_shell/home_tab.dart';
 import 'models/submission_row.dart';
+import '../../core/log/safe.dart';
 
 class FormFilter {
   const FormFilter(this.name, this.label, this.count);
@@ -72,11 +73,11 @@ class SubmissionsController extends GetxController {
         if (name != null) _build();
       }),
       ever(shell.tab, (t) {
-        if (t == HomeTab.submits) unawaited(_syncIfStale());
+        if (t == HomeTab.submits) fireAndLog('submissions_controller', () => _syncIfStale());
       }),
     ]);
     _build();
-    unawaited(_sync());
+    fireAndLog('submissions_controller', () => _sync());
   }
 
   bool get isOnline => connectivity.state.value == AppConnectivity.online;

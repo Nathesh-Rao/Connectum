@@ -14,6 +14,7 @@ import '../../data/attachment_cache.dart';
 import '../../data/repositories/sv_file_repository.dart';
 import '../../data/smart_view/preview/sv_preview_parsers.dart';
 import '../../data/smart_view/sv_file.dart';
+import '../../core/log/safe.dart';
 
 enum SvFilePhase { idle, loading, ready, error }
 
@@ -243,14 +244,14 @@ class SvFilePreviewController extends GetxController {
           "Still couldn't save it. You can share the file instead.",
           variant: AppNoticeVariant.error,
           actionLabel: 'Share',
-          onAction: () => unawaited(share()),
+          onAction: () => fireAndLog('sv_file_preview_controller', () => share()),
         );
       } else {
         AppNotices.show(
           "The file couldn't be saved. Try again.",
           variant: AppNoticeVariant.error,
           actionLabel: 'Retry',
-          onAction: () => unawaited(download(isRetry: true)),
+          onAction: () => fireAndLog('sv_file_preview_controller', () => download(isRetry: true)),
         );
       }
       return SvDownload.failed;

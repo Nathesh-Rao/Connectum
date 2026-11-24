@@ -6,6 +6,7 @@ import '../../core/widgets/app_notices.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import 'tickets_texts.dart';
+import '../../core/log/safe.dart';
 
 /// After a new submission is accepted: "Saved", or "Waiting for approval".
 /// A form with auto-send rules has already sent it on by then; one read of
@@ -21,7 +22,7 @@ class SavedRecordNotice extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _sub = _submissions.saved.listen((r) => unawaited(handle(r)));
+    _sub = _submissions.saved.listen((r) => fireAndLog('saved_record_notice', () => handle(r)), onError: streamOnError('saved_record_notice'));
   }
 
   @override

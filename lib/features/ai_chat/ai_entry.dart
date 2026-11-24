@@ -8,6 +8,7 @@ import 'ai_summary_controller.dart';
 import 'ai_texts.dart';
 import 'widgets/ai_notice_dialog.dart';
 import 'widgets/ai_sheet.dart';
+import '../../core/log/safe.dart';
 
 /// What the AI icon does: a dialog (not set up, encrypted chat, cannot reach
 /// the server) or the sheet.
@@ -41,13 +42,11 @@ Future<void> openAi(BuildContext context, AiSummaryController c) async {
     if (setup == null || !isOpen || !context.mounted) return;
     isOpen = false;
     Navigator.of(context).pop();
-    unawaited(
-      AiNoticeDialog.show(
+    fireAndLog('ai_entry', () => AiNoticeDialog.show(
         context,
         title: AiTexts.setupTitle,
         text: c.setupText,
-      ),
-    );
+      ));
   });
   final sheet = AppBottomSheet.show<void>(
     context,
@@ -62,7 +61,7 @@ Future<void> openAi(BuildContext context, AiSummaryController c) async {
       },
     ),
   );
-  unawaited(c.onSheetOpened());
+  fireAndLog('ai_entry', () => c.onSheetOpened());
   await sheet;
   isOpen = false;
   worker.dispose();

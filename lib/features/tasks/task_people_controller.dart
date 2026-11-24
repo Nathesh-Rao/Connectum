@@ -10,6 +10,7 @@ import '../../data/repositories/group_repository.dart';
 import '../../data/socket/socket_service.dart';
 import '../chats/models/chat_person.dart';
 import 'tasks_texts.dart';
+import '../../core/log/app_log.dart';
 
 /// The people list of the assignee and "send to" sheets: the colleagues
 /// list (`users.colleagues`), searched by name. Made by the Tasks controller
@@ -62,7 +63,8 @@ class TaskPeopleController {
       people.addAll(page.people);
       hasMore.value = page.hasMore;
       _next = page.next;
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('task_people_controller', 'socket ${e.code}');
       hasMore.value = false;
     } finally {
       isLoadingMore.value = false;

@@ -18,6 +18,7 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../invite_code/invite_code_sheet.dart';
 import 'auth_validators.dart';
+import '../../core/log/safe.dart';
 
 class AuthenticationController extends GetxController {
   AuthenticationController({
@@ -281,7 +282,7 @@ class AuthenticationController extends GetxController {
     final result = await auth.startLogin(email.text.trim());
     switch (result.kind) {
       case LoginStartKind.trusted:
-        Get.offAllNamed(AppRoutes.enterprises);
+        fireAndLog('authentication_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
       case LoginStartKind.throttled:
         _openVerification(AuthFlow.login, null, result.retryAfter);
       case LoginStartKind.codeSent:
@@ -307,7 +308,7 @@ class AuthenticationController extends GetxController {
     }
     password.clear();
     TextInput.finishAutofillContext();
-    Get.offAllNamed(AppRoutes.enterprises);
+    fireAndLog('authentication_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
   }
 
   void _startRetry(int? seconds) {

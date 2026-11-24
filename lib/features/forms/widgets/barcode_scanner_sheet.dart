@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../connect/widgets/viewfinder_overlay.dart';
+import '../../../core/log/safe.dart';
 
 /// Scans one barcode or QR code with the camera and hands back its text. The
 /// code can always be typed instead.
@@ -38,7 +39,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
   @override
   void initState() {
     super.initState();
-    _detections = _scanner.barcodes.listen(_onDetect);
+    _detections = _scanner.barcodes.listen(_onDetect, onError: streamOnError('barcode_scanner_sheet'));
     _scanner.addListener(_onValue);
   }
 
@@ -70,8 +71,8 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
   @override
   void dispose() {
     _scanner.removeListener(_onValue);
-    unawaited(_detections?.cancel());
-    unawaited(_scanner.dispose());
+    fireAndLog('barcode_scanner_sheet', () async => _detections?.cancel());
+    fireAndLog('barcode_scanner_sheet', () => _scanner.dispose());
     super.dispose();
   }
 

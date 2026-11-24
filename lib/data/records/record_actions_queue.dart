@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../socket/socket_service.dart';
+import '../../core/log/app_log.dart';
 
 /// The one queue that reads `record.actions` for cards on screen. Cards only
 /// say "I am on screen" ([show]) and "I am gone" ([hide]); this class decides
@@ -185,7 +186,8 @@ class RecordActionsQueue {
       _attempts.remove(id);
     } on SocketCallError catch (e) {
       if (retryable.contains(e.code)) _retry(id);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('record_actions_queue', e, st);
       // The fetch settles its own failures; nothing is retried here.
     } finally {
       _isRunning = false;

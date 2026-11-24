@@ -9,6 +9,7 @@ import '../../data/repositories/e2e_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import 'device_limit_controller.dart';
+import '../../core/log/safe.dart';
 
 /// The Security screen and the setup sheets share this controller: it lives
 /// with the home shell (see HomeShellBinding) and is reused by `/security`.
@@ -121,7 +122,7 @@ class SecurityController extends GetxController {
     if (sheet == null) return;
     switch (phase) {
       case E2eSetupPhase.ready:
-        unawaited(sheet.onRegistered());
+        fireAndLog('security_controller', () => sheet.onRegistered());
       case E2eSetupPhase.limit:
         sheet.devices.assignAll(e2e.myDevices);
       case E2eSetupPhase.refused:

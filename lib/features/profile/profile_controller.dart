@@ -25,6 +25,7 @@ import '../../data/socket/connectivity_service.dart';
 import '../chats/enterprise_switcher_controller.dart';
 import '../password/password_sheet.dart';
 import '../qr/qr_sheet.dart';
+import '../../core/log/app_log.dart';
 
 class ProfileController extends GetxController {
   ProfileController({
@@ -132,7 +133,8 @@ class ProfileController extends GetxController {
       );
     } on PhotoPickException catch (e) {
       if (!isClosed) _pickFailed(e);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('profile_controller', e, st);
       debugPrint('changePhoto failed: ${e.runtimeType}');
       if (!isClosed) {
         AppNotices.show(
@@ -167,7 +169,8 @@ class ProfileController extends GetxController {
             ? AppNoticeVariant.warning
             : AppNoticeVariant.error,
       );
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('profile_controller', e, st);
       debugPrint('photo update failed: ${e.runtimeType}');
       await avatars.set(name, previous);
       AppNotices.show(

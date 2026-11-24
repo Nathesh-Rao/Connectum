@@ -14,6 +14,8 @@ import '../session_store.dart';
 import 'local_notification_rules.dart';
 import 'push/push_payload.dart';
 import 'push/push_token_registry.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// System notifications for live feed items, in the foreground and the
 /// background alike: the `feed_item` event is the single trigger. No push: a
@@ -93,20 +95,24 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
       await _createChannels();
       _isReady = true;
       _log('plugin initialised, small icon=$_smallIcon');
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('local_notification_service', e, st);
       _log('initialise failed: $e');
       return this;
     }
     wasAsked.value = await _store.readValue(_askedKey) != null;
     await refreshPermission();
     _subscriptions
-      ..add(_feed.onItem.listen(_onItem))
-      ..add(_feed.onGone.listen(_cancelAll));
+      ..add(_feed.onItem.listen(
+          (item) => fireAndLog('local_notification_service', () async => _onItem(item)),
+          onError: streamOnError('local_notification_service'),
+        ))
+      ..add(_feed.onGone.listen(_cancelAll, onError: streamOnError('local_notification_service')));
     await _loadGroups();
     ever(_store.current, (_) {
       _shown.clear();
-      unawaited(_plugin.cancelAll());
-      unawaited(_loadGroups());
+      fireAndLog('local_notification_service', () => _plugin.cancelAll());
+      fireAndLog('local_notification_service', () => _loadGroups());
     });
     ever(_feed.items, (_) => _sweepRead());
     final launch = await _plugin.getNotificationAppLaunchDetails();
@@ -128,7 +134,7 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _log('lifecycle=$state');
-    if (state == AppLifecycleState.resumed) unawaited(refreshPermission());
+    if (state == AppLifecycleState.resumed) fireAndLog('local_notification_service', () => refreshPermission());
   }
 
   // ---- permission ----------------------------------------------------------
@@ -154,7 +160,8 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
             IOSFlutterLocalNotificationsPlugin
           >();
       return (await ios?.checkPermissions())?.isEnabled ?? false;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('local_notification_service', e, st);
       return false;
     }
   }
@@ -180,7 +187,9 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
             >()
             ?.requestPermissions(alert: true, badge: true, sound: true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('local_notification_service', e, st);
+    }
     await markAsked();
     await refreshPermission();
     return isEnabled.value;
@@ -356,7 +365,8 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
       _log('show id=${item.id} ok');
       await _updateSummary(channel);
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('local_notification_service', e, st);
       _log('show id=${item.id} failed: $e');
       return false;
     }
@@ -447,7 +457,7 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
     _router.handlePayload(payload);
     final id = payload.itemId;
     if (id != null) {
-      unawaited(_feed.setRead([id], isRead: true).catchError((_) {}));
+      fireAndLog('local_notification_service', () => _feed.setRead([id], isRead: true));
     }
   }
 }

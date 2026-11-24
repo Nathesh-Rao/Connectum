@@ -7,6 +7,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_notices.dart';
+import '../../../core/log/safe.dart';
 
 /// A table cell's whole value: the field's label, the text wrapped and
 /// selectable, and Copy. Opened by "View more" or a long press on a cell.
@@ -34,7 +35,7 @@ class SvCellDetails extends StatelessWidget {
 
   static Future<void> copy(String value) async {
     await Clipboard.setData(ClipboardData(text: value));
-    HapticFeedback.lightImpact();
+    fireAndLog('sv_cell_details_sheet', () async => HapticFeedback.lightImpact());
     AppNotices.success('Copied');
   }
 

@@ -17,6 +17,7 @@ import '../struct_records/models/struct_records_launch.dart';
 import '../home_shell/home_shell_controller.dart';
 import '../conversation/models/command_prompt.dart';
 import 'widgets/command_sheets.dart';
+import '../../core/log/safe.dart';
 
 /// Runs a `#` line from a message box and shows what came back: a notice, a
 /// screen, a sheet, or a chat opened with a draft. One per composer; the
@@ -104,11 +105,11 @@ class CommandRunner {
       case HashKind.screen:
         _openScreen(r.target);
       case HashKind.rows:
-        CommandSheets.showRows(
+        fireAndLog('command_runner', () async => CommandSheets.showRows(
           title: r.text,
           rows: r.rows,
           onOpen: ConversationRoute.open,
-        );
+        ));
       case HashKind.confirm:
         final isSure = await CommandSheets.confirmLeave(r.target);
         if (isSure) return run(body, isConfirmed: true);
@@ -141,7 +142,7 @@ class CommandRunner {
       return false;
     }
     if (r.kind == HashKind.records) {
-      Get.toNamed(
+      fireAndLog('command_runner', () async => Get.toNamed(
         AppRoutes.structRecords,
         arguments: StructRecordsLaunch(
           name: open.name,
@@ -149,9 +150,9 @@ class CommandRunner {
           caption: open.caption,
           convId: _postableChat,
         ),
-      );
+      ));
     } else {
-      Get.toNamed(
+      fireAndLog('command_runner', () async => Get.toNamed(
         AppRoutes.form,
         arguments: FormLaunch(
           name: open.name,
@@ -159,7 +160,7 @@ class CommandRunner {
           caption: open.caption,
           convId: _postableChat,
         ),
-      );
+      ));
     }
     return true;
   }

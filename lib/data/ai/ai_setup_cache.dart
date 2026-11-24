@@ -1,5 +1,6 @@
 import 'ai_models.dart';
 import 'ai_repository.dart';
+import '../../core/log/safe.dart';
 
 /// The setup state, kept for a minute so opening a chat or tapping the icon
 /// does not ask the server each time. The sheet refreshes it when it opens,
@@ -7,7 +8,7 @@ import 'ai_repository.dart';
 class AiSetupCache {
   AiSetupCache(this._repository, {DateTime Function()? clock})
     : _now = clock ?? DateTime.now {
-    _repository.agentsChanged.listen((_) => clear());
+    _repository.agentsChanged.listen((_) => clear(), onError: streamOnError('ai_setup_cache'));
   }
 
   static const keepFor = Duration(seconds: 60);

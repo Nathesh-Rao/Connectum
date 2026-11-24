@@ -13,6 +13,7 @@ import 'app_card_circles.dart';
 import 'app_highlight_text.dart';
 import 'app_logo.dart';
 import 'app_tag.dart';
+import '../log/app_log.dart';
 
 /// The QR card: who the code is, the QR and the code as XXXX-XXXX.
 /// Light colours and no text scaling, so the screen and the shared image
@@ -276,7 +277,10 @@ class AppQrShareFrame extends StatelessWidget {
 
     listener = ImageStreamListener(
       (_, _) => finish(),
-      onError: (_, _) => finish(),
+      onError: (Object e, StackTrace? st) {
+        AppLog.w('app_qr_share_card', 'image ${e.runtimeType}');
+        finish();
+      },
     );
     stream.addListener(listener);
     return done.future.timeout(const Duration(seconds: 2), onTimeout: finish);

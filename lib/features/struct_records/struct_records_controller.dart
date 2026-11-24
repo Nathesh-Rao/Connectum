@@ -12,6 +12,7 @@ import '../../data/smart_view/models/sv_row.dart';
 import '../../data/socket/socket_service.dart';
 import '../forms/models/form_launch.dart';
 import 'models/struct_records_launch.dart';
+import '../../core/log/safe.dart';
 
 /// The records screen of `#tstruct <name>`. Records live in memory only. Never
 /// an offline-capable screen: with no connection it says so and offers Retry.
@@ -55,13 +56,13 @@ class StructRecordsController extends GetxController {
   void onInit() {
     super.onInit();
     scroll.addListener(_onScroll);
-    unawaited(load());
+    fireAndLog('struct_records_controller', () => load());
   }
 
   void _onScroll() {
     if (!scroll.hasClients) return;
     final p = scroll.position;
-    if (p.maxScrollExtent - p.pixels < 300) unawaited(loadMore());
+    if (p.maxScrollExtent - p.pixels < 300) fireAndLog('struct_records_controller', () => loadMore());
   }
 
   /// The first page (the whole list is read again).
@@ -175,7 +176,7 @@ class StructRecordsController extends GetxController {
         convId: launch.convId,
       ),
     );
-    if (result == true) unawaited(load(isQuiet: true));
+    if (result == true) fireAndLog('struct_records_controller', () => load(isQuiet: true));
   }
 
   /// Edit: the app's edit form of a saved record (`submissions.update`),

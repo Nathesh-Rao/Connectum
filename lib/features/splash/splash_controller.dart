@@ -9,6 +9,7 @@ import '../../core/widgets/logo_intro/logo_intro.dart';
 import '../../core/widgets/logo_loader/logo_loader.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
+import '../../core/log/app_log.dart';
 
 // TUNE ME: splash logo intro.
 /// True plays the LogoIntro once and holds its final frame; false is the
@@ -153,7 +154,8 @@ class SplashController extends GetxController with WidgetsBindingObserver {
   Future<String> _work() async {
     try {
       return await (resolveRoute ?? _resolveRoute)();
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('splash_controller', e, st);
       return _fallbackRoute();
     }
   }
@@ -184,7 +186,8 @@ class SplashController extends GetxController with WidgetsBindingObserver {
           : store.hasIdentity
           ? AppRoutes.enterprises
           : AppRoutes.onboarding;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('splash_controller', e, st);
       return AppRoutes.onboarding;
     }
   }

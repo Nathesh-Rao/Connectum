@@ -37,6 +37,7 @@ import '../commands/command_runner.dart';
 import '../conversation/models/command_prompt.dart';
 import 'models/workspace_note.dart';
 import 'models/workspace_row.dart';
+import '../../core/log/safe.dart';
 
 /// My Work Space: the submissions I made as sent-style cards, newest at the
 /// bottom. It reads the cache; opening it refreshes the list when online.
@@ -336,7 +337,7 @@ class WorkspaceController extends GetxController {
             user: result.user,
           );
           _addNote(note);
-          unawaited(_watch(note, result.cid));
+          fireAndLog('workspace_controller', () => _watch(note, result.cid));
         case HashKind.done:
           break;
         default:
@@ -398,7 +399,7 @@ class WorkspaceController extends GetxController {
 
   void openRecordMenu(FormCardData d) {
     final id = recordIdOf(d);
-    if (id != null) unawaited(tickets.ensureMenu(id));
+    if (id != null) fireAndLog('workspace_controller', () => tickets.ensureMenu(id));
   }
 
   TicketDetailController? detailOf(FormCardData d) {
@@ -479,12 +480,12 @@ class WorkspaceController extends GetxController {
   /// opens.
   void tap(FormCardData d, {bool isReceived = false}) {
     if (isReceived) return open(d, isReceived: true);
-    if (isDraft(d)) return unawaited(editAndResend(d));
+    if (isDraft(d)) return fireAndLog('workspace_controller', () => editAndResend(d));
     if (stateOf(d) != AppFormCardState.failed) return open(d);
     if (isInvalidFailure(d)) {
-      unawaited(editAndResend(d));
+      fireAndLog('workspace_controller', () => editAndResend(d));
     } else {
-      unawaited(submissions.retry(d.id));
+      fireAndLog('workspace_controller', () => submissions.retry(d.id));
     }
   }
 

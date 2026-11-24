@@ -23,6 +23,8 @@ import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../connect/connect_controller.dart';
 import '../connect/connect_view.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 enum InviteStep { none, checking, entering, waiting, rejected, failed }
 
@@ -126,7 +128,7 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
     ).whenComplete(() {
       connect.close();
       _isJoinSheetOpen = false;
-      unawaited(refresh());
+      fireAndLog('enterprises_controller', () => refresh());
       continueInvite(isAfterJoin: true);
     });
   }
@@ -229,7 +231,7 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
   void dismissInvite() {
     inviteStep.value = InviteStep.none;
     inviteNote.value = null;
-    unawaited(links.clear());
+    fireAndLog('enterprises_controller', () => links.clear());
   }
 
   @override
@@ -280,9 +282,9 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
   void retryInvite() {
     final entry = _retryEntry;
     if (entry != null) {
-      unawaited(enter(entry));
+      fireAndLog('enterprises_controller', () => enter(entry));
     } else {
-      unawaited(continueInvite());
+      fireAndLog('enterprises_controller', () => continueInvite());
     }
   }
 
@@ -351,6 +353,7 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
         message.value = ApiMessages.of(e);
       }
     } catch (e, stack) {
+      AppLog.e('enterprises_controller', e, stack);
       if (kDebugMode) {
         debugPrint('enter ${tapped.enterprise} failed: $e\n$stack');
       }
@@ -366,7 +369,7 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
 
   Future<void> signOut() async {
     await auth.signOutIdentity();
-    Get.offAllNamed(AppRoutes.authentication);
+    fireAndLog('enterprises_controller', () async => Get.offAllNamed(AppRoutes.authentication));
   }
 
   @override

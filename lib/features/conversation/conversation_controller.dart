@@ -72,6 +72,8 @@ import 'models/file_download.dart';
 import 'models/forward.dart';
 import 'models/mention_picker.dart';
 import 'models/pending_upload.dart';
+import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 /// One conversation. A controller exists per conversation id (the binding puts
 /// it under that id as its tag), so one route's disposal can never delete
@@ -475,11 +477,11 @@ class ConversationController extends GetxController
   void tapForm(Message m, FormCardData d) {
     if (m.status != MessageStatus.failed) return openForm(m, d);
     if (isNotPostedFailure(m)) {
-      unawaited(saveWithoutPosting(m));
+      fireAndLog('conversation_controller', () => saveWithoutPosting(m));
     } else if (isInvalidFailure(m)) {
-      unawaited(editAndResend(m));
+      fireAndLog('conversation_controller', () => editAndResend(m));
     } else {
-      unawaited(retryForm(m));
+      fireAndLog('conversation_controller', () => retryForm(m));
     }
   }
 
@@ -631,7 +633,7 @@ class ConversationController extends GetxController
   void openRecordMenu(Message m) {
     final d = formCardOf(m);
     final id = d == null ? null : recordIdOf(d);
-    if (id != null) unawaited(tickets.ensureMenu(id));
+    if (id != null) fireAndLog('conversation_controller', () => tickets.ensureMenu(id));
   }
 
   /// The controller the status sheet works on for the ticket on [d].
@@ -681,14 +683,14 @@ class ConversationController extends GetxController
     _onlineWorker = ever(socket.connection, (state) {
       if (state == SocketState.online && !SeedUi.isActive) {
         _sync();
-        unawaited(_refreshGate(isLookup: true));
+        fireAndLog('conversation_controller', () => _refreshGate(isLookup: true));
       }
     });
     _setupWorker = ever(e2e.phase, (_) {
       if (SeedUi.isActive) {
         _applySeedGate();
       } else {
-        unawaited(_refreshGate());
+        fireAndLog('conversation_controller', () => _refreshGate());
       }
     });
     ConversationRoute.jumpListeners[conversationId] = _runJump;
@@ -731,12 +733,12 @@ class ConversationController extends GetxController
     _firstUnreadId = _firstUnread(list.toList());
     _rebuild(isFirst: true);
     isLoaded.value = true;
-    unawaited(_runJump());
+    fireAndLog('conversation_controller', () => _runJump());
     _listWorker = ever(list, (_) => _rebuild());
     WidgetsBinding.instance.addPostFrameCallback((_) => _initialScroll());
     if (!SeedUi.isActive) {
-      unawaited(_checkEncryptedOnline());
-      unawaited(_sync());
+      fireAndLog('conversation_controller', () => _checkEncryptedOnline());
+      fireAndLog('conversation_controller', () => _sync());
     }
   }
 
@@ -789,7 +791,8 @@ class ConversationController extends GetxController
       return kind == 'group'
           ? await e2e.reviewKeys(keyChangeMember ?? '', group: target)
           : await e2e.reviewKeys(target);
-    } on SocketCallError catch (_) {
+    } on SocketCallError catch (e) {
+      AppLog.w('conversation_controller', 'socket ${e.code}');
       _say("Couldn't check the security keys right now.");
       return null;
     } finally {
@@ -973,7 +976,7 @@ class ConversationController extends GetxController
     final away = p.pixels > _nearBottom;
     if (away != isAway.value) isAway.value = away;
     if (!away) newAway.value = 0;
-    if (p.maxScrollExtent - p.pixels < 400) unawaited(loadOlder());
+    if (p.maxScrollExtent - p.pixels < 400) fireAndLog('conversation_controller', () => loadOlder());
     _scheduleRead();
   }
 
@@ -1059,7 +1062,7 @@ class ConversationController extends GetxController
           math.min(y + render.size.height, box.size.height) - math.max(y, 0);
       if (visible >= render.size.height * 0.6) {
         if (SeedUi.isActive) return;
-        unawaited(conversations.markRead(conversationId, m.msgId));
+        fireAndLog('conversation_controller', () => conversations.markRead(conversationId, m.msgId));
         return;
       }
     }
@@ -1081,7 +1084,7 @@ class ConversationController extends GetxController
       'global' => '/typing global',
       _ => null,
     };
-    if (command != null) unawaited(socket.sendCommand(command));
+    if (command != null) fireAndLog('conversation_controller', () => socket.sendCommand(command));
   }
 
   bool get canSend {
@@ -1225,7 +1228,7 @@ class ConversationController extends GetxController
     );
     uploads.add(upload);
     WidgetsBinding.instance.addPostFrameCallback((_) => scrollToLatest());
-    unawaited(_runUpload(upload));
+    fireAndLog('conversation_controller', () => _runUpload(upload));
   }
 
   /// Upload, then the ordinary send of the tag. No tag is built before the
@@ -1290,7 +1293,8 @@ class ConversationController extends GetxController
       upload.isFailed.value = true;
       upload.error.value = e.message;
       upload.canRetry.value = e.isRetryable;
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('conversation_controller', e, st);
       if (!uploads.contains(upload)) return;
       upload.isFailed.value = true;
       upload.error.value =
@@ -1327,7 +1331,8 @@ class ConversationController extends GetxController
       final bytes = await attachments.readBytes(upload.file);
       try {
         sealed = await e2e.encryptFile(bytes);
-      } catch (_) {
+      } catch (e, st) {
+        AppLog.e('conversation_controller', e, st);
         throw const AttachmentException(
           "That file couldn't be encrypted. Try again.",
         );
@@ -1360,7 +1365,7 @@ class ConversationController extends GetxController
     }
   }
 
-  void retryUpload(PendingUpload upload) => unawaited(_runUpload(upload));
+  void retryUpload(PendingUpload upload) => fireAndLog('conversation_controller', () => _runUpload(upload));
 
   void cancelUpload(PendingUpload upload) {
     upload.cancel.cancel();
@@ -1429,7 +1434,8 @@ class ConversationController extends GetxController
             cancel: _imageCancel,
           );
       if (!isClosed) imageFiles[tag.url] = file;
-    } on AttachmentException catch (_) {
+    } on AttachmentException catch (e, st) {
+      AppLog.e('conversation_controller', e, st);
       if (!isClosed) imageGaveUp.add(tag.url);
     }
   }
@@ -1461,7 +1467,8 @@ class ConversationController extends GetxController
     }
     try {
       return await e2e.decryptFile(blob, tag.e2eKey!, tag.e2eIv!);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('conversation_controller', e, st);
       await attachmentCache.forget(tag);
       throw const AttachmentException(undecryptable);
     }
@@ -1486,12 +1493,12 @@ class ConversationController extends GetxController
   /// The viewer is about to open: counts as the file's latest use.
   void viewedImage(AttachmentTag tag) {
     final file = imageFiles[tag.url];
-    if (file != null) unawaited(attachmentCache.touch(file));
+    if (file != null) fireAndLog('conversation_controller', () => attachmentCache.touch(file));
   }
 
   void retryImage(AttachmentTag tag) {
     secureFailures.remove(tag.url);
-    unawaited(imageOf(tag)?.evict());
+    fireAndLog('conversation_controller', () async => imageOf(tag)?.evict());
     imageFiles.remove(tag.url);
     imageGaveUp.remove(tag.url);
     _imageStarted.remove(tag.url);
@@ -1599,7 +1606,7 @@ class ConversationController extends GetxController
   bool isSaved(AttachmentTag tag) {
     final isSaved = savedFiles.contains(tag.url);
     if (!isSaved && _savedChecked.add(tag.url)) {
-      unawaited(_checkSaved(tag));
+      fireAndLog('conversation_controller', () => _checkSaved(tag));
     }
     return isSaved;
   }

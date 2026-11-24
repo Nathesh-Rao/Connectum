@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../../data/smart_view/models/sv_source.dart';
 import '../../../data/smart_view/overview/sv_overview.dart';
+import '../../../core/log/app_log.dart';
 
 enum SvCardPhase { loading, ready, error }
 
@@ -92,7 +93,8 @@ class SvOverviewModel {
     SvOverviewRead got;
     try {
       got = await read(c.source);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('sv_overview_model', e, st);
       got = const SvOverviewRead(isOk: false);
     }
     if (gen != _gen) return;

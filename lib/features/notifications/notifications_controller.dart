@@ -17,6 +17,7 @@ import 'models/feed_reducer.dart';
 import 'notification_router.dart';
 import 'notification_texts.dart';
 import 'widgets/notifications_more_menu.dart';
+import '../../core/log/safe.dart';
 
 class NotificationsController extends GetxController {
   NotificationsController({
@@ -104,7 +105,7 @@ class NotificationsController extends GetxController {
   void onInit() {
     super.onInit();
     if (feed.items.isEmpty) {
-      unawaited(feed.refresh());
+      fireAndLog('notifications_controller', () => feed.refresh());
     }
   }
 
@@ -126,12 +127,12 @@ class NotificationsController extends GetxController {
       id,
       exclusiveId: 'all',
     );
-    unawaited(_ensure());
+    fireAndLog('notifications_controller', () => _ensure());
   }
 
   void setUnreadOnly(bool value) {
     isUnreadOnly.value = value;
-    unawaited(_ensure());
+    fireAndLog('notifications_controller', () => _ensure());
   }
 
   Future<void> _ensure() async {
@@ -167,7 +168,7 @@ class NotificationsController extends GetxController {
   /// shows its detail.
   Future<void> open(FeedItem item) async {
     final destination = NotificationRouter.resolve(item);
-    if (!item.isRead) unawaited(setRead(item, isRead: true));
+    if (!item.isRead) fireAndLog('notifications_controller', () => setRead(item, isRead: true));
     if (destination.kind == DestinationKind.none) {
       router.showDetail(item);
     } else {
@@ -188,9 +189,9 @@ class NotificationsController extends GetxController {
       !notifications.shouldNotifyGroups.value,
     ),
     NotificationsMenuItem.unreadOnly => setUnreadOnly(!isUnreadOnly.value),
-    NotificationsMenuItem.markAllRead => unawaited(markAllRead()),
-    NotificationsMenuItem.markAllResolved => unawaited(resolveAll()),
-    NotificationsMenuItem.clearResolved => unawaited(clearResolved()),
+    NotificationsMenuItem.markAllRead => fireAndLog('notifications_controller', () => markAllRead()),
+    NotificationsMenuItem.markAllResolved => fireAndLog('notifications_controller', () => resolveAll()),
+    NotificationsMenuItem.clearResolved => fireAndLog('notifications_controller', () => clearResolved()),
   };
 
   Future<void> markAllRead() => _actions.run(feed.markAllRead);
@@ -200,7 +201,7 @@ class NotificationsController extends GetxController {
   Future<void> clearResolved() => _actions.run(feed.clearResolved);
 
   void setNotifyGroups(bool value) =>
-      unawaited(notifications.setNotifyGroups(value));
+      fireAndLog('notifications_controller', () => notifications.setNotifyGroups(value));
 
   Future<void> onPermissionAction() async {
     if (notifications.wasAsked.value) {

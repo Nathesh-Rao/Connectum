@@ -4,6 +4,7 @@ import 'ai_models.dart';
 import 'ai_prompt.dart';
 import 'ai_repository.dart';
 import 'ai_transcript.dart';
+import '../../core/log/safe.dart';
 
 enum FakeAiScenario {
   short,
@@ -187,7 +188,7 @@ class FakeAiRepository implements AiRepository {
     lastRequest = request;
     final controller = StreamController<AiSummaryChunk>();
     _open = controller;
-    unawaited(_run(controller));
+    fireAndLog('fake_ai_repository', () => _run(controller));
     return controller.stream;
   }
 

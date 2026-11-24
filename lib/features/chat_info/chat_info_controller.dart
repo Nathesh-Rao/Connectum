@@ -18,6 +18,7 @@ import '../chats/record_rename_controller.dart';
 import '../tickets/models/ticket_detail_row.dart';
 import '../tickets/models/ticket_rows.dart';
 import 'models/chat_info.dart';
+import '../../core/log/safe.dart';
 
 /// The info page of one conversation. It reads what is already stored (the
 /// conversation row and its member list) and, for a record conversation, the
@@ -74,7 +75,7 @@ class ChatInfoController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    if (ticketId != null) unawaited(_readTicket());
+    if (ticketId != null) fireAndLog('chat_info_controller', () => _readTicket());
   }
 
   Future<void> _readTicket() async {

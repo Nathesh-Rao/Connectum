@@ -24,6 +24,7 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
+import '../../core/log/safe.dart';
 
 enum ConnectTargetStep {
   resolving,
@@ -220,7 +221,7 @@ class ConnectTargetController extends GetxController {
       step.value = found.isConnected
           ? ConnectTargetStep.alreadyAssociates
           : ConnectTargetStep.person;
-      if (found.isConnected) unawaited(links.clear(only: target));
+      if (found.isConnected) fireAndLog('connect_target_controller', () => links.clear(only: target));
       return;
     }
     card.value = found.card;
@@ -469,7 +470,7 @@ class ConnectTargetController extends GetxController {
   /// caller closes this sheet.
   void joinOrganisation() {
     _isKept = true;
-    unawaited(_requestJoinAfterClose());
+    fireAndLog('connect_target_controller', () => _requestJoinAfterClose());
   }
 
   Future<void> _requestJoinAfterClose() async {
@@ -486,7 +487,7 @@ class ConnectTargetController extends GetxController {
     if (kind == ConnectTargetFailure.notFound ||
         kind == ConnectTargetFailure.invalid ||
         kind == ConnectTargetFailure.refused) {
-      unawaited(links.clear(only: target));
+      fireAndLog('connect_target_controller', () => links.clear(only: target));
     }
     step.value = ConnectTargetStep.failed;
   }

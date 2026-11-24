@@ -25,6 +25,7 @@ import '../../core/crash/crash_service.dart';
 import 'home_tab.dart';
 import '../smart_view/smart_view_controller.dart';
 import '../security/widgets/security_sheets.dart';
+import '../../core/log/safe.dart';
 
 class HomeShellController extends GetxController
     with GetSingleTickerProviderStateMixin {
@@ -76,7 +77,7 @@ class HomeShellController extends GetxController
       previous = start;
       isBuilt[start.index] = true;
       if (start == HomeTab.smartView) {
-        unawaited(smartView.enter(const SmartViewEntry.tab()));
+        fireAndLog('home_shell_controller', () => smartView.enter(const SmartViewEntry.tab()));
       }
     }
     ever(conversations.conversations, (_) => _updateDot());
@@ -85,7 +86,7 @@ class HomeShellController extends GetxController
     ever(security.e2e.notice, (_) => _syncNotice());
     ever(security.e2e.lateHint, (_) => _syncNotice());
     ever(security.e2e.isLate, (_) => _syncNotice());
-    _notices = security.e2e.notices.listen(_onE2eNotice);
+    _notices = security.e2e.notices.listen(_onE2eNotice, onError: streamOnError('home_shell_controller'));
     _syncNotice();
     _updateDot();
   }
@@ -109,7 +110,7 @@ class HomeShellController extends GetxController
     super.onReady();
     links.resume();
     notificationRouter.markHomeReady();
-    unawaited(_explainNotifications());
+    fireAndLog('home_shell_controller', () => _explainNotifications());
   }
 
   /// Once, after sign-in, on the first Home: a short explainer, then the
@@ -179,10 +180,10 @@ class HomeShellController extends GetxController
     final context = Get.context;
     if (context == null) return;
     if (phase == E2eSetupPhase.limit) {
-      unawaited(SecuritySheets.openLimit(context, security));
+      fireAndLog('home_shell_controller', () => SecuritySheets.openLimit(context, security));
     } else if (phase == E2eSetupPhase.removed ||
         phase == E2eSetupPhase.refused) {
-      unawaited(SecuritySheets.openIssue(context, security));
+      fireAndLog('home_shell_controller', () => SecuritySheets.openIssue(context, security));
     }
   }
 
@@ -190,7 +191,7 @@ class HomeShellController extends GetxController
   void openDeviceLimit() {
     final context = Get.context;
     if (context == null) return;
-    unawaited(SecuritySheets.openLimit(context, security, isRequested: true));
+    fireAndLog('home_shell_controller', () => SecuritySheets.openLimit(context, security, isRequested: true));
   }
 
   void _updateDot() {
@@ -232,7 +233,7 @@ class HomeShellController extends GetxController
     }
     if (isSmart && !isMoving && entry == null) smartView.onReselect();
     if (isSmart && (isMoving || entry != null)) {
-      unawaited(smartView.enter(entry ?? const SmartViewEntry.tab()));
+      fireAndLog('home_shell_controller', () => smartView.enter(entry ?? const SmartViewEntry.tab()));
     }
   }
 

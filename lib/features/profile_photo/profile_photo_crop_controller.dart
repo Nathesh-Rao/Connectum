@@ -9,6 +9,7 @@ import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import 'crop_math.dart';
 import 'photo_renderer.dart';
+import '../../core/log/app_log.dart';
 
 /// The crop screen's state: the picture, the frame size and the view the
 /// person has set. The maths is in [CropState]; this only feeds it gestures.
@@ -55,7 +56,8 @@ class ProfilePhotoCropController extends GetxController {
         PhotoRenderer.previewSide,
       );
       _start();
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('profile_photo_crop_controller', e, st);
       hasLoadFailed.value = true;
     } finally {
       isLoading.value = false;
@@ -157,7 +159,8 @@ class ProfilePhotoCropController extends GetxController {
       full = decoded.image;
       final out = await PhotoRenderer.render(full, c);
       Get.back<Uint8List>(result: out);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('profile_photo_crop_controller', e, st);
       AppNotices.show(
         "This photo couldn't be prepared. Try another one.",
         variant: AppNoticeVariant.error,

@@ -71,6 +71,8 @@ import '../debug/seed_tasks.dart';
 import '../debug/seed_smart_files.dart';
 import '../debug/seed_smart_view.dart';
 import '../debug/seed_tickets.dart';
+import '../log/safe.dart';
+import '../log/app_log.dart';
 
 class InitialBinding extends Bindings {
   InitialBinding(this.connectivity, {SmartViewPrefs? smartViewPrefs})
@@ -107,7 +109,7 @@ class InitialBinding extends Bindings {
     final db = Get.put(AppDatabase(), permanent: true);
     final api = Get.put(ApiClient(store), permanent: true);
     if (!kReleaseMode && !isDemo && AppConfig.isConfigured) {
-      unawaited(_logEnvironment(api));
+      fireAndLog('initial_binding', () => _logEnvironment(api));
     }
     Get.put(connectivity, permanent: true);
     final socket = Get.put(
@@ -221,7 +223,7 @@ class InitialBinding extends Bindings {
       ),
       permanent: true,
     );
-    if (!isDemo) unawaited(localNotifications.start());
+    if (!isDemo) fireAndLog('initial_binding', () => localNotifications.start());
     final attachments = Get.put(AttachmentRepository(store), permanent: true);
     Get.put(FormFileRepository(attachments, store), permanent: true);
     final attachmentCache = Get.put(
@@ -253,7 +255,7 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     // Decrypted documents made for the viewer last run do not outlive it.
-    unawaited(attachmentCache.clearOpenTmp());
+    fireAndLog('initial_binding', () => attachmentCache.clearOpenTmp());
     final session = Get.put(
       isDemo
           ? DemoSessionRepository(
@@ -280,12 +282,10 @@ class InitialBinding extends Bindings {
     Get.put(InviteService(auth, store, links), permanent: true);
     if (isDemo) {
       SeedTasks.start();
-      unawaited(
-        SeedTickets.start().then((_) {
+      fireAndLog('initial_binding', () => SeedTickets.start().then((_) {
           SeedTickets.startOtherPerson();
           return SeedSmartView.start();
-        }),
-      );
+        }));
     }
   }
 }
@@ -294,5 +294,7 @@ Future<void> _logEnvironment(ApiClient api) async {
   try {
     final data = await api.version(const Duration(seconds: 4));
     debugPrint('server: ${data['environment']} ${data['release']}');
-  } catch (_) {}
+  } catch (e, st) {
+    AppLog.e('initial_binding', e, st);
+  }
 }

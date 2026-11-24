@@ -19,6 +19,7 @@ import 'task_form_controller.dart';
 import 'task_people_controller.dart';
 import 'tasks_texts.dart';
 import 'widgets/task_detail_sheet.dart';
+import '../../core/log/safe.dart';
 
 /// One tab's list.
 class TaskList {
@@ -88,12 +89,12 @@ class TasksController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _changes = tasks.changes.listen(_onChange);
-    _refreshes = tasks.refreshes.listen((_) => unawaited(refreshAll()));
-    _openRequests = tasks.openRequests.listen((id) => unawaited(openTask(id)));
-    unawaited(refreshAll());
+    _changes = tasks.changes.listen(_onChange, onError: streamOnError('tasks_controller'));
+    _refreshes = tasks.refreshes.listen((_) => fireAndLog('tasks_controller', () => refreshAll()), onError: streamOnError('tasks_controller'));
+    _openRequests = tasks.openRequests.listen((id) => fireAndLog('tasks_controller', () => openTask(id)), onError: streamOnError('tasks_controller'));
+    fireAndLog('tasks_controller', () => refreshAll());
     final id = Get.arguments;
-    if (id is int) unawaited(openTask(id));
+    if (id is int) fireAndLog('tasks_controller', () => openTask(id));
     if (id == showTickets) selectedSection.value = 1;
   }
 
@@ -203,7 +204,7 @@ class TasksController extends GetxController {
       list.seq++;
       list.viewState.value = AppViewState.loading;
     }
-    unawaited(refreshAll());
+    fireAndLog('tasks_controller', () => refreshAll());
   }
 
   // ---- events and answers ----------------------------------------------------
@@ -294,7 +295,7 @@ class TasksController extends GetxController {
     } on SocketCallError catch (e) {
       final problem = CallProblem.of(e, isWrite: true);
       _tell(problem, retry: retry);
-      if (problem.shouldRefresh) unawaited(_recover(problem, taskId));
+      if (problem.shouldRefresh) fireAndLog('tasks_controller', () => _recover(problem, taskId));
       return false;
     } finally {
       isBusy.value = false;
@@ -325,7 +326,7 @@ class TasksController extends GetxController {
           ? AppNoticeVariant.warning
           : AppNoticeVariant.error,
       actionLabel: problem.canRetry ? TasksTexts.retry : null,
-      onAction: problem.canRetry ? () => unawaited(retry()) : null,
+      onAction: problem.canRetry ? () => fireAndLog('tasks_controller', () => retry()) : null,
     );
   }
 

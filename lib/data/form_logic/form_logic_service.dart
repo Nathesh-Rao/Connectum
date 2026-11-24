@@ -9,6 +9,7 @@ import '../../core/debug/seed_ui.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'form_logic_assets.dart';
+import '../../core/log/safe.dart';
 
 /// What a call to the logic gives back: a value, or the reason there is none.
 /// Calls never throw.
@@ -94,7 +95,7 @@ class FormLogicService extends GetxService {
     } on Object {
       return;
     }
-    unawaited(_resolvePerson(key));
+    fireAndLog('form_logic_service', () => _resolvePerson(key));
   }
 
   Future<void> _resolvePerson(String key) async {
@@ -271,7 +272,7 @@ class FormLogicService extends GetxService {
       } else if (m is List && m.length == 2) {
         _waiting.remove(m[0] as int)?.complete(m[1] as String);
       }
-    });
+    }, onError: streamOnError('form_logic_service'));
     final isolate = await Isolate.spawn(_entry, [
       replies.sendPort,
       assets.shim,
@@ -384,6 +385,6 @@ var __call = function (op, argsJson) {
         reply = jsonEncode({'e': e.toString()});
       }
       if (msg[0] != 0) out.send([msg[0], reply]);
-    });
+    }, onError: streamOnError('form_logic_service'));
   }
 }

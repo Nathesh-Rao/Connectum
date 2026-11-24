@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../session_store.dart';
 import 'push_service.dart';
+import '../../../core/log/safe.dart';
 
 /// Keeps the current push token and what goes with it, in secure storage,
 /// for the day the server can take it. Nothing is sent: the server has no
@@ -35,7 +36,7 @@ class PushTokenRegistry extends GetxService {
   void onInit() {
     super.onInit();
     _scope = _scopeOf();
-    _tokens = _push.tokenStream.listen(_onToken);
+    _tokens = _push.tokenStream.listen(_onToken, onError: streamOnError('push_token_registry'));
     ever(_store.current, (_) => _onSessionChanged());
     _load();
   }

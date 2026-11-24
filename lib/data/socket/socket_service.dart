@@ -198,7 +198,10 @@ class SocketService extends GetxService with WidgetsBindingObserver {
       _subscription = channel.stream.listen(
         _onData,
         onDone: () => _onClosed(channel),
-        onError: (_) => _onClosed(channel),
+        onError: (Object e, StackTrace st) {
+          AppLog.e('socket_service', e, st, 'stream');
+          _onClosed(channel);
+        },
       );
       // The server stores usernames in lower case and wants exactly that; the
       // stored user id keeps the original for display.

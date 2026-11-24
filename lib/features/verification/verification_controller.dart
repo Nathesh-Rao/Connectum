@@ -8,6 +8,7 @@ import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
 import '../../data/models/auth_flow.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../core/log/safe.dart';
 
 class VerificationController extends GetxController {
   VerificationController({
@@ -142,16 +143,16 @@ class VerificationController extends GetxController {
       switch (flow) {
         case AuthFlow.login:
           await auth.verifyLogin(email, code);
-          Get.offAllNamed(AppRoutes.enterprises);
+          fireAndLog('verification_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
         case AuthFlow.register:
           await auth.verifyRegister(email, code);
-          Get.offAllNamed(AppRoutes.enterprises);
+          fireAndLog('verification_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
         case AuthFlow.setup:
           final created = await auth.verifySetup(email, code);
-          Get.offAllNamed(
+          fireAndLog('verification_controller', () async => Get.offAllNamed(
             AppRoutes.enterpriseCreated,
             arguments: {'name': created.name, 'id': created.enterpriseId},
-          );
+          ));
       }
     } on UnsupportedStep catch (e) {
       blockedReasons.assignAll(e.reasons);
@@ -197,7 +198,7 @@ class VerificationController extends GetxController {
         case AuthFlow.login:
           final result = await auth.startLogin(email);
           if (result.kind == LoginStartKind.trusted) {
-            Get.offAllNamed(AppRoutes.enterprises);
+            fireAndLog('verification_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
             return;
           }
           _startResendTimer(

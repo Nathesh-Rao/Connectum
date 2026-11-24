@@ -30,6 +30,7 @@ import 'models/smart_view_entry.dart';
 import 'models/sv_overview_model.dart';
 import 'sv_file_preview_controller.dart';
 import 'widgets/smart_view_table.dart';
+import '../../core/log/safe.dart';
 
 enum SvViewsPhase { loading, ready, error }
 
@@ -176,7 +177,7 @@ class SmartViewController extends GetxController {
           ? Crumb.smartviewModeTable
           : Crumb.smartviewModeCards,
     );
-    unawaited(prefs.setMode(value));
+    fireAndLog('smart_view_controller', () => prefs.setMode(value));
   }
 
   void toggleFilesExpanded(int id) {
@@ -262,7 +263,7 @@ class SmartViewController extends GetxController {
       return;
     }
     if (!isOverview) {
-      unawaited(showOverview());
+      fireAndLog('smart_view_controller', () => showOverview());
       return;
     }
     if (overviewScroll.hasClients) {
@@ -281,7 +282,7 @@ class SmartViewController extends GetxController {
     if (isDrawerOpen.value) {
       closeDrawer();
     } else if (!isOverview) {
-      unawaited(showOverview());
+      fireAndLog('smart_view_controller', () => showOverview());
     }
   }
 
@@ -342,7 +343,7 @@ class SmartViewController extends GetxController {
     current.value = s;
     final t = repo.open(s);
     table.value = t;
-    unawaited(_loadViews(s));
+    fireAndLog('smart_view_controller', () => _loadViews(s));
     await repo.load(t);
   }
 
@@ -683,7 +684,7 @@ class SmartViewController extends GetxController {
           caption: open.caption,
         ),
       );
-      if (result == true) unawaited(repo.refreshNewest(t));
+      if (result == true) fireAndLog('smart_view_controller', () => repo.refreshNewest(t));
     } finally {
       isAdding.value = false;
     }
@@ -1033,7 +1034,7 @@ class SmartViewController extends GetxController {
   // ---- the card's bar and menu: the queue's, nothing new per card ---------
 
   /// The menu is opened: its actions are read once (cached 60 s).
-  void openRecordMenu(int id) => unawaited(tickets.ensureMenu(id));
+  void openRecordMenu(int id) => fireAndLog('smart_view_controller', () => tickets.ensureMenu(id));
 
   TicketDetailController detailOf(int id) => _details.putIfAbsent(id, () {
     final c = newTicketDetail(id);
