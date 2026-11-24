@@ -66,7 +66,7 @@ class _Rig {
       store: FakeStore(),
       fetcher: fetcher ?? _fast,
       tempDir: () async => temp..createSync(recursive: true),
-      saver: (name, bytes, mime) async => null,
+      saver: (name, file, mime) async => null,
     );
   }
 

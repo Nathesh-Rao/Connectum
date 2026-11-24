@@ -74,4 +74,21 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(runs, 2);
   });
+
+  test('large and small frames reach listeners in arrival order', () async {
+    final seen = <String>[];
+    final sub = socket.unfilteredEventsForTest.listen(
+      (e) => seen.add('${e['n']}'),
+    );
+    final padding = 'x' * (SocketService.decodeThreshold + 10);
+    socket.receiveForTest('{"type":"m","n":"1"}');
+    socket.receiveForTest('{"type":"m","n":"2","pad":"$padding"}');
+    socket.receiveForTest('{"type":"m","n":"3"}');
+    socket.receiveForTest('not json');
+    socket.receiveForTest('{"type":"m","n":"4","pad":"$padding"}');
+    socket.receiveForTest('{"type":"m","n":"5"}');
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(seen, ['1', '2', '3', '4', '5']);
+    await sub.cancel();
+  });
 }

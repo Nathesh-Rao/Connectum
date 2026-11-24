@@ -252,7 +252,7 @@ class SmartViewColumns {
     if (f == null) return const SvCellValue(empty, null);
     final raw = row.values[f.name];
     final files = column.type == SvColType.file
-        ? SvFile.listOf(raw, row.files[f.name])
+        ? row.filesOf(f.name)
         : const <SvFile>[];
     return SvCellValue(
       _shown(SvCell.of(f, raw, labels: row.labels, files: row.files)),

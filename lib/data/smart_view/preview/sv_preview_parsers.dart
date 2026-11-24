@@ -95,6 +95,9 @@ class SvPreviewParsers {
 
   static SvSheetTable parseCsvText(String text) => parseCsv(text);
 
+  static SvSheetTable parseCsvBytes(List<int> bytes) =>
+      parseCsv(utf8.decode(bytes, allowMalformed: true));
+
   /// A tolerant CSV / TSV parser: quotes with doubled quotes, embedded
   /// newlines, and the delimiter (comma, semicolon or tab) taken from the
   /// first line. Rows and columns are capped.

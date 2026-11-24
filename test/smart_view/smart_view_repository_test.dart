@@ -584,4 +584,79 @@ void main() {
       expect(rig.socket.calls, isEmpty);
     });
   });
+
+  group('rows on screen', () {
+    // ts of row i (server order) over 1100 rows = 3 pages of 500.
+    final cases = <String, int Function(int)>{
+      'newest first (append path)': (i) => 5000 - i,
+      'oldest first (full sort)': (i) => 5000 + i,
+      'mixed pages (full sort)': (i) => 5000 + (i * 7919) % 1000,
+      'equal times': (i) => 5000 - i ~/ 100,
+    };
+    for (final c in cases.entries) {
+      test('${c.key}: same order and count as a full sort', () async {
+        await openTickets();
+        final ts = [for (var i = 0; i < 1100; i++) c.value(i)];
+        serve([for (var i = 0; i < ts.length; i++) ownRow(i + 1, ts: ts[i])]);
+        await rig.repo.load(table);
+        expect(table.rows.length, 1100);
+        expect([
+          for (final r in table.rows) r.ts,
+        ], [...ts]..sort((a, b) => b.compareTo(a)));
+        expect({for (final r in table.rows) r.id}.length, 1100);
+      });
+    }
+
+    test(
+      'a page that sorts after what is shown is appended, not re-sorted',
+      () async {
+        await openTickets();
+        final pager = listPager([
+          for (var i = 0; i < 1100; i++) ownRow(i + 1, ts: 5000 - i),
+        ]);
+        rig.socket.answers[_rows] = (args) {
+          if (args['offset'] != 0) {
+            table.rows[0] = table.rows[0].copyWith(holder: 'marker');
+          }
+          return pager(args);
+        };
+        await rig.repo.load(table);
+        expect(table.rows.length, 1100);
+        expect(table.rows.first.holder, 'marker');
+      },
+    );
+
+    test(
+      'a page that sorts before what is shown re-sorts everything',
+      () async {
+        await openTickets();
+        final pager = listPager([
+          for (var i = 0; i < 1100; i++) ownRow(i + 1, ts: 5000 + i),
+        ]);
+        rig.socket.answers[_rows] = (args) {
+          if (args['offset'] != 0) {
+            table.rows[0] = table.rows[0].copyWith(holder: 'marker');
+          }
+          return pager(args);
+        };
+        await rig.repo.load(table);
+        expect(table.rows.length, 1100);
+        expect(table.rows.first.ts, 6099);
+        expect(table.rows.any((r) => r.holder == 'marker'), isFalse);
+      },
+    );
+
+    test('visible maps are shared, hidden keys are cut', () async {
+      await openTickets();
+      serve([
+        ownRow(1, values: {'title': 'a', 'stage': 'Open', 'zz_hidden': 'x'}),
+        ownRow(2),
+      ]);
+      await rig.repo.load(table);
+      final byId = {for (final r in table.rows) r.id: r};
+      expect(byId[1]!.values.containsKey('zz_hidden'), isFalse);
+      expect(byId[1]!.values['title'], 'a');
+      expect(byId[2]!.values['title'], 'Row 2');
+    });
+  });
 }

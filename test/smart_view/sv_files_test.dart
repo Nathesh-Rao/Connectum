@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:connectum/core/debug/seed_smart_files.dart';
@@ -48,8 +49,8 @@ class _Rig {
       fetcher: fetcher ?? _fast,
       cacheLimit: limit,
       tempDir: () async => temp..createSync(recursive: true),
-      saver: (name, bytes, mime) async {
-        asked.add((name: name, bytes: bytes.length, mime: mime));
+      saver: (name, file, mime) async {
+        asked.add((name: name, bytes: file.lengthSync(), mime: mime));
         final out = onSave?.call(name);
         return out;
       },
@@ -818,4 +819,60 @@ void main() {
       expect(rig.temp.existsSync(), isFalse);
     });
   });
+
+  group('performance', () {
+    test('SvRow.filesOf is memoised per row and follows a changed row', () {
+      const f = SvFile(id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'a.pdf', size: 3);
+      final row = _row(1, [f]);
+      final first = row.filesOf('doc');
+      expect(first.single.name, 'a.pdf');
+      expect(identical(row.filesOf('doc'), first), isTrue);
+      expect(
+        [for (final x in first) x.id],
+        [
+          for (final x in SvFile.listOf(row.values['doc'], row.files['doc']))
+            x.id,
+        ],
+      );
+      final changed = row.copyWith(values: {'doc': <String>[]});
+      expect(changed.filesOf('doc'), isEmpty);
+      expect(row.filesOf('doc').length, 1);
+      expect(row.filesOf('nope'), isEmpty);
+    });
+
+    test('saveAs hands the file over and never reads its bytes', () async {
+      final rig = _Rig();
+      addTearDown(rig.dispose);
+      final file = _NoBytesFile(File('${rig.temp.path}/big.bin'));
+      rig.onSave = (_) => Uri.parse('file:///x/big.bin');
+      const f = SvFile(
+        id: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+        name: 'big.bin',
+        size: 9,
+      );
+      final name = await rig.repo.saveAs(f, file);
+      expect(name, 'big.bin');
+      expect(file.readCalls, 0);
+      expect(rig.asked.single.name, 'big.bin');
+    });
+  });
+}
+
+class _NoBytesFile extends Fake implements File {
+  _NoBytesFile(this._inner);
+
+  final File _inner;
+  int readCalls = 0;
+
+  @override
+  int lengthSync() => 9;
+
+  @override
+  Future<Uint8List> readAsBytes() async {
+    readCalls++;
+    throw StateError('whole file read');
+  }
+
+  @override
+  String get path => _inner.path;
 }

@@ -16,6 +16,7 @@ import '../smart_view/smart_view_commands.dart';
 import '../socket/socket_service.dart';
 import 'ticket_repository.dart';
 import '../../core/log/safe.dart';
+import '../../core/log/app_log.dart';
 
 enum SvPhase { loading, ready, empty, error, offline, noAccess }
 
@@ -98,6 +99,12 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   StreamSubscription<Map<String, dynamic>>? _events;
   StreamSubscription<void>? _online;
 
+  final _changes = StreamController<String?>.broadcast();
+
+  /// The structure a record event named (lower case), or null when it named
+  /// none or the connection came back (`resync`): what the Overview follows.
+  Stream<String?> get recordChanges => _changes.stream;
+
   /// `record` when events carry `data.record`, `refetch` when they do not;
   /// null until the first event.
   String? liveMode;
@@ -108,6 +115,10 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   final _needsFull = <SvTable>{};
   final _flushing = <SvTable>{};
   int _debounceGen = 0;
+
+  void _announce(String? tstruct) {
+    if (!_changes.isClosed) _changes.add(tstruct);
+  }
 
   String get me =>
       (SeedSmartView.isActive ? SeedSmartView.me : _store.userId ?? '')
@@ -120,11 +131,15 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _events = _socket.events.listen(
-      (event) => fireAndLog('smart_view_repository', () async => onEvent(event)),
+      (event) =>
+          fireAndLog('smart_view_repository', () async => onEvent(event)),
       onError: streamOnError('smart_view_repository'),
     );
     SeedSmartView.emit = onEvent;
-    _online = _socket.onOnline.listen((_) => _reconnected(), onError: streamOnError('smart_view_repository'));
+    _online = _socket.onOnline.listen(
+      (_) => _reconnected(),
+      onError: streamOnError('smart_view_repository'),
+    );
     ever(_store.current, (_) => _reset());
   }
 
@@ -133,6 +148,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _events?.cancel();
     _online?.cancel();
+    _changes.close();
     if (SeedSmartView.emit == onEvent) SeedSmartView.emit = null;
     super.onClose();
   }
@@ -370,9 +386,15 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         }
         if (isStale()) return;
         final page = SvPage.parse(data, isReceived: false);
-        own.addAll([for (final r in page.rows) _cut(t.source, r)]);
+        final watch = Stopwatch()..start();
+        final names = _namesOf(t.source);
+        own.addAll([for (final r in page.rows) _cut(t.source, r, names)]);
         t.total.value = page.total;
         _show(t, own);
+        AppLog.i(
+          'SMARTVIEW',
+          'page added rows=${page.rows.length} ms=${watch.elapsedMilliseconds}',
+        );
         isFirst = false;
         pages++;
         offset += SvLimits.rowsPageSize;
@@ -446,9 +468,10 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       if (isStale()) return;
       final page = SvPage.parse(data, isReceived: true);
       final have = {for (final r in own) r.id};
+      final names = _namesOf(t.source);
       for (final r in page.rows) {
         if (r.tstruct.toLowerCase() != t.source.name.toLowerCase()) continue;
-        if (have.add(r.id)) own.add(_cut(t.source, r));
+        if (have.add(r.id)) own.add(_cut(t.source, r, names));
       }
       _show(t, own);
       offset += page.received;
@@ -462,9 +485,19 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     }
   }
 
-  /// Hidden fields: only keys of the source list are kept.
-  SvRow _cut(SvSource s, SvRow r) {
-    final names = {for (final f in s.fields) f.name};
+  Set<String> _namesOf(SvSource s) => {for (final f in s.fields) f.name};
+
+  /// Hidden fields: only keys of the source list are kept. A map that has no
+  /// hidden key is shared, not copied.
+  SvRow _cut(SvSource s, SvRow r, [Set<String>? known]) {
+    final names = known ?? _namesOf(s);
+    Map<String, dynamic> keep(Map<String, dynamic> m) =>
+        m.keys.every(names.contains)
+        ? m
+        : {
+            for (final e in m.entries)
+              if (names.contains(e.key)) e.key: e.value,
+          };
     return SvRow(
       id: r.id,
       tstruct: r.tstruct,
@@ -475,35 +508,49 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       holder: r.holder,
       claimants: r.claimants,
       completion: r.completion,
-      values: {
-        for (final e in r.values.entries)
-          if (names.contains(e.key)) e.key: e.value,
-      },
-      labels: {
-        for (final e in r.labels.entries)
-          if (names.contains(e.key)) e.key: e.value,
-      },
-      files: {
-        for (final e in r.files.entries)
-          if (names.contains(e.key)) e.key: e.value,
-      },
+      values: keep(r.values),
+      labels: keep(r.labels),
+      files: keep(r.files),
       canEdit: r.canEdit,
       isReceived: r.isReceived,
     );
   }
 
+  /// How many rows of each growing list [_show] has already put on screen.
+  final _shownCount = Expando<int>('smartview shown');
+
   /// Puts [rows] (newest first) on screen. Nothing at all is "empty" only
   /// once every list was read, so a structure that holds only received
-  /// records does not flash the empty state.
+  /// records does not flash the empty state. [rows] only grows between calls:
+  /// a new page that sorts after what is shown is appended; anything else
+  /// sorts everything once.
   void _show(SvTable t, List<SvRow> rows, {bool isDone = false}) {
-    final sorted = [...rows]..sort((a, b) => b.ts.compareTo(a.ts));
-    t.rows.assignAll(sorted);
-    _remember(t, sorted);
-    if (sorted.isNotEmpty) {
+    final shown = _shownCount[rows];
+    if (shown != null && shown <= rows.length && t.rows.length == shown) {
+      if (rows.length > shown) {
+        final tail = rows.sublist(shown)..sort((a, b) => b.ts.compareTo(a.ts));
+        if (t.rows.isEmpty || t.rows.last.ts >= tail.first.ts) {
+          t.rows.addAll(tail);
+          _remember(t, tail);
+        } else {
+          _showAll(t, rows);
+        }
+      }
+    } else {
+      _showAll(t, rows);
+    }
+    _shownCount[rows] = rows.length;
+    if (t.rows.isNotEmpty) {
       t.phase.value = SvPhase.ready;
     } else if (isDone) {
       t.phase.value = SvPhase.empty;
     }
+  }
+
+  void _showAll(SvTable t, List<SvRow> rows) {
+    final sorted = [...rows]..sort((a, b) => b.ts.compareTo(a.ts));
+    t.rows.assignAll(sorted);
+    _remember(t, sorted);
   }
 
   /// The cards follow the record state (`liveOf`) like every other record
@@ -538,11 +585,16 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   void onEvent(Map<String, dynamic> e) {
     final name = e['type'] == 'sd_event' ? idText(e['event']) : e['type'];
     if (name == SvEvents.resync) {
+      _announce(null);
       _reconnected();
       return;
     }
     final raw = e['data'];
     final data = raw is Map ? raw : e;
+    if (SvEvents.record.contains(name)) {
+      final s = idText(data['tstruct']).toLowerCase();
+      _announce(s.isEmpty ? null : s);
+    }
     if (name == SvEvents.structures) {
       _sources = null;
       final changed = idText(data['name']).toLowerCase();
@@ -632,9 +684,12 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
 
   void _scheduleFlush() {
     final gen = ++_debounceGen;
-    fireAndLog('smart_view_repository', () => _delay(_debounce).then((_) {
+    fireAndLog(
+      'smart_view_repository',
+      () => _delay(_debounce).then((_) {
         if (gen == _debounceGen) _flushAll();
-      }));
+      }),
+    );
   }
 
   void _flushAll() {
@@ -644,7 +699,8 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       ..._needsFull,
     }.where(_tables.contains).toList();
     for (final t in all) {
-      if (_flushing.add(t)) fireAndLog('smart_view_repository', () => _flush(t));
+      if (_flushing.add(t))
+        fireAndLog('smart_view_repository', () => _flush(t));
     }
   }
 

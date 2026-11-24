@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -178,34 +177,24 @@ class SvFilePreviewController extends GetxController {
         l.isShowable.value = true;
       case SvViewer.sheet:
         final bytes = await file.readAsBytes();
-        final text = utf8.decode(bytes, allowMalformed: true);
         final table = await _parse(
-          SvPreviewParsers.parseCsvText,
-          text,
+          SvPreviewParsers.parseCsvBytes,
+          bytes,
           bytes.length,
         );
         l.sheet = SvSheetBook([table]);
         l.isShowable.value = table.rows.isNotEmpty;
       case SvViewer.docx:
-        l.doc = await _parse(
-          SvPreviewParsers.parseDocx,
-          await file.readAsBytes(),
-          l.file.size,
-        );
+        final bytes = await file.readAsBytes();
+        l.doc = await _parse(SvPreviewParsers.parseDocx, bytes, bytes.length);
         l.isShowable.value = l.doc != null;
       case SvViewer.pptx:
-        l.doc = await _parse(
-          SvPreviewParsers.parsePptx,
-          await file.readAsBytes(),
-          l.file.size,
-        );
+        final bytes = await file.readAsBytes();
+        l.doc = await _parse(SvPreviewParsers.parsePptx, bytes, bytes.length);
         l.isShowable.value = l.doc != null;
       case SvViewer.zip:
-        l.zip = await _parse(
-          SvPreviewParsers.listZip,
-          await file.readAsBytes(),
-          l.file.size,
-        );
+        final bytes = await file.readAsBytes();
+        l.zip = await _parse(SvPreviewParsers.listZip, bytes, bytes.length);
         l.isShowable.value = l.zip != null;
       case SvViewer.none:
         break;

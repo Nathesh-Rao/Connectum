@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart' show FilePicker;
@@ -46,10 +45,11 @@ typedef SvFileFetcher =
       CancelToken cancel,
     );
 
-/// Hands [bytes] to the system save dialog under [name]. Returns where the
-/// person saved it, or null when they cancelled. Tests pass their own.
+/// Hands [file] (the cached copy) to the system save dialog under [name].
+/// Returns where the person saved it, or null when they cancelled. Tests pass
+/// their own.
 typedef SvFileSaver =
-    Future<Uri?> Function(String name, Uint8List bytes, String mime);
+    Future<Uri?> Function(String name, File file, String mime);
 
 /// The save dialog could not save the file (not a cancel).
 class SvSaveException implements Exception {
@@ -104,8 +104,15 @@ class SvFileRepository {
     p.join((await getTemporaryDirectory()).path, 'sv_files'),
   ).create(recursive: true);
 
-  static Future<Uri?> _systemSaver(String name, Uint8List bytes, String mime) =>
-      FilePicker.saveFile(fileName: name, bytes: bytes, mimeType: mime);
+  /// `FilePicker.saveFile` only takes the bytes (the plugin writes them
+  /// itself), so this is the one place the file is read whole, and only after
+  /// the person has picked to save: the viewer caps files at 25 MB.
+  static Future<Uri?> _systemSaver(String name, File file, String mime) async =>
+      FilePicker.saveFile(
+        fileName: name,
+        bytes: await file.readAsBytes(),
+        mimeType: mime,
+      );
 
   void dispose() => _worker?.dispose();
 
@@ -254,10 +261,9 @@ class SvFileRepository {
     final name = source.safeName;
     final Uri? where;
     try {
-      final bytes = await file.readAsBytes();
       where = await _saver(
         name,
-        bytes,
+        file,
         source.mime.isEmpty ? 'application/octet-stream' : source.mime,
       );
     } on Object {

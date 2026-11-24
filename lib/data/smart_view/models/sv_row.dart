@@ -1,5 +1,6 @@
 import '../../models/ids.dart';
 import '../../models/ticket.dart';
+import '../sv_file.dart';
 import 'sv_source.dart';
 
 /// One record of a structure: a `submissions.list` row (mine, with `canEdit`,
@@ -41,6 +42,15 @@ class SvRow {
   /// Only a `submissions.list` row can say so; a received record never can.
   final bool canEdit;
   final bool isReceived;
+
+  static final _fileMemo = Expando<Map<String, List<SvFile>>>('sv files');
+
+  /// The files of field [name], parsed once per row. A changed row is a new
+  /// [SvRow] (see [copyWith]), so it starts with an empty memo.
+  List<SvFile> filesOf(String name) {
+    final memo = _fileMemo[this] ??= <String, List<SvFile>>{};
+    return memo[name] ??= SvFile.listOf(values[name], files[name]);
+  }
 
   /// `Waiting for approval` / `Declined` / `Approved` / `Recorded`.
   String get approval => switch (recordStatus.toLowerCase()) {

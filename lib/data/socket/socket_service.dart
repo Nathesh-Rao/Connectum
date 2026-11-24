@@ -16,7 +16,10 @@ import '../redact.dart';
 import '../session_store.dart';
 import 'connectivity_service.dart';
 import '../../core/log/safe.dart';
+import '../../core/log/api_log.dart';
 import '../../core/log/app_log.dart';
+
+Object? _decodeFrame(String raw) => jsonDecode(raw);
 
 enum SocketState {
   connecting,
@@ -98,6 +101,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     ever(connection, (state) {
+      AppLog.i('socket', 'state=${state.name}');
       if (kDebugMode) debugPrint('notifyflow: socket state=$state');
       if (state == SocketState.online) CrashBreadcrumbs.add(Crumb.wsConnected);
     });
@@ -220,15 +224,72 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     }
   }
 
+  /// Frames over this many characters are decoded in an isolate; smaller ones
+  /// on the UI isolate (a tiny decode costs less than the isolate hop).
+  static const decodeThreshold = 64 * 1024;
+
+  int _framesPending = 0;
+  int _frameEpoch = 0;
+  Future<void> _frameChain = Future<void>.value();
+
+  /// Frames reach the listeners in arrival order: while a large frame is still
+  /// decoding, every later frame (small ones too) waits behind it.
   void _onData(dynamic raw) {
     if (raw is! String) return;
-    final Object? decoded;
-    try {
-      decoded = jsonDecode(raw);
-    } catch (e, s) {
-      CrashService.nonFatal(e, s, 'ws frame parse');
+    if (raw.length <= decodeThreshold && _framesPending == 0) {
+      _dispatch(_decodeInline(raw));
       return;
     }
+    final epoch = _frameEpoch;
+    final Future<Object?> decoding = raw.length > decodeThreshold
+        ? _decodeInIsolate(raw)
+        : Future<Object?>.value(_decodeInline(raw));
+    _framesPending++;
+    _frameChain = _frameChain.then((_) async {
+      try {
+        final decoded = await decoding;
+        if (epoch == _frameEpoch) _dispatch(decoded);
+      } catch (e, s) {
+        AppLog.e('socket_service', e, s, 'frame');
+      } finally {
+        _framesPending--;
+      }
+    });
+  }
+
+  Object? _decodeInline(String raw) {
+    try {
+      return jsonDecode(raw);
+    } catch (e, s) {
+      CrashService.nonFatal(e, s, 'ws frame parse');
+      return null;
+    }
+  }
+
+  Future<Object?> _decodeInIsolate(String raw) async {
+    final watch = Stopwatch()..start();
+    try {
+      final out = await compute(_decodeFrame, raw);
+      AppLog.i(
+        'SMARTVIEW',
+        'frame decoded in isolate size=${raw.length} ms=${watch.elapsedMilliseconds}',
+      );
+      return out;
+    } catch (e, s) {
+      CrashService.nonFatal(e, s, 'ws frame parse');
+      return null;
+    }
+  }
+
+  void _dispatch(Object? decoded) {
+    try {
+      _handleFrame(decoded);
+    } catch (e, s) {
+      AppLog.e('socket_service', e, s, 'dispatch');
+    }
+  }
+
+  void _handleFrame(Object? decoded) {
     if (decoded is! Map) return;
     final event = decoded.cast<String, dynamic>();
     _log('<- ${Redact.event(event)}');
@@ -332,6 +393,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     _handshakeTimer?.cancel();
     _stableTimer?.cancel();
     if (_isEnded(next)) _retryTimer?.cancel();
+    _frameEpoch++;
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close();
@@ -347,6 +409,9 @@ class SocketService extends GetxService with WidgetsBindingObserver {
 
   @visibleForTesting
   void receiveForTest(String frame) => _onData(frame);
+
+  @visibleForTesting
+  Stream<Map<String, dynamic>> get unfilteredEventsForTest => _events.stream;
 
   @visibleForTesting
   bool get isRetryScheduled => _retryTimer?.isActive ?? false;
@@ -370,6 +435,7 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     final delay = (base * (0.8 + _random.nextDouble() * 0.4)).round();
     _attempt = min(_attempt + 1, 10);
     CrashBreadcrumbs.add(Crumb.wsReconnect);
+    AppLog.i('socket', 'reconnect in ${delay}ms (attempt $_attempt)');
     _retryTimer = Timer(Duration(milliseconds: delay), connectNow);
   }
 
@@ -439,10 +505,26 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     Duration timeout = const Duration(seconds: 12),
   }) {
     final id = 'm-${++_callSeq}';
+    final watch = Stopwatch()..start();
     return _call(
       id,
       '/sd $action ${jsonEncode({...args, 'reqId': id})}',
       timeout,
+      action: action,
+      request: args,
+    ).then(
+      (data) {
+        AppLog.i('sd_call', '$action ok ${watch.elapsedMilliseconds} ms');
+        return data;
+      },
+      onError: (Object e, StackTrace st) {
+        final code = e is SocketCallError ? e.code : e.runtimeType;
+        AppLog.w(
+          'sd_call',
+          '$action failed code=$code ${watch.elapsedMilliseconds} ms',
+        );
+        Error.throwWithStackTrace(e, st);
+      },
     );
   }
 
@@ -452,9 +534,40 @@ class SocketService extends GetxService with WidgetsBindingObserver {
     String line,
     String name, {
     Duration timeout = const Duration(seconds: 12),
-  }) => _call('#$name', line, timeout);
+  }) => _call('#$name', line, timeout, action: '#$name', request: line);
 
+  /// The one place every socket API call passes: logs it (file only, redacted)
+  /// while the log is on.
   Future<Map<String, dynamic>> _call(
+    String id,
+    String line,
+    Duration timeout, {
+    required String action,
+    Object? request,
+  }) {
+    final log = ApiLog.begin(action, request);
+    final answer = _send(id, line, timeout);
+    if (log == null) return answer;
+    return answer.then(
+      (data) {
+        log.ok(data);
+        return data;
+      },
+      onError: (Object e, StackTrace st) {
+        if (e is SocketCallError && !e.isConnectionGap) {
+          log.failed(e.code, e.message, body: e.details);
+        } else {
+          log.noResponse(
+            e.runtimeType.toString(),
+            e is SocketCallError ? e.code : null,
+          );
+        }
+        Error.throwWithStackTrace(e, st);
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _send(
     String id,
     String line,
     Duration timeout,
