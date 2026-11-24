@@ -15,6 +15,9 @@ class AppTone {
   Color get tint =>
       Color.alphaBlend(solid.withValues(alpha: 0.13), AppColors.white);
 
+  /// Halfway between [tint] and [tintStrong]: the band of an Inbox card.
+  Color get tintMedium => Color.lerp(tint, tintStrong, 0.5)!;
+
   Color get tintStrong =>
       Color.alphaBlend(solid.withValues(alpha: 0.20), AppColors.white);
 }
@@ -26,6 +29,9 @@ class AppTones {
 
   static const red = AppTone(Color(0xFFC62828), Color(0xFF8E1B1B));
   static const green = AppTone(Color(0xFF15803D), Color(0xFF115E2D));
+  /// Amber: the one yellow of the app. It means "waiting for you" on an Inbox
+  /// record and nothing else.
+  static const yellow = AppTone(Color(0xFFB45F06), Color(0xFF7A3F04));
   static const blue = AppTone(AppColors.primaryBright, AppColors.primaryStrong);
   static const violet = AppTone(AppColors.violet, AppColors.violetStrong);
   static const purple = AppTone(AppColors.purple, Color(0xFF4A2897));

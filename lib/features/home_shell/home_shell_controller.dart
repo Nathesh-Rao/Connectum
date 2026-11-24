@@ -219,6 +219,13 @@ class HomeShellController extends GetxController
     select(HomeTab.smartView, entry: entry);
   }
 
+  /// `#inbox`: leaves the open chat and shows the Inbox tab. The Smart view
+  /// tab keeps its own state while the Inbox is shown.
+  void openInbox() {
+    Get.until((r) => tabRoutes.contains(r.settings.name));
+    select(HomeTab.inbox);
+  }
+
   void select(HomeTab next, {SmartViewEntry? entry}) {
     final isSmart = next == HomeTab.smartView;
     final isMoving = next != tab.value;
@@ -231,7 +238,6 @@ class HomeShellController extends GetxController
       crossfade.forward(from: 0);
       smartView.setActive(isSmart);
     }
-    if (isSmart && !isMoving && entry == null) smartView.onReselect();
     if (isSmart && (isMoving || entry != null)) {
       fireAndLog('home_shell_controller', () => smartView.enter(entry ?? const SmartViewEntry.tab()));
     }

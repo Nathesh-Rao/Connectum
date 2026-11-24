@@ -46,6 +46,7 @@ import '../../data/repositories/typing_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/task_repository.dart';
+import '../../data/repositories/inbox_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/sv_saved_views_repository.dart';
 import '../debug/seed_saved_views.dart';
@@ -55,6 +56,7 @@ import '../../data/repositories/workspace_repository.dart';
 import '../../features/tickets/saved_record_notice.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
+import '../../data/socket/read_gate.dart';
 import '../../data/socket/socket_service.dart';
 import '../../features/connect_target/connect_target_controller.dart';
 import '../utils/install_referrer.dart';
@@ -188,14 +190,16 @@ class InitialBinding extends Bindings {
       SubmissionRepository(db, store, socket, messages, formOptions),
       permanent: true,
     );
+    final readGate = Get.put(ReadGate(), permanent: true);
     final tickets = Get.put(
-      TicketRepository(socket, store, conversations),
+      TicketRepository(socket, store, conversations, gate: readGate),
       permanent: true,
     );
     final smartView = Get.put(
-      SmartViewRepository(socket, store, tickets),
+      SmartViewRepository(socket, store, tickets, gate: readGate),
       permanent: true,
     );
+    Get.put(InboxRepository(socket, store, readGate), permanent: true);
     commands.sourceSuggester = smartView.suggestions;
     Get.put(
       SvSavedViewsRepository(

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectum/data/repositories/smart_view_repository.dart';
 import 'package:connectum/data/smart_view/smart_view_commands.dart';
+import 'package:connectum/data/socket/read_gate.dart';
 import 'package:connectum/data/socket/socket_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -342,7 +343,7 @@ void main() {
       expect(table.phase.value, SvPhase.error);
     });
 
-    test('never more than 6 commands in any 10 seconds', () async {
+    test('never more than the shared budget in any 10 seconds', () async {
       await openTickets();
       serve([for (var i = 0; i < 5000; i++) ownRow(i + 1)]);
       await rig.repo.load(table);
@@ -352,7 +353,7 @@ void main() {
           (x) =>
               !x.isBefore(t) && x.difference(t) < const Duration(seconds: 10),
         );
-        expect(inWindow.length, lessThanOrEqualTo(SvLimits.budget));
+        expect(inWindow.length, lessThanOrEqualTo(ReadGate.budget));
       }
     });
   });
@@ -534,7 +535,7 @@ void main() {
     });
 
     test(
-      'a burst of 20 events stays inside 6 commands per 10 seconds',
+      'a burst of 20 events stays inside the shared read budget',
       () async {
         await opened();
         times.clear();
@@ -554,7 +555,7 @@ void main() {
             (x) =>
                 !x.isBefore(t) && x.difference(t) < const Duration(seconds: 10),
           );
-          expect(inWindow.length, lessThanOrEqualTo(SvLimits.budget));
+          expect(inWindow.length, lessThanOrEqualTo(ReadGate.budget));
         }
         expect(rig.count(_rows), 0);
       },

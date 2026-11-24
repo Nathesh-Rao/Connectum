@@ -36,23 +36,12 @@ class SvLimits {
   /// `records.mine` with and involved: 200 a page, at most 3 pages each.
   static const mineMaxPages = 3;
 
-  /// Between two page reads.
-  static const gap = Duration(milliseconds: 300);
-
   /// The source list is read once per open and kept this long.
   static const sourcesTtl = Duration(seconds: 60);
-
-  /// Smart View never sends more than this many commands in [window].
-  static const budget = 6;
-  static const window = Duration(seconds: 10);
 
   /// Events are collected this long, then one refresh runs.
   static const eventDebounce = Duration(milliseconds: 600);
 
   /// A source list answers at most this many suggestions.
   static const maxSuggestions = 30;
-
-  /// `rate_limited` / `busy`: wait 1, 2, 3, 4 s, then give up.
-  static const maxRetries = 4;
-  static const retryable = {'rate_limited', 'busy'};
 }

@@ -15,6 +15,14 @@ class RecordCmd {
   static const people = 'record.people';
   static const thread = 'record.thread';
 
+  /// The Inbox's reads: the server runs the filter (`records.query`), counts
+  /// per view, the people the filter offers (`records.people`) and the
+  /// name/designation/picture of user names (`people.cards`).
+  static const query = 'records.query';
+  static const counts = 'records.counts';
+  static const queryPeople = 'records.people';
+  static const peopleCards = 'people.cards';
+
   static const submit = 'tstruct.submit';
   static const userSubmit = 'tstruct.user.submit';
   static const openStructure = 'tstruct.user.open';
@@ -79,4 +87,16 @@ class RecordLimits {
   /// use [requested] within 1-200.
   static int mineLimit(String as, int requested) =>
       as == 'raised' ? mineMaxLimit : requested.clamp(1, mineMaxLimit);
+
+  /// `records.query` (`sd_recquery.erl`): limit 1-200, people names at most 50
+  /// of at most 200 characters, at most 8 views. The page the Inbox asks.
+  static const queryMaxLimit = 200;
+  static const queryPageSize = 50;
+  static const queryMaxNames = 50;
+  static const queryMaxNameChars = 200;
+  static const queryMaxViews = 8;
+  static const queryMaxOffset = 1000000;
+
+  /// `people.cards`: at most this many user names in one call.
+  static const peopleCardsBatch = 60;
 }

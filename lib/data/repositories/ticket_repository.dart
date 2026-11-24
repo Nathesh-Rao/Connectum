@@ -13,6 +13,7 @@ import '../models/ticket.dart';
 import '../records/record_actions_queue.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
+import '../socket/read_gate.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
 import '../../core/log/safe.dart';
@@ -53,9 +54,11 @@ class TicketRepository extends GetxService with WidgetsBindingObserver {
     this._socket,
     this._store,
     this._conversations, {
+    ReadGate? gate,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now {
     _queue = RecordActionsQueue(
+      gate: gate ?? ReadGate(now: _now),
       now: _now,
       fetch: _fetchForCard,
       isFresh: _isMenuFresh,

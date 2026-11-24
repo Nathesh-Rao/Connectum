@@ -1,14 +1,15 @@
 import 'dart:async';
 
+import '../socket/read_gate.dart';
 import '../socket/socket_service.dart';
 import '../../core/log/app_log.dart';
 
 /// The one queue that reads `record.actions` for cards on screen. Cards only
 /// say "I am on screen" ([show]) and "I am gone" ([hide]); this class decides
-/// when a command goes out: one at a time, [spacing] apart, at most [budget]
-/// in any [window] (the server's limit is 30 per 10 s per connection and
-/// other traffic needs room), newest record first, never for a record whose
-/// last read is fresh, backing off when the server says it is busy.
+/// when a command goes out: one at a time, [spacing] apart, inside the
+/// shared [ReadGate] budget (the server's limit is 30 per 10 s per
+/// connection), newest record first, never for a record whose last read is
+/// fresh, backing off when the server says it is busy.
 ///
 /// A future batch command replaces [fetch] only; nothing else changes.
 class RecordActionsQueue {
@@ -16,14 +17,16 @@ class RecordActionsQueue {
     required this.fetch,
     required this.isFresh,
     required this.canRun,
+    required ReadGate gate,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now;
+  }) : _gate = gate,
+       _now = now ?? DateTime.now;
+
+  final ReadGate _gate;
 
   final DateTime Function() _now;
 
   static const spacing = Duration(milliseconds: 300);
-  static const budget = 8;
-  static const window = Duration(seconds: 10);
   static const maxAttempts = 5;
   static const _backoffBase = Duration(seconds: 1);
   static const _backoffCap = Duration(seconds: 20);
@@ -43,7 +46,6 @@ class RecordActionsQueue {
   final _visible = <int, int>{};
   final _pending = <int>{};
   final _attempts = <int, int>{};
-  final _starts = <DateTime>[];
   DateTime? _lastEnd;
   DateTime _blockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
   Timer? _timer;
@@ -128,7 +130,6 @@ class RecordActionsQueue {
     _visible.clear();
     _pending.clear();
     _attempts.clear();
-    _starts.clear();
   }
 
   void dispose() {
@@ -140,12 +141,9 @@ class RecordActionsQueue {
     var at = _blockedUntil;
     final end = _lastEnd;
     if (end != null && end.add(spacing).isAfter(at)) at = end.add(spacing);
-    _starts.removeWhere((t) => now.difference(t) >= window);
-    if (_starts.length >= budget) {
-      final free = _starts.first.add(window);
-      if (free.isAfter(at)) at = free;
-    }
     final wait = at.difference(now);
+    final shared = _gate.waitFor();
+    if (shared > wait) return shared;
     return wait.isNegative ? Duration.zero : wait;
   }
 
@@ -178,14 +176,13 @@ class RecordActionsQueue {
     final id = _next();
     if (id == null) return;
     _isRunning = true;
-    final now = _now();
-    _starts.add(now);
+    _gate.markStart();
     sent++;
     try {
       await fetch(id);
       _attempts.remove(id);
     } on SocketCallError catch (e) {
-      if (retryable.contains(e.code)) _retry(id);
+      if (retryable.contains(e.code)) _retry(id, e.code);
     } catch (e, st) {
       AppLog.e('record_actions_queue', e, st);
       // The fetch settles its own failures; nothing is retried here.
@@ -196,13 +193,14 @@ class RecordActionsQueue {
     _pump();
   }
 
-  void _retry(int id) {
+  void _retry(int id, String code) {
     final n = (_attempts[id] ?? 0) + 1;
     _attempts[id] = n;
     var delay = _backoffBase * (1 << (n - 1));
     if (delay > _backoffCap) delay = _backoffCap;
     final until = _now().add(delay);
     if (until.isAfter(_blockedUntil)) _blockedUntil = until;
+    if (code == 'rate_limited') _gate.blockFor(delay);
     if (n < maxAttempts && _visible.containsKey(id)) _pending.add(id);
   }
 }

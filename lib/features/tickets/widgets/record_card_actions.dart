@@ -41,7 +41,7 @@ class RecordCardActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _OnScreen(
+    return RecordOnScreen(
       recordId: recordId,
       tickets: tickets,
       summary: summary,
@@ -77,8 +77,9 @@ class RecordCardActions extends StatelessWidget {
 
 /// Tells the queue this record's card is on screen while it is built and its
 /// screen is the one in front (a covered screen has its tickers off).
-class _OnScreen extends StatefulWidget {
-  const _OnScreen({
+class RecordOnScreen extends StatefulWidget {
+  const RecordOnScreen({
+    super.key,
     required this.recordId,
     required this.tickets,
     required this.child,
@@ -91,10 +92,10 @@ class _OnScreen extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_OnScreen> createState() => _OnScreenState();
+  State<RecordOnScreen> createState() => _RecordOnScreenState();
 }
 
-class _OnScreenState extends State<_OnScreen> {
+class _RecordOnScreenState extends State<RecordOnScreen> {
   bool _isShown = false;
 
   @override
@@ -104,7 +105,7 @@ class _OnScreenState extends State<_OnScreen> {
   }
 
   @override
-  void didUpdateWidget(_OnScreen old) {
+  void didUpdateWidget(RecordOnScreen old) {
     super.didUpdateWidget(old);
     if (old.recordId != widget.recordId) {
       if (_isShown) old.tickets.releaseActions([old.recordId]);

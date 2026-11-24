@@ -219,7 +219,12 @@ class CommandRunner {
   void _openScreen(String target) {
     switch (target) {
       case 'inbox':
-        Get.until((route) => route.isFirst);
+        final home = shell;
+        if (home != null) {
+          home.openInbox();
+        } else {
+          Get.until((route) => route.isFirst);
+        }
       case 'tasks':
         Get.toNamed(AppRoutes.tasks);
       default:

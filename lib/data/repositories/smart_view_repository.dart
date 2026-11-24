@@ -10,9 +10,9 @@ import '../models/ids.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../smart_view/models/sv_row.dart';
-import '../smart_view/overview/sv_overview.dart';
 import '../smart_view/models/sv_source.dart';
 import '../smart_view/smart_view_commands.dart';
+import '../socket/read_gate.dart';
 import '../socket/socket_service.dart';
 import 'ticket_repository.dart';
 import '../../core/log/safe.dart';
@@ -57,21 +57,21 @@ class SvTable {
 }
 
 /// Smart View's reads (phase 1: no client engine). Everything runs through
-/// one gate: one command at a time, at least [SvLimits.gap] apart, at most
-/// [SvLimits.budget] in any [SvLimits.window]; `rate_limited` and `busy` wait
-/// 1, 2, 3, 4 s and retry. Rows are never written to SQLite or a log.
+/// the shared [ReadGate] (one read at a time, [ReadGate.budget] in any
+/// [ReadGate.window]; `rate_limited` and `busy` pause and retry). Rows are
+/// never written to SQLite or a log.
 class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   SmartViewRepository(
     this._socket,
     this._store,
     this._tickets, {
+    ReadGate? gate,
     DateTime Function()? now,
     Future<void> Function(Duration)? delay,
-    Duration gap = SvLimits.gap,
     Duration debounce = SvLimits.eventDebounce,
   }) : _now = now ?? DateTime.now,
        _delay = delay ?? Future<void>.delayed,
-       _gap = gap,
+       _gate = gate ?? ReadGate(now: now, delay: delay),
        _debounce = debounce;
 
   final SocketService _socket;
@@ -79,7 +79,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   final TicketRepository _tickets;
   final DateTime Function() _now;
   final Future<void> Function(Duration) _delay;
-  final Duration _gap;
+  final ReadGate _gate;
   final Duration _debounce;
 
   List<SvSource>? _sources;
@@ -90,9 +90,6 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
 
   /// Commands sent so far (tests).
   int sent = 0;
-  final _starts = <DateTime>[];
-  DateTime? _lastStart;
-  Future<void> _tail = Future.value();
   int _epoch = 0;
 
   final _tables = <SvTable>[];
@@ -102,7 +99,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   final _changes = StreamController<String?>.broadcast();
 
   /// The structure a record event named (lower case), or null when it named
-  /// none or the connection came back (`resync`): what the Overview follows.
+  /// none or the connection came back (`resync`).
   Stream<String?> get recordChanges => _changes.stream;
 
   /// `record` when events carry `data.record`, `refetch` when they do not;
@@ -176,8 +173,6 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     _sources = null;
     _sourcesLoading = null;
     sourceReads = 0;
-    _starts.clear();
-    _lastStart = null;
     _dirtyIds.clear();
     _removed.clear();
     _needsNewest.clear();
@@ -201,30 +196,9 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
 
   Future<Map<String, dynamic>> _call(String cmd, Map<String, dynamic> args) {
     final epoch = _epoch;
-    final prev = _tail;
-    final done = Completer<void>();
-    _tail = done.future;
-    return prev.then((_) async {
-      try {
-        return await _run(cmd, args, epoch);
-      } finally {
-        done.complete();
-      }
-    });
-  }
-
-  Future<Map<String, dynamic>> _run(
-    String cmd,
-    Map<String, dynamic> args,
-    int epoch,
-  ) async {
-    for (var attempt = 0; ; attempt++) {
-      await _waitSlot(epoch);
+    return _gate.run(() async {
       if (epoch != _epoch) throw const SocketCallError('stale');
       if (!isOnline) throw const SocketCallError('not_connected');
-      final at = _now();
-      _starts.add(at);
-      _lastStart = at;
       sent++;
       try {
         final reply = SeedSmartView.isActive
@@ -239,31 +213,9 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         return reply;
       } on SocketCallError catch (e) {
         _logCall(cmd, args, error: e.code);
-        if (SvLimits.retryable.contains(e.code) &&
-            attempt < SvLimits.maxRetries) {
-          await _delay(Duration(seconds: attempt + 1));
-          continue;
-        }
         rethrow;
       }
-    }
-  }
-
-  Future<void> _waitSlot(int epoch) async {
-    while (true) {
-      final now = _now();
-      _starts.removeWhere((t) => now.difference(t) >= SvLimits.window);
-      if (_starts.length >= SvLimits.budget) {
-        await _delay(SvLimits.window - now.difference(_starts.first));
-        continue;
-      }
-      final last = _lastStart;
-      if (last != null && now.difference(last) < _gap) {
-        await _delay(_gap - now.difference(last));
-        continue;
-      }
-      return;
-    }
+    });
   }
 
   /// Ids and counts only: never a value, a caption or a name.
@@ -420,26 +372,6 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         t.isLoading = false;
         t.isPaging.value = false;
       }
-    }
-  }
-
-  /// The Overview's read of one structure: the newest page of the person's
-  /// own records (`submissions.list`, the web's `structureStats`), through
-  /// the same gate as every other read. Nothing stays open afterwards.
-  Future<SvOverviewRead> readForOverview(SvSource source) async {
-    final t = open(source);
-    try {
-      await load(t, isOwnOnly: true, maxPages: 1);
-      if (t.phase.value != SvPhase.ready && t.phase.value != SvPhase.empty) {
-        return const SvOverviewRead(isOk: false);
-      }
-      return SvOverviewRead(
-        isOk: true,
-        rows: t.rows.toList(),
-        total: t.total.value,
-      );
-    } finally {
-      close(t);
     }
   }
 

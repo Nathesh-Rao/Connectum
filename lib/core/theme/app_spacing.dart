@@ -9,6 +9,10 @@ class AppSpacing {
   static const double xl = 24;
   static const double xxl = 32;
 
+  /// Gaps of the chip flow in the forms sheet.
+  static const double chipGap = 10;
+  static const double chipRunGap = 14;
+
   static const double page = 24;
   static const double controlHeight = 52;
   static const double controlPaddingX = 15;
@@ -88,6 +92,12 @@ class AppSpacing {
   static const double bracketLength = 26;
   static const double bracketStroke = 4;
   static const double tagHeight = 22;
+  static const double inboxCardHeight = 220;
+  static const double inboxFaceWidth = 56;
+  static const double inboxFaceSize = 36;
+  static const double inboxChipMaxWidth = 112;
+  static const double inboxPriorityDot = 10;
+  static const double inboxMenuButton = 32;
   static const double otpCellHeight = 58;
   static const double otpCellGap = 7;
   static const double dotCell = 28;
