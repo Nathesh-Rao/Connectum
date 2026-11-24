@@ -102,7 +102,7 @@ class _ShellState extends State<_Shell> {
                       width: AppSv.ovCardIcon,
                       height: AppSv.ovCardIcon,
                       decoration: BoxDecoration(
-                        color: AppTones.violet.tint,
+                        color: AppTones.blue.tint,
                         borderRadius: BorderRadius.circular(
                           AppSv.ovCardIconRadius,
                         ),
@@ -110,7 +110,7 @@ class _ShellState extends State<_Shell> {
                       child: Icon(
                         Icons.dynamic_form_outlined,
                         size: 20,
-                        color: AppTones.violet.strong,
+                        color: AppTones.blue.strong,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),

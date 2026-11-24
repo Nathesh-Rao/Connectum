@@ -108,6 +108,8 @@ import '../../features/submission_detail/submission_detail_view.dart';
 import '../../features/verification/verification_binding.dart';
 import '../../features/profile/profile_binding.dart';
 import '../../features/profile/profile_view.dart';
+import '../../features/log_viewer/log_viewer_binding.dart';
+import '../../features/log_viewer/log_viewer_view.dart';
 import '../../features/workspace/workspace_binding.dart';
 import '../../features/workspace/workspace_view.dart';
 import '../../features/verification/verification_view.dart';
@@ -254,6 +256,12 @@ class AppPages {
       AppRoutes.profile,
       () => const ProfileView(),
       ProfileBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.logViewer,
+      () => const LogViewerView(),
+      LogViewerBinding(),
       AppTransitionKind.push,
     ),
     _page(

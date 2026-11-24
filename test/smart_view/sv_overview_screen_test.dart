@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connectum/core/theme/app_sv.dart';
+import 'package:connectum/core/theme/app_tones.dart';
 import 'package:connectum/data/models/ticket.dart';
 import 'package:connectum/data/smart_view/models/sv_row.dart';
 import 'package:connectum/data/smart_view/models/sv_source.dart';
@@ -102,6 +103,41 @@ void main() {
         ),
     ],
   );
+
+  testWidgets('structure cards use the blue tile and icon; stat tiles keep '
+      'their tones', (tester) async {
+    final model = fake({'a': rich, 'b': rich});
+    await host(tester, model);
+    unawaited(model.start([_source('a'), _source('b')]));
+    await pumpFor(tester, 1500);
+    final icons = find.byWidgetPredicate(
+      (w) =>
+          w is Icon && w.icon == Icons.dynamic_form_outlined && w.size == 20,
+    );
+    expect(icons, findsNWidgets(2));
+    for (final e in icons.evaluate()) {
+      expect((e.widget as Icon).color, AppTones.blue.strong);
+      final tile = find
+          .ancestor(
+            of: find.byWidget(e.widget),
+            matching: find.byType(Container),
+          )
+          .first;
+      final deco = tester.widget<Container>(tile).decoration! as BoxDecoration;
+      expect(deco.color, AppTones.blue.tint);
+    }
+    // The four stat tiles are circles: blue, violet, teal and purple.
+    final circles = tester
+        .widgetList<Container>(find.byType(Container))
+        .map((c) => c.decoration)
+        .whereType<BoxDecoration>()
+        .where((d) => d.shape == BoxShape.circle)
+        .map((d) => d.color)
+        .toSet();
+    expect(circles, contains(AppTones.violet.tint));
+    expect(circles, contains(AppTones.blue.tint));
+    expect(circles, contains(AppTones.teal.tint));
+  });
 
   testWidgets('four KPI tiles of one size; numbers once everything settled', (
     tester,
