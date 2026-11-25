@@ -18,9 +18,11 @@ import '../../data/api/api_messages.dart';
 import '../../data/models/connect_card.dart';
 import '../../data/models/identity_info.dart';
 import '../../data/models/ids.dart';
+import '../../data/models/join_page.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
+import 'models/join_flow.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../core/log/safe.dart';
 import '../../core/log/app_log.dart';
@@ -79,7 +81,10 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   // resolved organisation
   final card = Rxn<ConnectCard>();
   final membership = Rxn<EnterpriseMembership>();
-  final selectedCategory = RxnString();
+  final joinFlow = Rxn<JoinFlow>();
+  final isLoadingPage = false.obs;
+  final pageMessage = RxnString();
+  final fieldErrors = <String, String>{}.obs;
   final isJoining = false.obs;
   final joinMessage = RxnString();
   final failure = ConnectFailure.other.obs;
@@ -113,6 +118,8 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     results.clear();
     searchMessage.value = null;
     card.value = null;
+    joinFlow.value = null;
+    fieldErrors.clear();
     membership.value = null;
     awaitingFrom.value = null;
     keptPersonLink = null;
@@ -177,7 +184,8 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   void showScanner() {
     queryFocus.unfocus();
     mode.value = ConnectMode.scan;
-    if (phase.value == ConnectPhase.entry) fireAndLog('connect_controller', () => startCamera());
+    if (phase.value == ConnectPhase.entry)
+      fireAndLog('connect_controller', () => startCamera());
   }
 
   /// Back to the entry step (scanner or manual) from a failure or the card.
@@ -189,8 +197,11 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     _isJoinOnly = false;
     phase.value = ConnectPhase.entry;
     card.value = null;
+    joinFlow.value = null;
+    fieldErrors.clear();
     isScanSuccess.value = false;
-    if (mode.value == ConnectMode.scan) fireAndLog('connect_controller', () => startCamera());
+    if (mode.value == ConnectMode.scan)
+      fireAndLog('connect_controller', () => startCamera());
   }
 
   // ---- camera ---------------------------------------------------------------------
@@ -206,7 +217,10 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     );
     _scanner = scanner;
     scanner.addListener(_onCameraValue);
-    _detections = scanner.barcodes.listen(_onDetect, onError: streamOnError('connect_controller'));
+    _detections = scanner.barcodes.listen(
+      _onDetect,
+      onError: streamOnError('connect_controller'),
+    );
     camera.value = scanner;
     try {
       await scanner.start();
@@ -407,11 +421,13 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
       membership.value = _membershipOf(found);
       keptPersonLink = link.isPersonLink ? link : null;
       if (link.isPersonLink) links.keep(link);
-      selectedCategory.value = found.categories.length == 1
-          ? found.categories.first
-          : null;
+      joinFlow.value = null;
+      fieldErrors.clear();
       joinMessage.value = null;
       phase.value = ConnectPhase.confirm;
+      if (membership.value == null) {
+        fireAndLog('connect_controller', () => loadJoinPage());
+      }
     } on ApiException catch (e) {
       if (!_isOpen) return;
       if (e.code == 'unauthenticated') {
@@ -477,15 +493,148 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
 
   // ---- join -------------------------------------------------------------------------
 
-  void selectCategory(String category) {
-    selectedCategory.value = category;
+  /// What the person chooses from (`GET /enterprise/<id>`): the web's card.
+  Future<void> loadJoinPage() async {
+    final found = card.value;
+    if (found == null || isLoadingPage.value) return;
+    pageMessage.value = null;
+    if (SeedUi.isActive) {
+      joinFlow.value = JoinFlow(page: JoinPage(categories: found.categories));
+      return;
+    }
+    if (isOffline) {
+      pageMessage.value = 'Connect to the internet to join.';
+      return;
+    }
+    isLoadingPage.value = true;
+    try {
+      final data = await auth.publicPage(found.display);
+      if (!_isOpen || card.value != found) return;
+      joinFlow.value = JoinFlow(page: JoinPage.fromJson(data));
+    } on ApiException catch (e) {
+      if (!_isOpen) return;
+      pageMessage.value = ApiMessages.of(e);
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
+      pageMessage.value = ApiMessages.of(e);
+    } finally {
+      isLoadingPage.value = false;
+    }
+  }
+
+  void _setFlow(JoinFlow next) {
+    joinFlow.value = next;
     joinMessage.value = null;
+  }
+
+  void chooseAssociate() {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.clear();
+    _setFlow(f.chooseAssociate());
+  }
+
+  void pickCategory(String value) {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.remove('category');
+    _setFlow(f.pickCategory(value));
+  }
+
+  void pickAffiliate(String value) {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.remove('affiliate');
+    fieldErrors.remove('affiliateBranch');
+    _setFlow(f.pickAffiliate(value));
+  }
+
+  void pickNoAffiliate() {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.clear();
+    _setFlow(f.pickNoAffiliate());
+  }
+
+  void pickBranch(String value) {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.remove('affiliateBranch');
+    _setFlow(f.pickBranch(value));
+  }
+
+  /// The previous step, or back to the entry from the first one.
+  void backStep() {
+    final f = joinFlow.value;
+    if (f == null || f.isFirst) {
+      backToEntry();
+      return;
+    }
+    fieldErrors.clear();
+    _setFlow(f.back());
+  }
+
+  /// Checks the current step the way the web does, then moves on. An answer
+  /// that says what is wrong stays; a check that cannot be reached does not
+  /// block (the join decides at the end).
+  Future<void> nextStep() async {
+    final f = joinFlow.value;
+    final found = card.value;
+    if (f == null || found == null || isJoining.value) return;
+    final local = f.problems();
+    if (local.isNotEmpty) {
+      fieldErrors.assignAll(local);
+      return;
+    }
+    fieldErrors.clear();
+    if (f.unsupportedFields.isNotEmpty && f.step != JoinStep.type) {
+      joinMessage.value =
+          'Joining as ${f.effectiveCategory} needs more details than the mobile app supports yet.';
+      return;
+    }
+    final body = f.checkBody();
+    if (body != null && !SeedUi.isActive) {
+      isJoining.value = true;
+      try {
+        final check = await auth.joinCheck(found.display, body);
+        if (!_isOpen) return;
+        final fields = check['fields'];
+        if (check['ok'] == false || (fields is Map && fields.isNotEmpty)) {
+          _showFields(fields is Map ? fields : const {});
+          return;
+        }
+      } on ApiException catch (e) {
+        if (!_isOpen) return;
+        if (e.code == 'unauthenticated') {
+          _toLogin();
+          return;
+        }
+        if (e.code != 'rate_limited' && e.status != 429) {
+          joinMessage.value = ApiMessages.of(e);
+        }
+      } catch (e, st) {
+        AppLog.e('connect_controller', e, st);
+      } finally {
+        isJoining.value = false;
+      }
+    }
+    final current = joinFlow.value;
+    if (current == null || !_isOpen) return;
+    joinFlow.value = current.advance();
+  }
+
+  void _showFields(Map fields) {
+    final errors = {for (final e in fields.entries) '${e.key}': '${e.value}'};
+    fieldErrors.assignAll(errors);
+    const shown = {'category', 'affiliate', 'affiliateBranch'};
+    final other = errors.entries.where((e) => !shown.contains(e.key));
+    if (other.isNotEmpty) joinMessage.value = other.first.value;
   }
 
   Future<void> join() async {
     final found = card.value;
-    final category = selectedCategory.value;
-    if (found == null || category == null || isJoining.value) return;
+    final f = joinFlow.value;
+    if (found == null || f == null || isJoining.value) return;
     if (isOffline) {
       joinMessage.value = 'Connect to the internet to join.';
       return;
@@ -493,30 +642,10 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     isJoining.value = true;
     joinMessage.value = null;
     try {
-      final Map<String, dynamic> data;
-      if (SeedUi.isActive) {
-        data = await SeedConnect.join(found);
-      } else {
-        final page = await auth.publicPage(found.display);
-        final extra =
-            (((page['onboarding'] as Map?)?[category]
-                    as Map?)?['requiredFields']
-                as List?) ??
-            [];
-        if (extra.isNotEmpty) {
-          joinMessage.value =
-              'Joining as $category needs more details than the mobile app supports yet.';
-          return;
-        }
-        final check = await auth.joinCheck(found.display, category);
-        final fields = (check['fields'] as Map?) ?? {};
-        if (fields.isNotEmpty) {
-          joinMessage.value = '${fields.values.first}';
-          return;
-        }
-        data = await auth.join(found.display, category, branch: found.branch);
-      }
-      await _afterJoin(found, category, data);
+      final Map<String, dynamic> data = SeedUi.isActive
+          ? await SeedConnect.join(found)
+          : await auth.join(found.display, f.joinBody(), branch: found.branch);
+      await _afterJoin(found, f.category, data);
     } on ApiException catch (e) {
       if (!_isOpen) return;
       if (e.code == 'unauthenticated') {
@@ -529,7 +658,9 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
         joinMessage.value =
             'Too many join requests. ${_waitText(e.retryAfterSeconds ?? 3600)}';
       } else {
-        joinMessage.value = ApiMessages.of(e);
+        final fields = e.fieldErrors;
+        if (fields.isNotEmpty) _showFields(fields);
+        joinMessage.value ??= ApiMessages.of(e);
       }
     } finally {
       isJoining.value = false;

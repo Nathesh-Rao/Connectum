@@ -430,34 +430,26 @@ class AuthRepository extends GetxService {
     }
   }
 
-  Future<Map<String, dynamic>> joinCheck(String enterprise, String category) =>
-      _api.post(
-        '/join/check',
-        body: {
-          'enterprise': enterprise,
-          'isEmployee': false,
-          'category': category,
-        },
-        bearer: _identityToken(),
-      );
+  /// `POST /join/check`: the fields so far (`category`, `affiliate`,
+  /// `affiliateBranch`); nothing is stored.
+  Future<Map<String, dynamic>> joinCheck(
+    String enterprise,
+    Map<String, dynamic> fields,
+  ) => _api.post(
+    '/join/check',
+    body: {'enterprise': enterprise, ...fields},
+    bearer: _identityToken(),
+  );
 
   Future<Map<String, dynamic>> join(
     String enterprise,
-    String category, {
+    Map<String, dynamic> fields, {
     String? branch,
-  }) async {
-    final data = await _api.post(
-      '/join',
-      body: {
-        'enterprise': enterprise,
-        'isEmployee': false,
-        'category': category,
-        'connectBranch': ?branch,
-      },
-      bearer: _identityToken(),
-    );
-    return data;
-  }
+  }) => _api.post(
+    '/join',
+    body: {'enterprise': enterprise, ...fields, 'connectBranch': ?branch},
+    bearer: _identityToken(),
+  );
 
   /// Enters one enterprise: stores its session and starts the socket.
   Future<void> enter(String enterprise) async {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
@@ -13,6 +12,7 @@ import '../../../data/models/connect_card.dart';
 import '../../../data/models/identity_info.dart';
 import '../../enterprises/widgets/enterprise_tile.dart';
 import '../connect_controller.dart';
+import 'join_steps.dart';
 
 class ConfirmPane extends StatelessWidget {
   const ConfirmPane({
@@ -52,7 +52,7 @@ class ConfirmPane extends StatelessWidget {
               onEnter: onEnter,
             );
           }
-          return _JoinForm(card: card, controller: c);
+          return JoinSteps(card: card, controller: c);
         }),
       ],
     );
@@ -163,116 +163,6 @@ class _Member extends StatelessWidget {
           onPressed: controller.backToEntry,
         ),
       ],
-    );
-  }
-}
-
-class _JoinForm extends StatelessWidget {
-  const _JoinForm({required this.card, required this.controller});
-
-  final ConnectCard card;
-  final ConnectController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = controller;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (card.categories.isEmpty)
-          const Text(
-            "This enterprise isn't open for joining from the app yet.",
-            style: AppText.body,
-          )
-        else ...[
-          const Text('Join as', style: AppText.readableStrong),
-          const SizedBox(height: AppSpacing.xs),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 156),
-            child: SingleChildScrollView(
-              child: Obx(
-                () => Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    for (final category in card.categories)
-                      _CategoryChip(
-                        label: category,
-                        isSelected: c.selectedCategory.value == category,
-                        onTap: () => c.selectCategory(category),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-        Obx(() {
-          final error = c.joinMessage.value;
-          return error == null
-              ? const SizedBox.shrink()
-              : Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.sm),
-                  child: Text(error, style: AppText.error),
-                );
-        }),
-        const SizedBox(height: AppSpacing.lg),
-        Obx(
-          () => AppButton.primary(
-            label: 'Join ${card.name}',
-            isCentered: true,
-            isLoading: c.isJoining.value,
-            onPressed: c.selectedCategory.value == null ? null : c.join,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        AppButton.text(label: 'Cancel', onPressed: c.backToEntry),
-      ],
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppDurations.fast,
-          curve: AppCurves.out,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryTint : AppColors.white,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(
-              color: isSelected ? AppColors.primaryBright : AppColors.inputBorder,
-            ),
-          ),
-          child: Text(
-            label,
-            style: AppText.readableStrong.copyWith(
-              color: isSelected ? AppColors.primaryStrong : AppColors.ink,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

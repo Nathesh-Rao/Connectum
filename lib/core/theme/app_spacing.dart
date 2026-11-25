@@ -15,6 +15,7 @@ class AppSpacing {
 
   static const double page = 24;
   static const double controlHeight = 52;
+  static const double joinListMaxHeight = 220;
   static const double controlPaddingX = 15;
   static const double sheetPaddingX = 22;
   static const double sheetPaddingTop = 10;
@@ -41,6 +42,7 @@ class AppSpacing {
   static const double compactPillCountGap = 4;
   static const double avatar = 44;
   static const double avatarSmall = 36;
+  static const double chipAvatar = 24;
   static const double statusPillHeight = 22;
   static const double priorityPillHeight = 20;
   static const double categoryPillHeight = 28;

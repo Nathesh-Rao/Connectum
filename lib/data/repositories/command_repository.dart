@@ -13,6 +13,7 @@ import '../models/hash_command.dart';
 import '../models/ids.dart';
 import '../session_store.dart';
 import '../socket/connectivity_service.dart';
+import '../socket/read_gate.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
 import 'message_repository.dart';
@@ -109,7 +110,19 @@ class CommandRepository extends GetxService {
     this._messages,
     this._conversations, {
     Duration replyWait = const Duration(seconds: 12),
-  }) : _replyWait = replyWait;
+    ReadGate? readGate,
+    Duration permissionsDebounce = const Duration(milliseconds: 300),
+  }) : _replyWait = replyWait,
+       _gate = readGate,
+       _permDebounce = permissionsDebounce;
+
+  static const _permEvents = {
+    'permissions_changed',
+    'roles_changed',
+    'org_config_changed',
+  };
+  final Duration _permDebounce;
+  Timer? _permTimer;
 
   static const _maxLength = 2000;
   static const escapeNotice =
@@ -135,6 +148,8 @@ class CommandRepository extends GetxService {
   final MessageRepository _messages;
   final ConversationRepository _conversations;
   final Duration _replyWait;
+  final ReadGate? _gate;
+  int _permSeq = 0;
 
   /// The choices after `#view `, built from the source list by Smart View
   /// (`/cmdcomplete` does not know `#view`). Set once by the app's binding.
@@ -168,12 +183,16 @@ class CommandRepository extends GetxService {
       if (_store.orgId != null) return ensureLoaded();
     });
     _socket.events.listen((e) {
-      if (e['type'] == 'sd_event' && e['event'] == 'permissions_changed') {
-        _isFresh = false;
-        fireAndLog('command_repository', () => ensureLoaded());
+      if (e['type'] == 'sd_event' && _permEvents.contains(e['event'])) {
+        _permTimer?.cancel();
+        _permTimer = Timer(_permDebounce, () {
+          fireAndLog('command_repository', () => refreshPermissions());
+        });
       }
     }, onError: streamOnError('command_repository'));
     ever(_store.current, (_) {
+      _permTimer?.cancel();
+      _permSeq++;
       _isFresh = false;
       _loadedOrg = null;
       catalog.clear();
@@ -299,9 +318,19 @@ class CommandRepository extends GetxService {
     await _loadPermissions();
   }
 
+  /// One fresh `perm.mine` read. Each read takes a number and only the newest
+  /// one writes, so a late answer never overwrites a newer one.
+  Future<void> refreshPermissions() => _loadPermissions();
+
   Future<void> _loadPermissions() async {
+    if (SeedUi.isActive || !_socket.isOnline) return;
+    final seq = ++_permSeq;
+    final org = _store.orgId;
     try {
-      final data = await _socket.sdCall('perm.mine', {});
+      Future<Map<String, dynamic>> read() => _socket.sdCall('perm.mine', {});
+      final gate = _gate;
+      final data = gate == null ? await read() : await gate.run(read);
+      if (seq != _permSeq || org != _store.orgId) return;
       permissions.value = {
         for (final p in (data['permissions'] as List? ?? const [])) idText(p),
       };
