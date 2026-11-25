@@ -37,6 +37,7 @@ import '../commands/command_runner.dart';
 import '../conversation/models/command_prompt.dart';
 import 'models/workspace_note.dart';
 import 'models/workspace_row.dart';
+import '../../core/log/app_log.dart';
 import '../../core/log/safe.dart';
 
 /// My Work Space: the submissions I made as sent-style cards, newest at the
@@ -121,13 +122,18 @@ class WorkspaceController extends GetxController {
   Worker? _receivedWorker;
   Worker? _workspaceStateWorker;
   Worker? _connectivityWorker;
+  Worker? _selfWorker;
+
+  /// My notes kept on the server, read from SQLite (shown with no network).
+  final selfNotes = <Message>[].obs;
   final _details = <int, TicketDetailController>{};
 
   String get me => store.userId ?? SeedMessages.me;
 
   void openTasks() => Get.toNamed(AppRoutes.tasks);
 
-  void openApprovals() => Get.toNamed(AppRoutes.approvals);
+  /// The Inbox with its Approvals pane open.
+  void openApprovals() => shell?.openInbox(approvals: true);
 
   /// The workspace's greeting, word for word as the web app builds it.
   String get welcome {
@@ -167,10 +173,32 @@ class WorkspaceController extends GetxController {
     ], (_) => _apply());
     _connectivityWorker = ever(connectivity.state, (_) => _apply());
     _apply();
+    fireAndLog('workspace_controller', _openNotes);
     if (connectivity.state.value == AppConnectivity.online) {
       workspace.request(now: true);
     }
   }
+
+  /// Reads the stored notes first; the network fills them in the background.
+  Future<void> _openNotes() async {
+    if (SeedUi.isActive) return;
+    try {
+      final list = await messages.openSelf();
+      selfNotes.assignAll(list);
+      _selfWorker = ever(list, (items) {
+        selfNotes.assignAll(items);
+        _apply();
+      });
+      _apply();
+    } catch (e, st) {
+      AppLog.e('workspace_controller', e, st, 'open notes');
+    }
+  }
+
+  /// The note a reply points to, when it is loaded.
+  Message? originalOf(Message m) => m.replyTo == null
+      ? null
+      : selfNotes.where((n) => n.msgId == m.replyTo).firstOrNull;
 
   /// The read failed and there is nothing to show: an error with Retry, never
   /// an empty list. Offline is not an error: the cache is shown.
@@ -216,6 +244,9 @@ class WorkspaceController extends GetxController {
           row: WorkspaceRow.received(FormCardData.fromTicket(t)),
         ),
       for (final n in _notes) (ts: n.ts, row: WorkspaceRow.note(n)),
+      for (final m in selfNotes)
+        if (!m.isDeleted && !m.isLocalTemp)
+          (ts: m.ts, row: WorkspaceRow.message(m)),
     ]..sort((a, b) => a.ts.compareTo(b.ts));
     final asc = <WorkspaceRow>[];
     int? prevTs;
@@ -399,7 +430,8 @@ class WorkspaceController extends GetxController {
 
   void openRecordMenu(FormCardData d) {
     final id = recordIdOf(d);
-    if (id != null) fireAndLog('workspace_controller', () => tickets.ensureMenu(id));
+    if (id != null)
+      fireAndLog('workspace_controller', () => tickets.ensureMenu(id));
   }
 
   TicketDetailController? detailOf(FormCardData d) {
@@ -480,7 +512,8 @@ class WorkspaceController extends GetxController {
   /// opens.
   void tap(FormCardData d, {bool isReceived = false}) {
     if (isReceived) return open(d, isReceived: true);
-    if (isDraft(d)) return fireAndLog('workspace_controller', () => editAndResend(d));
+    if (isDraft(d))
+      return fireAndLog('workspace_controller', () => editAndResend(d));
     if (stateOf(d) != AppFormCardState.failed) return open(d);
     if (isInvalidFailure(d)) {
       fireAndLog('workspace_controller', () => editAndResend(d));
@@ -535,6 +568,7 @@ class WorkspaceController extends GetxController {
     _receivedWorker?.dispose();
     _workspaceStateWorker?.dispose();
     _connectivityWorker?.dispose();
+    _selfWorker?.dispose();
     for (final c in _details.values) {
       c.onClose();
     }

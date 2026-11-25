@@ -59,7 +59,8 @@ class ConversationRepository extends GetxService {
   void onInit() {
     super.onInit();
     _socket.events.listen(
-      (event) => fireAndLog('conversation_repository', () async => _onEvent(event)),
+      (event) =>
+          fireAndLog('conversation_repository', () async => _onEvent(event)),
       onError: streamOnError('conversation_repository'),
     );
     _scope = '${_session.orgId}/${_session.userId}';
@@ -631,7 +632,9 @@ class ConversationRepository extends GetxService {
       convId == 'global' ? 'global' : convId.split(':').first;
 
   static String targetOf(String convId) =>
-      convId == 'global' ? '' : convId.substring(convId.indexOf(':') + 1);
+      convId == 'global' || convId == 'self'
+      ? ''
+      : convId.substring(convId.indexOf(':') + 1);
 
   static Future<void> ensure(
     Sql sql,
@@ -731,7 +734,10 @@ class ConversationRepository extends GetxService {
             );
           }
         });
-        fireAndLog('conversation_repository', () => _decryptPreviews((e['list'] as List? ?? []).cast<Map>()));
+        fireAndLog(
+          'conversation_repository',
+          () => _decryptPreviews((e['list'] as List? ?? []).cast<Map>()),
+        );
       case 'groups':
         await _db.transaction((sql) async {
           for (final g in (e['list'] as List? ?? []).cast<Map>()) {
@@ -743,7 +749,10 @@ class ConversationRepository extends GetxService {
         await _db.transaction((sql) => _upsertGroup(sql, org, user, e));
       case 'group_system':
         // Not a stored message; the full member list comes from /groups.
-        fireAndLog('conversation_repository', () => _socket.sendCommand('/groups'));
+        fireAndLog(
+          'conversation_repository',
+          () => _socket.sendCommand('/groups'),
+        );
         return;
       case 'left_group':
         await _db.update(

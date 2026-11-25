@@ -26,7 +26,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 14;
+  static const _version = 16;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -158,6 +158,10 @@ class AppDatabase {
         avatar TEXT NOT NULL,
         PRIMARY KEY(org_id, user_id, username))''',
     ],
+    // The Smart View Overview's cache table (once added here) is gone; it
+    // is never created now.
+    15: [],
+    16: ['DROP TABLE IF EXISTS sv_overview_cache'],
   };
 
   static const _scopedTables = [
@@ -173,6 +177,18 @@ class AppDatabase {
     'sync_cursor',
     'people_avatars',
   ];
+
+  @visibleForTesting
+  static List<String> get scopedTables => _scopedTables;
+
+  AppDatabase();
+
+  @visibleForTesting
+  static int get schemaVersion => _version;
+
+  /// A database that is already open (tests use an in-memory one).
+  @visibleForTesting
+  AppDatabase.withDatabase(Database db) : _db = db;
 
   Database? _db;
 
@@ -192,12 +208,14 @@ class AppDatabase {
       }
     }
     try {
-      return await openDatabase(
+      final db = await openDatabase(
         p.join(folder, 'connectum.db'),
         version: _version,
         onCreate: (db, _) => migrate(db, 0, _version),
         onUpgrade: migrate,
       );
+      AppLog.i('app_database', 'opened, schema version $_version');
+      return db;
     } catch (e, st) {
       // Nothing is deleted or reset here; the caller cannot go on without it.
       AppLog.e('app_database', e, st, 'open or migrate');

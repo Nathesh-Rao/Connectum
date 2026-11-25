@@ -157,6 +157,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
+    ever(phase, (p) => AppLog.i('e2e', 'setup phase=${p.name}'));
     _socket.events.listen(
       (event) => fireAndLog('e2e_repository', () async => _onEvent(event)),
       onError: streamOnError('e2e_repository'),
@@ -181,7 +182,8 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _isForeground = state == AppLifecycleState.resumed;
-    if (_isForeground && isLate.value) fireAndLog('e2e_repository', () => _pollOnce());
+    if (_isForeground && isLate.value)
+      fireAndLog('e2e_repository', () => _pollOnce());
   }
 
   void _reset() {
@@ -227,7 +229,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     }
     // A burst of events (a device finishing, then a removal) is read once.
     _eventTimer?.cancel();
-    _eventTimer = Timer(_eventDebounce, () => fireAndLog('e2e_repository', () => _pollOnce()));
+    _eventTimer = Timer(
+      _eventDebounce,
+      () => fireAndLog('e2e_repository', () => _pollOnce()),
+    );
   }
 
   /// This device's keys, read from the key store (never generated here).
@@ -417,7 +422,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
   void _startPolling() {
     if (_pollTimer?.isActive ?? false) return;
     fireAndLog('e2e_repository', () => refreshPending());
-    _pollTimer = Timer.periodic(_pollEvery, (_) => fireAndLog('e2e_repository', () => _pollOnce()));
+    _pollTimer = Timer.periodic(
+      _pollEvery,
+      (_) => fireAndLog('e2e_repository', () => _pollOnce()),
+    );
   }
 
   /// One slow-poll step: the status (late may have ended) and the helpers. Only
@@ -869,7 +877,10 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
       if (e.code == 'rate_limited') {
         _retryAfter = DateTime.now().add(_backoff);
         _retryTimer?.cancel();
-        _retryTimer = Timer(_backoff, () => fireAndLog('e2e_repository', () => ensureSetup()));
+        _retryTimer = Timer(
+          _backoff,
+          () => fireAndLog('e2e_repository', () => ensureSetup()),
+        );
         _backoff = _backoff * 2 > _backoffCap ? _backoffCap : _backoff * 2;
         phase.value = E2eSetupPhase.idle;
         return;
@@ -1066,6 +1077,7 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
     if (convId.startsWith('group:')) {
       return E2eCrypto.groupLabel(convId.substring(6));
     }
+    if (convId == 'self') return E2eCrypto.selfLabel(me ?? '');
     return null;
   }
 

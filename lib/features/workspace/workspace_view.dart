@@ -23,6 +23,7 @@ import '../tickets/widgets/record_card_actions.dart';
 import '../tickets/widgets/record_menu_rows.dart';
 import '../tickets/widgets/ticket_action_sheet.dart';
 import 'widgets/workspace_composer.dart';
+import 'widgets/workspace_message.dart';
 import 'widgets/workspace_welcome.dart';
 import 'workspace_controller.dart';
 
@@ -78,7 +79,7 @@ class WorkspaceView extends GetView<WorkspaceController> {
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
                       ),
-                      child: Text(text, style: AppText.caption),
+                      child: Text(text, style: AppText.wsMeta),
                     ),
             );
           }),
@@ -120,7 +121,7 @@ class _Feed extends StatelessWidget {
                     child: Center(
                       child: Text(
                         'Forms you submit and records sent to you show up here.',
-                        style: AppText.readable,
+                        style: AppText.wsSubtitle,
                       ),
                     ),
                   ),
@@ -130,6 +131,15 @@ class _Feed extends StatelessWidget {
           final row = rows[i];
           final card = row.card;
           final note = row.note;
+          final message = row.message;
+          if (message != null) {
+            return WorkspaceMessage(
+              key: ValueKey(row.key),
+              message: message,
+              original: c.originalOf(message),
+              me: c.me,
+            );
+          }
           if (note != null) {
             return Obx(
               () => SystemRow(
@@ -137,11 +147,16 @@ class _Feed extends StatelessWidget {
                 text: note.text.value,
                 isProblem: note.isProblem.value,
                 onTap: note.convId == null ? null : () => c.openChat(note),
+                style: AppText.wsMeta,
               ),
             );
           }
           if (card == null) {
-            return DayDivider(key: ValueKey(row.key), label: row.label);
+            return DayDivider(
+              key: ValueKey(row.key),
+              label: row.label,
+              style: AppText.wsSection,
+            );
           }
           return _Card(
             key: ValueKey(row.key),
@@ -176,6 +191,7 @@ class _Card extends StatelessWidget {
         padding: const EdgeInsets.only(top: AppSpacing.bubbleGap),
         child: AppFormCard(
           data: card,
+          text: AppFormCardText.workspace,
           isSent: !isReceived,
           senderName: isReceived ? card.by : null,
           state: state,

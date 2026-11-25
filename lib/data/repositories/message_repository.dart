@@ -12,6 +12,7 @@ import '../db/app_database.dart';
 import '../models/ids.dart';
 import '../models/message.dart';
 import '../models/outbox_entry.dart';
+import '../models/self_conversation.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
@@ -120,9 +121,18 @@ class MessageRepository extends GetxService {
           );
     }, onError: streamOnError('message_repository'));
     _socket.listenOnline('messages', _onOnline);
-    _e2e.unlockRequests.listen((_) => fireAndLog('messages.unlock', _unlockLocked), onError: streamOnError('message_repository'));
-    _e2e.registrations.listen((_) => fireAndLog('messages.reopen', reopenNoDevice), onError: streamOnError('message_repository'));
-    _conversations.receiptsChanged.listen(applyReceipts, onError: streamOnError('message_repository'));
+    _e2e.unlockRequests.listen(
+      (_) => fireAndLog('messages.unlock', _unlockLocked),
+      onError: streamOnError('message_repository'),
+    );
+    _e2e.registrations.listen(
+      (_) => fireAndLog('messages.reopen', reopenNoDevice),
+      onError: streamOnError('message_repository'),
+    );
+    _conversations.receiptsChanged.listen(
+      applyReceipts,
+      onError: streamOnError('message_repository'),
+    );
     ever(_socket.connection, (state) {
       if (state != SocketState.online) _onDropped();
     });
@@ -429,7 +439,7 @@ class MessageRepository extends GetxService {
   Future<List<Message>> readFor(String org, String user, String convId) async {
     final rows = await _db.query(
       'SELECT * FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? '
-      "ORDER BY CASE WHEN msg_id LIKE 'temp-%' THEN 1 ELSE 0 END, ts, local_seq",
+      "ORDER BY CASE WHEN msg_id LIKE 'temp-%' THEN 1 ELSE 0 END, ts, local_seq, LENGTH(msg_id), msg_id",
       [org, user, convId],
     );
     return rows.map(Message.fromRow).toList();
@@ -473,6 +483,7 @@ class MessageRepository extends GetxService {
     final org = _org;
     final user = _me;
     if (org == null || user == null) return SendResult.noSession;
+    if (SelfConversation.refuse(convId, 'sendText')) return SendResult.invalid;
     final body = text.trim();
     if (body.isEmpty) return SendResult.invalid;
     if (body.length > 2000) return SendResult.tooLong;
@@ -497,6 +508,10 @@ class MessageRepository extends GetxService {
     final tempId = _tempId();
     final cid = newCid();
     final now = DateTime.now().millisecondsSinceEpoch;
+    AppLog.i(
+      'outbox',
+      'queued ${replyTo == null ? 'message' : 'reply'} cid=$cid encrypted=$isSecure',
+    );
     await _db.transaction((sql) async {
       await ConversationRepository.ensure(sql, org, user, convId);
       await sql.insert(
@@ -635,6 +650,7 @@ class MessageRepository extends GetxService {
     );
     if (rows.isEmpty) return false;
     final message = Message.fromRow(rows.first);
+    if (SelfConversation.refuse(message.convId, 'editText')) return false;
     if (!message.isMine || message.isDeleted || message.kind != 'chat') {
       return false;
     }
@@ -682,6 +698,7 @@ class MessageRepository extends GetxService {
   }
 
   Future<void> retry(String msgId) async {
+    AppLog.i('outbox', 'retry requested by the user');
     final org = _org;
     final user = _me;
     if (org == null || user == null) return;
@@ -783,6 +800,14 @@ class MessageRepository extends GetxService {
           _cidMemory.inMilliseconds;
 
   Future<_Outcome> _send(OutboxEntry entry) async {
+    AppLog.i(
+      'outbox',
+      'send kind=${entry.kind} cid=${entry.cid} attempt=${entry.retryCount + 1}',
+    );
+    if (SelfConversation.refuse(entry.convId, 'outbox ${entry.kind}')) {
+      await _fail(entry, 'unsupported in this conversation');
+      return _Outcome.finished;
+    }
     if (entry.isUnreadable) {
       await _fail(entry, 'unreadable');
       return _Outcome.finished;
@@ -938,6 +963,7 @@ class MessageRepository extends GetxService {
 
   /// The same line for a debug send, without an outbox entry.
   static String? cidCommand(String convId, String text, String cid) {
+    if (SelfConversation.refuse(convId, 'cidCommand')) return null;
     final kind = ConversationRepository.kindOf(convId);
     if (kind != 'dm' && kind != 'group' && kind != 'host') return null;
     final target = ConversationRepository.targetOf(convId);
@@ -952,6 +978,7 @@ class MessageRepository extends GetxService {
   static String? _commandFor(OutboxEntry e, {String? text}) {
     text ??= '${e.payload['text']}';
     final reply = e.payload['replyTo'] as String?;
+    if (SelfConversation.refuse(e.convId, 'command ${e.kind}')) return null;
     final kind = ConversationRepository.kindOf(e.convId);
     final target = ConversationRepository.targetOf(e.convId);
     switch (e.kind) {
@@ -1018,6 +1045,10 @@ class MessageRepository extends GetxService {
   }
 
   Future<void> _fail(OutboxEntry e, String reason) async {
+    AppLog.w(
+      'outbox',
+      'failed kind=${e.kind} cid=${e.cid} retries=${e.retryCount} reason=$reason',
+    );
     _settle(e.id);
     _staleTries.remove(e.id);
     await _db.transaction((sql) async {
@@ -1080,6 +1111,7 @@ class MessageRepository extends GetxService {
       }
       await flush();
       await _syncAll();
+      await syncSelf();
       await flush();
     } finally {
       if (_syncScope == scope) _isSyncing = false;
@@ -1157,25 +1189,40 @@ class MessageRepository extends GetxService {
   bool _holds(_History page, String id) =>
       page.items.any((i) => idText(i['id']) == id);
 
-  Future<_History?> _fetchHistory(String convId, {String? before}) async {
-    final key = before == null ? convId : 'older:$convId';
+  Future<_History?> _fetchHistory(
+    String convId, {
+    String? before,
+    ({String after, int since})? delta,
+  }) async {
+    final key = delta != null
+        ? 'delta:$convId'
+        : before == null
+        ? convId
+        : 'older:$convId';
     final existing = _historyWaiters[key];
     if (existing != null) {
-      return existing.future
-          .then<_History?>((h) => h)
-          .catchError((Object e, StackTrace st) {
-            AppLog.w('message_repository', 'history wait ${e.runtimeType}');
-            return null;
-          });
+      return existing.future.then<_History?>((h) => h).catchError((
+        Object e,
+        StackTrace st,
+      ) {
+        AppLog.w('message_repository', 'history wait ${e.runtimeType}');
+        return null;
+      });
     }
     final kind = ConversationRepository.kindOf(convId);
     final target = ConversationRepository.targetOf(convId);
     final waiter = Completer<_History>();
     _historyWaiters[key] = waiter;
     try {
-      final scope = kind == 'global' ? 'global' : '$kind $target';
+      final scope = kind == 'global' || kind == 'self'
+          ? kind
+          : '$kind $target';
       final sent = await _socket.sendCommand(
-        before == null ? '/history $scope' : '/history $scope before $before',
+        delta != null
+            ? '/history $scope delta ${delta.after} ${delta.since}'
+            : before == null
+            ? '/history $scope'
+            : '/history $scope before $before',
       );
       if (!sent) return null;
       return await waiter.future.timeout(const Duration(seconds: 10));
@@ -1352,6 +1399,15 @@ class MessageRepository extends GetxService {
         await _incoming('host:${idText(e['host'])}', e);
       case 'chat':
         await _incoming('global', e);
+      case 'self_message':
+        await _onSelfMessage(e);
+      case 'self_edited':
+        await _onSelfEdited(e);
+      case 'self_deleted':
+        await _onSelfDeleted(e);
+      case 'self_ack':
+        // Nothing sends into My Work Space yet, so there is no note to match.
+        break;
       case 'dm_read':
         await _onRead(idText(e['from']).toLowerCase());
       case 'history':
@@ -1379,6 +1435,12 @@ class MessageRepository extends GetxService {
         await _onReaction(e);
       case 'sd_event':
         final event = e['event'];
+        if (event is String && _selfEvents.contains(event)) {
+          await _handle({
+            ...((e['data'] as Map?)?.cast<String, dynamic>() ?? {}),
+            'type': event,
+          });
+        }
         if (event == 'receipt') {
           await _onReceipt((e['data'] as Map?)?.cast<String, dynamic>() ?? {});
         }
@@ -1439,6 +1501,7 @@ class MessageRepository extends GetxService {
     bool delivered = false,
     bool moveCursor = true,
   }) async {
+    AppLog.i('outbox', 'sent kind=${entry.kind} cid=${entry.cid}');
     _settle(entry.id);
     _staleTries.remove(entry.id);
     final status = delivered && entry.convId.startsWith('dm:')
@@ -1759,6 +1822,106 @@ class MessageRepository extends GetxService {
     await _reloadAll();
   }
 
+  // ---- My Work Space notes (receive only) -------------------------------------
+
+  static const _selfEvents = {
+    'self_message',
+    'self_edited',
+    'self_deleted',
+    'self_ack',
+  };
+
+  /// The notes of My Work Space, read from SQLite (empty offline until the
+  /// first sync) and kept up to date in place. The network fills it in the
+  /// background through [syncSelf].
+  Future<RxList<Message>> openSelf() async {
+    final list = await open(SelfConversation.id);
+    fireAndLog('message_repository.self', syncSelf);
+    return list;
+  }
+
+  /// Newest page of the person's own conversation (and the gap check), then
+  /// what changed since the last answer (edits and deletes of older notes).
+  /// The same history reader as every chat.
+  Future<void> syncSelf() async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null || !_socket.isOnline) return;
+    try {
+      final saved = await _db.query(
+        'SELECT last_server_id, last_history_now FROM sync_cursor WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+        [org, user, SelfConversation.id],
+      );
+      final lastId = saved.isEmpty
+          ? null
+          : numericId(saved.first['last_server_id']);
+      final since = saved.isEmpty ? 0 : intOf(saved.first['last_history_now']);
+      await _syncConversation(SelfConversation.id);
+      if (_org != org || _me != user || !_socket.isOnline) return;
+      if (lastId == null || since <= 0) return;
+      await _fetchHistory(
+        SelfConversation.id,
+        delta: (after: '$lastId', since: since),
+      );
+    } catch (e, st) {
+      AppLog.e('message_repository', e, st, 'self sync');
+    }
+  }
+
+  /// A note of mine, typed on this or another device. Added once by its
+  /// server id; a repeat (or the same note from history) changes nothing.
+  Future<void> _onSelfMessage(Map<String, dynamic> e) async {
+    final org = _org;
+    final user = _me;
+    final id = idText(e['id']);
+    if (org == null || user == null || id.isEmpty) return;
+    await _db.transaction((sql) async {
+      final known = await sql.query(
+        'SELECT 1 FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+        [org, user, id],
+      );
+      if (known.isNotEmpty) return;
+      await _upsert(sql, SelfConversation.id, {...e, 'from': user});
+      await _setCursor(sql, SelfConversation.id, id);
+    });
+    await _reload(SelfConversation.id);
+  }
+
+  Future<void> _onSelfEdited(Map<String, dynamic> e) async {
+    final id = idText(e['messageId']);
+    if (id.isEmpty) return;
+    final text = idText(e['text']);
+    final isEnvelope = text.startsWith('e2e1:');
+    await _db.update(
+      'UPDATE messages SET text = ?, edited_ts = ?, is_encrypted_unsupported = ?, decrypt_state = ?, plaintext = NULL '
+      'WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = ?',
+      [
+        text,
+        e['editedTs'] == null ? null : intOf(e['editedTs']),
+        isEnvelope ? 1 : 0,
+        isEnvelope ? 'pending' : null,
+        _org,
+        _me,
+        id,
+        SelfConversation.id,
+      ],
+    );
+    if (isEnvelope) _scheduleDecrypt();
+    await _reload(SelfConversation.id);
+  }
+
+  /// A delete made on another device: the row is marked deleted, as in every
+  /// chat; the My Work Space thread does not draw deleted notes.
+  Future<void> _onSelfDeleted(Map<String, dynamic> e) async {
+    final id = idText(e['messageId']);
+    if (id.isEmpty) return;
+    await _db.update(
+      'UPDATE messages SET is_deleted = 1 WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = ?',
+      [_org, _me, id, SelfConversation.id],
+    );
+    await _reload(SelfConversation.id);
+  }
+
   Future<void> _onEditDenied(Map<String, dynamic> e) async {
     for (final entry in _inFlight.values.toList()) {
       if (entry.kind == 'edit' && entry.refId == idText(e['messageId'])) {
@@ -1808,7 +1971,10 @@ class MessageRepository extends GetxService {
       await _setCursor(sql, convId, id);
     });
     if (idText(e['from']).toLowerCase() != user.toLowerCase()) {
-      fireAndLog('message_repository', () => _conversations.noteDelivered(convId, id));
+      fireAndLog(
+        'message_repository',
+        () => _conversations.noteDelivered(convId, id),
+      );
     }
     await _reload(convId);
     await _conversations.reload();
@@ -1904,9 +2070,12 @@ class MessageRepository extends GetxService {
       'dm' => 'dm:${idText(e['with']).toLowerCase()}',
       'group' => 'group:${idText(e['group'])}',
       'host' => 'host:${idText(e['host'])}',
+      'self' => SelfConversation.id,
       _ => '',
     };
     if (convId.isEmpty) return;
+    final isSelf = SelfConversation.isSelf(convId);
+    final isDelta = e['delta'] == true;
     final isOlder = e['before'] != null;
     final hasMore = e['hasMore'] == true;
     final next = e['next'] == null ? null : idText(e['next']);
@@ -1917,7 +2086,9 @@ class MessageRepository extends GetxService {
     final unknown = <Map<String, dynamic>>[];
     final fresh = <int>[];
     await _db.transaction((sql) async {
-      await ConversationRepository.ensure(sql, org, user, convId);
+      // My Work Space has no list row: it never shows in the chat list and
+      // never counts as unread.
+      if (!isSelf) await ConversationRepository.ensure(sql, org, user, convId);
       for (var i = 0; i < items.length; i++) {
         final item = items[i];
         final isNew = await _upsert(
@@ -1932,7 +2103,10 @@ class MessageRepository extends GetxService {
           fresh.add(i);
         }
       }
-      if (isOlder) {
+      if (isDelta) {
+        // Only what changed: the newest-id cursor and paging stay as they are.
+        await _setCursor(sql, convId, null, now: intOf(e['now']));
+      } else if (isOlder) {
         // Fetching locked messages again must not move the "load older" spot.
         if (convId != _unlockingConv) {
           await _setCursor(sql, convId, null);
@@ -1962,20 +2136,28 @@ class MessageRepository extends GetxService {
         );
       }
     });
-    if (!isOlder) {
+    if (!isOlder && !isDelta && !isSelf) {
       final fromOthers = [
         for (final i in items)
           if (idText(i['from']).toLowerCase() != user.toLowerCase())
             idText(i['id']),
       ];
       if (fromOthers.isNotEmpty) {
-        fireAndLog('message_repository', () => _conversations.noteDelivered(convId, fromOthers.last));
+        fireAndLog(
+          'message_repository',
+          () => _conversations.noteDelivered(convId, fromOthers.last),
+        );
       }
     }
     await _applyReceipts(convId);
     await _reload(convId);
     await _conversations.reload();
-    final waiter = _historyWaiters[isOlder ? 'older:$convId' : convId];
+    final waiter =
+        _historyWaiters[isDelta
+            ? 'delta:$convId'
+            : isOlder
+            ? 'older:$convId'
+            : convId];
     if (waiter != null && !waiter.isCompleted) {
       waiter.complete(_History(items, unknown, hasMore: hasMore, next: next));
     }

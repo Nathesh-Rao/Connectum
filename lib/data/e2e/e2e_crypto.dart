@@ -59,6 +59,9 @@ class E2eCrypto {
 
   static String groupLabel(String name) => 'group:${name.toLowerCase()}';
 
+  /// The label of My Work Space notes: `self:` plus my lower-cased name.
+  static String selfLabel(String me) => 'self:${me.toLowerCase()}';
+
   String newDeviceId() =>
       _random.bytes(16).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 

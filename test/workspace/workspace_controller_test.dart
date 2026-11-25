@@ -4,6 +4,7 @@ import 'package:connectum/core/widgets/app_state_view.dart';
 import 'package:connectum/data/commands/command_reply.dart';
 import 'package:connectum/data/models/form_definition.dart';
 import 'package:connectum/data/models/form_submission.dart';
+import 'package:connectum/data/models/message.dart';
 import 'package:connectum/data/records/record_commands.dart';
 import 'package:connectum/data/repositories/command_repository.dart';
 import 'package:connectum/data/repositories/form_options_repository.dart';
@@ -13,6 +14,7 @@ import 'package:connectum/data/repositories/ticket_repository.dart';
 import 'package:connectum/data/repositories/workspace_repository.dart';
 import 'package:connectum/data/socket/connectivity_service.dart';
 import 'package:connectum/data/socket/socket_service.dart';
+import 'package:connectum/features/home_shell/home_shell_controller.dart';
 import 'package:connectum/features/tickets/ticket_detail_controller.dart';
 import 'package:connectum/features/workspace/workspace_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,13 +106,14 @@ void main() {
   late TicketRepository tickets;
   late WorkspaceRepository workspace;
   late WorkspaceController c;
+  late _Messages messages;
 
   List<String> keys() => [
     for (final r in c.rows)
       if (r.card != null) r.key,
   ];
 
-  Future<void> start() async {
+  Future<void> start({HomeShellController? shell}) async {
     workspace = WorkspaceRepository(
       socket,
       store,
@@ -125,9 +128,9 @@ void main() {
       store: store,
       connectivity: connectivity,
       formOptions: _FormOptions(),
-      shell: null,
+      shell: shell,
       commands: _Commands(),
-      messages: _Messages(),
+      messages: messages,
       workspace: workspace,
       tickets: tickets,
       newTicketDetail: (id) => TicketDetailController(
@@ -141,6 +144,7 @@ void main() {
   }
 
   setUp(() {
+    messages = _Messages();
     socket = FakeSocket()..goOnline();
     store = FakeStore(user: 'ana');
     submissions = _Submissions();
@@ -196,6 +200,44 @@ void main() {
     await _wait();
     expect(socket.count(RecordCmd.actions), 1);
     expect(tickets.stateOf(8)!.items, isNotEmpty);
+  });
+
+  group('stored notes', () {
+    List<String> order() => [
+      for (final r in c.rows)
+        if (r.card != null || r.message != null) r.key,
+    ];
+
+    test('notes and cards are one list by time; a deleted note is not '
+        'drawn', () async {
+      submissions.submissions.assignAll([_own(5, 500), _own(6, 900)]);
+      messages.notes.assignAll([
+        _note('11', 700),
+        _note('12', 100),
+        _note('13', 800, isDeleted: true),
+      ]);
+      await start();
+      expect(order(), ['c-6', 'm-11', 'c-5', 'm-12']);
+    });
+
+    test('a note that arrives later is added in place, no network '
+        'needed', () async {
+      connectivity.set(AppConnectivity.offline);
+      socket.goOffline();
+      messages.notes.assignAll([_note('11', 700)]);
+      await start();
+      expect(order(), ['m-11']);
+      messages.notes.add(_note('12', 800));
+      await _wait();
+      expect(order(), ['m-12', 'm-11']);
+      expect(c.viewState.value, AppViewState.content);
+    });
+
+    test('a note is never counted as a card', () async {
+      messages.notes.assignAll([_note('11', 700)]);
+      await start();
+      expect(keys(), isEmpty);
+    });
   });
 
   group('states', () {
@@ -255,6 +297,13 @@ void main() {
     });
   });
 
+  test('the Approvals icon opens the Inbox with the approvals pane', () async {
+    final shell = _Shell();
+    await start(shell: shell);
+    c.openApprovals();
+    expect(shell.opened, [true]);
+  });
+
   test('switching organisation takes the other organisation\'s received '
       'records off the screen', () async {
     socket.answers[RecordCmd.mine] = (a) =>
@@ -272,4 +321,27 @@ void main() {
 
 class _FormOptions extends Fake implements FormOptionsRepository {}
 
-class _Messages extends Fake implements MessageRepository {}
+class _Messages extends Fake implements MessageRepository {
+  final notes = <Message>[].obs;
+
+  @override
+  Future<RxList<Message>> openSelf() async => notes;
+}
+
+Message _note(String id, int ts, {bool isDeleted = false}) => Message(
+  msgId: id,
+  convId: 'self',
+  sender: 'ana',
+  isMine: true,
+  text: 'note $id',
+  ts: ts,
+  status: MessageStatus.sent,
+  isDeleted: isDeleted,
+);
+
+class _Shell extends Fake implements HomeShellController {
+  final opened = <bool>[];
+
+  @override
+  void openInbox({bool approvals = false}) => opened.add(approvals);
+}
