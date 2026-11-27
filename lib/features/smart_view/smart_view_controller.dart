@@ -1130,7 +1130,10 @@ class SmartViewController extends GetxController {
       _sampleSource != null ? SvPhase.ready : listPhase.value;
 
   /// The records on screen are the tour's sample ones.
-  bool get isTourSampleShown => _demo?.isSampleTable(table.value) ?? false;
+  bool get isTourSampleShown {
+    final t = table.value;
+    return _demo?.isSampleTable(t) ?? false;
+  }
 
   /// The tour needs the list read, and a view that is open to have been read
   /// to its end (loading or failed states are not shown a tour over).

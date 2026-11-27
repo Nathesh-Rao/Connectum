@@ -99,7 +99,10 @@ class TourService extends GetxService with WidgetsBindingObserver {
     await _store.reset(user, id);
   }
 
+  /// Every tour and the intro dialog play again.
   Future<void> resetAll() async {
+    final user = _userId();
+    if (user != null) await _store.resetIntro(user);
     for (final id in TourId.values) {
       await reset(id);
     }

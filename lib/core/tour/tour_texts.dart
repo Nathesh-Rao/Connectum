@@ -30,7 +30,7 @@ class TourTexts {
   static const replayTitle = 'Replay all tours';
   static const replaySubtitle = 'Show the first-run tips again';
   static const replayDone =
-      'The tours will play again as you visit each screen.';
+      'The tours, with a short intro, will play again as you visit each screen.';
 
   // Chat list.
   static const chatSwitcherTitle = 'Your enterprise';

@@ -151,10 +151,47 @@ void main() {
     expect(hasSample, isFalse);
   });
 
-  testWidgets('Replay all tours does not bring the intro back', (tester) async {
+  testWidgets('Replay all tours brings the intro back once per round', (
+    tester,
+  ) async {
     data[introKey] = '1';
-    await newService().resetAll();
-    expect(data[introKey], '1');
+    final service = newService();
+    await service.resetAll();
+    expect(data.containsKey(introKey), isFalse);
+    isRealData = true;
+    final (result, context) = await begin(tester, service);
+    expect(find.text(TourTexts.introTitle), findsOneWidget);
+    await tester.tap(find.text(TourTexts.introStart));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(await result, TourStart.started);
+    service.skip();
+    await tester.pump(const Duration(milliseconds: 100));
+    final second = service.start(
+      TourId.values.firstWhere((t) => t != TourId.chatList),
+      steps(),
+      context: context,
+    );
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text(TourTexts.introTitle), findsNothing);
+    expect(await second, TourStart.started);
+    service.skip();
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  test('the intro flag is per user', () async {
+    final a = TourService(userId: () => 'u1', store: memoryStore(data, true));
+    final b = TourService(userId: () => 'u2', store: memoryStore(data, true));
+    data[TourStore.introKeyOf('u1')] = '1';
+    expect(TourStore.introKeyOf('u1'), isNot(TourStore.introKeyOf('u2')));
+    expect(await memoryStore(data, true).isIntroSeen('u2'), isFalse);
+    await b.resetAll();
+    expect(data[TourStore.introKeyOf('u1')], '1', reason: 'u1 is untouched');
+    await a.resetAll();
+    expect(data.containsKey(TourStore.introKeyOf('u1')), isFalse);
   });
 
   testWidgets('tap outside and back keep the dialog', (tester) async {

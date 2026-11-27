@@ -43,6 +43,16 @@ class TourStore {
 
   Future<void> markIntroSeen(String userId) => _set(introKeyOf(userId));
 
+  Future<void> resetIntro(String userId) async {
+    final key = introKeyOf(userId);
+    _cache[key] = false;
+    try {
+      await _delete(key);
+    } catch (e, st) {
+      AppLog.e('tour_store', e, st);
+    }
+  }
+
   Future<bool> isSeen(String userId, TourId id) => _isSet(keyOf(userId, id));
 
   Future<void> markSeen(String userId, TourId id) => _set(keyOf(userId, id));
