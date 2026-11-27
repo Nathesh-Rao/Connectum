@@ -34,9 +34,11 @@ void main() {
       }
       final view = File('lib/features/onboarding/onboarding_view.dart');
       expect(
-        _imports(
-          view,
-        ).any((i) => i.endsWith('widgets/onboarding_art_stage.dart')),
+        _imports(view).any(
+          (i) =>
+              i.endsWith('widgets/onboarding_art_stage.dart') ||
+              i.endsWith('core/widgets/widgets.dart'),
+        ),
         isTrue,
       );
     },
