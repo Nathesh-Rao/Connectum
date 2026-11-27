@@ -1,4 +1,4 @@
-import '../../../data/models/message.dart';
+import 'package:connectum/data/models/models.dart';
 
 enum ChatItemKind {
   message,

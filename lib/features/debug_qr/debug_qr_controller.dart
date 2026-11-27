@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_qr.dart';
-import '../../data/repositories/qr_repository.dart';
-import '../qr/qr_sheet.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/qr/qr.dart';
 
 class DebugQrController extends GetxController {
   DebugQrController({required this.real});

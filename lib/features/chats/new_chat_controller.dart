@@ -4,18 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_state_view.dart';
 import '../../data/api/api_client.dart';
-import '../../data/models/conversation.dart';
-import '../../data/models/ids.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/people_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
 import 'models/chat_person.dart';
 import 'models/person_link.dart';
 

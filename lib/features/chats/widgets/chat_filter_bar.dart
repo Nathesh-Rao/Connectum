@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/widgets/app_pill_bar.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../models/chat_filter.dart';
 
 /// The chips above the Chats list: All, Direct & Teams and, while a thread

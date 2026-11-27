@@ -2,9 +2,8 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_saved_views.dart';
 import '../../core/debug/seed_smart_view.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/sv_saved_views_repository.dart';
-import '../smart_view/smart_view_controller.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 
 /// The saved views of the Leave request demo (Pending only, By status with
 /// two group levels, Compact) over 120 sample rows with a fake repository:

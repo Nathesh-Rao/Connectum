@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// One run of a sentence: plain text, or a value that stands out.
 class HighlightPart {

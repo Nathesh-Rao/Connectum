@@ -4,13 +4,11 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_tasks.dart';
-import '../../core/log/app_log.dart';
-import '../models/approval.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
 import 'feed_repository.dart';
-import '../../core/log/safe.dart';
 
 /// A `request_created` or `request_resolved` event.
 class ApprovalChange {

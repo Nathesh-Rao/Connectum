@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../../data/e2e/e2e_models.dart';
-import '../../../data/repositories/e2e_repository.dart';
 import '../security_controller.dart';
-import '../../../core/widgets/app_highlight_text.dart';
 import '../../../data/e2e/e2e_texts.dart';
 import 'device_card.dart';
 import 'device_limit_sheet.dart';

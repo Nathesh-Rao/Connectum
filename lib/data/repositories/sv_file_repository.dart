@@ -9,7 +9,7 @@ import 'package:get/get.dart' hide Response;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 import '../attachment_cache.dart';
 import '../session_store.dart';
 import '../smart_view/sv_file.dart';

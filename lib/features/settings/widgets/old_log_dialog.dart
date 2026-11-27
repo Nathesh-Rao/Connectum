@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// "Old log file found". True: delete it and start a new one. False: keep it
 /// and add to it. Null: dismissed, so logging stays off.

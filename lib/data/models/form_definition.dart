@@ -223,12 +223,27 @@ class FormDefinition {
   }
 
   /// A captions-only definition from a `structures` entry, in the shape that
-  /// is stored.
+  /// is stored. `creatorCanDelete` and `owner` are kept only when the form
+  /// turned the author's Delete off (the server leaves the default unsaid).
   static String captionsJson(Map structure) => jsonEncode({
     'caption': structure['caption'],
     'fields': structure['fields'],
+    if (structure['creatorCanDelete'] == false) ...{
+      'creatorCanDelete': false,
+      'owner': structure['owner'],
+    },
     captionsOnlyMarker: true,
   });
+
+  /// False only when the form says so (`creatorCanDelete: false`); a missing
+  /// field, or any other value, keeps the author's Delete.
+  bool get creatorCanDelete => raw['creatorCanDelete'] != false;
+
+  /// May the person [me] be offered Delete on a record of theirs? The form's
+  /// owner always may; the author only while the form allows it.
+  bool mayDeleteOwn(String me) =>
+      creatorCanDelete ||
+      (me.isNotEmpty && idText(raw['owner']).toLowerCase() == me.toLowerCase());
 
   /// The sections in the order they are shown, with the fields that belong to
   /// none first (an empty section name).

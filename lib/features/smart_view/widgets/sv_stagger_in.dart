@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_sv.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Fades and lifts its child in, [index] steps after the first. With
 /// animations off it is simply there.

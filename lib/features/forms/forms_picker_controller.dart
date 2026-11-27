@@ -3,16 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
-import '../../core/utils/link_launcher.dart';
-import '../../core/utils/link_open_policy.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/form_option.dart';
-import '../../data/models/link_target.dart';
-import '../../data/repositories/form_options_repository.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../home_shell/home_shell_controller.dart';
-import '../home_shell/home_tab.dart';
-import '../link_browser/models/link_browser_args.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
+import 'package:connectum/features/link_browser/link_browser.dart';
 import 'form_icon_dictionary.dart';
 import 'models/form_launch.dart';
 
@@ -169,7 +166,7 @@ class FormsPickerController extends GetxController {
           }
         case LinkOpenMode.inApp:
           closeSheet();
-          await Get.toNamed<void>(
+          await Get.toNamed(
             AppRoutes.linkBrowser,
             arguments: LinkBrowserArgs(
               url: target.url,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The loading animation of the QR sheet. Reduced motion shows a still frame.
 class AppQrLoading extends StatelessWidget {

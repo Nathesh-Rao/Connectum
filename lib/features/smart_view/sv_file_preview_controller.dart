@@ -7,16 +7,13 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/crash/crash_breadcrumbs.dart';
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/attachment_cache.dart';
-import '../../data/repositories/share_repository.dart';
-import '../../data/repositories/sv_file_repository.dart';
 import '../../data/smart_view/preview/sv_preview_parsers.dart';
 import '../../data/smart_view/preview/sv_xlsx_parser.dart';
 import '../../data/smart_view/sv_file.dart';
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
 
 enum SvFilePhase { idle, loading, ready, error }
 

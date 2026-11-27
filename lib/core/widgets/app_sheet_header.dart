@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A sheet's title row: the title (and an optional line under it) and a plain
 /// close X with a 44 px tap target.

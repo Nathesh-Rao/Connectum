@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../data/notifications/local_notification_rules.dart';
 import 'models/feed_item.dart';
 import 'notification_texts.dart';

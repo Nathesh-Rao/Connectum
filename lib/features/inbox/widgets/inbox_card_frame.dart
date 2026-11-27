@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_animated_size.dart';
-import '../../../core/utils/avatar_tint.dart';
-import '../../../core/utils/chat_time.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../../smart_view/widgets/sv_file_chips.dart';
 import '../models/inbox_card_rows.dart';
 import '../models/inbox_record_tone.dart';

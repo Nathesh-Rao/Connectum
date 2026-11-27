@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The app's switch look. Colours live here only.
 class AppSwitch extends StatelessWidget {

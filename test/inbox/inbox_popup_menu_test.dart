@@ -1,10 +1,9 @@
-import 'package:connectum/core/widgets/app_anchored_popup.dart';
+import 'package:connectum/core/widgets/animated_callout_menu.dart';
+import 'package:connectum/core/widgets/callout_menu/callout_painter.dart';
+import 'package:connectum/features/inbox/widgets/inbox_card.dart';
 import 'package:connectum/features/tickets/models/card_menu.dart';
-import 'package:connectum/features/tickets/widgets/record_menu_rows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'inbox_screen_support.dart';
 
 const _items = [
   CardMenuItem('act-send', 'Send', Icons.send_rounded),
@@ -12,17 +11,16 @@ const _items = [
   CardMenuItem(CardMenuItem.history, 'History', Icons.history_rounded),
 ];
 
+final _painter = find.byWidgetPredicate(
+  (w) => w is CustomPaint && w.painter is CalloutPainter,
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late InboxRig rig;
   late List<String> picked;
 
-  setUp(() {
-    rig = InboxRig();
-    picked = [];
-    addTearDown(rig.dispose);
-  });
+  setUp(() => picked = []);
 
   Future<void> pumpMenu(WidgetTester t, {bool isStill = false}) async {
     t.view.physicalSize = const Size(390, 800);
@@ -41,20 +39,15 @@ void main() {
               child: Builder(
                 builder: (context) => IconButton(
                   icon: const Icon(Icons.more_horiz),
-                  onPressed: () => AppAnchoredPopup.show(
-                    context,
-                    label: 'Record menu',
-                    builder: (popup) => RecordMenuRows(
-                      tickets: rig.tickets,
-                      recordId: null,
-                      isCompact: true,
-                      itemsFor: (_) => _items,
-                      onPick: (item) {
-                        Navigator.of(popup).pop();
-                        picked.add(item.id);
-                      },
-                    ),
-                  ),
+                  onPressed: () async {
+                    final item = await AnimatedCalloutMenu.show<CardMenuItem>(
+                      context,
+                      AnimatedCalloutMenu.anchorOf(context)!,
+                      InboxMenu.rowsFor(_items),
+                      label: 'Record menu',
+                    );
+                    if (item != null) picked.add(item.id);
+                  },
                 ),
               ),
             ),
@@ -65,86 +58,53 @@ void main() {
   }
 
   Finder text(String s) => find.text(s);
-  final surface = find.ancestor(
-    of: find.text('Send'),
-    matching: find.byType(SingleChildScrollView),
-  );
 
-  Future<Map<String, double>> fullWidths(WidgetTester t) async {
-    await t.tap(find.byIcon(Icons.more_horiz));
-    await t.pumpAndSettle();
-    final w = {
-      for (final i in _items) i.label: t.getRect(text(i.label)).width,
-      'height': t.getSize(surface).height,
-    };
-    await t.tapAt(const Offset(4, 700));
-    await t.pumpAndSettle();
-    expect(text('Send'), findsNothing);
-    return w;
-  }
+  double opacityOf(WidgetTester t, String s) => t
+      .widget<Opacity>(
+        find.ancestor(of: text(s), matching: find.byType(Opacity)).first,
+      )
+      .opacity;
+
+  double join(WidgetTester t) =>
+      (t.widget<CustomPaint>(_painter).painter! as CalloutPainter).frame.join;
 
   testWidgets('the items come out one after another, then merge', (t) async {
     await pumpMenu(t);
-    final full = await fullWidths(t);
     await t.tap(find.byIcon(Icons.more_horiz));
     await t.pump();
-
-    double? lastHeight;
-    final samples = <int, List<double>>{};
-    for (final ms in [30, 50, 50, 50, 50]) {
-      await t.pump(Duration(milliseconds: ms));
-      final at = samples.length;
-      samples[at] = [
-        for (final i in _items) t.getRect(text(i.label)).width / full[i.label]!,
-      ];
-      lastHeight = t.getSize(surface).height;
-    }
-    // Early on the first card is further out than the second and the third.
-    final early = samples[1]!;
-    expect(early[0], greaterThan(early[1]));
-    expect(early[1], greaterThan(early[2]));
-    // The cards are apart (the menu is taller than its merged height) before
-    // the merge.
-    expect(lastHeight, greaterThan(full['height']! + 4));
-
-    await t.pump(const Duration(milliseconds: 60));
+    await t.pump(const Duration(milliseconds: 120));
+    expect(opacityOf(t, 'Send'), greaterThan(0));
+    expect(opacityOf(t, 'Update status'), 0);
+    expect(opacityOf(t, 'History'), 0);
     await t.pump(const Duration(milliseconds: 200));
-    expect(t.getSize(surface).height, closeTo(full['height']!, 0.5));
+    expect(opacityOf(t, 'Update status'), greaterThan(opacityOf(t, 'History')));
+    expect(join(t), 0, reason: 'the cards are apart before the merge');
+    await t.pumpAndSettle();
+    expect(join(t), 1);
     for (final i in _items) {
-      expect(t.getRect(text(i.label)).width, closeTo(full[i.label]!, 0.5));
+      expect(opacityOf(t, i.label), 1);
     }
   });
 
   testWidgets('closing is the same sequence backwards', (t) async {
     await pumpMenu(t);
-    final full = await fullWidths(t);
     await t.tap(find.byIcon(Icons.more_horiz));
     await t.pumpAndSettle();
     await t.tapAt(const Offset(4, 700));
     await t.pump();
-    // First the surface splits into separate cards...
+    // First the panel splits into separate cards...
     await t.pump(const Duration(milliseconds: 60));
-    expect(t.getSize(surface).height, greaterThan(full['height']! + 1));
+    expect(join(t), lessThan(1));
     for (final i in _items) {
-      expect(
-        t.getRect(text(i.label)).width / full[i.label]!,
-        greaterThan(0.9),
-        reason: '${i.label} is still out',
-      );
+      expect(opacityOf(t, i.label), greaterThan(0.9), reason: i.label);
     }
     // ...then the last card goes first, the first card last.
-    await t.pump(const Duration(milliseconds: 150));
-    final mid = [
-      for (final i in _items) t.getRect(text(i.label)).width / full[i.label]!,
-    ];
-    expect(mid[2], lessThan(mid[1]));
-    expect(mid[2], lessThan(mid[0]));
-    await t.pump(const Duration(milliseconds: 110));
-    final late = [
-      for (final i in _items) t.getRect(text(i.label)).width / full[i.label]!,
-    ];
-    expect(late[1], lessThan(late[0]));
-    expect(late[2], lessThan(late[1]));
+    await t.pump(const Duration(milliseconds: 260));
+    expect(opacityOf(t, 'History'), lessThan(opacityOf(t, 'Update status')));
+    expect(
+      opacityOf(t, 'Update status'),
+      lessThanOrEqualTo(opacityOf(t, 'Send')),
+    );
     await t.pumpAndSettle();
     expect(text('Send'), findsNothing);
     expect(picked, isEmpty);
@@ -160,6 +120,7 @@ void main() {
     expect(text('Send'), findsOneWidget);
     await t.pumpAndSettle();
     expect(text('Send'), findsNothing);
+    expect(picked, isEmpty);
   });
 
   testWidgets('the items still take taps, also while they fly', (t) async {
@@ -172,7 +133,6 @@ void main() {
       expect(picked.last, item.id);
       expect(text(item.label), findsNothing);
     }
-    // Tapped before the merge is done.
     await t.tap(find.byIcon(Icons.more_horiz));
     await t.pump();
     await t.pump(const Duration(milliseconds: 250));
@@ -182,18 +142,14 @@ void main() {
     expect(picked.length, 4);
   });
 
-  testWidgets('reduced motion: a plain fade, the cards are one surface', (
+  testWidgets('reduced motion: a plain fade, the cards are one panel', (
     t,
   ) async {
     await pumpMenu(t, isStill: true);
-    final full = await fullWidths(t);
     await t.tap(find.byIcon(Icons.more_horiz));
     await t.pump();
     await t.pump(const Duration(milliseconds: 40));
-    expect(t.getSize(surface).height, closeTo(full['height']!, 0.5));
-    for (final i in _items) {
-      expect(t.getRect(text(i.label)).width, closeTo(full[i.label]!, 0.5));
-    }
+    expect(join(t), 1);
     await t.pumpAndSettle();
     await t.tap(text('History'));
     await t.pumpAndSettle();
@@ -220,20 +176,5 @@ void main() {
       );
     }
     handle.dispose();
-  });
-
-  test('the timeline: items one after another, the merge last', () {
-    double enter(int i, double ms) => AppPopupTiming.enter(i, ms / 380);
-    expect(enter(0, 0), 0);
-    expect(enter(1, 40), 0);
-    expect(enter(0, 40), greaterThan(0));
-    expect(enter(1, 90), greaterThan(0));
-    expect(enter(2, 90), 0);
-    expect(enter(2, 380), closeTo(1, 1e-9));
-    expect(AppPopupTiming.merge(250 / 380), 0);
-    expect(AppPopupTiming.merge(1), 1);
-    for (final i in [0, 1, 2]) {
-      expect(enter(i, 280), closeTo(1, 0.1));
-    }
   });
 }

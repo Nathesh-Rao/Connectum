@@ -1,4 +1,4 @@
-import '../../../data/models/task.dart';
+import 'package:connectum/data/models/models.dart';
 import '../tasks_texts.dart';
 
 /// The limits `task.create` and `task.update` enforce, checked before sending

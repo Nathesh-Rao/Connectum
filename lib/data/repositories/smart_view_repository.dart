@@ -6,7 +6,9 @@ import 'package:get/get.dart';
 import '../../core/debug/records_log.dart';
 import '../../core/debug/seed_smart_view.dart';
 import '../commands/command_reply.dart';
-import '../models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
 import '../smart_view/models/sv_row.dart';
@@ -14,11 +16,7 @@ import '../smart_view/models/sv_source.dart';
 import '../smart_view/smart_view_commands.dart';
 import '../smart_view/sv_file.dart';
 import '../smart_view/sv_team.dart';
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
 import 'ticket_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 enum SvPhase { loading, ready, empty, error, offline, noAccess }
 

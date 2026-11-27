@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/conversation.dart';
-import '../../data/repositories/attachment_repository.dart';
-import '../../data/repositories/share_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 /// The state of the "Share to Connectum" sheet: the chats, the search, the
 /// choice, and the send. Created for one sheet; the sending that follows the

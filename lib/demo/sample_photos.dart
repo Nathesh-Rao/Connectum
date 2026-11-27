@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
-import '../core/theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 enum SamplePhoto {
   landscape('Landscape 1800 x 1000', 1800, 1000),

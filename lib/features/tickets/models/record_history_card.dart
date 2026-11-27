@@ -1,5 +1,4 @@
-import '../../../data/models/form_card.dart';
-import '../../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The read-only form message a record's conversation gets for each event
 /// (`structure: "record_history"`). Its `submissionId` is the history row,

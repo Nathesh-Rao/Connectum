@@ -1,12 +1,10 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/deep_link_service.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/session_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/connect/connect.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../connect/connect_binding.dart';
-import '../connect/connect_controller.dart';
 import 'enterprises_controller.dart';
 
 class EnterprisesBinding extends Bindings {

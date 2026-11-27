@@ -2,6 +2,7 @@ import 'package:connectum/core/utils/avatar_palette.dart';
 import 'package:connectum/core/widgets/app_avatar.dart';
 import 'package:connectum/core/widgets/conversation_avatar.dart';
 import 'package:connectum/data/models/conversation.dart';
+import 'package:connectum/data/profile/presence.dart';
 import 'package:connectum/features/chats/chats_controller.dart';
 import 'package:connectum/features/chats/widgets/conversation_tile.dart';
 import 'package:connectum/features/conversation/widgets/conversation_header.dart';
@@ -18,6 +19,9 @@ class _FakeChats extends Fake implements ChatsController {
   @override
   AppPresenceDot presenceFor(Conversation c) =>
       _isOnline.value ? AppPresenceDot.online : AppPresenceDot.none;
+
+  @override
+  Presence? moodFor(Conversation c) => null;
 }
 
 Color? _fill(WidgetTester tester) {

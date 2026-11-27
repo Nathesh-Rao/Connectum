@@ -5,11 +5,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'crop_math.dart';
 import 'photo_renderer.dart';
-import '../../core/log/app_log.dart';
 
 /// The crop screen's state: the picture, the frame size and the view the
 /// person has set. The maths is in [CropState]; this only feeds it gestures.

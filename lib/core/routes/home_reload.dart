@@ -5,8 +5,7 @@ import 'package:get/get_navigation/src/router_report.dart';
 
 import '../debug/connect_flow_log.dart';
 import 'app_routes.dart';
-import '../log/app_log.dart';
-import '../log/safe.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// Reloads the home area (after an enterprise switch) without the new home
 /// sharing controllers with the old one.

@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../log/app_log.dart';
-import '../log/safe.dart';
+import 'package:connectum/core/log/log.dart';
 import 'tour_action.dart';
 import 'tour_demo.dart';
 import 'tour_step.dart';

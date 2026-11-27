@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/home_reload.dart';
-import '../../core/theme/app_motion.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 class EnterpriseCreatedController extends GetxController {
   EnterpriseCreatedController({required this.name, required this.enterpriseId});

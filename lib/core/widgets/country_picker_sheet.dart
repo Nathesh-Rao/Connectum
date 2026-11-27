@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/app_countries.dart';
 import '../data/country_lookup.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_text_field.dart';
 
 /// Body of the country-code bottom sheet: search by name, ISO code or dial

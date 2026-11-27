@@ -3,18 +3,14 @@ import 'dart:async';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/ticket.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/socket/call_problem.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'models/ticket_reducer.dart';
 import 'tickets_texts.dart';
-import '../../core/log/safe.dart';
 
 /// One tab's list.
 class TicketList {

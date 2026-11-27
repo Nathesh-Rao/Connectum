@@ -1,5 +1,5 @@
-import '../../../data/models/chat_thread.dart';
-import '../../../data/repositories/conversation_repository.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 enum FormChatMode { none, always }
 

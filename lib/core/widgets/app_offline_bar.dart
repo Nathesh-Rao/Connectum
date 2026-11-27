@@ -3,11 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../data/socket/connectivity_service.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'app_connectivity_scope.dart';
 
 class AppOfflineBar extends StatefulWidget {

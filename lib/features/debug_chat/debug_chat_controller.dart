@@ -1,11 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../core/utils/attachment_tag.dart';
-import '../../core/utils/chat_time.dart';
-import '../../core/utils/mention_text.dart';
-import '../../data/models/message.dart';
-import '../conversation/models/chat_item.dart';
-import '../conversation/models/document_info.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/conversation/conversation.dart';
 
 /// Sample messages for the message rules: mentions, forwards, edits, a reply
 /// with a missing original, a deleted message (must not show), day separators.

@@ -1,5 +1,5 @@
-import '../../../core/utils/chat_time.dart';
-import '../../../data/models/ids.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Words for the data of a ticket. Pure.
 class TicketText {

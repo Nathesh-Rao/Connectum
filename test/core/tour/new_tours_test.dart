@@ -43,10 +43,11 @@ void main() {
   });
 
   group('profile', () {
-    test('four steps, the last one is the replay row', () {
+    test('five steps, the last one is the replay row', () {
       final tour = ProfileTour(service: service);
       final s = tour.steps();
-      expect(s.length, 4);
+      expect(s.length, 5);
+      expect(s[1].target, tour.statusKey);
       expect(s.last.target, tour.replayKey);
       expect(s.last.body, contains('Replay all tours'));
       expect(s.first.canScroll, isFalse);
@@ -139,6 +140,11 @@ void main() {
                     width: double.infinity,
                     height: 120,
                   ),
+                  SizedBox(
+                    key: tour.statusKey,
+                    width: double.infinity,
+                    height: 60,
+                  ),
                   const SizedBox(height: 1000),
                   SizedBox(
                     key: tour.securityKey,
@@ -168,6 +174,9 @@ void main() {
       expect(await tour.start(), TourStart.started);
       await pumpTour(tester);
       expect(scroll.offset, 0);
+      await tester.tap(find.text(TourTexts.next));
+      await pumpTour(tester);
+      expect(find.text(TourTexts.prStatusTitle), findsOneWidget);
       await tester.tap(find.text(TourTexts.next));
       await pumpTour(tester);
       expect(find.text(TourTexts.prSecurityTitle), findsOneWidget);

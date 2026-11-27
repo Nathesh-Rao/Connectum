@@ -1,29 +1,16 @@
-import '../ai_chat/ai_entry.dart';
-import '../ai_chat/widgets/ai_header_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/ai_chat/ai_chat.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_form_card.dart';
-import '../../core/widgets/conversation_avatar.dart';
-import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_skeleton.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/message_selection/selectable_row.dart';
-import '../../core/widgets/message_selection/selection_app_bar.dart';
-import '../../core/widgets/message_selection/swipe_to_reply.dart';
 import 'conversation_tour.dart';
 import 'conversation_controller.dart';
 import 'models/chat_item.dart';
-import '../tickets/widgets/record_card_actions.dart';
-import '../tickets/widgets/ticket_action_sheet.dart';
 import 'widgets/attachment_view.dart';
-import '../../data/models/message.dart';
 import 'widgets/chat_rows.dart';
 import 'widgets/conversation_composer.dart';
 import 'widgets/conversation_sample_row.dart';
@@ -95,12 +82,16 @@ class ConversationView extends GetView<ConversationController> {
                       avatar: conversationAvatarFor(
                         conv,
                         presence: c.presenceDot,
+                        mood: c.mood,
                       ),
                       isEncrypted: c.isLocked.value || c.isBlocked.value,
                       onInfoTap: () => Get.toNamed(
                         AppRoutes.chatInfoOf(c.conversationId),
                         arguments: c.isLocked.value || c.isBlocked.value,
                       ),
+                      onAvatarTap: c.personUsername == null
+                          ? null
+                          : c.openPersonProfile,
                       onBack: Get.back,
                       trailing: [
                         if (c.canUseAi)

@@ -2,9 +2,8 @@ import 'dart:ui';
 
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_spinner/pull_refresh_config.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 class DebugRefreshController extends GetxController {
   static const colorNames = ['kPullRefreshColor', 'Primary blue', 'Violet'];

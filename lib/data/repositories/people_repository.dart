@@ -3,11 +3,8 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../features/chats/models/chat_person.dart';
 import '../../features/chats/models/person_link.dart';
-import '../models/approval.dart';
-import '../models/group_add.dart';
-import '../models/ids.dart';
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// What to do with the optimistic "Requested" state when an invite fails.
 enum InviteFix {

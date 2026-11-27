@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 import 'tour_id.dart';
 
 /// Which tours a person has seen, kept per user, tour and tour version. The

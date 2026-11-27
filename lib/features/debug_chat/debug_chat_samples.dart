@@ -1,21 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_action_bar.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_form_card.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../data/models/conversation.dart';
-import '../../data/models/form_card.dart';
-import '../../data/models/form_entry.dart';
-import '../../data/models/ticket.dart';
-import '../chat_info/models/chat_info.dart';
-import '../chat_info/widgets/chat_info_body.dart';
-import '../tickets/models/ticket_action_style.dart';
-import '../tickets/models/ticket_rows.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/chat_info/chat_info.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 
 /// Debug only (see "Before release" in CLAUDE.md): the Chat info page for
 /// every kind of conversation, and ticket cards with 0 to 6 actions, from

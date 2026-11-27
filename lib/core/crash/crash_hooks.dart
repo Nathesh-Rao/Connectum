@@ -2,7 +2,7 @@ import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 
-import '../log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 import 'crash_reporter.dart';
 
 /// Chains the error hooks after whatever is installed now; the old handler

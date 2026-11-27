@@ -248,6 +248,36 @@ void main() {
       expect(find.bySemanticsLabel('Delete record 3'), findsNothing);
     });
 
+    for (final (label, def, isDelete) in <(String, Map<String, dynamic>, bool)>[
+      ('missing', _definition(), true),
+      ('true', {..._definition(), 'creatorCanDelete': true}, true),
+      (
+        'false hides Delete, keeps Edit',
+        {..._definition(), 'creatorCanDelete': false},
+        false,
+      ),
+      (
+        'false but I own the form',
+        {..._definition(owner: 'alex'), 'creatorCanDelete': false},
+        true,
+      ),
+    ]) {
+      testWidgets('creatorCanDelete $label', (tester) async {
+        final rig = Rig(def: def, rows: [_sub(1, 'alex')]);
+        final c = await boot(tester, rig);
+        final row = c.rows.single;
+        expect(c.canDelete(row), isDelete);
+        expect(c.canChange(row), isTrue);
+        expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+        expect(
+          find.byIcon(Icons.delete_outline),
+          isDelete ? findsOneWidget : findsNothing,
+        );
+        await c.deleteRecord(row);
+        expect(rig.deleted, isDelete ? ['1'] : isEmpty);
+      });
+    }
+
     testWidgets('a name in another case is still me', (tester) async {
       final rig = Rig(rows: [_sub(1, 'ALEX')]);
       final c = await boot(tester, rig);

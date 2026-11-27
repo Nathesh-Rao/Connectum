@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import '../../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The colour of the pull-to-refresh spinner. Primary bright is what the old
 /// refresh header, AppSpinner and the blue loading animation already use.

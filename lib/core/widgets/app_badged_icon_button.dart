@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_button.dart';
 import 'app_unread_badge.dart';
 

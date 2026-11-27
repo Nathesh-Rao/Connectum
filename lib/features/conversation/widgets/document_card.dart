@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/attachment_tag.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
 import '../models/document_info.dart';
 
 /// A non-image attachment: a file-type tile, the name, "PDF · 2.4 MB" and one

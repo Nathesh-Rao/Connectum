@@ -1,24 +1,19 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
-import '../../data/repositories/people_avatars.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/person_profile/person_profile.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
-import '../../data/models/chat_thread.dart';
-import '../../data/models/conversation.dart';
-import '../../data/models/ticket.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
-import '../chats/record_rename_controller.dart';
-import '../tickets/models/ticket_detail_row.dart';
-import '../tickets/models/ticket_rows.dart';
 import 'models/chat_info.dart';
-import '../../core/log/safe.dart';
 
 /// The info page of one conversation. It reads what is already stored (the
 /// conversation row and its member list) and, for a record conversation, the
@@ -169,6 +164,15 @@ class ChatInfoController extends GetxController {
     AppRoutes.newGroup,
     arguments: ConversationRepository.targetOf(conversationId),
   );
+
+  /// A member's avatar: their read-only profile, or my own for me.
+  void openMemberProfile(ChatInfoMember member) {
+    if (member.isMe) {
+      Get.toNamed(AppRoutes.profile);
+      return;
+    }
+    PersonRoute.open(PersonCard(username: member.user, name: member.name));
+  }
 
   /// A person's own chat. Nothing for me.
   void openMember(ChatInfoMember member) {

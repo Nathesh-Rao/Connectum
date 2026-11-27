@@ -206,6 +206,8 @@ void main() {
     expect(find.text('Adjust your photo'), findsNothing);
     expect(rig.avatars.urlOf('me'), startsWith('memory:'));
     expect(rig.controller.isPhotoBusy.value, isFalse);
+    // The hero ring reads the picture's colour (a timed read).
+    await tester.pump(const Duration(seconds: 6));
   });
 
   testWidgets('gallery reaches the crop screen too', (tester) async {

@@ -4,7 +4,7 @@ import 'ai_models.dart';
 import 'ai_prompt.dart';
 import 'ai_repository.dart';
 import 'ai_transcript.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
 
 enum FakeAiScenario {
   short,

@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/auth_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/session_store.dart';
 import 'password_controller.dart';
 

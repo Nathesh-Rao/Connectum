@@ -1,10 +1,9 @@
 import 'package:get/get.dart';
 
-import '../../core/tour/tour_service.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/notifications/local_notification_service.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'notification_router.dart';
 import 'notifications_controller.dart';
 import 'notifications_tour.dart';

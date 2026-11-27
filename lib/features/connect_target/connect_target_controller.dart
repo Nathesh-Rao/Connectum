@@ -9,22 +9,19 @@ import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../core/routes/deep_link_service.dart';
 import '../../core/routes/home_reload.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/utils/connect_code.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
-import '../../data/models/connect_card.dart';
-import '../../data/models/connect_lookup.dart';
-import '../../data/models/identity_info.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/connect_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
-import '../../core/log/safe.dart';
 
 enum ConnectTargetStep {
   resolving,

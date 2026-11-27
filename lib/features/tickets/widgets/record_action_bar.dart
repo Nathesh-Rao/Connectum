@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/log/safe.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_action_bar.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_state_view.dart';
-import '../../../data/models/record_state.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../../inbox/approval_texts.dart';
 import '../../inbox/models/approval_rules.dart';
 import '../../inbox/widgets/approval_reason_sheet.dart';

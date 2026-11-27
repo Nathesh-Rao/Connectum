@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/app_state_view.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../chats/models/chat_person.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/chats/chats.dart';
 import '../new_group_controller.dart';
 
 /// Selected chips with a count, a search field and the people list.

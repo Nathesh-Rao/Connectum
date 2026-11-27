@@ -1,22 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/attachment_tag.dart';
-import '../../../core/utils/forwarded_text.dart';
-import '../../../core/utils/mention_text.dart';
-import '../../../core/widgets/app_mention_text.dart';
-import '../../../core/widgets/app_png_icon.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_state_image.dart';
-import '../../../core/widgets/app_text_field.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/forms/forms.dart';
 import '../../../data/e2e/e2e_texts.dart';
-import '../../../data/models/message.dart';
-import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
 import '../../workspace/widgets/workspace_context_bar.dart';
 import 'attach_sheet.dart';

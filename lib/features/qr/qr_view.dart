@@ -3,14 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_filter_chips.dart';
-import '../../core/widgets/app_qr_share_card.dart';
-import '../../core/widgets/app_qr_loading.dart';
-import '../../core/widgets/app_state_view.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'models/qr_models.dart';
 import 'qr_controller.dart';
 import 'widgets/qr_kind_switch.dart';
@@ -121,6 +115,31 @@ class _Content extends StatelessWidget {
                 onPressed: () => c.shareImage(QrView._origin(context)),
               ),
             ),
+            if (c.canRegenerate) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Builder(
+                builder: (context) => AppButton.text(
+                  label: 'Regenerate QR code',
+                  leadingIcon: Icons.refresh_rounded,
+                  tone: AppTextButtonTone.ink,
+                  onPressed: c.isRegenerating.value
+                      ? null
+                      : () async {
+                          final isConfirmed = await AppConfirmDialog.ask(
+                            context,
+                            title: 'Regenerate your QR code?',
+                            message:
+                                'Your current QR code and Connectum code will '
+                                'stop working. Anyone who saved or printed it '
+                                'will need the new one.',
+                            confirmLabel: 'Regenerate',
+                            isDanger: true,
+                          );
+                          if (isConfirmed) await c.regenerate();
+                        },
+                ),
+              ),
+            ],
           ],
         ],
       );

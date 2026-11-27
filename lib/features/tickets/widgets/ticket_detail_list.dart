@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../models/ticket_detail_row.dart';
 
 /// The record as a flat list: a soft icon chip, the label above the value,

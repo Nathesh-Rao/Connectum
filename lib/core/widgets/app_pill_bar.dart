@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The tint of a pill: the selected one is filled with the strong colour, the
 /// others are tinted.

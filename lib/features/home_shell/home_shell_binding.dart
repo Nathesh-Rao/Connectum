@@ -1,22 +1,19 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/deep_link_service.dart';
-import '../../core/tour/tour_service.dart';
-import '../../data/repositories/conversation_repository.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/ai_agents/ai_agents.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/hand_on/hand_on.dart';
+import 'package:connectum/features/inbox/inbox.dart';
+import 'package:connectum/features/notifications/notifications.dart';
+import 'package:connectum/features/security/security.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
+import 'package:connectum/features/submissions/submissions.dart';
 import '../../data/notifications/local_notification_service.dart';
-import '../ai_agents/ai_agents_binding.dart';
-import '../notifications/notification_router.dart';
-import '../chats/chats_binding.dart';
-import '../../data/repositories/e2e_repository.dart';
-import '../../data/repositories/hand_on_repository.dart';
-import '../hand_on/hand_on_controller.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../inbox/inbox_binding.dart';
-import '../smart_view/smart_view_binding.dart';
-import '../smart_view/smart_view_controller.dart';
-import '../security/security_controller.dart';
-import '../submissions/submissions_binding.dart';
 import 'home_shell_controller.dart';
 
 class HomeShellBinding extends Bindings {

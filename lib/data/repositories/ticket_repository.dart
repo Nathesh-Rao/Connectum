@@ -6,18 +6,13 @@ import 'package:get/get.dart';
 
 import '../../core/debug/records_log.dart';
 import '../../core/debug/seed_tickets.dart';
-import '../models/ids.dart';
-import '../models/record_live.dart';
-import '../models/record_state.dart';
-import '../models/ticket.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../records/record_actions_queue.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 typedef _Read = ({Map<String, dynamic>? data, SocketCallError? error});
 

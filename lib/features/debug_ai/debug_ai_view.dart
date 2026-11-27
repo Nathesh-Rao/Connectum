@@ -1,21 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_pill_bar.dart';
-import '../../core/widgets/app_scaffold.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/ai_chat/ai_chat.dart';
 import '../../data/ai/ai_models.dart';
 import '../../data/ai/fake_ai_repository.dart';
-import '../ai_chat/ai_entry.dart';
-import '../ai_chat/ai_summary_message_format.dart';
-import '../ai_chat/ai_texts.dart';
-import '../ai_chat/widgets/ai_header_button.dart';
-import '../ai_chat/widgets/ai_notice_dialog.dart';
-import '../ai_chat/widgets/ai_rich_text.dart';
 import 'debug_ai_controller.dart';
 
 class DebugAiView extends GetView<DebugAiController> {

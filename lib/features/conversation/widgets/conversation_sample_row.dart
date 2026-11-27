@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/tour/tour_texts.dart';
-import '../../../core/utils/mention_text.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../core/widgets/message_selection/selectable_row.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../conversation_tour.dart';
 import '../models/chat_item.dart';
 import 'message_bubble.dart';

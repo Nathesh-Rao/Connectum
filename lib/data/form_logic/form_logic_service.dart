@@ -7,9 +7,9 @@ import 'package:quickjs_engine/quickjs_engine.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'form_logic_assets.dart';
-import '../../core/log/safe.dart';
 
 /// What a call to the logic gives back: a value, or the reason there is none.
 /// Calls never throw.

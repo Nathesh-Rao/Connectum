@@ -2,10 +2,10 @@ import 'package:get/get.dart';
 
 import '../../core/routes/invite_service.dart';
 import '../../data/api/api_client.dart';
-import '../../data/repositories/session_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/authentication/authentication.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../authentication/authentication_controller.dart';
 import 'debug_auth_controller.dart';
 import 'scripted_auth_repository.dart';
 

@@ -7,21 +7,17 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/errors/run_guarded.dart';
-import '../../core/log/safe.dart';
-import '../../core/utils/attachment_tag.dart';
-import '../db/app_database.dart';
-import '../models/ids.dart';
-import '../models/message.dart';
-import '../models/outbox_entry.dart';
-import '../models/self_conversation.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
 import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_models.dart';
 import 'e2e_repository.dart';
 import 'encryption_policy.dart';
-import '../../core/log/app_log.dart';
 
 /// How a file for a chat is made: uploaded as it is, or sealed first.
 enum AttachMode { plain, encrypted }

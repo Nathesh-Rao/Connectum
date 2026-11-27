@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/e2e_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'security_controller.dart';
 
 class SecurityBinding extends Bindings {

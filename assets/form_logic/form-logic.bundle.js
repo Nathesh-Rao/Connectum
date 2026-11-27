@@ -6,8 +6,8 @@ var ConnectumFormLogic = (() => {
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
+    for (var name2 in all)
+      __defProp(target, name2, { get: all[name2], enumerable: true });
   };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
@@ -37,11 +37,33 @@ var ConnectumFormLogic = (() => {
     hasCalc: () => hasCalc,
     isEmpty: () => isEmpty,
     ruleResult: () => ruleResult,
+    runCalcCase: () => runCalcCase,
     runConformance: () => runConformance,
     setRuleGlobals: () => setRuleGlobals,
     usedFields: () => usedFields,
     withBlanks: () => withBlanks
   });
+
+  // form-studio/src/core/emailRule.js
+  var HIDDEN = "\\s\\p{Z}\\p{C}";
+  var JOIN = "\\u200C\\u200D";
+  var name = (not) => `[^${not}${HIDDEN}](?:[${JOIN}]*[^${not}${HIDDEN}])*`;
+  var ENDING = `[\\p{L}\\p{M}](?:[${JOIN}]*[\\p{L}\\p{M}])+|xn--[A-Za-z0-9-]+`;
+  var EMAIL_RULE_SOURCE = `^${name("@")}@(${name("@.")}\\.)+(${ENDING})$`;
+  var RULE = new RegExp(EMAIL_RULE_SOURCE, "u");
+  var EMAIL_MAX_BYTES = 254;
+  function utf8Length(text) {
+    let n = 0;
+    for (const ch of text) {
+      const c = ch.codePointAt(0);
+      n += c < 128 ? 1 : c < 2048 ? 2 : c < 65536 ? 3 : 4;
+    }
+    return n;
+  }
+  function isValidEmail(text) {
+    const t = String(text != null ? text : "");
+    return utf8Length(t) <= EMAIL_MAX_BYTES && RULE.test(t);
+  }
 
   // form-studio/src/core/axExpParser.js
   var RegVarFldList = [];
@@ -121,18 +143,18 @@ var ConnectumFormLogic = (() => {
   function findVariable(list, separator, variableName, parseTypedValue = false) {
     var _a, _b, _c, _d, _e;
     for (const item of list) {
-      let name;
+      let name2;
       let value;
       if (typeof item === "string") {
         const separatorIndex = item.indexOf(separator);
         if (separatorIndex === -1) continue;
-        name = item.slice(0, separatorIndex).trim();
+        name2 = item.slice(0, separatorIndex).trim();
         value = item.slice(separatorIndex + 1);
       } else if (item && typeof item === "object") {
-        name = (_c = (_b = (_a = item.n) != null ? _a : item.name) != null ? _b : item.variableName) != null ? _c : item.fieldName;
+        name2 = (_c = (_b = (_a = item.n) != null ? _a : item.name) != null ? _b : item.variableName) != null ? _c : item.fieldName;
         value = (_e = (_d = item.v) != null ? _d : item.value) != null ? _e : item.fieldValue;
       }
-      if (String(name != null ? name : "").toLowerCase() === variableName.toLowerCase()) {
+      if (String(name2 != null ? name2 : "").toLowerCase() === variableName.toLowerCase()) {
         return normalizeValue(value, parseTypedValue);
       }
     }
@@ -478,23 +500,25 @@ var ConnectumFormLogic = (() => {
     return stack[0];
   }
   function RegisterRegVars(varName, varType, varValue) {
-    const name = String(varName != null ? varName : "").trim();
-    if (!name) return "";
-    const entry = `${name}:${varType != null ? varType : ""}:${varValue != null ? varValue : ""}`;
+    const name2 = String(varName != null ? varName : "").trim();
+    if (!name2) return "";
+    const entry = `${name2}:${varType != null ? varType : ""}:${varValue != null ? varValue : ""}`;
     const existingIndex = RegVarFldList.findIndex(
-      (value) => value.slice(0, value.indexOf(":")).toLowerCase() === name.toLowerCase()
+      (value) => value.slice(0, value.indexOf(":")).toLowerCase() === name2.toLowerCase()
     );
     if (existingIndex === -1) RegVarFldList.push(entry);
     else RegVarFldList[existingIndex] = entry;
     return "";
   }
-  function evaluateFunction(name, args, reactFieldArray, rowNo, context) {
+  function asBoolean(value) {
+    return typeof value === "string" ? !["", "0", "f", "false", "n", "no"].includes(value.trim().toLowerCase()) : Boolean(value);
+  }
+  function evaluateFunction(name2, args, reactFieldArray, rowNo, context) {
     var _a, _b, _c, _d, _e, _f;
     const [first, second, third] = args;
     const text = (value) => String(value != null ? value : "");
     const numeric = (value) => Number(value);
     const activeDateFormat = (_a = context.dateFormat) != null ? _a : dateFormat;
-    const asBoolean = (value) => typeof value === "string" ? !["", "0", "f", "false", "n", "no"].includes(value.trim().toLowerCase()) : Boolean(value);
     function matchingFields(fieldName) {
       return reactFieldArray.filter((field) => field.n.toLowerCase() === text(fieldName).toLowerCase()).sort((left, right) => Number(left.rno) - Number(right.rno));
     }
@@ -512,7 +536,7 @@ var ConnectumFormLogic = (() => {
       if (!date) throw new Error("Invalid date");
       return date;
     }
-    switch (name.toLowerCase()) {
+    switch (name2.toLowerCase()) {
       case "regvar":
         return RegisterRegVars(text(first), text(second), third);
       case "abs":
@@ -558,7 +582,7 @@ var ConnectumFormLogic = (() => {
       case "isvarempty":
         return text(first) === "" ? "T" : "F";
       case "iif":
-        return first ? second : third;
+        return asBoolean(first) ? second : third;
       case "val":
         return Number.parseFloat(text(first).replace(/,/g, "")) || 0;
       case "str":
@@ -720,7 +744,7 @@ var ConnectumFormLogic = (() => {
       case "time":
         return (/* @__PURE__ */ new Date()).toTimeString().slice(0, 8);
       case "checkemail":
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text(first));
+        return isValidEmail(text(first));
       case "convertmd5":
         return md5(first);
       case "makedate": {
@@ -790,7 +814,7 @@ var ConnectumFormLogic = (() => {
       }
       case "sum":
       case "sumtill": {
-        const limit = name.toLowerCase() === "sumtill" && args.length > 3 ? Number(args[3]) : Infinity;
+        const limit = name2.toLowerCase() === "sumtill" && args.length > 3 ? Number(args[3]) : Infinity;
         const matchingRows = new Set(reactFieldArray.filter((field) => field.n.toLowerCase() === text(first).toLowerCase() && String(field.v) === String(second) && Number(field.rno) <= limit).map((field) => Number(field.rno)));
         return reactFieldArray.filter((field) => field.n.toLowerCase() === text(third).toLowerCase() && matchingRows.has(Number(field.rno))).reduce((sum, field) => sum + (Number(normalizeValue(field.v)) || 0), 0);
       }
@@ -801,7 +825,7 @@ var ConnectumFormLogic = (() => {
         }).filter(Boolean).join(",");
       }
       default:
-        throw new Error(`Unsupported function: ${name}`);
+        throw new Error(`Unsupported function: ${name2}`);
     }
   }
   function calculate(expression, resolveVariable, reactFieldArray, rowNo, context = {}) {
@@ -905,7 +929,7 @@ var ConnectumFormLogic = (() => {
       while (["&", "&&"].includes((_a = tokens[position]) == null ? void 0 : _a.type)) {
         position++;
         const right = parseComparison();
-        value = Boolean(value) && Boolean(right);
+        value = asBoolean(value) && asBoolean(right);
       }
       return value;
     }
@@ -915,7 +939,7 @@ var ConnectumFormLogic = (() => {
       while (["|", "||"].includes((_a = tokens[position]) == null ? void 0 : _a.type)) {
         position++;
         const right = parseAnd();
-        value = Boolean(value) || Boolean(right);
+        value = asBoolean(value) || asBoolean(right);
       }
       return value;
     }
@@ -964,17 +988,18 @@ var ConnectumFormLogic = (() => {
     const out = evaluateExpression(expr, values);
     return out === null ? null : ruleResult(out);
   }
-  function evaluateExpression(expr, values) {
+  function evaluateExpression(expr, values, blankText = null) {
     const text = String(expr != null ? expr : "").trim();
     if (!text) return null;
     let arr = [];
-    const put = (n, v, rno) => {
-      if (n && !n.includes("__") && /^[A-Za-z_][\w]*$/.test(n)) arr = RegisterVariable(arr, { n, v: forParser(v), rno });
+    const asText = (n, v, isPerson = false) => (isPerson || blankText && blankText.has(n)) && (v === void 0 || v === null || v === "") ? null : forParser(v);
+    const put = (n, v, rno, isPerson = false) => {
+      if (n && !n.includes("__") && /^[A-Za-z_][\w]*$/.test(n)) arr = RegisterVariable(arr, { n, v: asText(n, v, isPerson), rno });
     };
     for (const [n, v] of Object.entries(GLOBALS)) {
-      put(n, v, 1);
-      put(`${GLOBAL_PREFIX}${n}`, v, 1);
-      put(`${LEGACY_GLOBAL_PREFIX}${n}`, v, 1);
+      put(n, v, 1, true);
+      put(`${GLOBAL_PREFIX}${n}`, v, 1, true);
+      put(`${LEGACY_GLOBAL_PREFIX}${n}`, v, 1, true);
     }
     for (const [n, v] of Object.entries(values || {})) {
       if (Array.isArray(v) && v.length && v.every((r) => r && typeof r === "object" && !Array.isArray(r))) {
@@ -1018,11 +1043,41 @@ var ConnectumFormLogic = (() => {
     const sb = String(b != null ? b : "");
     return sa < sb ? -1 : sa > sb ? 1 : 0;
   }
+  var FIELD_COMPARE_OPS = ["eq", "ne", "gt", "lt", "gte", "lte"];
+  var comparesFields = (r) => !!r && typeof r.valueField === "string" && r.valueField !== "" && FIELD_COMPARE_OPS.includes(r.op);
+  var MAX_CONDITION_RULES = 10;
+  var OPS = ["eq", "ne", "gt", "lt", "gte", "lte", "in", "between", "notempty"];
+  var isRuleObject = (r) => !!r && typeof r === "object" && !Array.isArray(r) && typeof r.field === "string" && OPS.includes(r.op) && (r.op !== "in" && r.op !== "between" ? true : Array.isArray(r.value));
+  function conditionRules(cond) {
+    if (!cond || !Array.isArray(cond.also) || cond.also.length === 0 || cond.also.length >= MAX_CONDITION_RULES) return null;
+    const match = cond.match === void 0 ? "all" : cond.match;
+    if (match !== "all" && match !== "any") return null;
+    if (!cond.also.every((r) => isRuleObject(r) && r.also === void 0 && r.match === void 0)) return null;
+    return { match, rules: [cond, ...cond.also] };
+  }
   function evalCondition(cond, values) {
     if (!cond) return true;
     if (Array.isArray(cond.all)) return cond.all.every((c) => evalCondition(c, values));
     if (Array.isArray(cond.any)) return cond.any.some((c) => evalCondition(c, values));
+    const several = conditionRules(cond);
+    if (!several) return evalRule(cond, values);
+    return several.match === "any" ? several.rules.some((r) => evalRule(r, values)) : several.rules.every((r) => evalRule(r, values));
+  }
+  function evalFieldRule(op, a, b) {
+    if (op === "ne" && isEmpty(a) && isEmpty(b)) return false;
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (op !== "eq" && op !== "ne") return false;
+      const shared = [].concat(a != null ? a : []).some((x) => [].concat(b != null ? b : []).some((y) => !isEmpty(x) && cmp(x, y) === 0));
+      return op === "eq" ? shared : !shared;
+    }
+    if (op === "ne") return cmp(a, b) !== 0;
+    if (isEmpty(a) || isEmpty(b)) return false;
+    const c = cmp(a, b);
+    return op === "eq" ? c === 0 : op === "gt" ? c > 0 : op === "lt" ? c < 0 : op === "gte" ? c >= 0 : c <= 0;
+  }
+  function evalRule(cond, values) {
     const v = values[cond.field];
+    if (comparesFields(cond)) return evalFieldRule(cond.op, v, values[cond.valueField]);
     switch (cond.op) {
       case "eq":
         return Array.isArray(v) ? v.includes(cond.value) : cmp(v, cond.value) === 0 && !isEmpty(v);
@@ -1059,6 +1114,7 @@ var ConnectumFormLogic = (() => {
     var _a;
     return !!(f && f.calc && String((_a = f.calc.expr) != null ? _a : "").trim());
   };
+  var calcEditable = (f) => hasCalc(f) && f.calc.editable === true;
   var canCalc = (f) => !!f && CALC_KINDS.includes(kindOf(f)) && !f.multi;
   var isEmpty2 = (v) => v === void 0 || v === null || v === "" || Array.isArray(v) && v.length === 0;
   var same = (a, b) => String(a != null ? a : "") === String(b != null ? b : "");
@@ -1076,6 +1132,31 @@ var ConnectumFormLogic = (() => {
       if (id !== void 0) out.add(id);
     }
     return [...out];
+  }
+  var TEXT_KINDS = /* @__PURE__ */ new Set(["text", "email", "url", "mobile", "list", "selection"]);
+  var IIF_CALL = /\biif\s*\(/i;
+  var blankQuoted = (t) => t.replace(LITERAL, (q) => q[0] + "x".repeat(q.length - 2) + q[0]);
+  function liveText(expr, cur) {
+    const text = String(expr != null ? expr : "");
+    const mask = blankQuoted(text);
+    const m = IIF_CALL.exec(mask);
+    if (!m) return text;
+    const open = m.index + m[0].length;
+    const cuts = [];
+    let depth = 1;
+    let end = -1;
+    for (let i = open; i < mask.length && end < 0; i += 1) {
+      const c = mask[i];
+      if (c === "(") depth += 1;
+      else if (c === ")") {
+        depth -= 1;
+        if (depth === 0) end = i;
+      } else if (c === "," && depth === 1) cuts.push(i);
+    }
+    if (end < 0 || cuts.length !== 2) return text;
+    const [cond, yes, no] = [text.slice(open, cuts[0]), text.slice(cuts[0] + 1, cuts[1]), text.slice(cuts[1] + 1, end)];
+    const taken = asBoolean(evaluateExpression(cond, cur)) ? yes : no;
+    return `${text.slice(0, m.index)} ${liveText(cond, cur)} ${liveText(taken, cur)} ${liveText(text.slice(end + 1), cur)}`;
   }
   function fitCalc(field, raw) {
     if (raw === null || raw === void 0) return "";
@@ -1137,10 +1218,10 @@ var ConnectumFormLogic = (() => {
     for (const key in g) if (key.toLowerCase() === bare) return part(g[key]);
     return void 0;
   }
-  function answer(id, expr, cur, names, columns) {
+  function answer(id, expr, cur, names, columns, blankText) {
     const plain = copied(expr, cur, names);
     if (plain !== void 0) return plain;
-    if (CLOCK.test(expr)) return evaluateExpression(expr, cur);
+    if (CLOCK.test(expr)) return evaluateExpression(expr, cur, blankText);
     const sig = `${(/* @__PURE__ */ new Date()).toDateString()}${wordsOf(expr).map((w) => {
       const k = names.get(w);
       if (k !== void 0) return part(cur[k]);
@@ -1162,26 +1243,31 @@ var ConnectumFormLogic = (() => {
       MEMORY.set(key, m);
     }
     if (m.has(sig)) return m.get(sig);
-    const out = evaluateExpression(expr, cur);
+    const out = evaluateExpression(expr, cur, blankText);
     if (m.size >= MEMORY_PER_FIELD) m.clear();
     m.set(sig, out);
     return out;
   }
-  function applyCalcs(fields, values, idOf = (f) => f.id, extraIds = [], columns = null) {
+  function applyCalcs(fields, values, idOf = (f) => f.id, extraIds = [], columns = null, put = null) {
     const calcs = fields.filter(hasCalc);
     if (!calcs.length) return values;
     const ids = [...fields.map(idOf), ...extraIds];
     const names = new Map([...Object.keys(values), ...ids].map((k) => [String(k).toLowerCase(), k]));
+    const kinds = new Map(fields.map((f) => [idOf(f), kindOf(f)]));
+    const blankText = new Set(fields.filter((f) => TEXT_KINDS.has(kindOf(f))).map(idOf));
     let cur = values;
     for (let pass = 0; pass <= calcs.length; pass += 1) {
       let changed = false;
       for (const f of calcs) {
         const id = idOf(f);
-        const reads = usedFields(f.calc.expr, ids).filter((x) => x !== id);
-        const { [id]: _own, ...view } = cur;
+        if (put && calcEditable(f) && !isEmpty2(values[id]) && !same(values[id], put[id])) continue;
+        const { [id]: _own, ...rest } = cur;
+        const view = withBlanks(ids.filter((x) => x !== id), rest);
+        const reads = usedFields(liveText(f.calc.expr, view), ids).filter((x) => x !== id);
         const others = new Map(names);
         others.delete(String(id).toLowerCase());
-        const next = reads.some((x) => isEmpty2(cur[x])) ? "" : fitCalc(f, answer(id, f.calc.expr, view, others, columns));
+        const next = reads.some((x) => isEmpty2(cur[x]) && !TEXT_KINDS.has(kinds.get(x))) ? "" : fitCalc(f, answer(id, f.calc.expr, view, others, columns, blankText));
+        if (put && calcEditable(f)) put[id] = next;
         if (!same(cur[id], next)) {
           cur = { ...cur, [id]: next };
           changed = true;
@@ -1194,7 +1280,7 @@ var ConnectumFormLogic = (() => {
   function applyRowCalcs(fields, row, outer, idOf = (f) => f.id) {
     const calcs = fields.filter(hasCalc);
     if (!calcs.length) return row;
-    const ctx = applyCalcs(fields, { ...outer, ...row }, idOf, Object.keys(outer));
+    const ctx = applyCalcs(fields, { ...outer, ...row }, idOf, Object.keys(outer), null, null);
     let out = row;
     for (const f of calcs) {
       const id = idOf(f);
@@ -1202,13 +1288,13 @@ var ConnectumFormLogic = (() => {
     }
     return out;
   }
-  function applyFormCalcs(fields, grids, values, idOf = (f) => f.id) {
+  function applyFormCalcs(fields, grids, values, idOf = (f) => f.id, put = {}) {
     const gridIds = new Set(grids.map((g) => g.id));
     let cur = values;
     const columns = /* @__PURE__ */ new Map();
     for (const g of grids) for (const f of g.fields) columns.set(String(idOf(f)).toLowerCase(), [g.id, idOf(f)]);
     for (let pass = 0; pass < 4; pass += 1) {
-      let next = applyCalcs(fields, cur, idOf, [], columns);
+      let next = applyCalcs(fields, cur, idOf, [], columns, put);
       const outer = Object.fromEntries(Object.entries(next).filter(([k]) => !gridIds.has(k)));
       for (const g of grids) {
         const rows = next[g.id];
@@ -1220,6 +1306,20 @@ var ConnectumFormLogic = (() => {
       cur = next;
     }
     return cur;
+  }
+  var pick = (obj, path) => String(path).split(/[.[\]]+/).filter(Boolean).reduce((o, k) => o == null ? void 0 : o[k], obj);
+  function runCalcCase(c) {
+    let out;
+    try {
+      out = applyFormCalcs(c.fields, c.grids || [], c.values, (f) => f.id, {});
+    } catch (e) {
+      return { why: c.why, error: String(e && e.message) };
+    }
+    const wrong = Object.entries(c.expect).filter(([path, want]) => {
+      var _a;
+      return String((_a = pick(out, path)) != null ? _a : "") !== want;
+    }).map(([path, want]) => ({ path, expected: want, got: pick(out, path) }));
+    return wrong.length ? { why: c.why, wrong } : null;
   }
 
   // form-studio/src/core/formLogicEntry.js
@@ -1251,7 +1351,12 @@ var ConnectumFormLogic = (() => {
       }
       if (got !== c.expect) failures.push({ condition: c.cond, values: c.values, expected: c.expect, got });
     }
-    const total = conformance.cases.length + conditions.length;
+    const calcs = conformance.calcs || [];
+    for (const c of calcs) {
+      const bad = runCalcCase(c);
+      if (bad) failures.push({ calculation: bad.why, ...bad });
+    }
+    const total = conformance.cases.length + conditions.length + calcs.length;
     return { total, passed: total - failures.length, failures };
   }
   return __toCommonJS(formLogicEntry_exports);

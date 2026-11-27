@@ -2,10 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
-import '../models/form_option.dart';
-import '../models/ids.dart';
-import '../repositories/form_options_repository.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'form_logic_service.dart';
 import 'form_logic_values.dart';
 

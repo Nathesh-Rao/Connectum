@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../data/models/auth_flow.dart';
-import '../../data/repositories/auth_repository.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'verification_controller.dart';
 
 class VerificationBinding extends Bindings {

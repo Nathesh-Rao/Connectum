@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import '../log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 import 'tour_service.dart';
 
 /// When a screen's tour is tried: a beat after the screen has settled, and

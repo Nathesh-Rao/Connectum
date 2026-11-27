@@ -11,76 +11,42 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_trigger.dart';
-import '../commands/commands_tour.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/ai_chat/ai_chat.dart';
+import 'package:connectum/features/commands/commands.dart';
+import 'package:connectum/features/forms/forms.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
+import 'package:connectum/features/person_profile/person_profile.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import 'conversation_tour.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../core/routes/home_reload.dart';
-import '../../core/utils/attachment_tag.dart';
-import '../../core/utils/forwarded_text.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/utils/chat_time.dart';
-import '../../core/utils/mention_text.dart';
-import '../../data/models/conversation.dart';
 import '../../data/commands/command_line.dart';
 import '../../data/commands/command_reply.dart';
-import '../../data/models/hash_command.dart';
 import '../../core/debug/records_log.dart';
-import '../../data/models/ids.dart';
-import '../../data/models/form_card.dart';
-import '../../core/widgets/app_form_card.dart';
-import '../forms/forms_picker_controller.dart';
-import '../forms/models/form_launch.dart';
-import '../home_shell/home_shell_controller.dart';
-import '../../data/models/form_submission.dart';
-import '../../data/repositories/form_options_repository.dart';
-import '../../data/socket/connectivity_service.dart';
 
 import '../../data/attachment_cache.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_texts.dart';
-import '../../data/models/message.dart';
-import '../../data/models/reaction.dart';
-import '../../data/repositories/attachment_repository.dart';
-import '../../data/repositories/attachment_sender.dart';
-import '../../data/repositories/command_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/e2e_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/presence_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/repositories/typing_repository.dart';
+import '../../data/profile/presence.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
-import '../../core/widgets/app_avatar.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
-import '../../core/widgets/app_notices.dart';
-import '../../data/models/record_state.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../tickets/models/card_menu.dart';
-import '../tickets/models/card_destination.dart';
-import '../tickets/models/record_card_rule.dart';
-import '../tickets/models/record_history_card.dart';
-import '../tickets/ticket_detail_controller.dart';
-import '../tickets/tickets_texts.dart';
 import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
 import '../../data/ai/care_summary_text.dart';
-import '../ai_chat/ai_summary_controller.dart';
 import 'models/chat_item.dart';
-import '../commands/command_runner.dart';
 import 'models/command_prompt.dart';
 import 'models/file_download.dart';
 import 'models/forward.dart';
 import 'models/mention_picker.dart';
-import '../../data/models/pending_upload.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// One conversation. A controller exists per conversation id (the binding puts
 /// it under that id as its tag), so one route's disposal can never delete
@@ -93,6 +59,7 @@ class ConversationController extends GetxController
     required this.messages,
     required this.conversations,
     required this.presence,
+    this.profiles,
     required this.typing,
     required this.submissions,
     required this.smartView,
@@ -140,6 +107,9 @@ class ConversationController extends GetxController
   final MessageRepository messages;
   final ConversationRepository conversations;
   final PresenceRepository presence;
+
+  /// People's chosen presence; null where it is not set up.
+  final PeopleProfiles? profiles;
   final TypingRepository typing;
   final SubmissionRepository submissions;
   final SmartViewRepository smartView;
@@ -432,9 +402,25 @@ class ConversationController extends GetxController
     }
     return switch (presence.dotFor(target)) {
       PresenceDot.online => AppPresenceDot.online,
-      PresenceDot.offline => AppPresenceDot.offline,
-      PresenceDot.none => AppPresenceDot.none,
+      PresenceDot.offline || PresenceDot.none => AppPresenceDot.none,
     };
+  }
+
+  /// What the person in a direct chat shows; null unless they are online.
+  /// Reads Rx values: call it inside an Obx.
+  Presence? get mood {
+    if (presenceDot != AppPresenceDot.online || SeedUi.isActive) return null;
+    return profiles?.presenceOf(target) ?? Presence.available;
+  }
+
+  /// The person's username when this is a direct chat, else null.
+  String? get personUsername => isDirect && target.isNotEmpty ? target : null;
+
+  /// The header avatar of a direct chat: the person's read-only profile.
+  void openPersonProfile() {
+    final user = personUsername;
+    if (user == null) return;
+    PersonRoute.open(PersonCard(username: user, name: title));
   }
 
   /// A key that is unique across open conversations: message ids repeat
@@ -619,6 +605,10 @@ class ConversationController extends GetxController
   bool get isMarkable => kind == 'dm' || kind == 'group' || kind == 'global';
   bool get isPinnable => kind == 'dm' || kind == 'group';
 
+  /// The form behind a card, when its definition is stored.
+  FormDefinition? formOf(FormCardData d) =>
+      submissions.definitions[d.structure];
+
   /// The rows of a settled form or record card's menu, from what
   /// `record.actions` said (null until it was read). The same gating as the
   /// submission detail screen for Edit, Fix and send again, and Delete.
@@ -636,7 +626,7 @@ class ConversationController extends GetxController
       canEdit: isSettled && !isHistoryRow && canEditForm(m, d),
       isFix: d.canFix(me),
       canOpenHistory: recordId != null && isSentForm(d),
-      canDelete: isSettled && !isHistoryRow && d.canDelete(me),
+      canDelete: isSettled && !isHistoryRow && d.canDelete(me, form: formOf(d)),
     );
   }
 
@@ -646,7 +636,7 @@ class ConversationController extends GetxController
     FormCardData d,
     Future<bool> Function() confirm,
   ) async {
-    if (!d.canDelete(me) || !await confirm()) return;
+    if (!d.canDelete(me, form: formOf(d)) || !await confirm()) return;
     final problem = await submissions.deleteSubmission(d.id);
     _say(problem ?? 'Submission deleted');
   }
@@ -678,7 +668,7 @@ class ConversationController extends GetxController
 
   void openForm(Message m, FormCardData d) {
     final route = CardDestination.of(d, convId: conversationId, msgId: m.msgId);
-    if (route != null) Get.toNamed<dynamic>(route);
+    if (route != null) Get.toNamed(route);
   }
 
   Message? originalOf(Message m) => m.replyTo == null ? null : _byId[m.replyTo];

@@ -1,13 +1,10 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../../data/smart_view/sv_prefs.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../smart_view/smart_view_controller.dart';
-import '../tickets/ticket_detail_controller.dart';
 import 'debug_smart_insights_controller.dart';
 
 class DebugSmartInsightsBinding extends Bindings {

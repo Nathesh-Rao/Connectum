@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_sv.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_search_field.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../smart_view/viewers/sv_log_viewer.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 import 'log_viewer_controller.dart';
 import 'log_viewer_prefs.dart';
 

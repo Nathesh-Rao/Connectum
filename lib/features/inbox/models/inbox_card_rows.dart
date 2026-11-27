@@ -1,4 +1,4 @@
-import '../../../core/utils/chat_time.dart';
+import 'package:connectum/core/utils/utils.dart';
 import '../../../data/smart_view/sv_file.dart';
 import 'inbox_field_kind.dart';
 import 'inbox_row.dart';

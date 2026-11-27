@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_pill_bar.dart';
-import '../../../core/widgets/app_spinner.dart';
-import '../../../core/widgets/app_text_field.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../../../data/ai/ai_models.dart';
 import '../ai_summary_controller.dart';
 import '../ai_texts.dart';

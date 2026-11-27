@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// xs inside small inline text, sm inside buttons, md for paging footers and
 /// inline loading rows, lg for the refresh header and small card loading.

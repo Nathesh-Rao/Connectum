@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/attachment_tag.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The bar above the field while a note is being edited ("Editing note") or
 /// quoted ("Replying to note"), with the note's first line and a cancel. It

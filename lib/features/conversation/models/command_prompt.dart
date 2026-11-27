@@ -2,9 +2,9 @@ import 'package:get/get.dart';
 
 import '../../../data/commands/command_line.dart';
 import '../../../data/commands/command_reply.dart';
-import '../../../data/models/hash_command.dart';
-import '../../../data/repositories/command_repository.dart';
-import '../../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 /// The "#" menu of one composer. Two stages: while the command name is being
 /// written it lists the catalogue; once a space follows a known name it asks

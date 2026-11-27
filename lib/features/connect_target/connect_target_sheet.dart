@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../core/utils/connect_code.dart';
+import 'package:connectum/core/utils/utils.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import 'connect_target_binding.dart';
 import 'connect_target_controller.dart';

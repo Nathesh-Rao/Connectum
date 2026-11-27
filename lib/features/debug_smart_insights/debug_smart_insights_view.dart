@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/theme/app_tones.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_speed_dial.dart';
-import '../smart_view/smart_view_view.dart';
-import '../smart_view/widgets/sv_charts_sheet.dart';
-import '../smart_view/widgets/sv_kpi_sheet.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 import 'debug_smart_insights_controller.dart';
 
 class DebugSmartInsightsView extends GetView<DebugSmartInsightsController> {

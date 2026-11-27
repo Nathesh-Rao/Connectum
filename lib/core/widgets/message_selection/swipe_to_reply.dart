@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_motion.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The numbers of the swipe-to-reply gesture, in one place.
 class SwipeReply {

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import '../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/records/record_commands.dart';
-import '../../data/socket/socket_service.dart';
 
 /// Debug and demo only (`/debug/tickets`, `DEMO_MODE`; see "Before release" in
 /// CLAUDE.md): an in-memory server for the record flow. It answers the

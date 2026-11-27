@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../core/utils/qr_share_service.dart';
-import '../../data/repositories/qr_repository.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'models/qr_models.dart';
 import 'qr_controller.dart';
 

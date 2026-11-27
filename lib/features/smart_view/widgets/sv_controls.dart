@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_popup_menu.dart';
-import '../../../core/widgets/app_text_field.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../smart_view_controller.dart';
 import 'smart_view_mode_switch.dart';
 import 'sv_col_icon.dart';

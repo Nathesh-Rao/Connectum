@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../utils/app_settings.dart';
+import 'package:connectum/core/utils/utils.dart';
 import 'app_log.dart';
 import 'log_file_sink.dart';
 import 'log_formatter.dart';

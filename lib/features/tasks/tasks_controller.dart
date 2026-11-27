@@ -2,15 +2,11 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/task.dart';
-import '../../data/repositories/group_repository.dart';
-import '../../data/repositories/task_repository.dart';
-import '../../data/socket/call_problem.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../chats/models/chat_person.dart';
 import '../tickets/tickets_controller.dart';
 import 'models/task_actions.dart';
@@ -19,7 +15,6 @@ import 'task_form_controller.dart';
 import 'task_people_controller.dart';
 import 'tasks_texts.dart';
 import 'widgets/task_detail_sheet.dart';
-import '../../core/log/safe.dart';
 
 /// One tab's list.
 class TaskList {

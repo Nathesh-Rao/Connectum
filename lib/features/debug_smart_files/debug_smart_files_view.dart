@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_sv.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_scaffold.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 import '../../data/smart_view/sv_columns.dart';
-import '../smart_view/widgets/smart_view_card.dart';
-import '../smart_view/widgets/smart_view_table.dart';
-import '../smart_view/widgets/sv_file_preview_dialog.dart';
 import 'debug_smart_files_controller.dart';
 
 class DebugSmartFilesView extends GetView<DebugSmartFilesController> {

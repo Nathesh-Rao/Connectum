@@ -1,14 +1,12 @@
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../core/utils/qr_share_service.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/repositories/qr_repository.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'models/qr_models.dart';
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
 
 class QrController extends GetxController {
   QrController({
@@ -30,6 +28,7 @@ class QrController extends GetxController {
   /// The branch put in the organisation QR; null is the whole organisation.
   final branch = Rxn<QrBranch>();
   final isSharing = false.obs;
+  final isRegenerating = false.obs;
 
   final person = Rxn<QrCardData>();
   final organisation = Rxn<QrCardData>();
@@ -78,6 +77,35 @@ class QrController extends GetxController {
       if (error.message.isNotEmpty) return error.message;
     }
     return 'Could not load your QR codes.';
+  }
+
+  static const regenerateFailed = 'Could not regenerate the QR code.';
+  static const regenerated = 'Your QR code has been regenerated.';
+
+  /// Only the person's own code can be regenerated.
+  bool get canRegenerate =>
+      selected.value == QrKind.person && person.value != null;
+
+  /// `connect.rotate` after the person confirmed, then the codes load again.
+  /// A failure shows the server's message, else a fixed text.
+  Future<void> regenerate() async {
+    if (isRegenerating.value) return;
+    isRegenerating.value = true;
+    try {
+      await repository.regenerate();
+      AppNotices.success(regenerated);
+      await load();
+    } on SocketCallError catch (e, st) {
+      AppLog.e('qr_controller', e, st);
+      AppNotices.error(
+        e.isConnectionGap || e.message.isEmpty ? regenerateFailed : e.message,
+      );
+    } catch (e, st) {
+      AppLog.e('qr_controller', e, st);
+      AppNotices.error(regenerateFailed);
+    } finally {
+      isRegenerating.value = false;
+    }
   }
 
   void selectKind(QrKind kind) => selected.value = kind;

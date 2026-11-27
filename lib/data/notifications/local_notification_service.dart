@@ -8,14 +8,12 @@ import 'package:get/get.dart';
 import '../../features/notifications/models/feed_item.dart';
 import '../../features/notifications/notification_router.dart';
 import '../../features/notifications/notification_texts.dart';
-import '../repositories/conversation_repository.dart';
-import '../repositories/feed_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../session_store.dart';
 import 'local_notification_rules.dart';
 import 'push/push_payload.dart';
 import 'push/push_token_registry.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// System notifications for live feed items, in the foreground and the
 /// background alike: the `feed_item` event is the single trigger. No push: a

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_fab.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// Debug only: the bubble primary button and FAB in each size and state.
 class ButtonSamples extends StatelessWidget {

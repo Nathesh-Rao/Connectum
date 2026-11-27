@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The auth screens' soft discs, thin rings and small spheres (same colours as
 /// [AppAmbientBackdrop]) scaled down for a card: a few shapes near three

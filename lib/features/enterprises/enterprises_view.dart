@@ -1,24 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_flex_gap.dart';
-import '../../core/widgets/app_id_copy_strip.dart';
-import '../../core/widgets/app_invite_card.dart';
-import '../../core/widgets/app_list_row.dart';
-import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_tag.dart';
-import '../../data/models/identity_info.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import 'enterprises_controller.dart';
 import 'widgets/enterprise_tile.dart';
-import '../../core/widgets/app_spinner.dart';
 
 class EnterprisesView extends GetView<EnterprisesController> {
   const EnterprisesView({super.key});

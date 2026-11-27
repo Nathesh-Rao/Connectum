@@ -1,10 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../data/repositories/ticket_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'chat_info_controller.dart';
 
 /// One controller per conversation id (its tag). The conversation screen

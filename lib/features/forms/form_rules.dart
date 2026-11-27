@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import '../../data/models/form_definition.dart';
-import '../../data/models/ids.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 import 'form_formats.dart';
 
 /// The pure rules of a form: conditions, starting values, the checks made
@@ -188,7 +188,6 @@ class FormRules {
 
   // ---- checking ----------------------------------------------------------------
 
-  static final _email = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
   static final _url = RegExp(r'^https?://\S+$');
   static final _mobile = RegExp(r'^\+?[0-9]{7,15}$');
 
@@ -207,7 +206,7 @@ class FormRules {
             ? 'Too long (max ${FormFormats.maxText} characters).'
             : null;
       case 'email':
-        return _email.hasMatch(text) ? null : 'Enter a valid email address.';
+        return EmailRule.isValid(text) ? null : 'Enter a valid email address.';
       case 'url':
         return _url.hasMatch(text) ? null : 'Enter a valid http(s) URL.';
       case 'mobile':

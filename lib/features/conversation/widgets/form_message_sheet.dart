@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_list_row.dart';
-import '../../../data/models/form_card.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../../submission_detail/submission_detail_view.dart'
     show confirmDeleteSubmission;
-import '../../tickets/models/card_menu.dart';
-import '../../tickets/widgets/record_menu_rows.dart';
-import '../../tickets/widgets/ticket_action_sheet.dart';
 import '../conversation_controller.dart';
 
 /// The menu of a form message, opened from "Form actions" in the selection

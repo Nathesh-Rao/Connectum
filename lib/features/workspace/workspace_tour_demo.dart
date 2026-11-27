@@ -2,9 +2,8 @@ import 'package:get/get.dart';
 
 import '../../core/selection/message_selection.dart';
 import '../../core/selection/selection_rules.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../data/models/message.dart';
-import '../../data/models/self_conversation.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The sample note of the My Work Space tour, shown only when the screen has
 /// no note of its own. Plain in-memory state that the view reads while [isOn]:

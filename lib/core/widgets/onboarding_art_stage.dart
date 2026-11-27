@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_ambient.dart';
-import '../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'onboarding_art/onboarding_art.dart';
 
 /// The onboarding animation slot, shared by the real onboarding and its debug

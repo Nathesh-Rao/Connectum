@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/tonal_accent.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// One attach option: a 56 px tonal circle with an icon, no visible label.
 class AttachCircleButton extends StatelessWidget {

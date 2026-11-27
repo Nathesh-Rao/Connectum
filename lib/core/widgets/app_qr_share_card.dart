@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../features/qr/models/qr_models.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_shadows.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_card_circles.dart';
 import 'app_highlight_text.dart';
 import 'app_logo.dart';

@@ -4,11 +4,7 @@ import './app_bubble_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 enum _AppButtonKind { primary, secondary, text, icon }
 

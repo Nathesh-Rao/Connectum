@@ -5,16 +5,13 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/group_add.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/group_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/chats/chats.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
-import '../chats/models/chat_person.dart';
-import '../../core/log/app_log.dart';
 
 enum NewGroupPhase { editing, creating, adding, unconfirmed, done }
 

@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_ambient_backdrop.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_id_copy_strip.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_success_animation.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'enterprise_created_controller.dart';
 
 class EnterpriseCreatedView extends GetView<EnterpriseCreatedController> {

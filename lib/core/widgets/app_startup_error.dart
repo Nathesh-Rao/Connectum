@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
-import '../theme/app_theme.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_button.dart';
 
 /// Shown when something that must work before the app can open failed.

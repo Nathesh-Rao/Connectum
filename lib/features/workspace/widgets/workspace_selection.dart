@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/selection/selection_rules.dart';
-import '../../../core/widgets/message_selection/delete_confirm_sheet.dart';
-import '../../../core/widgets/message_selection/selection_app_bar.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../workspace_controller.dart';
 import '../workspace_tour_demo.dart';
 

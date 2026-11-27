@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../data/repositories/sv_file_repository.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/share/share.dart';
 import '../../../data/smart_view/sv_file.dart';
-import '../../share/share_to_connectum_sheet.dart';
 import '../sv_file_preview_controller.dart';
 import '../viewers/sv_file_card.dart';
 import '../viewers/sv_sheet_skeleton.dart';

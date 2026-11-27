@@ -1,7 +1,7 @@
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/onboarding_art/network_tiers.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../../core/widgets/onboarding_art/onboarding_art.dart';
 import 'frame_stats.dart';
 

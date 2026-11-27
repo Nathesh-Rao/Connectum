@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../core/tour/tour_texts.dart';
-import '../../data/models/approval.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/models/models.dart';
 import 'models/inbox_row.dart';
 
 /// The sample of the Inbox tour: two record cards for the Records tab (when

@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_animated_size.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../../../data/smart_view/sv_columns.dart';
 import '../../../data/smart_view/sv_file.dart';
-import '../../../core/widgets/card_top_right_decoration.dart';
 import 'sv_col_icon.dart';
 import 'sv_file_chips.dart';
 import 'smart_view_status_pill.dart';

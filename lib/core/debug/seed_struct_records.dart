@@ -1,5 +1,4 @@
-import '../../data/repositories/struct_records_repository.dart';
-import '../../data/repositories/submission_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../demo/demo_mode.dart';
 import 'seed_ui.dart';
 

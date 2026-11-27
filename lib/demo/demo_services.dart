@@ -1,12 +1,10 @@
 import 'package:get/get.dart';
 
 import '../core/routes/app_routes.dart';
-import '../data/models/identity_info.dart';
-import '../data/models/session_info.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../data/session_store.dart';
-import '../data/socket/connectivity_service.dart';
-import '../data/socket/socket_service.dart';
-import '../data/repositories/session_repository.dart';
 
 /// Keeps the session in memory: nothing is read from or written to secure
 /// storage.

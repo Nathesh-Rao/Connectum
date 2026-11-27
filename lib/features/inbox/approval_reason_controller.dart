@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
 import 'models/approval_rules.dart';
 
 /// The Decline / Return sheet of one request. Made by the sheet opener. For a

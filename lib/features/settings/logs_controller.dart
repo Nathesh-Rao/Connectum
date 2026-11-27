@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/log_file_sink.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/share/share.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/share_repository.dart';
-import '../share/share_to_connectum_sheet.dart';
 import 'logs_exporter.dart';
 import 'widgets/logs_options_sheet.dart';
 import 'widgets/old_log_dialog.dart';
@@ -114,7 +112,7 @@ class LogsController {
     try {
       AppLog.i('logs_controller', 'open viewer');
       await sink.flush();
-      await Get.toNamed<dynamic>(AppRoutes.logViewer);
+      await Get.toNamed(AppRoutes.logViewer);
     } catch (e, st) {
       AppLog.e('logs_controller', e, st, 'view $e');
       AppNotices.error("Couldn't open the log file");

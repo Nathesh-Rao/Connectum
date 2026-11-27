@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../../data/smart_view/engine/sv_insights.dart';
 
 /// The record count in the view's header: "Total 120", or, while a search or

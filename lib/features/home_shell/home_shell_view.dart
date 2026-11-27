@@ -3,16 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_icons.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/widgets/app_bottom_nav.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../ai_agents/ai_agents_view.dart';
-import '../chats/chats_view.dart';
-import '../inbox/inbox_view.dart';
-import '../smart_view/smart_view_view.dart';
-import '../submissions/submissions_view.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/ai_agents/ai_agents.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/inbox/inbox.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
+import 'package:connectum/features/submissions/submissions.dart';
 import 'home_shell_controller.dart';
 import 'home_tab.dart';
 

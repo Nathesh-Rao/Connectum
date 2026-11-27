@@ -1,18 +1,11 @@
 import 'package:get/get.dart';
 
-import '../../core/tour/tour_service.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/api/api_client.dart';
-import '../../data/db/app_database.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../data/repositories/people_repository.dart';
-import '../../data/repositories/presence_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
 import '../home_shell/home_shell_controller.dart';
 import 'chats_controller.dart';
 import 'chats_tour.dart';
@@ -53,6 +46,7 @@ class ChatsBinding extends Bindings {
         conversations: conversations,
         messages: Get.find<MessageRepository>(),
         presence: Get.find<PresenceRepository>(),
+        profiles: Get.find<PeopleProfiles>(),
         feed: Get.find<FeedRepository>(),
         store: store,
         connectivity: connectivity,

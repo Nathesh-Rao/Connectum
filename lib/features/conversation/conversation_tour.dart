@@ -2,16 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/selection/selection_rules.dart';
-import '../../core/theme/app_tones.dart';
-import '../../core/tour/tour_action.dart';
-import '../../core/tour/tour_demo.dart';
-import '../../core/tour/tour_gesture.dart';
-import '../../core/tour/tour_id.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_step.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../core/widgets/message_selection/swipe_to_reply.dart';
-import '../../data/models/message.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import 'conversation_tour_demo.dart';
 import 'models/chat_item.dart';
 

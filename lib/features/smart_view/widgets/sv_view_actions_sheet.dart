@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/widgets/app_bottom_sheet.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../smart_view_controller.dart';
 import 'sv_columns_sheet.dart';
 import 'sv_confirm_sheet.dart';

@@ -5,15 +5,11 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_sample_forms.dart';
 import '../../core/debug/seed_ui.dart';
-import '../db/app_database.dart';
-import '../models/form_option.dart';
-import '../models/link_target.dart';
-import '../models/ids.dart';
-import '../models/slot_day.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// One list `form.options` gave, as kept for a form, a field and the values of
 /// the fields it depends on.

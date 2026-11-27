@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'debug_smart_view_controller.dart';
 
 class DebugSmartViewBinding extends Bindings {

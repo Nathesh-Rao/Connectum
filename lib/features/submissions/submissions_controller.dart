@@ -4,14 +4,14 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/form_card.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../home_shell/home_shell_controller.dart';
 import '../home_shell/home_tab.dart';
 import 'models/submission_row.dart';
-import '../../core/log/safe.dart';
 
 class FormFilter {
   const FormFilter(this.name, this.label, this.count);

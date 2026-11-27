@@ -3,15 +3,13 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notice_card.dart' show AppNoticeVariant;
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/ai/ai_models.dart';
 import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
 import '../../data/ai/care_summary_text.dart';
 import '../../data/ai/ai_answer.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/message_repository.dart' show SendResult;
 import 'ai_summary_message_format.dart';
 import 'ai_texts.dart';
 

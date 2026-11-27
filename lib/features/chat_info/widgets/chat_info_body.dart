@@ -1,17 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_list_row.dart';
-import '../../../core/widgets/app_refresh.dart';
-import '../../../core/widgets/app_spinner.dart';
-import '../../../core/widgets/conversation_avatar.dart';
-import '../../tickets/tickets_texts.dart';
-import '../../tickets/widgets/ticket_detail_list.dart';
-import '../../tickets/widgets/ticket_status_pill.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../models/chat_info.dart';
 import 'chat_info_members.dart';
 
@@ -26,6 +17,7 @@ class ChatInfoBody extends StatelessWidget {
     this.onRename,
     this.onAddPeople,
     this.onOpenMember,
+    this.onOpenMemberProfile,
     this.onRefresh,
     this.pictureOf,
   });
@@ -37,6 +29,7 @@ class ChatInfoBody extends StatelessWidget {
   final VoidCallback? onRename;
   final VoidCallback? onAddPeople;
   final ValueChanged<ChatInfoMember>? onOpenMember;
+  final ValueChanged<ChatInfoMember>? onOpenMemberProfile;
   final Future<void> Function()? onRefresh;
   final String? Function(String username)? pictureOf;
 
@@ -93,6 +86,7 @@ class ChatInfoBody extends StatelessWidget {
             members: d.members,
             hasSearch: d.hasSearch,
             onOpen: onOpenMember ?? (_) {},
+            onOpenProfile: onOpenMemberProfile,
             onAddPeople: d.canAddPeople ? onAddPeople : null,
             pictureOf: pictureOf,
           )

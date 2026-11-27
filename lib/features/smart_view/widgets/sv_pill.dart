@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A compact tappable pill: a label and, when it opens a menu, a chevron.
 class SvPill extends StatelessWidget {

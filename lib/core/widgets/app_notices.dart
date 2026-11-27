@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_highlight_text.dart';
 import 'app_notice_card.dart';
 

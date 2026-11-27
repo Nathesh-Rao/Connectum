@@ -22,7 +22,7 @@ class FormLogicAssets {
     required this.checks,
   });
 
-  static const expectedVersion = '1.3.0';
+  static const expectedVersion = '1.7.1';
   static const _dir = 'assets/form_logic/';
   static const _loaded = [
     'form-logic-host-shim.js',

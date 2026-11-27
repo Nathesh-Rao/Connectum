@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_tones.dart';
-import '../../core/tour/tour_gesture.dart';
-import '../../core/tour/tour_id.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_step.dart';
-import '../../core/tour/tour_texts.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
 import '../home_shell/home_tab.dart';
 
 /// The first-run tour of the chat list: its targets and its six or seven steps. The

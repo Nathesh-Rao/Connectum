@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_tones.dart';
-import '../../core/tour/tour_gesture.dart';
-import '../../core/tour/tour_id.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_step.dart';
-import '../../core/tour/tour_texts.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
 
-/// The first-run tour of the Profile screen: four steps (the picture and
-/// details, Security, Switch enterprise, Replay all tours). Rows below the
+/// The first-run tour of the Profile screen: five steps (the picture and
+/// details, your status, Security, Switch enterprise, Replay all tours). Rows below the
 /// fold are scrolled into view as their step comes. The keys are put on the
 /// screen's own widgets by the view.
 class ProfileTour {
@@ -17,6 +13,7 @@ class ProfileTour {
   final TourService service;
 
   final identityKey = GlobalKey(debugLabel: 'tour-profile-identity');
+  final statusKey = GlobalKey(debugLabel: 'tour-profile-status');
   final securityKey = GlobalKey(debugLabel: 'tour-profile-security');
   final switchKey = GlobalKey(debugLabel: 'tour-profile-switch');
   final replayKey = GlobalKey(debugLabel: 'tour-profile-replay');
@@ -29,6 +26,15 @@ class ProfileTour {
       body: TourTexts.prIdentityBody,
       tone: AppTones.primary,
       gesture: TourGesture.tap,
+    ),
+    TourStep(
+      target: statusKey,
+      icon: Icons.circle_outlined,
+      title: TourTexts.prStatusTitle,
+      body: TourTexts.prStatusBody,
+      tone: AppTones.green,
+      gesture: TourGesture.tap,
+      canScroll: true,
     ),
     TourStep(
       target: securityKey,

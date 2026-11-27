@@ -1,5 +1,4 @@
-import '../../../data/models/form_card.dart';
-import '../../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 import 'record_history_card.dart';
 
 /// The web's rule for a record card (`formToCard`): a form message whose form

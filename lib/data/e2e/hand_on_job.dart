@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import '../socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'hand_on.dart';
 
 /// One run of the older-device hand-on for one waiting device: count, then per

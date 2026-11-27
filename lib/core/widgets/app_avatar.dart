@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_icons.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
-import '../theme/app_motion.dart';
-import '../utils/avatar_palette.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import '../../data/profile/presence.dart';
 import 'app_png_icon.dart';
 import 'avatar_image.dart';
 
@@ -31,6 +27,7 @@ class AppAvatar extends StatelessWidget {
     this.isSquare = false,
     this.isAccent = false,
     this.presence = AppPresenceDot.none,
+    this.mood,
   });
 
   final String name;
@@ -52,6 +49,10 @@ class AppAvatar extends StatelessWidget {
   final bool isAccent;
   final AppPresenceDot presence;
 
+  /// The presence the person chose, drawn as the dot's colour and a thin ring
+  /// while the dot says online; null keeps the plain online dot.
+  final Presence? mood;
+
   String get _initials {
     final parts = name
         .trim()
@@ -65,6 +66,8 @@ class AppAvatar extends StatelessWidget {
     return parts.take(2).map((p) => p[0].toUpperCase()).join();
   }
 
+  static const ringWidth = 2.0;
+  static const ringOffset = 3.0;
   static const _iconRatio = 0.5;
   static const _letterRatio = 0.4;
 
@@ -191,12 +194,32 @@ class AppAvatar extends StatelessWidget {
           );
     final shown = _withPicture(avatar);
     if (presence == AppPresenceDot.none) return shown;
+    final isRinged = presence == AppPresenceDot.online && mood != null;
     return SizedBox(
       width: size,
       height: size,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          if (isRinged)
+            Positioned(
+              left: -ringOffset,
+              top: -ringOffset,
+              right: -ringOffset,
+              bottom: -ringOffset,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  key: const ValueKey('avatar-mood-ring'),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppPresenceTones.dot(mood!),
+                      width: ringWidth,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           shown,
           Positioned(
             right: -1,
@@ -207,7 +230,9 @@ class AppAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: presence == AppPresenceDot.online
-                    ? AppColors.yesDot
+                    ? (mood == null
+                          ? AppColors.yesDot
+                          : AppPresenceTones.dot(mood!))
                     : AppColors.noDot,
                 border: Border.all(color: AppColors.white, width: 2),
               ),

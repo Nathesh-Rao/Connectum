@@ -2,11 +2,10 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../forms/models/form_launch.dart';
-import '../../data/models/form_card.dart';
-import '../../data/repositories/submission_repository.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/forms/forms.dart';
 import '../../data/session_store.dart';
 
 /// One submission, in full. It is read from the cache first (a submission of
@@ -40,13 +39,20 @@ class SubmissionDetailController extends GetxController {
 
   final isDeleting = false.obs;
 
-  bool get canDelete => card.value?.canDelete(me) ?? false;
+  FormDefinition? _formOf(FormCardData c) =>
+      submissions.definitions[c.structure];
+
+  bool get canDelete {
+    final c = card.value;
+    return c != null && c.canDelete(me, form: _formOf(c));
+  }
 
   /// Asks first (the sheet is [confirm]), then deletes on the server and
   /// closes. A refusal shows as a notice and the card stays.
   Future<void> delete(Future<bool> Function() confirm) async {
     final c = card.value;
-    if (c == null || isDeleting.value || !c.canDelete(me)) return;
+    if (c == null || isDeleting.value || !c.canDelete(me, form: _formOf(c)))
+      return;
     if (!await confirm()) return;
     isDeleting.value = true;
     try {

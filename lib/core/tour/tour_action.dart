@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../theme/app_motion.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'tour_gesture.dart';
 
 /// What a step does on its own when it becomes active. The pointer plays the

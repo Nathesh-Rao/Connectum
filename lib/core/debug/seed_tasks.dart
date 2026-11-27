@@ -1,7 +1,6 @@
-import '../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../features/chats/models/chat_person.dart';
-import '../../data/models/task.dart';
-import '../../data/socket/socket_service.dart';
 
 /// Debug only (`/debug/tasks`, see "Before release" in CLAUDE.md): sample
 /// tasks and requests in memory, answered in place of the server, so Tasks

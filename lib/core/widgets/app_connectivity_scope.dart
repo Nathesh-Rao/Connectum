@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 class AppConnectivityScope extends InheritedWidget {
   const AppConnectivityScope({

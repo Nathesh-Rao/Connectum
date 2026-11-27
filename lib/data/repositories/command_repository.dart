@@ -9,16 +9,12 @@ import '../commands/command_handlers.dart';
 import '../commands/command_line.dart';
 import '../commands/command_menu.dart';
 import '../commands/command_reply.dart';
-import '../models/hash_command.dart';
-import '../models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/connectivity_service.dart';
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
 import 'message_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 enum HashKind {
   unknown,

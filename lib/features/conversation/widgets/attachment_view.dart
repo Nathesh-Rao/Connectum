@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/attachment_tag.dart';
-import '../../../core/widgets/app_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../conversation_controller.dart';
 import '../models/document_info.dart';
 import 'document_card.dart';
-import '../../../core/widgets/app_spinner.dart';
 
 /// What an `[ATTACHMENT]` message shows: a rounded picture that opens full
 /// screen, or (for anything else) a document card that downloads and opens.

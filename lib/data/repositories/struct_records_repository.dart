@@ -1,10 +1,8 @@
-import '../models/form_definition.dart';
-import '../models/ids.dart';
-import '../models/struct_records.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../records/record_commands.dart';
 import '../smart_view/models/sv_row.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/app_log.dart';
 
 /// The records screen of `#tstruct <name>`: every record of one structure the
 /// server lets this person see, read page by page (`submissions.list`, the
@@ -117,4 +115,10 @@ class StructRecordsRepository {
       !view.isReadOnly &&
       isMine(row.by) &&
       row.recordStatus.toLowerCase() != 'pending';
+
+  /// Delete is Edit's rule, and the form must not have switched off the
+  /// author's Delete (`creatorCanDelete: false`) unless this person owns it.
+  bool canDelete(StructRecordsSchema view, SvRow row) =>
+      canChange(view, row) &&
+      (view.source.creatorCanDelete || isMine(view.source.owner));
 }

@@ -1,6 +1,5 @@
-import '../../data/db/app_database.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/message_repository.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'cache_vectors.dart';
 
 /// One conversation and one message are written under a dummy organisation A

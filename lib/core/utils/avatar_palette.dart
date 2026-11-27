@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-import '../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The colours of an avatar: [foreground] for the letter or icon and a very
 /// light [background] of the same hue.

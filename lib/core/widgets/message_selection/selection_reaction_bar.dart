@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../selection/message_selection.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_motion.dart';
-import '../../theme/app_radius.dart';
-import '../../theme/app_shadows.dart';
-import '../../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The floating pill above (or below) the selected message: the quick emoji,
 /// scrolling when they do not fit, and a round "+" that always stays visible.

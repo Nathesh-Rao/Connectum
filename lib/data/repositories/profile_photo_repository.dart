@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 enum ProfilePhotoError {
   tooLarge,

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/form_entry.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 import 'app_status_pill.dart';
 
 /// A caption with its value: the caption on the left and the value on the

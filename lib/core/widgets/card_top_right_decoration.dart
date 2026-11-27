@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_sv.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A barely-there decoration in a card's top-right corner: a soft blue to
 /// lavender radial wash inside a smooth curve, and a translucent white wave

@@ -5,9 +5,8 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_smart_view.dart';
 import '../../core/debug/seed_tickets.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 /// Smart View on the sample server, no connection needed: four structures
 /// (120 records, empty, `not_found`, fails once), live changes after 10 s and

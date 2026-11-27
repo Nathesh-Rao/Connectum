@@ -5,7 +5,7 @@ import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
 import '../../data/ai/fake_ai_repository.dart';
 import '../../data/repositories/message_repository.dart' show SendResult;
-import '../ai_chat/ai_summary_controller.dart';
+import 'package:connectum/features/ai_chat/ai_chat.dart';
 
 /// Every state of the in-chat AI (an end-to-end chat is blocked) on the fake repository, or on the real one
 /// with [useReal]; the real one reads the messages this phone holds for

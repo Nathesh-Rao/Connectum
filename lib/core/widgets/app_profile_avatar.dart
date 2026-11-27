@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_avatar.dart';
 
 /// The profile control of a top bar: the person's picture, or the first letter

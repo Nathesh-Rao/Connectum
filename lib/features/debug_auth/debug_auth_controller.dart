@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../authentication/authentication_controller.dart';
+import 'package:connectum/features/authentication/authentication.dart';
 import 'scripted_auth_repository.dart';
 
 class DebugAuthController extends GetxController {

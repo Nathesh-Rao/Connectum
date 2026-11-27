@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/app_skeleton.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// A table of grey blocks while a spreadsheet is being read.
 class SvSheetSkeleton extends StatelessWidget {

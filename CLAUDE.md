@@ -14,6 +14,8 @@
 - Every screen = one GetxController + one `GetView<Controller>` + one Binding. Views are UI only. Controllers hold logic and state.
 - `Get.find` / `Get.put` / `Get.lazyPut` are allowed ONLY in Binding files (and one app-level InitialBinding for permanent services). Never in views, widgets or controllers. Dependencies reach controllers through constructors.
 - Exception (owner decision B1, Smart View only): `lib/data/smart_view/engine/` is a pure-Dart port of the web's Smart View engine (type inference, search, filters, sort, group, aggregate); `test/fixtures/smart_view/engine/vectors.json` (BE vectors) is its acceptance test and must be re-run after every BE sync. Form logic is still never ported.
+- Barrels: `lib/core/{theme,widgets,utils,log,tour}/<name>.dart`, `lib/data/{models,repositories,socket,db}/<name>.dart` and `lib/features/<feature>/<feature>.dart` (only what other features and routes need). A barrel holds a one-line `// Barrel:` header and sorted `export` lines only (no `show`; resolve a clash with `hide`); to add a file, add its export line, and keep part and generated files out (`test/barrels/barrel_rules_test.dart`).
+- Inside a folder or feature, import files directly; from outside, import the barrel (`package:connectum/...`). A file never imports its own barrel, and a barrel import that would create an import cycle stays a direct import.
 - Concrete classes only. No abstract classes, interfaces, use-case classes, mappers or generic base classes unless asked. One repository class per domain.
 - `Obx` with the smallest possible scope. No `setState` in screens.
 

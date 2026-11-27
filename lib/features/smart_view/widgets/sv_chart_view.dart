@@ -2,11 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../../data/smart_view/engine/sv_insights.dart';
 
 Color svChartColor(SvChartPoint p) => p.colorIndex < 0

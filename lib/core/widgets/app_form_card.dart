@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/form_card.dart';
-import '../../data/models/form_entry.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_shadows.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
-import '../utils/chat_time.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 import 'app_status_pill.dart';
 
 enum AppFormCardState { sent, waiting, failed }

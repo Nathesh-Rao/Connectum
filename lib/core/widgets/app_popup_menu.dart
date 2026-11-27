@@ -3,12 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_shadows.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// One row of an [AppPopupMenu]: an action row, or a switch row when
 /// [switchValue] is set. A switch row toggles in place and keeps the menu

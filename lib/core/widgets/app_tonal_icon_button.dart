@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_motion.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A bare icon action in a tone's strong colour, no disc. 44 dp to tap.
 /// [onPressed] null means not tappable; [isDimmed] reads as waiting;

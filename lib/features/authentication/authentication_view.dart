@@ -2,24 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/data/app_countries.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_ambient_backdrop.dart';
-import '../../core/widgets/app_animated_size.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_invite_card.dart';
-import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_tab_bar.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/country_picker_sheet.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'auth_validators.dart';
 import 'authentication_controller.dart';
+import 'code_cooldown.dart';
 import 'widgets/option_picker_sheet.dart';
 
 class AuthenticationView extends GetView<AuthenticationController> {
@@ -70,12 +57,7 @@ class _Form extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AppInviteSlot(invite: c.invite),
-              const SizedBox(height: AppSpacing.lg),
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Text('01 / YOUR ACCOUNT', style: AppText.eyebrow),
-              ),
-              SizedBox(height: heroGap),
+              SizedBox(height: heroGap + AppSpacing.lg),
               const _Hero(),
               SizedBox(height: fieldsGap),
               _Fields(controller: c),
@@ -96,7 +78,7 @@ class _Form extends StatelessWidget {
                     onPressed: c.openInviteSheet,
                   ),
                 ),
-                const _AccessFooter(),
+                const AppAgileFooter(),
               ],
             ),
           ),
@@ -131,30 +113,6 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _AccessFooter extends StatelessWidget {
-  const _AccessFooter();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check, size: 13, color: AppColors.muted),
-          SizedBox(width: AppSpacing.xs),
-          Flexible(
-            child: Text(
-              'Private by design. Connected by choice.',
-              style: AppText.caption,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _Fields extends StatelessWidget {
   const _Fields({required this.controller});
 
@@ -169,9 +127,14 @@ class _Fields extends StatelessWidget {
       children: [
         Obx(
           () => AppTabBar(
-            selectedIndex: c.mode.value,
-            onChanged: c.selectTab,
-            labels: AuthenticationController.tabLabels,
+            selectedIndex: AuthenticationController.tabOrder.indexOf(
+              c.mode.value,
+            ),
+            onChanged: (i) => c.selectTab(AuthenticationController.tabOrder[i]),
+            labels: [
+              for (final m in AuthenticationController.tabOrder)
+                AuthenticationController.tabLabels[m],
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -187,6 +150,7 @@ class _Fields extends StatelessWidget {
         const SizedBox(height: AppSpacing.xl),
         Obx(() {
           final wait = c.retryIn.value;
+          final isWaiting = wait > 0 || c.codeWait.value > 0;
           return AppButton.primary(
             label: c.mode.value != 0
                 ? 'Send me a code'
@@ -195,7 +159,20 @@ class _Fields extends StatelessWidget {
                 : 'Sign in',
             icon: Icons.chevron_right,
             isLoading: c.isBusy.value,
-            onPressed: wait > 0 ? null : c.submit,
+            onPressed: isWaiting ? null : c.submit,
+          );
+        }),
+        Obx(() {
+          final wait = c.codeWait.value;
+          if (wait <= 0) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Text(
+              CodeCooldown.sentence(wait),
+              key: const ValueKey('code-wait'),
+              style: AppText.error,
+              textAlign: TextAlign.center,
+            ),
           );
         }),
         const SizedBox(height: AppSpacing.md),

@@ -1,10 +1,9 @@
 import 'package:get/get.dart';
 
-import '../data/repositories/e2e_repository.dart';
-import '../data/repositories/feed_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/notifications/notifications.dart';
 import '../data/session_store.dart';
-import '../data/socket/socket_service.dart';
-import '../features/notifications/models/feed_item.dart';
 
 /// The notifications of the demo: every category, unread and read, three
 /// priorities and one resolved. Reads, resolves and dismissals change this

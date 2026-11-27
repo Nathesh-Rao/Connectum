@@ -5,17 +5,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../db/app_database.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../e2e/e2e_crypto.dart';
 import '../e2e/e2e_device_label.dart';
 import '../e2e/e2e_key_store.dart';
 import '../e2e/e2e_models.dart';
 import '../e2e/e2e_texts.dart';
-import '../models/ids.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
 
 enum E2eRegisterResult {
   registered,

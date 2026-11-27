@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../chats/widgets/record_rename_sheet.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/chats/chats.dart';
 import 'chat_info_controller.dart';
 import 'widgets/chat_info_body.dart';
 
@@ -66,6 +61,7 @@ class ChatInfoView extends GetView<ChatInfoController> {
                 onOpenTicket: c.openTicket,
                 onAddPeople: c.addPeople,
                 onOpenMember: c.openMember,
+                onOpenMemberProfile: c.openMemberProfile,
                 pictureOf: c.pictureOf,
                 onRename: () {
                   final renamer = c.renamer;

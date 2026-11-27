@@ -1,9 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../../core/utils/attachment_tag.dart';
-import '../../../core/utils/forwarded_text.dart';
-import '../../../data/models/conversation.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// What a forward is: an ordinary new message whose text starts with the
 /// forward line (`CHAT_MESSAGE_UI_FOR_MOBILE.md`, section 3).

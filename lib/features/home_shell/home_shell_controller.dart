@@ -8,25 +8,20 @@ import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
 import '../../core/routes/home_reload.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/notifications/notifications.dart';
+import 'package:connectum/features/security/security.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_texts.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/e2e_repository.dart';
 import '../../data/notifications/local_notification_service.dart';
-import '../notifications/notification_router.dart';
-import '../notifications/widgets/notification_permission_sheet.dart';
-import '../security/security_controller.dart';
-import '../smart_view/models/smart_view_entry.dart';
 import '../../core/crash/crash_breadcrumbs.dart';
 import '../../core/crash/crash_service.dart';
 import 'home_tab.dart';
-import '../smart_view/smart_view_controller.dart';
-import '../security/widgets/security_sheets.dart';
-import '../../core/log/safe.dart';
 
 class HomeShellController extends GetxController
     with GetSingleTickerProviderStateMixin {

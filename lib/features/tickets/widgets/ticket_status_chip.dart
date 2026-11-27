@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/app_tag.dart';
-import '../../../data/models/ticket.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../tickets_texts.dart';
 
 /// The status of a ticket as a chip. The tone comes from the data, never from

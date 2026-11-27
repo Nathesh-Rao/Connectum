@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A small quiet icon naming a field's type, shown in a read-only field.
 class FormTypeChip extends StatelessWidget {

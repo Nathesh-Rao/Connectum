@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_highlight_text.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_success_animation.dart';
 import '../../core/widgets/app_tag.dart';
-import '../../data/models/connect_card.dart';
-import '../../data/models/connect_lookup.dart';
 import '../enterprises/widgets/enterprise_tile.dart';
 import 'connect_target_controller.dart';
 import '../../core/widgets/app_loading.dart';

@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_notice_card.dart';
-import '../../../core/widgets/app_notices.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../sv_file_preview_controller.dart';
 
 /// Text, code, JSON, logs: monospace, selectable, first 200 KB, with a

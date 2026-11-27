@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import '../models/ids.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// Who is typing, per conversation, from `typing_dm`, `group_typing` and
 /// `typing` (the global room). A name disappears five seconds after its last

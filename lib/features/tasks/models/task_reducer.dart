@@ -1,4 +1,4 @@
-import '../../../data/models/task.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Keeps the Tasks lists right when an event or an answer arrives. Pure.
 class TaskReducer {

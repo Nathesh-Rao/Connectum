@@ -1,8 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 enum AppTransitionKind { push, tab, fade, intro, enter, slideUp }
 

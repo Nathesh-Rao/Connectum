@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_tones.dart';
-import '../../core/tour/tour_action.dart';
-import '../../core/tour/tour_demo.dart';
-import '../../core/tour/tour_id.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_step.dart';
-import '../../core/tour/tour_texts.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
 import 'smart_view_tour_demo.dart';
 
 /// What the tour asks of the screen. Each one only changes UI state of the

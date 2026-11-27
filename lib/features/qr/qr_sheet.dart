@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_motion.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../data/repositories/qr_repository.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'models/qr_models.dart';
 import 'qr_binding.dart';
 import 'qr_controller.dart';

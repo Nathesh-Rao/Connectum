@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_motion.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../data/e2e/e2e_models.dart';
 
 enum DeviceLimitStep { list, confirm, registering, done, failed }

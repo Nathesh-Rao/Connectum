@@ -5,13 +5,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/debug/seed_connect.dart';
 import '../../../core/debug/seed_ui.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../connect_controller.dart';
 import 'viewfinder_overlay.dart';
 

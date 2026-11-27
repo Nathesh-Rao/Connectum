@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_anchored_popup.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../smart_view/widgets/sv_file_preview_dialog.dart';
-import '../../tickets/models/card_menu.dart';
-import '../../tickets/widgets/record_card_actions.dart';
-import '../../tickets/widgets/record_menu_rows.dart';
-import '../../tickets/widgets/ticket_action_sheet.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../inbox_controller.dart';
 import '../inbox_tour_demo.dart';
 import '../models/inbox_card_rows.dart';
@@ -159,35 +154,80 @@ class _Menu extends StatelessWidget {
 }
 
 /// The record menu of a card (the one of the chat and the Work Space): Send,
-/// Update status and History, read when it opens, as a popup under the dots.
+/// Update status and History, read when it opens, as a callout under the dots.
+/// While `record.actions` is read the menu says "Loading…" and follows the
+/// answer. A row that is off shows the server's reason and does nothing.
 class InboxMenu {
   InboxMenu._();
+
+  static List<MenuItem<CardMenuItem>> _rows(InboxController c, InboxRow row) {
+    final tickets = c.tickets;
+    return rowsFor(
+      CardMenu.build(record: tickets.stateOf(row.id), canOpenHistory: true),
+      isLoading: tickets.isCardReading(row.id),
+    );
+  }
+
+  /// The callout's rows of a card's menu: a destructive row gets the hairline
+  /// above it, and a note says "Loading…" while the read runs (or that
+  /// nothing is offered).
+  static List<MenuItem<CardMenuItem>> rowsFor(
+    List<CardMenuItem> items, {
+    bool isLoading = false,
+  }) => [
+    for (final (i, item) in items.indexed)
+      MenuItem<CardMenuItem>(
+        label: item.label,
+        icon: item.icon,
+        value: item,
+        why: item.why,
+        isEnabled: item.isEnabled,
+        isDanger: item.isDanger,
+        hasDividerAbove: item.isDanger && i > 0,
+      ),
+    if (isLoading || items.isEmpty)
+      MenuItem<CardMenuItem>.note(
+        isLoading ? TicketsTexts.menuLoading : TicketsTexts.menuEmpty,
+      ),
+  ];
 
   static Future<void> show(
     BuildContext context,
     InboxController c,
     InboxRow row,
-  ) {
+  ) async {
+    final anchor = AnimatedCalloutMenu.anchorOf(context);
+    if (anchor == null) return;
+    final root = Navigator.of(context, rootNavigator: true).context;
     c.openMenu(row);
-    return AppAnchoredPopup.show(
-      context,
-      label: 'Record menu',
-      builder: (popup) => RecordMenuRows(
-        isCompact: true,
-        tickets: c.tickets,
-        recordId: row.id,
-        itemsFor: (state) =>
-            CardMenu.build(record: state, canOpenHistory: true),
-        onPick: (item) {
-          final root = Navigator.of(popup, rootNavigator: true).context;
-          Navigator.of(popup, rootNavigator: true).pop();
-          if (item.id == CardMenuItem.history) {
-            c.open(row);
-          } else if (item.isRecordAction) {
-            TicketActionSheet.show(root, c.detailOf(row), item.recordActionId);
-          }
-        },
-      ),
-    );
+    final live = ValueNotifier(_rows(c, row));
+    var isOpen = true;
+    // A turn later: the read still counts as running while it announces that
+    // it is done.
+    final worker = ever(c.tickets.cardRevision, (_) {
+      Future(() {
+        if (isOpen) live.value = _rows(c, row);
+      });
+    });
+    final CardMenuItem? item;
+    try {
+      item = await AnimatedCalloutMenu.show<CardMenuItem>(
+        context,
+        anchor,
+        live.value,
+        label: 'Record menu',
+        live: live,
+      );
+    } finally {
+      isOpen = false;
+      worker.dispose();
+      live.dispose();
+    }
+    if (item == null) return;
+    if (item.id == CardMenuItem.history) {
+      c.open(row);
+    } else if (item.isRecordAction && root.mounted) {
+      TicketActionSheet.show(root, c.detailOf(row), item.recordActionId);
+    }
   }
 }

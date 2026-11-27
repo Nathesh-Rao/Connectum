@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/app_progress_bar.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 import '../../inbox/models/inbox_card_rows.dart';
 import '../../inbox/models/inbox_field_kind.dart';
 import '../../inbox/widgets/inbox_file_chip.dart';
-import '../../smart_view/widgets/sv_file_chips.dart';
 import '../tickets_texts.dart';
 
 /// One line of the record's fields card: an icon, a label and a value.

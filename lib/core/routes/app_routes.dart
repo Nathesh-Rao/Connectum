@@ -21,6 +21,9 @@ class AppRoutes {
   static const profile = '/profile';
   static const logViewer = '/log-viewer';
   static const photoCrop = '/profile/photo-crop';
+  static const profileStatus = '/profile/status';
+  static const profileDetails = '/profile/details';
+  static const person = '/person/:username';
   static const notifications = '/notifications';
   static const security = '/security';
   static const newGroup = '/new-group';
@@ -59,6 +62,9 @@ class AppRoutes {
   static const debugSmartViews = '/debug/smartviews';
   static const debugSmartFiles = '/debug/smartfiles';
   static const debugSmartInsights = '/debug/smartinsights';
+
+  static String personOf(String username) =>
+      '/person/${Uri.encodeComponent(username)}';
 
   static String ticketOf(int id) => '/tickets/$id';
 

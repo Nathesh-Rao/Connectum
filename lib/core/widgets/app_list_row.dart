@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A divider row (no card): optional leading tile, title, caption, trailing.
 class AppListRow extends StatefulWidget {

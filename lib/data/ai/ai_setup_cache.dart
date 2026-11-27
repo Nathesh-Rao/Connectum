@@ -1,6 +1,6 @@
 import 'ai_models.dart';
 import 'ai_repository.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// The setup state, kept for a minute so opening a chat or tapping the icon
 /// does not ask the server each time. The sheet refreshes it when it opens,

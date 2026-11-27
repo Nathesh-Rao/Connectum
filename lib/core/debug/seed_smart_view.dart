@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import '../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/smart_view/models/sv_row.dart';
 import '../../data/smart_view/models/sv_source.dart';
 import '../../data/smart_view/smart_view_commands.dart';
-import '../../data/socket/socket_service.dart';
 import 'seed_smart_files.dart';
 import 'seed_tickets.dart';
 

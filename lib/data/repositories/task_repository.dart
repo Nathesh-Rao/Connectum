@@ -4,11 +4,11 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_tasks.dart';
-import '../models/task.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../records/record_commands.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/safe.dart';
 
 /// A `task_assigned` or `task_updated` event.
 class TaskChange {

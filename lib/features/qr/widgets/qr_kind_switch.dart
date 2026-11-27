@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Two or more equal pills in a bordered container; the selected one is
 /// filled with the accent tint. Stateless: the selection lives with the caller.

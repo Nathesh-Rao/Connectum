@@ -1,4 +1,4 @@
-import '../../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 import 'inbox_record_tone.dart';
 
 /// `structures[form]` of a `records.query` / `records.mine` reply: only what

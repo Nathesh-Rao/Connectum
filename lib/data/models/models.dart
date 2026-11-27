@@ -1,0 +1,33 @@
+// Barrel: data models. Export lines only.
+
+export 'approval.dart';
+export 'auth_flow.dart';
+export 'chat_thread.dart';
+export 'connect_card.dart';
+export 'connect_lookup.dart';
+export 'conversation.dart';
+export 'form_card.dart';
+export 'form_definition.dart';
+export 'form_entry.dart';
+export 'form_option.dart';
+export 'form_submission.dart';
+export 'group_add.dart';
+export 'hash_command.dart';
+export 'identity_info.dart';
+export 'ids.dart';
+export 'join_page.dart';
+export 'link_target.dart';
+export 'message.dart';
+export 'message_mark.dart';
+export 'outbox_entry.dart';
+export 'pending_upload.dart';
+export 'reaction.dart';
+export 'record_live.dart';
+export 'record_state.dart';
+export 'self_conversation.dart';
+export 'session_info.dart';
+export 'slot_day.dart';
+export 'struct_records.dart';
+export 'task.dart';
+export 'thread_names.dart';
+export 'ticket.dart';

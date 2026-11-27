@@ -7,12 +7,11 @@ import 'package:get/get.dart';
 import '../e2e/e2e_models.dart';
 import '../e2e/hand_on.dart';
 import '../e2e/hand_on_job.dart';
-import '../models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 enum HandOnPhase {
   idle,

@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_pill_bar.dart';
-import '../../core/widgets/app_popup_menu.dart';
-import '../notifications/models/feed_item.dart';
-import '../notifications/models/feed_reducer.dart';
-import '../notifications/notification_style.dart';
-import '../notifications/widgets/feed_detail_sheet.dart';
-import '../notifications/widgets/feed_tile.dart';
-import '../notifications/widgets/notifications_more_menu.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/notifications/notifications.dart';
 import 'debug_notifications_controller.dart';
 
 const _longText =

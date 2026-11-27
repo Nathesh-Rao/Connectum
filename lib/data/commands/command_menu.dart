@@ -1,4 +1,4 @@
-import '../models/hash_command.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Which commands the menu offers and in what order, with the web's rules
 /// (hashCommandsCatalog.js).

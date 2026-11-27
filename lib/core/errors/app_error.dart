@@ -7,8 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../data/api/api_client.dart';
-import '../../data/socket/call_problem.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 enum ErrorKind {
   network,

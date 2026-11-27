@@ -2,8 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_sv.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../log_viewer/models/log_document.dart';
 
 /// The text-file variant of the Smart View preview for the app's own log:

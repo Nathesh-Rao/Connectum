@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import '../repositories/conversation_repository.dart';
-import '../models/message.dart';
-import '../repositories/message_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'ai_answer.dart';
 import 'ai_models.dart';
 import 'ai_prompt.dart';
@@ -12,7 +12,6 @@ import 'ai_relay.dart';
 import 'ai_repository.dart';
 import 'ai_transcript.dart';
 import 'care_summary_text.dart';
-import '../../core/log/safe.dart';
 
 /// The real calls: `ai.agents` for the setup and `assistant.relay` for the
 /// answer. The server never sees "which chat": the transcript is built here

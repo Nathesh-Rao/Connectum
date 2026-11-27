@@ -1,6 +1,6 @@
-import '../../../data/models/record_state.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../../data/records/record_commands.dart';
-import '../../../data/socket/call_problem.dart';
 
 /// What the person filled in on the status sheet.
 class StatusInput {

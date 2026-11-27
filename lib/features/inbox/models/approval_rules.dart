@@ -1,4 +1,4 @@
-import '../../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
 
 enum ApprovalAction {
   accept('accept'),

@@ -2,10 +2,10 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_tickets.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/socket/socket_service.dart';
-import '../tasks/tasks_controller.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/tasks/tasks.dart';
 
 /// Tickets with the real captured replies and injected events, no server.
 /// Debug builds only (see "Before release" in CLAUDE.md).

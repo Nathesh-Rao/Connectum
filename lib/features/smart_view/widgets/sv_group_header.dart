@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../../data/smart_view/engine/sv_engine.dart';
 
 /// A group's header line: chevron, the group value, its row count and, when

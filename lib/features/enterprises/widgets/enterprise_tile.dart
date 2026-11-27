@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 const _tileIcons = [
   Icons.domain,

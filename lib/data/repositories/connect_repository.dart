@@ -2,9 +2,9 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_connect.dart';
 import '../../core/debug/seed_ui.dart';
-import '../../core/utils/connect_code.dart';
-import '../models/connect_lookup.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// `connect.lookup` (who is this, connects nothing) and `connect.scan`
 /// (connects). Both take the whole link and share one server limit.

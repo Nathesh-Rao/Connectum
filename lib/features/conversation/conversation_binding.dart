@@ -1,31 +1,18 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/people_avatars.dart';
-import '../../core/tour/tour_service.dart';
-import '../commands/commands_tour.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/commands/commands.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import 'conversation_tour.dart';
 
 import '../../core/routes/home_reload.dart';
 import '../../data/ai/ai_repository.dart';
 import '../../data/ai/ai_setup_cache.dart';
 import '../../data/attachment_cache.dart';
-import '../../data/repositories/attachment_repository.dart';
-import '../../data/repositories/command_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/e2e_repository.dart';
-import '../../data/repositories/form_options_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/presence_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/repositories/typing_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
-import '../home_shell/home_shell_controller.dart';
-import '../tickets/ticket_detail_controller.dart';
 import 'conversation_controller.dart';
 
 /// Puts one controller per conversation id (its tag), so another route's
@@ -44,6 +31,7 @@ class ConversationBinding extends Bindings {
         messages: Get.find<MessageRepository>(),
         conversations: Get.find<ConversationRepository>(),
         presence: Get.find<PresenceRepository>(),
+        profiles: Get.find<PeopleProfiles>(),
         typing: Get.find<TypingRepository>(),
         submissions: Get.find<SubmissionRepository>(),
         smartView: Get.find<SmartViewRepository>(),

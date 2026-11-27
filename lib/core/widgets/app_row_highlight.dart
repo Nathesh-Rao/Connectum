@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Press feedback for a list row that sits inside a padded list. The tint
 /// runs edge to edge (it bleeds over the list's horizontal padding by

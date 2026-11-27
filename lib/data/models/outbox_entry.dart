@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
 import 'ids.dart';
 
 class OutboxEntry {

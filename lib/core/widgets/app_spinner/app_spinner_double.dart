@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../onboarding_art/svg_path_parser.dart';
 import 'generated/spinner_double_data.dart';
 import 'pull_refresh_config.dart';

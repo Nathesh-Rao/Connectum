@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import '../models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The answer to one `#` line, read from the chat-socket frames.
 class CommandReply {

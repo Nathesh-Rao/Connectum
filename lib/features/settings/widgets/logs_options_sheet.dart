@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_list_row.dart';
-import '../../../core/theme/app_radius.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// The things to do with the log file: Share to Connectum first, then view,
 /// save and the system share. The sheet's own header comes

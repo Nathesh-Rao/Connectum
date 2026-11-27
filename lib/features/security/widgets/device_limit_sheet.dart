@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_highlight_text.dart';
-import '../../../core/widgets/app_invite_card.dart';
-import '../../../core/widgets/app_spinner.dart';
-import '../../../core/widgets/app_success_animation.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../../../data/e2e/e2e_texts.dart';
 import '../device_limit_controller.dart';
 import 'device_card.dart';

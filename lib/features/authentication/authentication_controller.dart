@@ -9,16 +9,17 @@ import '../../core/data/app_countries.dart';
 import '../../core/data/country_lookup.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/invite_service.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/invite_code/invite_code.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
-import '../../data/models/auth_flow.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/session_repository.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../invite_code/invite_code_sheet.dart';
 import 'auth_validators.dart';
-import '../../core/log/safe.dart';
+import 'code_cooldown.dart';
 
 class AuthenticationController extends GetxController {
   AuthenticationController({
@@ -29,7 +30,13 @@ class AuthenticationController extends GetxController {
   });
 
   static const _loginNoticeKey = 'login-notice';
-  static const tabLabels = ['Sign in', 'Set up', 'Self register'];
+
+  /// Labels by mode index (0 sign in, 1 new organisation, 2 register).
+  static const tabLabels = ['Sign in', 'New Org', 'Register'];
+
+  /// The mode shown at each position of the tab bar: Sign in | Register |
+  /// New Org.
+  static const tabOrder = [0, 2, 1];
 
   final AuthRepository auth;
   final SessionRepository session;
@@ -62,7 +69,7 @@ class AuthenticationController extends GetxController {
       key: FocusNode(),
   };
 
-  /// 0 = Sign in, 1 = Set up, 2 = Self register.
+  /// 0 = Sign in, 1 = New Org (set up), 2 = Register.
   final mode = 0.obs;
 
   /// +1 when the tab changed towards a higher index, -1 towards a lower one.
@@ -76,6 +83,11 @@ class AuthenticationController extends GetxController {
   /// Seconds left of a lockout the server gave a time for; the button waits.
   final retryIn = 0.obs;
   Timer? _retryTimer;
+
+  /// Seconds left of a refused code request for the current action and
+  /// email; the send button waits and re-enables by itself.
+  final codeWait = 0.obs;
+  Timer? _codeTimer;
 
   final isBusy = false.obs;
   final isMoreOpen = false.obs;
@@ -104,6 +116,7 @@ class AuthenticationController extends GetxController {
       email.text = prefill;
       session.loginEmail.value = null;
     }
+    syncCodeWait();
     focus.forEach((key, node) {
       node.addListener(() {
         if (!node.hasFocus) touch(key);
@@ -114,6 +127,7 @@ class AuthenticationController extends GetxController {
   void setPasswordMode(bool isPassword) {
     if (isPassword == isPasswordMode.value) return;
     isPasswordMode.value = isPassword;
+    syncCodeWait();
     formError.value = null;
     serverErrors.clear();
     password.clear();
@@ -136,6 +150,29 @@ class AuthenticationController extends GetxController {
     mode.value = index;
     formError.value = null;
     serverErrors.clear();
+    syncCodeWait();
+  }
+
+  AuthFlow? get _codeFlow => switch (mode.value) {
+    0 => isPasswordMode.value ? null : AuthFlow.login,
+    1 => AuthFlow.setup,
+    _ => AuthFlow.register,
+  };
+
+  /// Reads the stored wait for the current action and email and runs the
+  /// live countdown while it lasts.
+  void syncCodeWait() {
+    final flow = _codeFlow;
+    codeWait.value = flow == null
+        ? 0
+        : CodeCooldown.secondsLeft(flow, email.text);
+    _codeTimer?.cancel();
+    if (codeWait.value <= 0) return;
+    _codeTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      final f = _codeFlow;
+      codeWait.value = f == null ? 0 : CodeCooldown.secondsLeft(f, email.text);
+      if (codeWait.value <= 0) t.cancel();
+    });
   }
 
   @override
@@ -170,6 +207,7 @@ class AuthenticationController extends GetxController {
   void changed(String key) {
     serverErrors.remove(key);
     revision.value++;
+    if (key == 'email') syncCodeWait();
   }
 
   void toggleMore() => isMoreOpen.toggle();
@@ -226,7 +264,7 @@ class AuthenticationController extends GetxController {
   }
 
   Future<void> submit() async {
-    if (isBusy.value || retryIn.value > 0) return;
+    if (isBusy.value || retryIn.value > 0 || codeWait.value > 0) return;
     submitAttempted.value = true;
     formError.value = null;
     serverErrors.clear();
@@ -258,7 +296,27 @@ class AuthenticationController extends GetxController {
 
   void _showServerError(ApiException e) {
     final fields = e.fieldErrors;
-    if (fields.isNotEmpty) {
+    final named = e.fieldName;
+    final flow = _codeFlow;
+    if (e.code == 'rate_limited' &&
+        flow != null &&
+        e.retryAfterSeconds != null) {
+      CodeCooldown.start(flow, email.text, e.retryAfterSeconds!);
+      syncCodeWait();
+    } else if (e.code == 'invalid_email' ||
+        (e.code == 'invalid' && named == 'email')) {
+      final said = e.message.isNotEmpty ? e.message : EmailRule.invalidMessage;
+      serverErrors['email'] =
+          '${said.replaceAll(RegExp(r'[.\s]+$'), '')}. ${EmailRule.hint}';
+      focus['email']?.requestFocus();
+    } else if (e.code == 'invalid' &&
+        named != null &&
+        focus.containsKey(named)) {
+      serverErrors[named] = e.message.isNotEmpty
+          ? e.message
+          : (named == 'org' ? 'Enter enterprise name' : 'Enter your name');
+      focus[named]?.requestFocus();
+    } else if (fields.isNotEmpty) {
       serverErrors.assignAll(fields);
     } else if (e.code == 'invalid_mobile') {
       serverErrors[mode.value == 1 ? 'setupMobile' : 'regMobile'] =
@@ -328,8 +386,8 @@ class AuthenticationController extends GetxController {
   }
 
   Map<String, dynamic> _setupBody() => {
-    'org': orgName.text.trim(),
-    'name': ownerName.text.trim(),
+    'org': AuthValidators.clean(orgName.text),
+    'name': AuthValidators.clean(ownerName.text),
     'email': email.text.trim(),
     'mobile': AuthValidators.mobile(
       setupMobile.text,
@@ -418,6 +476,7 @@ class AuthenticationController extends GetxController {
   @override
   void onClose() {
     _retryTimer?.cancel();
+    _codeTimer?.cancel();
     AppNotices.hide(_loginNoticeKey);
     invite.detach();
     for (final c in [

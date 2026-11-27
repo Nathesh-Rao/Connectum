@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_smart_files.dart';
 import '../../data/attachment_cache.dart';
-import '../../data/repositories/sv_file_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'debug_smart_files_controller.dart';
 
 class DebugSmartFilesBinding extends Bindings {

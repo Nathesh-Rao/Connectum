@@ -1,13 +1,11 @@
 import 'package:get/get.dart';
 
-import '../../core/utils/connect_code.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 import '../api/api_client.dart';
-import '../models/connect_card.dart';
-import '../models/identity_info.dart';
-import '../models/ids.dart';
 import '../session_store.dart';
 import 'session_repository.dart';
-import '../../core/log/app_log.dart';
 
 enum LoginStartKind { codeSent, trusted, throttled }
 

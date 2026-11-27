@@ -1,5 +1,4 @@
-import '../models/form_definition.dart';
-import '../models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The one place where the form's values are put into the shape the logic
 /// reads (`FORM_LOGIC_FOR_MOBILE.md` section 3): dates `yyyy-mm-dd`, times

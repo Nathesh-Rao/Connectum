@@ -1,6 +1,6 @@
 import '../../data/api/api_client.dart';
-import '../../data/models/identity_info.dart';
-import '../../data/repositories/auth_repository.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 enum PasswordOutcome { wrong, locked, lockedWithTime, network }
 

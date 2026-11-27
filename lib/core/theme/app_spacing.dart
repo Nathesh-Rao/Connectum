@@ -52,6 +52,7 @@ class AppSpacing {
   static const double handleHeight = 4;
   static const double minTapTarget = 44;
   static const double methodButtonHeight = 48;
+  static const double agileLogoHeight = 15;
   static const double chipHeight = 40;
   static const double checkBadge = 64;
   static const double stateImage = 160;
@@ -164,12 +165,14 @@ class AppSpacing {
   static const double popupMenuIcon = 20;
   static const double menuEdge = 8;
   static const double compactMenuMinWidth = 168;
-  static const double compactMenuMaxWidth = 220;
-  static const double compactMenuMaxFraction = 0.6;
   static const double compactMenuRow = 44;
   static const double compactMenuIcon = 18;
   static const double compactMenuIconSlot = 24;
   static const double compactMenuPadding = 14;
+  static const double calloutWidth = 190;
+  static const double calloutTailHeight = 10;
+  static const double calloutTailBaseHalf = 9;
+  static const double calloutTailTipRadius = 3;
   static const double qrCardMinWidth = 260;
   static const double qrCardWidth = 312;
   static const double qrShareWidth = 360;

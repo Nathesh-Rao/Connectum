@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../data/models/task.dart';
+import 'package:connectum/data/models/models.dart';
 import '../chats/models/chat_person.dart';
 import 'models/task_due_label.dart';
 import 'models/task_form_rules.dart';

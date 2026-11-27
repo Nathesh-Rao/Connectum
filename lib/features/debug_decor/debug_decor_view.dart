@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/utils/avatar_palette.dart';
-import '../../core/widgets/app_ambient_backdrop.dart';
-import '../../core/widgets/app_card_circles.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_success_animation.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'debug_decor_controller.dart';
 
 /// Debug only: every decorative element of the onboarding, auth and state

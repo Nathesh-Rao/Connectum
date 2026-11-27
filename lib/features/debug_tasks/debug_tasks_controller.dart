@@ -2,13 +2,11 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_tasks.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/models/approval.dart';
-import '../../data/models/task.dart';
-import '../../data/repositories/approval_repository.dart';
-import '../../data/repositories/task_repository.dart';
-import '../../data/socket/socket_service.dart';
-import '../home_shell/home_shell_controller.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
 
 /// Tasks and Approvals with sample data and injected events, no server. Debug
 /// builds only (see "Before release" in CLAUDE.md).

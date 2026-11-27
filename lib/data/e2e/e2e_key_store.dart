@@ -5,7 +5,7 @@ import 'package:webcrypto/webcrypto.dart';
 
 import 'e2e_crypto.dart';
 import 'e2e_models.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// This device's private keys per organisation and user, in Keystore/Keychain.
 /// Nothing here returns key bytes or logs them. Sign-out never calls [remove];

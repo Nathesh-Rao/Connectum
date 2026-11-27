@@ -6,22 +6,21 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:webcrypto/webcrypto.dart';
 
-import '../../data/db/app_database.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/security/security.dart';
 import '../../data/e2e/e2e_crypto.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_random.dart';
 import '../../core/config/app_config.dart';
-import '../../core/utils/attachment_tag.dart';
-import '../../data/repositories/e2e_repository.dart';
-import '../security/device_limit_controller.dart';
 import 'hand_on_vectors.dart';
 import 'highlight_vectors.dart';
 import 'limit_sheet_vectors.dart';
 import 'read_vectors.dart';
-import '../../data/repositories/encryption_policy.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
 
 class E2eCheck {
   const E2eCheck(this.name, this.isPassed, [this.detail = '']);

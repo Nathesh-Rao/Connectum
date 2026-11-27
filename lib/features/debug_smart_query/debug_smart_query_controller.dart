@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_smart_view.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../smart_view/smart_view_controller.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 
 /// The Smart View controls (search, filter, sort, chips, cards and table) on
 /// 120 sample Leave request records, no server. Debug builds only (see

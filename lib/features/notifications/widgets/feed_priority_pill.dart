@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../notification_texts.dart';
 
 /// The priority of a feed item as a label and a colour. Low is the default

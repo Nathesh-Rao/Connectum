@@ -1,7 +1,6 @@
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_texts.dart';
-import '../security/device_limit_controller.dart';
-import '../security/widgets/device_card.dart';
+import 'package:connectum/features/security/security.dart';
 
 /// Self-test of the device-limit sheet and the sample data behind the debug
 /// button. No server: the removal and the registration are stand-ins.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/widgets/app_popup_menu.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../notification_texts.dart';
 
 enum NotificationsMenuItem {

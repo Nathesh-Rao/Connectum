@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../data/models/reaction.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The reactions under a bubble or a card: an emoji and its count, muted,
 /// with an accent outline when I reacted. A tap toggles my reaction. A chip

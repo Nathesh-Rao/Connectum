@@ -1,10 +1,10 @@
 import 'package:get/get.dart';
 
-import '../../data/db/app_database.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/e2e/e2e_key_store.dart';
-import '../../data/repositories/e2e_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
 import 'debug_e2e_controller.dart';
 
 class DebugE2eBinding extends Bindings {

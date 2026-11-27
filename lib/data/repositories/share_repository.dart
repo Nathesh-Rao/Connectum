@@ -1,7 +1,6 @@
-import '../../core/log/app_log.dart';
-import '../models/conversation.dart';
-import '../models/pending_upload.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'attachment_repository.dart';
 import 'attachment_sender.dart';
 import 'conversation_repository.dart';

@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-import '../models/ids.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
 
 typedef Row = Map<String, Object?>;
 

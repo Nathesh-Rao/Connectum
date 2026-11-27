@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-import '../../data/models/form_definition.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// How a typed field behaves: the keyboard, what may be typed, the longest
 /// text and the action key. These only keep the input in the shapes the server

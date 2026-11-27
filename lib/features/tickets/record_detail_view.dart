@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_refresh.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_state_view.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
 import '../inbox/widgets/inbox_card_frame.dart';
-import '../smart_view/widgets/sv_file_preview_dialog.dart';
 import 'models/record_kind.dart';
 import 'ticket_detail_controller.dart';
 import 'tickets_texts.dart';

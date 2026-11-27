@@ -1,4 +1,4 @@
-import '../../data/repositories/form_options_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 /// The kept lists of `form.options`: the key, how long a list is reused, the
 /// two-day limit offline and every rule that drops them. The drop rules run

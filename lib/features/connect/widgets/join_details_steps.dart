@@ -3,13 +3,9 @@ import 'package:get/get.dart';
 
 import '../../../core/data/app_countries.dart';
 import '../../../core/data/country_lookup.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/country_picker_sheet.dart';
-import '../../authentication/widgets/option_picker_sheet.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/authentication/authentication.dart';
 import '../../forms/widgets/form_box.dart';
 import '../connect_controller.dart';
 import '../models/join_flow.dart';

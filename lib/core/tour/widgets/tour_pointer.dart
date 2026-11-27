@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../log/safe.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_motion.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../tour_gesture.dart';
 
 /// Drives a [TourPointer]: moves it to a target and plays one gesture.

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_ambient_backdrop.dart';
 import 'app_offline_bar.dart';
 

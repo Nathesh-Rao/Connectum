@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_motion.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_animation_placeholder.dart';
-import '../log/app_log.dart';
 
 /// Every state picture, with its file and display scale. The only place that
 /// maps a state to a file.

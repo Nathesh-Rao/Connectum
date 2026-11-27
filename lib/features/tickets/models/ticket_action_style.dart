@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_action_bar.dart';
-import '../../../data/models/record_state.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The icon and tone of an action, picked from its words.
 class ActionStyle {

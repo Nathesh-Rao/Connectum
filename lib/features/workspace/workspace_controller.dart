@@ -6,52 +6,31 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_trigger.dart';
-import '../commands/commands_tour.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/commands/commands.dart';
+import 'package:connectum/features/conversation/conversation.dart';
+import 'package:connectum/features/forms/forms.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import 'workspace_tour.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/selection/message_selection.dart';
 import '../../core/selection/selection_rules.dart';
-import '../../core/utils/attachment_tag.dart';
-import '../../core/utils/chat_time.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/widgets/app_form_card.dart';
-import '../../data/models/form_card.dart';
-import '../../data/models/ids.dart';
-import '../../data/repositories/marks_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/repositories/workspace_repository.dart';
-import '../../data/models/record_state.dart';
-import '../tickets/models/card_destination.dart';
-import '../tickets/models/card_menu.dart';
-import '../tickets/models/record_card_rule.dart';
-import '../tickets/ticket_detail_controller.dart';
 import '../../data/commands/command_line.dart';
 import '../../data/commands/command_reply.dart';
-import '../../data/models/hash_command.dart';
-import '../../data/models/message.dart';
-import '../../data/models/self_conversation.dart';
-import '../../data/repositories/command_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/form_options_repository.dart';
-import '../forms/forms_picker_controller.dart';
-import '../forms/models/form_launch.dart';
-import '../home_shell/home_shell_controller.dart';
 
-import '../../data/repositories/submission_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../commands/command_runner.dart';
-import '../conversation/models/command_prompt.dart';
 import 'models/pinned_line.dart';
 import 'models/workspace_note.dart';
 import 'models/workspace_row.dart';
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
 
 /// My Work Space: the submissions I made as sent-style cards, newest at the
 /// bottom. It reads the cache; opening it refreshes the list when online.
@@ -780,7 +759,7 @@ class WorkspaceController extends GetxController {
   /// submission opens its detail.
   void open(FormCardData d, {bool isReceived = false}) {
     final route = CardDestination.of(d);
-    if (route != null) Get.toNamed<dynamic>(route);
+    if (route != null) Get.toNamed(route);
   }
 
   /// The record menu of a card opened: `record.actions`, read once (cached
@@ -803,6 +782,10 @@ class WorkspaceController extends GetxController {
     });
   }
 
+  /// The form behind a card, when its definition is stored.
+  FormDefinition? formOf(FormCardData d) =>
+      submissions.definitions[d.structure];
+
   bool canEdit(FormCardData d) => d.canEdit(me) || d.canFix(me);
 
   /// The rows of a card's menu: the record's actions and the card's own
@@ -817,7 +800,7 @@ class WorkspaceController extends GetxController {
           isSettled &&
           recordIdOf(d) != null &&
           d.by.toLowerCase() == me.toLowerCase(),
-      canDelete: isSettled && d.canDelete(me),
+      canDelete: isSettled && d.canDelete(me, form: formOf(d)),
     );
   }
 
@@ -831,7 +814,7 @@ class WorkspaceController extends GetxController {
     FormCardData d,
     Future<bool> Function() confirm,
   ) async {
-    if (!d.canDelete(me) || !await confirm()) return;
+    if (!d.canDelete(me, form: formOf(d)) || !await confirm()) return;
     final problem = await submissions.deleteSubmission(d.id);
     _say(problem ?? 'Submission deleted');
   }

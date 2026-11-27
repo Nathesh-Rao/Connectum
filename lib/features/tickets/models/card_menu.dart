@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../data/models/record_state.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// One row of a card's menu.
 class CardMenuItem {

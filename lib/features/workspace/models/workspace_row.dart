@@ -1,5 +1,4 @@
-import '../../../data/models/form_card.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/data/models/models.dart';
 import 'workspace_note.dart';
 
 /// One row of the workspace feed: a submission card, a small row that is not

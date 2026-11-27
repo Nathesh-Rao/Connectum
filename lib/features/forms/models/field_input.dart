@@ -4,10 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../../data/models/form_definition.dart';
-import '../../../data/models/form_option.dart';
-import '../../../data/models/ids.dart';
-import '../../../data/models/slot_day.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// One field being filled: its value, its text editor (for the types that
 /// are typed) and its error. A row of a grid section has its own set.

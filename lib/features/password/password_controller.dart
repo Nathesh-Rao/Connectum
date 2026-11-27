@@ -4,13 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
-import '../../data/repositories/auth_repository.dart';
 import '../../data/session_store.dart';
-import '../../core/log/app_log.dart';
 
 /// Set, change or remove the account's own password (the web's "Set a
 /// password" panel): a code emailed to the account confirms it, then the

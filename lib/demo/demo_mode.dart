@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/models/identity_info.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Offline demo (`--dart-define=DEMO_MODE=true`, never in release). Everything
 /// in `lib/demo/` is removed before release (see CLAUDE.md). It builds on the

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Four corner brackets around the scanning square, plus the sweeping line
 /// while the camera is live. The brackets turn green once a code is accepted.

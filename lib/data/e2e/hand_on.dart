@@ -6,7 +6,7 @@ import 'package:webcrypto/webcrypto.dart';
 
 import 'e2e_crypto.dart';
 import 'e2e_models.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// The numbers of the older-device hand-on, from the backend docs
 /// (`E2E_NEW_DEVICE_AND_HISTORY.md` 3.2). Budgets are kept below the server's

@@ -6,12 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
-import '../log/app_log.dart';
-import '../log/safe.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../routes/app_routes.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
 import 'tour_demo.dart';
 import 'tour_id.dart';
 import 'tour_runner.dart';

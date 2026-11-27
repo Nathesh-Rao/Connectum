@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_detail_row.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../data/models/task.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../models/task_due_label.dart';
 import '../tasks_controller.dart';
 import '../tasks_texts.dart';

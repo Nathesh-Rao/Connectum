@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/selection/selection_rules.dart';
-import '../../../core/widgets/message_selection/delete_confirm_sheet.dart';
-import '../../../core/widgets/message_selection/selection_app_bar.dart';
-import '../../../core/widgets/message_selection/selection_reaction_bar.dart';
-import '../../../data/models/message.dart';
-import '../../../data/models/reaction.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../conversation_controller.dart';
 import '../conversation_tour_demo.dart';
 import 'emoji_picker_sheet.dart';

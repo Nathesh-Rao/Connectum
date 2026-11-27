@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../theme/app_spacing.dart';
-import '../../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../app_bottom_sheet.dart';
 import '../app_button.dart';
 

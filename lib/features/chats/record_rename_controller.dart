@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notices.dart';
-import '../../data/models/thread_names.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// The rename of one record conversation. Made by the Chats controller for one
 /// sheet. [onRename] shows the title at once, sends it and throws the server's

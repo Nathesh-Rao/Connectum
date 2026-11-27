@@ -1,14 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../core/tour/tour_service.dart';
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/repositories/sv_file_repository.dart';
-import '../../data/repositories/sv_saved_views_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/smart_view/sv_prefs.dart';
 import '../tickets/ticket_detail_controller.dart';
 import 'smart_view_controller.dart';

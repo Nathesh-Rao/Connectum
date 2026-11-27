@@ -84,7 +84,10 @@ class FormCardData {
 
   /// The web's Delete: mine, sent, and not waiting for approval or approved
   /// (a declined one may always be deleted).
-  bool canDelete(String me) =>
+  /// When the form (if known) switched off the author's Delete
+  /// (`creatorCanDelete: false`) only its owner keeps it.
+  bool canDelete(String me, {FormDefinition? form}) =>
+      (form?.mayDeleteOwn(me) ?? true) &&
       by.toLowerCase() == me.toLowerCase() &&
       !isForwarded &&
       !isPending &&

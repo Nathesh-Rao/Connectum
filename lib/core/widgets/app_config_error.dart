@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
-import '../theme/app_theme.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 class AppConfigError extends StatelessWidget {
   const AppConfigError({super.key, required this.message});

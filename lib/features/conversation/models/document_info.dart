@@ -1,5 +1,5 @@
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/attachment_tag.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
 import 'file_download.dart';
 
 /// The family a document belongs to; picks the tile label and tint.

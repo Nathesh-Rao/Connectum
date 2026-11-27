@@ -26,8 +26,20 @@ class ApiException implements Exception {
   }
 
   /// Seconds from the `Retry-After` header of a rate-limited answer.
-  int? get retryAfterSeconds =>
-      details is Map ? (details as Map)['retryAfter'] as int? : null;
+  int? get retryAfterSeconds {
+    final d = details;
+    if (d is! Map) return null;
+    final raw = d['retryAfter'];
+    final n = raw is num ? raw.ceil() : int.tryParse('$raw');
+    return n != null && n > 0 ? n : null;
+  }
+
+  /// The field a `400 invalid` names in `error.details.field` (`org`, `name`).
+  String? get fieldName {
+    final d = details;
+    final name = d is Map ? d['field'] : null;
+    return name is String && name.isNotEmpty ? name : null;
+  }
 
   bool get isUnauthorized => status == 401 || code == 'unauthenticated';
 
@@ -183,13 +195,17 @@ class ApiClient {
       e.response?.headers.value('retry-after') ?? '',
     );
     if (data is Map && data['ok'] == false) {
+      final body = data['error'];
+      final inBody = body is Map ? body['retryAfter'] : null;
+      final given = body is Map ? body['details'] : null;
+      final wait = inBody ?? retryAfter;
       final error = ApiException(
-        '${(data['error'] as Map?)?['code'] ?? 'error'}',
-        '${(data['error'] as Map?)?['message'] ?? ''}',
+        '${body is Map ? body['code'] ?? 'error' : 'error'}',
+        '${body is Map ? body['message'] ?? '' : ''}',
         status: status,
-        details:
-            (data['error'] as Map?)?['details'] ??
-            (retryAfter == null ? null : {'retryAfter': retryAfter}),
+        details: wait == null
+            ? given
+            : {if (given is Map) ...given, 'retryAfter': wait},
       );
       if (isSessionCall &&
           error.isUnauthorized &&

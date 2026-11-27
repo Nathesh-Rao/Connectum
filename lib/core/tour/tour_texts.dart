@@ -225,6 +225,9 @@ class TourTexts {
   static const prIdentityTitle = 'Your profile';
   static const prIdentityBody =
       'Your name, username and enterprise are here. Tap your picture to take a photo or choose one from your gallery.';
+  static const prStatusTitle = 'Your status';
+  static const prStatusBody =
+      'Tap your presence or status line to say whether you are available, busy or away, and add a short message.';
   static const prSecurityTitle = 'Security';
   static const prSecurityBody =
       'See the devices that can read your encrypted messages, and remove one you no longer use.';

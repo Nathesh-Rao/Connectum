@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/chat_time.dart';
-import '../../../core/widgets/app_progress_bar.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../data/models/record_live.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../tickets_texts.dart';
 
 /// Where a record stands, under its card's fields (the web's `RecordStatus`):

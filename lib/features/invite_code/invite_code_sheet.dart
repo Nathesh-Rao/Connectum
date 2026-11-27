@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_bottom_sheet.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'invite_code_binding.dart';
 import 'invite_code_controller.dart';
 import 'invite_code_view.dart';

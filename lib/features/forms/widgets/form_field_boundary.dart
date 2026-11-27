@@ -1,9 +1,7 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Keeps one broken field from taking the form down. After a field is built,
 /// a subtree that ended in an error widget is swapped for a quiet row; the

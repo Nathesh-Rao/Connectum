@@ -1,3 +1,5 @@
+import 'package:connectum/core/utils/utils.dart';
+
 /// Client checks that mirror the backend: `sd_util:valid_email`,
 /// `valid_mobile` (`^\+?[0-9]{7,15}$`) and `valid_username`
 /// (`^[a-z0-9][a-z0-9._-]{1,23}$`, the rule the join step applies to the
@@ -5,7 +7,6 @@
 class AuthValidators {
   AuthValidators._();
 
-  static final _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
   static final _username = RegExp(r'^[a-z0-9][a-z0-9._-]{1,23}$');
   static final _mobile = RegExp(r'^\+[0-9]{7,15}$');
   static final _mobileChars = RegExp(r'^[0-9+\s().-]+$');
@@ -16,20 +17,22 @@ class AuthValidators {
 
   static String normaliseUsername(String value) => value.trim().toLowerCase();
 
-  static String? email(String value) {
-    final text = value.trim();
-    if (text.isEmpty) return 'Enter your email address.';
-    if (text.length > 254 || !_email.hasMatch(text)) {
-      return 'Enter a valid email address.';
-    }
-    return null;
-  }
+  static String? email(String value) => EmailRule.problem(value);
+
+  static final _blanks = RegExp(
+    '^[\\s\u200B-\u200F\u2028-\u202F\u2060-\u2064\uFEFF]+|'
+    '[\\s\u200B-\u200F\u2028-\u202F\u2060-\u2064\uFEFF]+\$',
+  );
+
+  /// Trims the blanks the server trims (spaces, no-break and zero-width
+  /// characters), so a name of only such characters counts as empty.
+  static String clean(String value) => value.replaceAll(_blanks, '');
 
   static String? enterpriseName(String value) =>
-      value.trim().isEmpty ? 'Enter the enterprise name.' : null;
+      clean(value).isEmpty ? 'Enter the enterprise name.' : null;
 
   static String? personName(String value) =>
-      value.trim().isEmpty ? 'Enter your name.' : null;
+      clean(value).isEmpty ? 'Enter your name.' : null;
 
   static String? username(String value) {
     final text = normaliseUsername(value);

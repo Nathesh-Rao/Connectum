@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'tour_action.dart';
 import 'tour_gesture.dart';
 

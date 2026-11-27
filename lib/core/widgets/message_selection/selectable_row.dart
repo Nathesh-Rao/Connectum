@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../selection/message_selection.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_motion.dart';
-import '../../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'swipe_to_reply.dart';
 
 /// Wraps one message row of a thread: a tinted band across the full width

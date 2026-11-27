@@ -1,9 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/group_repository.dart';
-import '../../data/repositories/task_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../tickets/tickets_controller.dart';
 import 'tasks_controller.dart';
 

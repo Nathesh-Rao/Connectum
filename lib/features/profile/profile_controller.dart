@@ -10,27 +10,22 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_trigger.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/avatar_image.dart';
-import '../../core/utils/app_settings.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/password/password.dart';
+import 'package:connectum/features/qr/qr.dart';
+import 'package:connectum/features/settings/settings.dart';
 import '../../data/profile_photo/profile_photo_picker.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../data/repositories/profile_photo_repository.dart';
-import '../../data/repositories/qr_repository.dart';
-import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../chats/enterprise_switcher_controller.dart';
-import '../password/password_sheet.dart';
-import '../settings/logs_controller.dart';
-import '../qr/qr_sheet.dart';
 import 'profile_tour.dart';
-import '../../core/log/app_log.dart';
+import '../../data/profile/personal_details.dart';
+import '../../data/profile/presence.dart';
 
 class ProfileController extends GetxController {
   ProfileController({
@@ -45,6 +40,8 @@ class ProfileController extends GetxController {
     this.logs,
     this.tour,
     this.profileTour,
+    this.profiles,
+    this.repository,
   });
 
   final SessionStore store;
@@ -55,6 +52,15 @@ class ProfileController extends GetxController {
   final PeopleAvatars avatars;
   final ProfilePhotoRepository photos;
   final ProfilePhotoPicker picker;
+
+  /// People's status and chosen presence; null where it is not set up.
+  final PeopleProfiles? profiles;
+
+  /// The own profile record (roles, designation); null where it is not set up.
+  final ProfileRepository? repository;
+
+  /// `profile.get`, once it has answered: the header's roles and designation.
+  final record = Rxn<ProfileRecord>();
 
   /// The first-run tours; null where they are not set up.
   final TourService? tour;
@@ -83,7 +89,33 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     AppSettings.version().then((v) => version.value = v);
+    fireAndLog('profile_controller', _loadRecord);
   }
+
+  Future<void> _loadRecord() async {
+    final repo = repository;
+    if (repo == null || SeedUi.isActive || !repo.isOnline) return;
+    try {
+      final loaded = await repo.loadRecord();
+      if (!isClosed) record.value = loaded;
+    } on SocketCallError catch (e, st) {
+      AppLog.e('profile_controller', e, st, 'profile.get');
+    }
+  }
+
+  /// What the own profile shows. Reads an Rx value: call it in Obx.
+  Presence get presence => profiles?.presenceOf(username) ?? Presence.available;
+
+  /// The own status message, or null. Reads an Rx value.
+  String? get status => profiles?.statusOf(username);
+
+  String get designation => record.value?.designation ?? '';
+
+  List<String> get roles => record.value?.roles ?? const [];
+
+  void openStatus() => Get.toNamed(AppRoutes.profileStatus);
+
+  void openDetails() => Get.toNamed(AppRoutes.profileDetails);
 
   String get name {
     if (SeedUi.isActive) return SeedUi.profile().name;

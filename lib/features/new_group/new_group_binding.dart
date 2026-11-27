@@ -1,9 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/group_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'new_group_controller.dart';
 
 /// Opened with no arguments to create a group, or with a group's name as the

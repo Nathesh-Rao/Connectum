@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../crop_math.dart';
 import '../photo_renderer.dart';
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The AI icon of the chat header: a soft accent circle behind a 24 dp
 /// Material icon, 48 dp to tap.

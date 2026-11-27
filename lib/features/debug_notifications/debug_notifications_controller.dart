@@ -1,10 +1,9 @@
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_pill_bar.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/notifications/notifications.dart';
 import '../../data/notifications/local_notification_service.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../notifications/models/feed_item.dart';
 
 /// Injects sample `feed_item` / `feed_removed` / `feed_changed` events into
 /// the feed, as if the server had sent them, and fires local notifications.

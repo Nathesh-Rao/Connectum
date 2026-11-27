@@ -4,7 +4,7 @@ import 'package:flutter/painting.dart';
 import 'package:palette_generator/palette_generator.dart';
 
 import '../log/app_log.dart';
-import '../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../widgets/avatar_image.dart';
 
 /// The ring colour of a person's picture on an Inbox card: the hue of the

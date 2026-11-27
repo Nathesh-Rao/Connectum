@@ -5,19 +5,17 @@ import 'package:get/get.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
 import '../../data/notifications/push/push_payload.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../data/repositories/task_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/socket/socket_service.dart';
-import '../tasks/tasks_controller.dart';
-import '../../data/models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/tasks/tasks.dart';
 import '../../data/session_store.dart';
 import 'feed_actions.dart';
 import 'models/feed_item.dart';
 import 'widgets/feed_detail_sheet.dart';
 import '../home_shell/home_tab.dart';
-import '../../core/log/safe.dart';
 
 enum DestinationKind {
   chat,

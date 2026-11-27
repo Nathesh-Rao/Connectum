@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_button.dart';
 import 'app_loading.dart';
 import 'app_state_image.dart';

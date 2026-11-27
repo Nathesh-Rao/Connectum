@@ -1,4 +1,4 @@
-import '../models/hash_command.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// A message box line read as a `#` command: `#name arg arg rest of the line`.
 /// The server is the judge; this only reads the line the way it does and

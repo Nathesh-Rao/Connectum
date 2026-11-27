@@ -4,10 +4,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/log_file_sink.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../settings/logs_controller.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/settings/settings.dart';
 import 'log_viewer_prefs.dart';
 import 'models/log_document.dart';
 

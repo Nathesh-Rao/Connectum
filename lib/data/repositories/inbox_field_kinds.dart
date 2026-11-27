@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../smart_view/models/sv_source.dart';
-import '../socket/socket_service.dart';
 import 'smart_view_repository.dart';
 
 /// One field a condition can filter by: its name, its caption from the form

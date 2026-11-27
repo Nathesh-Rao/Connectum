@@ -1,4 +1,4 @@
-import '../socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'ai_error_text.dart';
 import 'ai_models.dart';
 

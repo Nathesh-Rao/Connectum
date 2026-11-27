@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../core/tour/tour_texts.dart';
-import '../../data/repositories/smart_view_repository.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/smart_view/models/sv_row.dart';
 import '../../data/smart_view/models/sv_source.dart';
 import '../../data/smart_view/sv_prefs.dart';

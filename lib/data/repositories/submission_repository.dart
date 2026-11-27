@@ -8,22 +8,15 @@ import '../../core/debug/records_log.dart';
 import '../../core/debug/seed_messages.dart';
 import '../../core/debug/seed_tickets.dart';
 import '../../core/debug/seed_ui.dart';
-import '../db/app_database.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../records/paged_read.dart';
 import '../records/record_commands.dart';
-import '../models/form_card.dart';
-import '../models/form_entry.dart';
-import '../models/form_definition.dart';
-import '../models/form_submission.dart';
-import '../models/ids.dart';
-import '../models/message.dart';
-import '../models/outbox_entry.dart';
 import '../session_store.dart';
 import 'form_options_repository.dart';
 import 'message_repository.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// A submission the server accepted: [isPending] when it waits for approval.
 class SavedRecord {
@@ -449,7 +442,11 @@ class SubmissionRepository extends GetxService {
       return switch (e.code) {
         'submission_locked' =>
           "It can't be deleted while it waits for approval or after it was approved.",
-        'forbidden' => 'Only the person who submitted it can delete it.',
+        'forbidden' =>
+          definitions[submissionById(id)?.tstruct ?? '']?.creatorCanDelete ==
+                  false
+              ? cannotDeleteOwn
+              : 'Only the person who submitted it can delete it.',
         'rate_limited' => 'Too many requests. Try again in a moment.',
         _ => e.isConnectionGap ? 'Needs a connection' : deleteFailed,
       };
@@ -458,6 +455,9 @@ class SubmissionRepository extends GetxService {
     fireAndLog('submission_repository', () => syncFromServer());
     return null;
   }
+
+  static const cannotDeleteOwn =
+      "Records of this form can't be deleted by the person who created them.";
 
   static const deleteFailed = "Couldn't delete it. Try again.";
 

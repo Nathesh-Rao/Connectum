@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
 import 'models/inbox_live_rule.dart';
 
 /// Where the Inbox is, for the live re-read.

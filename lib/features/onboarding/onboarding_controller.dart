@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/invite_service.dart';
-import '../../core/theme/app_motion.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/features/invite_code/invite_code.dart';
+import 'package:connectum/features/splash/splash.dart';
 import '../../data/session_store.dart';
-import '../invite_code/invite_code_sheet.dart';
-import '../splash/splash_controller.dart';
-import '../../core/log/safe.dart';
 
 class OnboardingSlide {
   const OnboardingSlide(this.title, this.copy, this.animation);

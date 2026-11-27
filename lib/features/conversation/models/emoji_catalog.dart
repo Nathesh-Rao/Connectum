@@ -1,4 +1,4 @@
-import '../../../data/models/reaction.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// One emoji the "+" picker offers, with the words the search matches.
 class EmojiEntry {

@@ -9,7 +9,7 @@ import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_random.dart';
 import '../../data/e2e/hand_on.dart';
 import '../../data/e2e/hand_on_job.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// The self-test of the older-device hand-on. No server, no storage: the
 /// backend's `rewrap` vectors (`assets/debug/e2e-rewrap-vectors.json`, the

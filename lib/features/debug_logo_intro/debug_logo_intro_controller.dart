@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/logo_intro/logo_intro.dart';
-import '../../core/widgets/logo_loader/logo_loader.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 class DebugLogoIntroController extends GetxController {
   static const speeds = [0.25, 0.5, 1.0];

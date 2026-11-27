@@ -1,5 +1,4 @@
-import '../../../data/models/chat_thread.dart';
-import '../../../data/models/conversation.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The chips of the Chats list, in the order of the web.
 enum ChatFilterKind { all, direct, threads }

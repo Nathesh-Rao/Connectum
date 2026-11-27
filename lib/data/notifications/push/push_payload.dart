@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import '../../models/ids.dart';
-import '../../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The small, text-free hint a push or a local notification carries:
 /// enough to route the tap, never the message. Values arrive as strings from

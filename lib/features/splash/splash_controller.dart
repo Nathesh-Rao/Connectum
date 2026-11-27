@@ -5,11 +5,10 @@ import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
-import '../../core/widgets/logo_intro/logo_intro.dart';
-import '../../core/widgets/logo_loader/logo_loader.dart';
-import '../../data/repositories/session_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/session_store.dart';
-import '../../core/log/app_log.dart';
 
 // TUNE ME: splash logo intro.
 /// True plays the LogoIntro once and holds its final frame; false is the

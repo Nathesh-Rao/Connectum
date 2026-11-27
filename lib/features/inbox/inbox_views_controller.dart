@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../data/repositories/inbox_views_repository.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'models/inbox_saved_view.dart';
 
 /// What the person answers to "Save your changes?".

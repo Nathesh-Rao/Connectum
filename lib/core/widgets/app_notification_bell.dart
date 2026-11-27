@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The notification control: a white 30 dp bell circle, which grows into a
 /// 36 dp accent tinted pill with the unread count at its right while the count is above

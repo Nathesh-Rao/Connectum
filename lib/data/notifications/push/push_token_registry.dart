@@ -1,12 +1,11 @@
 import 'dart:async';
-import '../../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 import 'dart:io';
 
 import 'package:get/get.dart';
 
 import '../../session_store.dart';
 import 'push_service.dart';
-import '../../../core/log/safe.dart';
 
 /// Keeps the current push token and what goes with it, in secure storage,
 /// for the day the server can take it. Nothing is sent: the server has no

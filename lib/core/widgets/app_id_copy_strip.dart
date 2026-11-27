@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// "Connectum ID  XXXX-XXXX" with a copy action at the right. While
 /// [isCopied] is true the copy icon turns into a green check and a "Copied"

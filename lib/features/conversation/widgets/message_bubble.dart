@@ -1,19 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/attachment_tag.dart';
-import '../../../core/utils/chat_time.dart';
-import '../../../core/utils/forwarded_text.dart';
-import '../../../core/utils/mention_text.dart';
-import '../../../core/widgets/app_mention_text.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../../../data/e2e/e2e_texts.dart';
-import '../../../data/models/message.dart';
-import '../../../data/models/reaction.dart';
-import '../../../data/models/self_conversation.dart';
 import '../models/chat_item.dart';
 import 'reaction_chips.dart';
 import 'message_status_mark.dart';

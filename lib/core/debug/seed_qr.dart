@@ -1,4 +1,4 @@
-import '../../data/repositories/qr_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 /// Debug-only sample data for /debug/qr: no server. Each scenario is a
 /// `connect.my` answer, so the real parser runs on it. Remove before release

@@ -1,20 +1,12 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/approval_repository.dart';
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/inbox_field_kinds.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/repositories/inbox_views_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/sv_file_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
-import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
-import '../tickets/ticket_detail_controller.dart';
 import 'inbox_approvals_controller.dart';
-import '../../core/tour/tour_service.dart';
 import 'inbox_controller.dart';
 import 'inbox_tour.dart';
 import 'inbox_views_controller.dart';

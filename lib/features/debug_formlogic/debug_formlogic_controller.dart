@@ -4,7 +4,7 @@ import '../../data/form_logic/form_logic_assets.dart';
 import '../../data/form_logic/form_logic_runner.dart';
 import '../../data/form_logic/sample_forms.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 class DebugFormLogicController extends GetxController {
   DebugFormLogicController({

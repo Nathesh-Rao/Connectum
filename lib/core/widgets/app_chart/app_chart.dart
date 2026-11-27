@@ -2,12 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../theme/app_chart_colors.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_motion.dart';
-import '../../theme/app_radius.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_chart_data.dart';
 
 /// A chart drawn with `CustomPainter` (no chart package): bars (horizontal),

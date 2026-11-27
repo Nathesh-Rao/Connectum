@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/submission_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/session_store.dart';
 import 'submission_detail_controller.dart';
 

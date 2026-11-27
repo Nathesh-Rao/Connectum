@@ -419,6 +419,56 @@ void main() {
       expect(repo.pinReads, 1);
     });
 
+    test('pins_changed with deleted:true drops the pin, no read', () async {
+      await addNote(7);
+      await addNote(8);
+      await repo.togglePin('7');
+      await repo.togglePin('8');
+      await repo.toggleSave('7');
+      await fire();
+      await fire();
+      socket.calls.clear();
+      final reads = repo.pinReads;
+      await emit({
+        'type': 'sd_event',
+        'event': 'pins_changed',
+        'data': {
+          'conv': 'self',
+          'id': 7,
+          'pinned': false,
+          'by': 'Ann',
+          'deleted': true,
+        },
+      });
+      await fire();
+      expect(repo.pinned.map((m) => m.msgId), ['8']);
+      expect(repo.marks.containsKey('7'), isFalse);
+      expect(socket.calls, isEmpty);
+      expect(repo.pinReads, reads);
+      final again = build();
+      await again.load();
+      expect(again.pinned.map((m) => m.msgId), ['8']);
+    });
+
+    test(
+      'pins_changed deleted for another conversation changes nothing',
+      () async {
+        await addNote(7);
+        await repo.togglePin('7');
+        await fire();
+        await fire();
+        socket.calls.clear();
+        await emit({
+          'type': 'sd_event',
+          'event': 'pins_changed',
+          'data': {'conv': 'dm:bob', 'id': 7, 'pinned': false, 'deleted': true},
+        });
+        await fire();
+        expect(repo.pinned.map((m) => m.msgId), ['7']);
+        expect(socket.calls, isEmpty);
+      },
+    );
+
     test('pins_changed of another conversation is not read', () async {
       await emit({
         'type': 'sd_event',

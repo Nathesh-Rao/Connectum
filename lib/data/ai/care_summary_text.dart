@@ -1,4 +1,4 @@
-import '../repositories/conversation_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 
 /// A port of the web's `careSummary.js` (`toPlainText`): the `care.summary`
 /// answer as the plain text the web copies, and the thread's person.

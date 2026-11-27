@@ -1,11 +1,9 @@
 import 'package:get/get.dart';
 
 import '../../data/form_logic/form_logic_service.dart';
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/form_options_repository.dart';
-import '../../data/repositories/submission_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'form_controller.dart';
 import 'models/form_launch.dart';
 

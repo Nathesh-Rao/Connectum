@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../sv_file_preview_controller.dart';
 
 /// A picture the first bytes confirmed: pinch to zoom, double-tap toggles.

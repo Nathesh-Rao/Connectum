@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/log/safe.dart';
-import '../../core/theme/app_tones.dart';
-import '../../core/tour/tour_gesture.dart';
-import '../../core/tour/tour_id.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_step.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../core/tour/tour_trigger.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
 
 /// The `#` shortcuts tour of one composer: it starts once the person has
 /// typed `#`, paused for a moment and the list of commands is still showing.

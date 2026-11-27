@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_highlight_text.dart';
-import '../../../core/widgets/app_state_image.dart';
-import '../../../core/widgets/app_success_animation.dart';
-import '../../../data/models/identity_info.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../connect_controller.dart';
-import '../../../core/widgets/app_loading.dart';
 
 class ResolvingPane extends StatelessWidget {
   const ResolvingPane({super.key});

@@ -30,10 +30,7 @@ class AppDurations {
   static const tourSwipe = Duration(milliseconds: 520);
   static const tourFade = Duration(milliseconds: 160);
   static const searchToggle = Duration(milliseconds: 300);
-  static const popupMenu = Duration(milliseconds: 380);
-  static const popupItem = Duration(milliseconds: 170);
-  static const popupStagger = Duration(milliseconds: 60);
-  static const popupMerge = Duration(milliseconds: 100);
+  static const calloutMenu = Duration(milliseconds: 640);
 }
 
 class AppCurves {

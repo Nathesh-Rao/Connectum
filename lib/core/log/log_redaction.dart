@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../../data/records/record_commands.dart';
+
 /// Turns an API request or response into a safe log string. Every list below
 /// is meant to be edited: add a new secret-like key or a new sensitive action
 /// here, nowhere else.
@@ -76,8 +78,8 @@ class LogRedaction {
     'conv.edit',
     'message.send',
     'message.edit',
-    'record.send',
-    'record.thread',
+    RecordCmd.send,
+    RecordCmd.thread,
     'care.thread',
     'task.send',
     'req.respond',
@@ -92,6 +94,9 @@ class LogRedaction {
     'connect.claim',
     'connect_claim',
     'connect.my',
+    'connect.rotate',
+    'profile.get',
+    'profile.update',
   };
 
   /// Socket action prefixes (E2E keys, recovery, device keys) and REST path

@@ -1,8 +1,8 @@
-import '../../core/utils/mention_text.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/e2e/e2e_crypto.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_texts.dart';
-import '../../data/repositories/e2e_repository.dart';
 
 /// The self-test of the read side: key pins on read, the placeholder for each
 /// failure code, and @tags in decrypted text. No server and no storage: the

@@ -1,20 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_chart_colors.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/theme/app_tones.dart';
-import '../../core/utils/avatar_palette.dart';
-import '../../core/widgets/app_action_bar.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_pill_bar.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_status_pill.dart';
-import '../../core/widgets/app_unread_badge.dart';
-import '../tickets/models/ticket_action_style.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import 'button_samples.dart';
 import 'debug_palette_controller.dart';
 

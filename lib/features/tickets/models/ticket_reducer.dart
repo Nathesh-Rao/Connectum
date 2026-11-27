@@ -1,4 +1,4 @@
-import '../../../data/models/ticket.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Keeps the Tickets lists right when a page, an event or an answer arrives.
 /// Pure.

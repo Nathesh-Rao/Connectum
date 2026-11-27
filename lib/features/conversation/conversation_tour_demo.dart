@@ -2,8 +2,8 @@ import 'package:get/get.dart';
 
 import '../../core/selection/message_selection.dart';
 import '../../core/selection/selection_rules.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../data/models/message.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/models/models.dart';
 import 'conversation_tour.dart';
 import 'models/chat_item.dart';
 import 'models/forward.dart';

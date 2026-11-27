@@ -3,28 +3,20 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_trigger.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/approval.dart';
-import '../../data/models/record_live.dart';
 import '../../data/records/record_commands.dart';
-import '../../data/repositories/inbox_field_kinds.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/repositories/sv_file_repository.dart';
 import '../../data/smart_view/sv_file.dart';
-import '../smart_view/sv_file_preview_controller.dart';
-import '../../data/repositories/ticket_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
 import '../home_shell/home_shell_controller.dart';
 import '../home_shell/home_tab.dart';
-import '../tickets/ticket_detail_controller.dart';
 import 'inbox_approvals_controller.dart';
 import 'inbox_filter_controller.dart';
 import 'inbox_live.dart';
@@ -1220,7 +1212,7 @@ class InboxController extends GetxController {
     );
   }
 
-  void open(InboxRow r) => Get.toNamed<dynamic>(AppRoutes.ticketOf(r.id));
+  void open(InboxRow r) => Get.toNamed(AppRoutes.ticketOf(r.id));
 
   /// The menu was opened: `record.actions`, read once (cached 60 s).
   void openMenu(InboxRow r) {

@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
 import 'inbox_approvals_controller.dart';
 import 'inbox_filter_controller.dart';
 import 'models/approval_entries.dart';

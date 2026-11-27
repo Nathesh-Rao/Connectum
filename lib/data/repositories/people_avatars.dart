@@ -1,12 +1,11 @@
 import 'package:get/get.dart';
 
-import '../db/app_database.dart';
-import '../models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// People's picture addresses, by lower-case username. The server pushes a
 /// `profile` event (`{user, avatar|null}`) when anyone changes their picture,

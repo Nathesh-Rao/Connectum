@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Whether the new chat button shows. One flag, written only when it changes:
 /// scrolling down by [AppSpacing.fabScrollThreshold] hides it, scrolling up by

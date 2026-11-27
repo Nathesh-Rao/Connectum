@@ -3,9 +3,8 @@ import 'package:get/get.dart';
 
 import '../../data/e2e/e2e_texts.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notice_card.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/hand_on_repository.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'hand_on_sheet.dart';
 
 /// Shows the hand-on to the person: a light notice card while a device waits

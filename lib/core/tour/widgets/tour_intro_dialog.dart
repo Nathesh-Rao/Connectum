@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../log/safe.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_motion.dart';
-import '../../theme/app_radius.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_text.dart';
-import '../../theme/app_tones.dart';
-import '../../widgets/app_button.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../tour_gesture.dart';
 import '../tour_texts.dart';
 import 'tour_gesture_hint.dart';

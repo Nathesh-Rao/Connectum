@@ -78,6 +78,7 @@ flutter:
     - assets/icons/home/
     - assets/icons/bottom_nav/
     - assets/icons/chat/
+    - assets/icons/agile/agile_logo.png
     - assets/lottie/
     - mobile-handoff/e2e-vectors.json
     - assets/debug/e2e-attachment-vectors.json

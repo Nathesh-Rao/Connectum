@@ -1,4 +1,4 @@
-import '../../../data/models/ticket.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// What a record is, for the title and the actions of its detail screen. A
 /// request (`req.*`) and a task are not records: they never open here.

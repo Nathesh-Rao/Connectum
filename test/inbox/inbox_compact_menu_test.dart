@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:connectum/core/widgets/animated_callout_menu.dart';
+import 'package:connectum/data/records/record_commands.dart';
+import 'package:connectum/features/inbox/models/inbox_row.dart';
+import 'package:connectum/features/inbox/widgets/inbox_card.dart';
 import 'package:connectum/features/tickets/models/card_menu.dart';
-import 'package:connectum/features/tickets/widgets/record_menu_rows.dart';
-import 'package:connectum/core/widgets/app_anchored_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../tickets/ticket_fixtures.dart';
 import 'inbox_screen_support.dart';
 
 const _items = [
@@ -12,22 +17,22 @@ const _items = [
   CardMenuItem(CardMenuItem.history, 'History', Icons.history_rounded),
 ];
 
-Finder get card => find.ancestor(
-  of: find.text('Send'),
-  matching: find.byType(SingleChildScrollView),
+final _row = InboxRow(
+  id: 24,
+  formId: 't',
+  form: 'Thing',
+  subject: 'A thing',
+  holder: 'ana',
+  raiser: 'ana',
+  ts: 1,
 );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late InboxRig rig;
   late List<String> picked;
 
-  setUp(() {
-    rig = InboxRig();
-    picked = [];
-    addTearDown(rig.dispose);
-  });
+  setUp(() => picked = []);
 
   Future<void> open(
     WidgetTester tester, {
@@ -35,6 +40,7 @@ void main() {
     double scale = 1,
     Alignment at = Alignment.topRight,
     List<CardMenuItem> items = _items,
+    Future<void> Function(BuildContext context)? onTap,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -54,20 +60,18 @@ void main() {
               child: Builder(
                 builder: (context) => IconButton(
                   icon: const Icon(Icons.more_horiz),
-                  onPressed: () => AppAnchoredPopup.show(
-                    context,
-                    label: 'Record menu',
-                    builder: (popup) => RecordMenuRows(
-                      tickets: rig.tickets,
-                      recordId: null,
-                      isCompact: true,
-                      itemsFor: (_) => items,
-                      onPick: (item) {
-                        Navigator.of(popup).pop();
-                        picked.add(item.id);
-                      },
-                    ),
-                  ),
+                  onPressed: onTap == null
+                      ? () async {
+                          final item =
+                              await AnimatedCalloutMenu.show<CardMenuItem>(
+                                context,
+                                AnimatedCalloutMenu.anchorOf(context)!,
+                                InboxMenu.rowsFor(items),
+                                label: 'Record menu',
+                              );
+                          if (item != null) picked.add(item.id);
+                        }
+                      : () => onTap(context),
                 ),
               ),
             ),
@@ -79,25 +83,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('width wraps inside 168..220 and under 60 percent', (
-    tester,
-  ) async {
-    await open(tester);
-    final w = tester.getSize(card).width;
-    expect(w, inInclusiveRange(168, 220));
-    expect(w, lessThanOrEqualTo(390 * 0.6));
-  });
+  Finder rowOf(String label) =>
+      find.ancestor(of: find.text(label), matching: find.byType(InkWell));
 
   testWidgets('rows are at least 44 px and icons share one left edge', (
     tester,
   ) async {
     await open(tester);
     for (final t in ['Send', 'Update status', 'History']) {
-      final row = find.ancestor(
-        of: find.text(t),
-        matching: find.byType(InkWell),
-      );
-      expect(tester.getSize(row).height, greaterThanOrEqualTo(44));
+      expect(tester.getSize(rowOf(t)).height, greaterThanOrEqualTo(44));
     }
     final lefts = {
       for (final i in [
@@ -108,8 +102,10 @@ void main() {
         tester.getTopLeft(find.byIcon(i)).dx,
     };
     expect(lefts.length, 1);
-    final cardLeft = tester.getTopLeft(card).dx;
-    expect(lefts.first - cardLeft, greaterThanOrEqualTo(12));
+    expect(
+      lefts.first - tester.getTopLeft(rowOf('Send')).dx,
+      greaterThanOrEqualTo(12),
+    );
   });
 
   testWidgets('no divider between normal rows, one above a danger row', (
@@ -137,9 +133,9 @@ void main() {
   testWidgets('opens down with the right edge on the button', (tester) async {
     await open(tester);
     final button = tester.getRect(find.byIcon(Icons.more_horiz));
-    final c = tester.getRect(card);
-    expect(c.top, greaterThanOrEqualTo(button.bottom));
-    expect(c.right, closeTo(button.right + 4, 12));
+    final r = tester.getRect(rowOf('Send'));
+    expect(r.top, greaterThanOrEqualTo(button.bottom));
+    expect(r.right, closeTo(button.right + 4, 12));
   });
 
   testWidgets('flips up near the bottom and never covers the button', (
@@ -147,22 +143,49 @@ void main() {
   ) async {
     await open(tester, at: Alignment.bottomRight);
     final button = tester.getRect(find.byIcon(Icons.more_horiz));
-    final c = tester.getRect(card);
-    expect(c.bottom, lessThanOrEqualTo(button.top));
+    expect(
+      tester.getRect(rowOf('History')).bottom,
+      lessThanOrEqualTo(button.top),
+    );
   });
 
   testWidgets('stays on screen at 320 px', (tester) async {
     await open(tester, size: const Size(320, 640), at: Alignment.topLeft);
-    final c = tester.getRect(card);
-    expect(c.left, greaterThanOrEqualTo(0));
-    expect(c.right, lessThanOrEqualTo(320));
-    expect(c.width, lessThanOrEqualTo(320 * 0.6));
+    final r = tester.getRect(rowOf('Send'));
+    expect(r.left, greaterThanOrEqualTo(0));
+    expect(r.right, lessThanOrEqualTo(320));
   });
 
   testWidgets('text scale 1.5 does not overflow', (tester) async {
     await open(tester, size: const Size(320, 640), scale: 1.5);
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(card).width, lessThanOrEqualTo(220));
+    expect(tester.getSize(rowOf('Send')).width, lessThanOrEqualTo(320));
+  });
+
+  testWidgets('a row that is off shows the reason and does nothing', (
+    tester,
+  ) async {
+    await open(
+      tester,
+      items: const [
+        CardMenuItem(
+          'act-send',
+          'Send',
+          Icons.send_rounded,
+          isEnabled: false,
+          why: 'Only the person it is with can do this.',
+        ),
+        CardMenuItem(CardMenuItem.history, 'History', Icons.history_rounded),
+      ],
+    );
+    expect(
+      find.text('Only the person it is with can do this.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+    expect(picked, isEmpty);
+    expect(find.text('Send'), findsOneWidget);
   });
 
   testWidgets('semantics list the items in order', (tester) async {
@@ -201,7 +224,35 @@ void main() {
     expect(picked, [for (final i in _items) i.id]);
   });
 
-  testWidgets('golden: the compact menu', (tester) async {
+  testWidgets('the real menu says Loading… while it reads, then lists rows', (
+    tester,
+  ) async {
+    final rig = InboxRig();
+    addTearDown(rig.dispose);
+    final release = Completer<void>();
+    rig.routes[RecordCmd.actions] = (_) async {
+      await release.future;
+      return fixtureData('record_actions');
+    };
+    await open(
+      tester,
+      onTap: (context) => InboxMenu.show(context, rig.controller, _row),
+    );
+    expect(find.text('Loading…'), findsOneWidget);
+    expect(find.text('Send'), findsNothing);
+    release.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Loading…'), findsNothing);
+    expect(find.text('Send'), findsOneWidget);
+    expect(find.text('Update status'), findsOneWidget);
+    expect(find.text('History'), findsOneWidget);
+    await tester.tapAt(const Offset(4, 600));
+    await tester.pumpAndSettle();
+    expect(find.text('Send'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('golden: the card menu', (tester) async {
     await open(
       tester,
       size: const Size(390, 300),

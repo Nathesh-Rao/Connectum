@@ -5,11 +5,11 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/e2e/e2e_texts.dart';
-import '../../data/repositories/e2e_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'device_limit_controller.dart';
-import '../../core/log/safe.dart';
 
 /// The Security screen and the setup sheets share this controller: it lives
 /// with the home shell (see HomeShellBinding) and is reused by `/security`.

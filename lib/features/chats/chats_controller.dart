@@ -6,22 +6,15 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_trigger.dart';
-import '../../core/utils/attachment_tag.dart';
-import '../../core/widgets/app_avatar.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/db/app_database.dart';
-import '../../data/models/conversation.dart';
-import '../../data/models/ids.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../data/repositories/presence_repository.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import '../../data/profile/presence.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
-import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
 import '../home_shell/home_tab.dart';
 import 'chats_tour.dart';
@@ -46,6 +39,7 @@ class ChatsController extends GetxController {
     required this.newChat,
     required this.avatars,
     this.tour,
+    this.profiles,
   });
 
   static const _searchDelay = Duration(milliseconds: 250);
@@ -53,6 +47,9 @@ class ChatsController extends GetxController {
   final ConversationRepository conversations;
   final MessageRepository messages;
   final PresenceRepository presence;
+
+  /// People's chosen presence; null where it is not set up.
+  final PeopleProfiles? profiles;
   final FeedRepository feed;
   final SessionStore store;
   final ConnectivityService connectivity;
@@ -340,16 +337,22 @@ class ChatsController extends GetxController {
     if (SeedUi.isActive) {
       return SeedUi.online.contains(peer)
           ? AppPresenceDot.online
-          : SeedUi.offline.contains(peer)
-          ? AppPresenceDot.offline
           : AppPresenceDot.none;
     }
     if (!isKnown) return AppPresenceDot.none;
     return switch (presence.dotFor(peer)) {
       PresenceDot.online => AppPresenceDot.online,
-      PresenceDot.offline => AppPresenceDot.offline,
-      PresenceDot.none => AppPresenceDot.none,
+      PresenceDot.offline || PresenceDot.none => AppPresenceDot.none,
     };
+  }
+
+  /// What the person in a direct chat shows (their dot and ring colour); null
+  /// unless they are online. Reads Rx values: call it inside an Obx.
+  Presence? moodFor(Conversation c) {
+    final peer = c.peer;
+    if (peer == null || SeedUi.isActive) return null;
+    if (presenceFor(c) != AppPresenceDot.online) return null;
+    return profiles?.presenceOf(peer) ?? Presence.available;
   }
 
   // ---- new chat button -----------------------------------------------------------

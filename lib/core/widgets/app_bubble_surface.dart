@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 // TUNE ME: bubble surface of the primary buttons and FABs. Edit the numbers,
 // then hot restart. Static, painted once per size/state; no animation.

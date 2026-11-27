@@ -11,23 +11,17 @@ import '../../core/data/country_lookup.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/utils/app_settings.dart';
-import '../../core/utils/connect_code.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
-import '../../data/models/connect_card.dart';
-import '../../data/models/identity_info.dart';
-import '../../data/models/ids.dart';
-import '../../data/models/join_page.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/session_repository.dart';
 import '../../data/session_store.dart';
 import 'models/join_flow.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 enum ConnectMode { scan, manual }
 

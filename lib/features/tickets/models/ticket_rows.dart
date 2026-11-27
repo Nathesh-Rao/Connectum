@@ -1,4 +1,4 @@
-import '../../../data/models/ticket.dart';
+import 'package:connectum/data/models/models.dart';
 import 'ticket_detail_row.dart';
 import 'ticket_text.dart';
 

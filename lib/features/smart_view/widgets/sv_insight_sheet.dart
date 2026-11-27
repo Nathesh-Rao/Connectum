@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// The shell of the KPI and Charts sheets: a draggable sheet with a grab
 /// handle, a title with a tinted icon and a close button; [body] scrolls.

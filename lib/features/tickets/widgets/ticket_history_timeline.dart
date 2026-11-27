@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/utils/chat_time.dart';
-import '../../../core/widgets/app_avatar.dart';
-import '../../../data/models/record_state.dart';
-import '../../../data/models/ticket.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../models/ticket_text.dart';
 import '../tickets_texts.dart';
 import 'history_parts.dart';

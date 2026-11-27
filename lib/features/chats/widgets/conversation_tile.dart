@@ -1,18 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/attachment_tag.dart';
-import '../../../core/utils/avatar_palette.dart';
-import '../../../core/utils/forwarded_text.dart';
-import '../../../core/utils/relative_time.dart';
-import '../../../core/widgets/conversation_avatar.dart';
-import '../../../core/widgets/app_row_highlight.dart';
-import '../../../core/widgets/app_unread_badge.dart';
-import '../../../data/models/conversation.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../chats_controller.dart';
 
 /// One conversation row. Only the parts that change on their own sit in their
@@ -161,7 +153,11 @@ class _Avatar extends StatelessWidget {
     final c = conversation;
     if (c.kind != 'dm') return conversationAvatarFor(c);
     return Obx(
-      () => conversationAvatarFor(c, presence: controller.presenceFor(c)),
+      () => conversationAvatarFor(
+        c,
+        presence: controller.presenceFor(c),
+        mood: controller.moodFor(c),
+      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 enum AppLoadingSize {
   medium(AppSpacing.loadingMedium),

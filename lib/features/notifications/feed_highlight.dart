@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-import '../../core/theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'models/feed_item.dart';
 
 /// The main words of a notification message, drawn bold in the primary

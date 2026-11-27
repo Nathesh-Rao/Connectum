@@ -1,5 +1,5 @@
 import '../../../core/routes/app_routes.dart';
-import '../../../data/models/form_card.dart';
+import 'package:connectum/data/models/models.dart';
 import 'record_card_rule.dart';
 import 'record_history_card.dart';
 

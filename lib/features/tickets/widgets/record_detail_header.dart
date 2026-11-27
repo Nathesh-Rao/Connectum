@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/utils/chat_time.dart';
-import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/app_skeleton.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// Who raised the record and when, with its subject: the block under the top
 /// bar of the record screen.

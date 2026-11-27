@@ -1,8 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../core/log/log_bootstrap.dart';
-import '../../core/log/log_file_sink.dart';
-import '../settings/logs_controller.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/features/settings/settings.dart';
 import 'log_viewer_controller.dart';
 
 class LogViewerBinding extends Bindings {

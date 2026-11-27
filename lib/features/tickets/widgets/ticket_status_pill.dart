@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../data/models/ticket.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 import '../tickets_texts.dart';
 
 /// A subtle tinted pill with a small icon: [icon] and [tone] come from

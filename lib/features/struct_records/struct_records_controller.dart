@@ -4,15 +4,14 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/struct_records.dart';
-import '../../data/repositories/struct_records_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/forms/forms.dart';
 import '../../data/smart_view/models/sv_row.dart';
-import '../../data/socket/socket_service.dart';
-import '../forms/models/form_launch.dart';
 import 'models/struct_records_launch.dart';
-import '../../core/log/safe.dart';
 
 /// The records screen of `#tstruct <name>`. Records live in memory only. Never
 /// an offline-capable screen: with no connection it says so and offers Retry.
@@ -165,6 +164,11 @@ class StructRecordsController extends GetxController {
     return v != null && repository.canChange(v, row);
   }
 
+  bool canDelete(SvRow row) {
+    final v = _view;
+    return v != null && repository.canDelete(v, row);
+  }
+
   /// New record: the add form of `#tstruct-add <name>`, same route and
   /// arguments, then the list is read again when something was saved.
   Future<void> addRecord() async {
@@ -206,7 +210,7 @@ class StructRecordsController extends GetxController {
   /// Delete (the view has asked already): the server decides. The row goes
   /// only when the server said yes.
   Future<void> deleteRecord(SvRow row) async {
-    if (!canChange(row) || deletingIds.contains(row.id)) return;
+    if (!canDelete(row) || deletingIds.contains(row.id)) return;
     deletingIds.add(row.id);
     try {
       final message = await repository.deleteRecord('${row.id}');

@@ -4,11 +4,11 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_commands.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../../data/commands/command_line.dart';
 import '../../data/commands/command_menu.dart';
 import '../../data/commands/command_reply.dart';
-import '../../data/models/hash_command.dart';
 
 /// `/debug/commands`: the "#" logic against the fixture of the doc. Nothing
 /// here reaches a server.

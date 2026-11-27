@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../data/models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../form_controller.dart';
 import '../models/field_input.dart';
 import 'form_box.dart';
-import '../../../core/log/safe.dart';
 
 /// A booking time: the days and times the person named by another field can
 /// be booked, minus what is already taken. The value is `yyyy-mm-dd HH:MM`.

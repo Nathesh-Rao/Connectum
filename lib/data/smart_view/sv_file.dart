@@ -1,4 +1,4 @@
-import '../../core/theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../models/ids.dart';
 
 /// What a file is, from its mime type and name (never from the server's

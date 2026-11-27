@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_bottom_sheet.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'ai_summary_controller.dart';
 import 'ai_texts.dart';
 import 'widgets/ai_notice_dialog.dart';
 import 'widgets/ai_sheet.dart';
-import '../../core/log/safe.dart';
 
 /// What the AI icon does: a dialog (not set up, encrypted chat, cannot reach
 /// the server) or the sheet.

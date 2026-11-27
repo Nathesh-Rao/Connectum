@@ -1,17 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_pill_bar.dart';
-import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_refresh.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_spinner.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_state_view.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../tickets/tickets_texts.dart';
 import '../tickets/widgets/tickets_pane.dart';
 import 'tasks_controller.dart';

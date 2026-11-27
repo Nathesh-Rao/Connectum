@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_icons.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/app_fab.dart';
-import '../../../core/widgets/app_png_icon.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// The new chat button of the Chats tab. It slides down, shrinks and fades
 /// out of the way while [isShown] is false or the keyboard is open, and cannot

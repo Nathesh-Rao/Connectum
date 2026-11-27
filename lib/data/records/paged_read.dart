@@ -1,5 +1,5 @@
 import '../../core/debug/records_log.dart';
-import '../socket/socket_service.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// One page as the loop needs it: how many rows the reply held (readable or
 /// not) and whether the server says there are more.

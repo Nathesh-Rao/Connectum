@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// Plays the success check once at its own frame rate and holds the finished
 /// check. The file fades everything out over its last 13 frames, so the hold

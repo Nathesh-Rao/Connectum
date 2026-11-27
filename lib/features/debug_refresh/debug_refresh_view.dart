@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_refresh.dart';
-import '../../core/widgets/app_scaffold.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'debug_refresh_controller.dart';
 
 /// Debug only: the pull-to-refresh spinner with a slow fake refresh.

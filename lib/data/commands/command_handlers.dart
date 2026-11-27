@@ -1,4 +1,4 @@
-import '../models/hash_command.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// What the app does when a command is run.
 enum CommandMode {

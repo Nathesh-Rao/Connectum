@@ -7,7 +7,7 @@ enum TourId {
   smartView(2),
   inbox(2),
   notifications(1),
-  profile(1);
+  profile(2);
 
   const TourId(this.version);
 

@@ -3,17 +3,13 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 
-import '../db/app_database.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../e2e/e2e_models.dart';
-import '../models/chat_thread.dart';
-import '../models/conversation.dart';
-import '../models/ids.dart';
-import '../models/thread_names.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 class ConversationRepository extends GetxService {
   ConversationRepository(this._db, this._session, this._socket, this._e2e);

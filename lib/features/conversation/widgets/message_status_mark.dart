@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../data/models/message.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The mark at the bottom right of my own bubble: a clock while waiting, a
 /// tick when sent, two ticks when delivered, two accent ticks when read (direct

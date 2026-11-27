@@ -2,17 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../chats/widgets/enterprise_switcher_sheet.dart';
-import '../settings/widgets/logs_settings_tile.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/settings/settings.dart';
 import 'profile_controller.dart';
+import 'profile_texts.dart';
 import 'widgets/logout_sheet.dart';
 import 'widgets/profile_identity_card.dart';
 import 'widgets/profile_photo_sheet.dart';
@@ -94,6 +90,7 @@ class ProfileView extends GetView<ProfileController> {
                 SeedUi.profileVariant.value;
                 c.store.identity.value;
                 c.connectivity.state.value;
+                c.record.value;
                 final email = c.email;
                 final category = c.category;
                 return Column(
@@ -105,7 +102,12 @@ class ProfileView extends GetView<ProfileController> {
                         name: c.name,
                         username: c.username,
                         organisation: c.organisation,
-                        isOnline: c.isOnline,
+                        presence: c.presence,
+                        status: c.status,
+                        designation: c.designation,
+                        roles: c.roles,
+                        statusKey: c.profileTour?.statusKey,
+                        onStatusTap: c.openStatus,
                         picture: c.picture,
                         progress: c.isPhotoBusy.value
                             ? (c.photoProgress.value ?? 0)
@@ -134,6 +136,13 @@ class ProfileView extends GetView<ProfileController> {
                           ProfileInfoRow(label: 'Email', value: email),
                         if (category.isNotEmpty)
                           ProfileInfoRow(label: 'Category', value: category),
+                        ProfileActionRow(
+                          icon: Icons.badge_outlined,
+                          title: ProfileTexts.detailsTitle,
+                          subtitle:
+                              'Gender, birthday, address, education, skills',
+                          onTap: c.openDetails,
+                        ),
                         ProfileActionRow(
                           icon: Icons.qr_code_2_rounded,
                           title: 'My QR code',

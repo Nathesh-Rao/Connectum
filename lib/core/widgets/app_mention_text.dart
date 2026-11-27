@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../utils/mention_text.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
 
 /// Message text with `@name` drawn as a tag, as on the web. A known person
 /// is drawn as `@` and the display name (the username is the semantics

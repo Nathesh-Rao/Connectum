@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_spinner/app_spinner_double.dart';
 import 'app_spinner/pull_refresh_config.dart';
 

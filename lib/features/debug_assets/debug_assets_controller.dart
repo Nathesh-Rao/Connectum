@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../core/debug/attachment_tag_vectors.dart';
-import '../../core/widgets/app_state_image.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 class PngInfo {
   const PngInfo(this.kind, this.kb, this.width, this.height);

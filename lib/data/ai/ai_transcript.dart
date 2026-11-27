@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../models/message.dart';
+import 'package:connectum/data/models/models.dart';
 import 'ai_prompt.dart';
 
 /// The chat as the model reads it: `formatTranscript()` of the web

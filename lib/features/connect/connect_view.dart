@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_motion.dart';
-import '../../data/models/identity_info.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 import 'connect_controller.dart';
 import 'widgets/confirm_pane.dart';
 import 'widgets/manual_pane.dart';

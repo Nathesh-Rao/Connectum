@@ -1,9 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/invite_service.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/session_repository.dart';
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'authentication_controller.dart';
 
 /// Every visit to the login route gets its own controller under its own tag.

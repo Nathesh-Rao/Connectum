@@ -1,4 +1,4 @@
-import '../../core/widgets/app_chart/app_chart_data.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// One piece of an answer: Markdown text, or a chart read from a ` ```chart `
 /// block.

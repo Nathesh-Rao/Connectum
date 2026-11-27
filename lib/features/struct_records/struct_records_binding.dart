@@ -1,12 +1,9 @@
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_struct_records.dart';
-import '../../data/repositories/command_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/struct_records_repository.dart';
-import '../../data/repositories/submission_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/socket_service.dart';
 import 'models/struct_records_launch.dart';
 import 'struct_records_controller.dart';
 

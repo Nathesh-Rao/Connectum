@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/tour/tour_texts.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../core/widgets/app_refresh.dart';
-import '../../../core/widgets/app_state_view.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../inbox_approvals_controller.dart';
 import '../inbox_tour.dart';
 import '../models/approval_pane.dart';

@@ -4,24 +4,19 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
-import '../../core/tour/tour_service.dart';
-import '../../core/tour/tour_trigger.dart';
-import '../../core/utils/app_settings.dart';
-import '../../core/widgets/app_pill_bar.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/notifications/local_notification_service.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
 import 'feed_actions.dart';
 import 'models/feed_item.dart';
 import 'models/feed_reducer.dart';
 import 'notification_router.dart';
 import 'notification_texts.dart';
 import 'widgets/notifications_more_menu.dart';
-import '../../core/log/safe.dart';
 import 'notifications_tour.dart';
 
 class NotificationsController extends GetxController {

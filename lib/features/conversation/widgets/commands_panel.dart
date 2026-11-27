@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_tag.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/commands/commands.dart';
 import '../../../data/commands/command_reply.dart';
-import '../../../data/models/hash_command.dart';
-import '../../commands/widgets/command_category_icon.dart';
 import '../models/command_prompt.dart';
 
 /// The "#" menu of a message box: a compact card right above the box (so

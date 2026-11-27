@@ -3,22 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_avatar.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_list_row.dart';
-import '../../core/widgets/app_search_field.dart';
-import '../../core/widgets/app_sheet_header.dart';
-import '../../core/widgets/app_skeleton.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/conversation_avatar.dart';
-import '../../data/repositories/share_repository.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'share_to_connectum_controller.dart';
 
 /// Opens the "Share to Connectum" picker for [files]. Sending closes the sheet

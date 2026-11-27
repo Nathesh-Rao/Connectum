@@ -1,10 +1,9 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/deep_link_service.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/session_repository.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 import 'connect_controller.dart';
 
 class ConnectBinding extends Bindings {

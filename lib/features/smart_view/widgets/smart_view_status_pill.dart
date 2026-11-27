@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_sv.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A status as a soft tinted pill with a leading dot, shared by the cards and
 /// the table. Words the app already colours (approved, declined, waiting,

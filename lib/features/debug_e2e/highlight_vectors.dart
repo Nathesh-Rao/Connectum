@@ -1,4 +1,4 @@
-import '../../core/widgets/app_highlight_text.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// Self-test of the sentence builder behind [AppHighlightText]: where the
 /// names go, and that a name is never read as a template.

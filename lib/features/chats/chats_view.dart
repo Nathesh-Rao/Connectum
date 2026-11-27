@@ -2,16 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_bottom_sheet.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_search_field.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../core/widgets/app_notices.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'chats_controller.dart';
 import 'models/chat_filter.dart';
 import 'widgets/chat_filter_bar.dart';
@@ -24,7 +16,6 @@ import 'widgets/new_chat_fab.dart';
 import 'widgets/new_chat_sheet.dart';
 import 'widgets/search_results.dart';
 import 'widgets/skeleton_rows.dart';
-import '../../core/widgets/app_refresh.dart';
 
 class ChatsView extends GetView<ChatsController> {
   const ChatsView({super.key});

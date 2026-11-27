@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_motion.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 class DebugOnboardingSlide {
   const DebugOnboardingSlide(this.title, this.copy);

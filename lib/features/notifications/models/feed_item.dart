@@ -1,4 +1,4 @@
-import '../../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The server keeps this many feed items per person, and so does the app.
 const feedCap = 300;

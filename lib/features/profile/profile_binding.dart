@@ -1,18 +1,13 @@
 import 'package:get/get.dart';
 
-import '../../core/tour/tour_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/settings/settings.dart';
 import '../../data/profile_photo/profile_photo_picker.dart';
-import '../../core/log/log_bootstrap.dart';
-import '../../core/log/log_file_sink.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../data/repositories/profile_photo_repository.dart';
-import '../../data/repositories/qr_repository.dart';
-import '../../data/repositories/session_repository.dart';
-import '../../data/repositories/share_repository.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../chats/enterprise_switcher_controller.dart';
-import '../settings/logs_controller.dart';
 import 'profile_controller.dart';
 import 'profile_tour.dart';
 
@@ -37,6 +32,8 @@ class ProfileBinding extends Bindings {
         avatars: Get.find<PeopleAvatars>(),
         photos: Get.find<ProfilePhotoRepository>(),
         picker: Get.find<ProfilePhotoPicker>(),
+        profiles: Get.find<PeopleProfiles>(),
+        repository: Get.find<ProfileRepository>(),
         tour: Get.isRegistered<TourService>() ? Get.find<TourService>() : null,
         profileTour: Get.isRegistered<TourService>()
             ? ProfileTour(service: Get.find<TourService>())

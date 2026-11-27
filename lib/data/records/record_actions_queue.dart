@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 /// The one queue that reads `record.actions` for cards on screen. Cards only
 /// say "I am on screen" ([show]) and "I am gone" ([hide]); this class decides

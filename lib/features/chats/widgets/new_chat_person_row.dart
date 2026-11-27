@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../core/widgets/app_tonal_icon_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../models/chat_person.dart';
 import '../models/person_link.dart';
 

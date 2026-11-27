@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_action_bar.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../tickets/models/ticket_action_style.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import 'debug_tickets_controller.dart';
 
 class DebugTicketsView extends GetView<DebugTicketsController> {

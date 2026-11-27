@@ -5,7 +5,7 @@ import 'package:webcrypto/webcrypto.dart';
 
 import 'e2e_models.dart';
 import 'e2e_random.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// The end-to-end primitives, byte for byte as `mobile-handoff/e2e.md`
 /// describes them: no networking, no storage.

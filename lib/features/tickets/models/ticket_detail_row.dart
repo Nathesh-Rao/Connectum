@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_tones.dart';
-import '../../../core/utils/chat_time.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
 
 /// One line of the details list: its icon, label and a readable value.
 class TicketDetailRow {

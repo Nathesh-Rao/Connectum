@@ -3,11 +3,10 @@ import 'package:get/get.dart';
 
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
-import '../../core/utils/connect_code.dart';
-import '../../core/utils/install_referrer.dart';
-import '../../data/models/connect_lookup.dart';
-import '../connect_target/connect_target_controller.dart';
-import '../invite_code/invite_code_sheet.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/connect_target/connect_target.dart';
+import 'package:connectum/features/invite_code/invite_code.dart';
 
 /// Debug only: shows how [ConnectLinkParser] reads a typed or pasted link, and
 /// opens the confirm sheet on sample links. Nothing here calls the server.

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/tour/tour_texts.dart';
-import '../../../core/widgets/app_tag.dart';
-import '../../../core/widgets/message_selection/selectable_row.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../workspace_tour.dart';
 import 'workspace_message.dart';
 

@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../tickets/widgets/ticket_status_pill.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../models/chat_info.dart';
 
 /// "Members (N)", a search field when there are more than
@@ -20,6 +15,7 @@ class ChatInfoMembers extends StatefulWidget {
     required this.members,
     required this.hasSearch,
     required this.onOpen,
+    this.onOpenProfile,
     this.onAddPeople,
     this.pictureOf,
   });
@@ -27,6 +23,9 @@ class ChatInfoMembers extends StatefulWidget {
   final List<ChatInfoMember> members;
   final bool hasSearch;
   final ValueChanged<ChatInfoMember> onOpen;
+
+  /// The avatar of a row opens that person's profile.
+  final ValueChanged<ChatInfoMember>? onOpenProfile;
 
   /// Only given to the group's owner (it already exists in the app).
   final VoidCallback? onAddPeople;
@@ -90,6 +89,7 @@ class _ChatInfoMembersState extends State<ChatInfoMembers> {
                     member: shown[i],
                     hasDivider: i > 0,
                     pictureOf: widget.pictureOf,
+                    onOpenProfile: widget.onOpenProfile,
                     onTap: shown[i].isMe ? null : () => widget.onOpen(shown[i]),
                   ),
               ],
@@ -107,12 +107,35 @@ class _MemberRow extends StatelessWidget {
     required this.hasDivider,
     required this.onTap,
     this.pictureOf,
+    this.onOpenProfile,
   });
 
+  final ValueChanged<ChatInfoMember>? onOpenProfile;
   final String? Function(String username)? pictureOf;
   final ChatInfoMember member;
   final bool hasDivider;
   final VoidCallback? onTap;
+
+  Widget _tapAvatar(Widget avatar) {
+    final open = onOpenProfile;
+    if (open == null) return avatar;
+    return Semantics(
+      button: true,
+      label: 'Profile, ${member.name}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => open(member),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: AppSpacing.minTapTarget,
+            minHeight: AppSpacing.minTapTarget,
+          ),
+          child: Center(child: avatar),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,21 +158,22 @@ class _MemberRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (pictureOf == null)
-                AppAvatar(
-                  name: m.name,
-                  kind: AppAvatarKind.person,
-                  size: AppSpacing.avatarSmall,
-                )
-              else
-                Obx(
-                  () => AppAvatar(
-                    name: m.name,
-                    kind: AppAvatarKind.person,
-                    picture: pictureOf!(m.user),
-                    size: AppSpacing.avatarSmall,
-                  ),
-                ),
+              _tapAvatar(
+                pictureOf == null
+                    ? AppAvatar(
+                        name: m.name,
+                        kind: AppAvatarKind.person,
+                        size: AppSpacing.avatarSmall,
+                      )
+                    : Obx(
+                        () => AppAvatar(
+                          name: m.name,
+                          kind: AppAvatarKind.person,
+                          picture: pictureOf!(m.user),
+                          size: AppSpacing.avatarSmall,
+                        ),
+                      ),
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(

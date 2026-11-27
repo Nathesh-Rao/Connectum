@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// A heading over a wrapping flow of chips. With [collapseAfter] set and more
 /// chips than that, the rest hide behind a "Show all" link.

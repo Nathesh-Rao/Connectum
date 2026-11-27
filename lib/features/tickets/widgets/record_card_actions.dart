@@ -3,11 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_motion.dart';
-import '../../../core/widgets/app_action_bar.dart';
-import '../../../core/widgets/app_form_card.dart';
-import '../../../data/models/record_live.dart';
-import '../../../data/repositories/ticket_repository.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../models/ticket_action_style.dart';
 import 'record_status_block.dart';
 

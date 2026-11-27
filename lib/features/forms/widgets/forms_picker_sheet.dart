@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_icons.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_png_icon.dart';
-import '../../../core/widgets/app_search_field.dart';
-import '../../../core/widgets/app_sheet_header.dart';
-import '../../../core/widgets/app_skeleton.dart';
-import '../../../core/widgets/app_state_image.dart';
-import '../../../core/widgets/app_state_view.dart';
-import '../../../data/models/form_option.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
 import '../forms_picker_controller.dart';
 import 'form_chip.dart';
 import 'form_chip_section.dart';

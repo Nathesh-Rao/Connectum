@@ -46,6 +46,7 @@ class SvSource {
     this.isSystem = false,
     this.canFetch = true,
     this.canAdd = true,
+    this.creatorCanDelete = true,
     this.hasThread = false,
     this.table,
     this.fields = const [],
@@ -61,6 +62,9 @@ class SvSource {
   final bool isSystem;
   final bool canFetch;
   final bool canAdd;
+
+  /// False when the form turned off the author's Delete (only [owner] may).
+  final bool creatorCanDelete;
   final bool hasThread;
   final TicketTable? table;
   final List<SvField> fields;
@@ -105,6 +109,7 @@ class SvSource {
       isSystem: raw['system'] == true,
       canFetch: raw['canFetch'] != false,
       canAdd: raw['canAdd'] != false,
+      creatorCanDelete: raw['creatorCanDelete'] != false,
       hasThread: raw['recordThread'] == true,
       table: TicketTable.tryParse(raw['status']),
       fields: [

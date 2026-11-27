@@ -7,13 +7,12 @@ import 'package:get/get.dart';
 import '../../features/notifications/models/feed_item.dart';
 import '../../features/notifications/models/feed_reducer.dart';
 import '../e2e/e2e_models.dart';
-import '../models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../core/debug/records_log.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// The workspace feed (`feed.*`): the items, the counts behind the bell, and
 /// the three live events. In memory only: the server is the source, and

@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../../data/models/record_state.dart';
+import 'package:connectum/data/models/models.dart';
 import '../forms/models/field_input.dart';
 import 'models/ticket_input.dart';
 import 'tickets_texts.dart';

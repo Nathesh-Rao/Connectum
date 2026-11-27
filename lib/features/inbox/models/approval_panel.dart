@@ -1,4 +1,4 @@
-import '../../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
 import 'approval_entries.dart';
 import 'approval_pane.dart';
 import 'inbox_approval_rows.dart';

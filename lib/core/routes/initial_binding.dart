@@ -14,58 +14,25 @@ import '../config/app_config.dart';
 import '../crash/crash_identity_binder.dart';
 import '../crash/crash_service.dart';
 import '../debug/seed_ui.dart';
-import '../../data/db/app_database.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/connect_target/connect_target.dart';
+import 'package:connectum/features/notifications/notifications.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/form_logic/form_logic_service.dart';
-import '../../data/repositories/attachment_repository.dart';
-import '../../data/repositories/attachment_sender.dart';
-import '../../data/repositories/share_repository.dart';
-import '../../data/repositories/approval_repository.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/command_repository.dart';
-import '../../data/repositories/connect_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/e2e_repository.dart';
-import '../../data/repositories/group_repository.dart';
-import '../../data/repositories/hand_on_repository.dart';
-import '../../data/repositories/encryption_policy.dart';
 import '../../data/notifications/local_notification_service.dart';
 import '../../data/notifications/push/noop_push_service.dart';
 import '../../data/notifications/push/push_token_registry.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../features/notifications/notification_router.dart';
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/form_options_repository.dart';
-import '../../data/repositories/marks_repository.dart';
-import '../../data/repositories/message_repository.dart';
 import '../../data/profile_photo/profile_photo_picker.dart';
-import '../../data/repositories/people_avatars.dart';
-import '../../data/repositories/people_repository.dart';
-import '../../data/repositories/presence_repository.dart';
-import '../../data/repositories/profile_photo_repository.dart';
-import '../widgets/avatar_image.dart';
 import '../../demo/demo_profile_photo_picker.dart';
-import '../../data/repositories/qr_repository.dart';
-import '../../data/repositories/typing_repository.dart';
-import '../../data/repositories/session_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/repositories/task_repository.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/repositories/inbox_views_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/sv_saved_views_repository.dart';
 import '../debug/seed_saved_views.dart';
-import '../../data/repositories/sv_file_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/repositories/workspace_repository.dart';
-import '../../features/tickets/saved_record_notice.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/read_gate.dart';
-import '../../data/socket/socket_service.dart';
-import '../../features/connect_target/connect_target_controller.dart';
-import '../utils/install_referrer.dart';
-import '../tour/tour_service.dart';
 import 'deep_link_service.dart';
 import 'invite_service.dart';
 import '../../demo/demo_ai_repository.dart';
@@ -79,10 +46,6 @@ import '../debug/seed_tasks.dart';
 import '../debug/seed_smart_files.dart';
 import '../debug/seed_smart_view.dart';
 import '../debug/seed_tickets.dart';
-import '../log/safe.dart';
-import '../log/app_log.dart';
-import '../log/log_bootstrap.dart';
-import '../log/log_formatter.dart';
 
 class InitialBinding extends Bindings {
   InitialBinding(this.connectivity, {SmartViewPrefs? smartViewPrefs})
@@ -335,6 +298,8 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.put(PeopleAvatars(db, store, socket, conversations), permanent: true);
+    Get.put(PeopleProfiles(socket, store), permanent: true);
+    Get.put(ProfileRepository(socket), permanent: true);
     Get.put<ProfilePhotoRepository>(
       isDemo
           ? FakeProfilePhotoRepository(register: AvatarImages.registerMemory)

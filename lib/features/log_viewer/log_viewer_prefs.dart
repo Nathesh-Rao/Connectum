@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 enum LogTextSize {
   small('Small', 11),

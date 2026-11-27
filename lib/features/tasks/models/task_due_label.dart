@@ -1,4 +1,4 @@
-import '../../../data/models/task.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The due date of a task in words: "Due today", "Due tomorrow", "Overdue by
 /// 2 days", "Due 12 Nov".

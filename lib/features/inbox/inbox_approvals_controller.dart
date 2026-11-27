@@ -2,15 +2,11 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import '../../core/log/safe.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/models/approval.dart';
-import '../../data/repositories/approval_repository.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/socket/call_problem.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'models/approval_chips.dart';
 import 'approval_filter_controller.dart';
 import 'models/approval_entries.dart';

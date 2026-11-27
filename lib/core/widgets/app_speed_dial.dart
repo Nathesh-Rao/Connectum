@@ -2,12 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_sv.dart';
-import '../theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_fab.dart';
 
 /// One bubble of an [AppSpeedDial].

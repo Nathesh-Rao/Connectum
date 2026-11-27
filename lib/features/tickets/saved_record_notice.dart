@@ -2,11 +2,10 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import 'tickets_texts.dart';
-import '../../core/log/safe.dart';
 
 /// After a new submission is accepted: "Saved", or "Waiting for approval".
 /// A form with auto-send rules has already sent it on by then; one read of

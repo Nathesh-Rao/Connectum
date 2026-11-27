@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_motion.dart';
-import '../../theme/app_radius.dart';
-import '../../theme/app_text.dart';
-import '../../theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../tour_gesture.dart';
 
 /// A small looping picture of a gesture, drawn with plain widgets. With the

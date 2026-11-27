@@ -6,18 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../data/e2e/e2e_models.dart';
-import '../../data/models/conversation.dart';
-import '../../data/models/form_definition.dart';
-import '../../data/models/form_option.dart';
-import '../../data/models/form_submission.dart';
-import '../../data/models/group_add.dart';
-import '../../data/models/hash_command.dart';
-import '../../data/models/identity_info.dart';
-import '../../data/models/message.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
 import '../../data/repositories/e2e_repository.dart';
 import '../../features/chats/models/chat_person.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text.dart';
 import '../../demo/demo_mode.dart';
 import 'seed_sample_forms.dart';
 

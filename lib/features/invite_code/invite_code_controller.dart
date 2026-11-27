@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/routes/deep_link_service.dart';
-import '../../core/utils/connect_code.dart';
+import 'package:connectum/core/utils/utils.dart';
 
 /// The "Have an invite code or link?" sheet of the welcome and sign-in
 /// screens. The person types or pastes the text; the app never reads the

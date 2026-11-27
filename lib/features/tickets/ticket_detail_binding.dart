@@ -1,13 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/approval_repository.dart';
-import '../../data/repositories/form_file_repository.dart';
-import '../../data/repositories/inbox_field_kinds.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/sv_file_repository.dart';
-import '../../data/repositories/ticket_repository.dart';
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'ticket_detail_controller.dart';
 
 /// One controller per ticket id (its tag), so a second ticket opened from

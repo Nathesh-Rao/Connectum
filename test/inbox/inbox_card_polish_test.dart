@@ -125,7 +125,7 @@ void main() {
       await pumpCard(tester, rowOf(record(1)), settleMs: 3000);
       await tester.tap(find.byIcon(Icons.more_horiz));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 700));
       expect(find.text('History'), findsOneWidget);
       expect(find.text('Record'), findsNothing, reason: 'no sheet title');
       final button = tester.getRect(find.byIcon(Icons.more_horiz));
@@ -136,7 +136,7 @@ void main() {
       expect(popup.left, greaterThanOrEqualTo(0));
       await tester.tapAt(const Offset(200, 860));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 700));
       expect(find.text('History'), findsNothing);
     });
   });

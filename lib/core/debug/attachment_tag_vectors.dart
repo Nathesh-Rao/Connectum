@@ -1,5 +1,5 @@
 import '../../data/attachment_cache.dart';
-import '../utils/attachment_tag.dart';
+import 'package:connectum/core/utils/utils.dart';
 
 /// Debug-only vectors for [AttachmentTag], run by the /debug/assets screen.
 class AttachmentTagVectors {

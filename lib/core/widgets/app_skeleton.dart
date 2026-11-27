@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
+import 'package:connectum/core/theme/theme.dart';
 
 /// One shared pulse for every placeholder under it, so a screen of skeleton
 /// rows runs a single animation.

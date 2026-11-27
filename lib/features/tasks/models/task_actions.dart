@@ -1,4 +1,4 @@
-import '../../../data/models/task.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// What [user] may do with a task, worked out from the data. The server
 /// stays the judge: it can still refuse, and its text is shown.

@@ -1,14 +1,8 @@
 import 'package:get/get.dart';
 
-import '../../data/db/app_database.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/presence_repository.dart';
-import '../../data/repositories/session_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'debug_socket_controller.dart';
 
 class DebugSocketBinding extends Bindings {

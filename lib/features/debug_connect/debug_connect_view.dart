@@ -4,14 +4,9 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_connect.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/utils/connect_code.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_text_field.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'debug_connect_controller.dart';
 
 class DebugConnectView extends GetView<DebugConnectController> {

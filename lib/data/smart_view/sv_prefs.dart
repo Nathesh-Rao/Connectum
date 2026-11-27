@@ -1,5 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 enum SvViewMode { cards, table }
 

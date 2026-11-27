@@ -1,14 +1,31 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../config/app_config.dart';
-import '../../features/link_browser/link_browser_binding.dart';
-import '../../features/link_browser/link_browser_view.dart';
-import '../../features/authentication/authentication_binding.dart';
-import '../../features/authentication/authentication_view.dart';
-import '../../features/chat_info/chat_info_binding.dart';
-import '../../features/chat_info/chat_info_view.dart';
-import '../../features/conversation/conversation_binding.dart';
-import '../../features/conversation/conversation_view.dart';
+import 'package:connectum/features/authentication/authentication.dart';
+import 'package:connectum/features/chat_info/chat_info.dart';
+import 'package:connectum/features/conversation/conversation.dart';
+import 'package:connectum/features/enterprise_created/enterprise_created.dart';
+import 'package:connectum/features/enterprises/enterprises.dart';
+import 'package:connectum/features/forms/forms.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
+import 'package:connectum/features/link_browser/link_browser.dart';
+import 'package:connectum/features/log_viewer/log_viewer.dart';
+import 'package:connectum/features/new_group/new_group.dart';
+import 'package:connectum/features/notifications/notifications.dart';
+import 'package:connectum/features/onboarding/onboarding.dart';
+import 'package:connectum/features/person_profile/person_profile.dart';
+import 'package:connectum/features/profile/profile.dart';
+import 'package:connectum/features/profile_details/profile_details.dart';
+import 'package:connectum/features/profile_photo/profile_photo.dart';
+import 'package:connectum/features/profile_status/profile_status.dart';
+import 'package:connectum/features/security/security.dart';
+import 'package:connectum/features/splash/splash.dart';
+import 'package:connectum/features/struct_records/struct_records.dart';
+import 'package:connectum/features/submission_detail/submission_detail.dart';
+import 'package:connectum/features/tasks/tasks.dart';
+import 'package:connectum/features/tickets/tickets.dart';
+import 'package:connectum/features/verification/verification.dart';
+import 'package:connectum/features/workspace/workspace.dart';
 import '../../features/debug_ai/debug_ai_binding.dart';
 import '../../features/debug_photo_crop/debug_photo_crop_binding.dart';
 import '../../features/debug_crashtest/debug_crashtest_binding.dart';
@@ -16,8 +33,6 @@ import '../../features/debug_crashtest/debug_crashtest_view.dart';
 import '../../features/debug_refresh/debug_refresh_binding.dart';
 import '../../features/debug_refresh/debug_refresh_view.dart';
 import '../../features/debug_photo_crop/debug_photo_crop_view.dart';
-import '../../features/profile_photo/profile_photo_crop_binding.dart';
-import '../../features/profile_photo/profile_photo_crop_view.dart';
 import '../../features/debug_ai/debug_ai_view.dart';
 import '../../features/debug_assets/debug_assets_binding.dart';
 import '../../features/debug_chat/debug_chat_binding.dart';
@@ -69,46 +84,10 @@ import '../../features/debug_smart_view/debug_smart_view_view.dart';
 import '../../features/debug_tickets/debug_tickets_binding.dart';
 import '../../features/debug_tickets/debug_tickets_view.dart';
 import '../../features/debug_socket/debug_socket_view.dart';
-import '../../features/enterprise_created/enterprise_created_binding.dart';
-import '../../features/enterprise_created/enterprise_created_view.dart';
-import '../../features/enterprises/enterprises_binding.dart';
-import '../../features/enterprises/enterprises_view.dart';
-import '../../features/forms/form_binding.dart';
-import '../../features/forms/form_view.dart';
-import '../../features/forms/models/form_launch.dart';
 import '../../features/gallery/gallery_auth_binding.dart';
-import '../../features/home_shell/home_shell_binding.dart';
-import '../../features/home_shell/home_shell_controller.dart';
-import '../../features/home_shell/home_shell_view.dart';
 import '../../features/gallery/gallery_auth_view.dart';
 import '../../features/gallery/gallery_binding.dart';
 import '../../features/gallery/gallery_view.dart';
-import '../../features/new_group/new_group_binding.dart';
-import '../../features/new_group/new_group_view.dart';
-import '../../features/notifications/notifications_binding.dart';
-import '../../features/notifications/notifications_view.dart';
-import '../../features/onboarding/onboarding_binding.dart';
-import '../../features/onboarding/onboarding_view.dart';
-import '../../features/security/security_binding.dart';
-import '../../features/security/security_view.dart';
-import '../../features/splash/splash_binding.dart';
-import '../../features/splash/splash_view.dart';
-import '../../features/struct_records/struct_records_binding.dart';
-import '../../features/struct_records/struct_records_view.dart';
-import '../../features/submission_detail/submission_detail_binding.dart';
-import '../../features/tasks/tasks_binding.dart';
-import '../../features/tasks/tasks_view.dart';
-import '../../features/tickets/ticket_detail_binding.dart';
-import '../../features/tickets/record_detail_view.dart';
-import '../../features/submission_detail/submission_detail_view.dart';
-import '../../features/verification/verification_binding.dart';
-import '../../features/profile/profile_binding.dart';
-import '../../features/profile/profile_view.dart';
-import '../../features/log_viewer/log_viewer_binding.dart';
-import '../../features/log_viewer/log_viewer_view.dart';
-import '../../features/workspace/workspace_binding.dart';
-import '../../features/workspace/workspace_view.dart';
-import '../../features/verification/verification_view.dart';
 import 'app_routes.dart';
 import 'app_transitions.dart';
 
@@ -252,6 +231,24 @@ class AppPages {
       AppRoutes.profile,
       () => const ProfileView(),
       ProfileBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.profileStatus,
+      () => const ProfileStatusView(),
+      ProfileStatusBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.profileDetails,
+      () => const ProfileDetailsView(),
+      ProfileDetailsBinding(),
+      AppTransitionKind.push,
+    ),
+    _page(
+      AppRoutes.person,
+      () => const PersonProfileView(),
+      PersonProfileBinding(),
       AppTransitionKind.push,
     ),
     _page(

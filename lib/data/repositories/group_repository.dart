@@ -4,13 +4,11 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
 import '../../features/chats/models/chat_person.dart';
-import '../models/group_add.dart';
-import '../models/ids.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'conversation_repository.dart';
-import '../../core/log/safe.dart';
-import '../../core/log/app_log.dart';
 
 /// Creating a group and adding people. `/creategroup` and `/addmember` take no
 /// `cid`, so nothing here is queued or retried by itself: each command is sent

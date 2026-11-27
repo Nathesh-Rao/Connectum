@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
-import '../models/ids.dart';
-import '../socket/socket_service.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 
 enum PresenceDot { none, online, offline }
 

@@ -1,37 +1,42 @@
 {
   "name": "connectum-form-logic",
-  "version": "1.3.0",
-  "sha256": "bd36551466e20766061560b293d7303f7eff179e28de5f1ca11921461c37c65d",
+  "version": "1.7.1",
+  "sha256": "b9efe57c8f51fc4d526235eead1d6b9e6bffa2604b0d3629e000c274eefe3256",
   "files": [
     {
       "path": "axExpParser.js",
-      "sha256": "32aba30f6a9e56da272ca1a40efba6fcd99e5aa94fb76732113460248e8e871f",
-      "size": 33506
+      "sha256": "70c6895ba0ce7ac5189b3671206cf114ba101458239f59ac421e733dd4be329e",
+      "size": 33916
     },
     {
       "path": "axFunctions.js",
-      "sha256": "c13bb9de1102883452479bb6154c141d9cd4c5e70c1b60f7e5632c6278c0ea8d",
-      "size": 15444
+      "sha256": "b00b23508c7908f7363543a6f49587fd0160d5f820dbfad8597a3410f84759d6",
+      "size": 15873
     },
     {
       "path": "fieldCalc.js",
-      "sha256": "fcc46f041a230a9d9b0072710738b19119c683d2213a6661ee5c0e0f729571e3",
-      "size": 10357
+      "sha256": "ecabda253a3cbf995716ba74adf329baf6604dfe7610392493c584d17f46073d",
+      "size": 15397
     },
     {
       "path": "fieldRule.js",
-      "sha256": "694ded1a9a717c7a3459a28adc0ee6898323dae58b6dc67eeb3da4153ec6874c",
-      "size": 6303
+      "sha256": "aa6689648ec542c4cc71b271913cd17d25a1829ed2477551d6801ff2860eb1e9",
+      "size": 7107
     },
     {
       "path": "condition.js",
-      "sha256": "1478a23c892ce4ef665c4003edccfeed057d4fb7dae70bbe6be80b8adaec1c66",
-      "size": 2698
+      "sha256": "276331191a7f5ff274165b4960d234851fdc71d518b0fb00c31148b71545e852",
+      "size": 7086
+    },
+    {
+      "path": "emailRule.js",
+      "sha256": "154fdcffcd952c58bc9b1bcb82eb1d2421b3655fc81dd60b27ade62a5e5b4c31",
+      "size": 2662
     },
     {
       "path": "form-logic.bundle.js",
-      "sha256": "199230bc148ff96ca94b39a23a5b6d491813c92a886ac7c0b4735a8fc0cde1c3",
-      "size": 50397
+      "sha256": "d8bc21e885e90c8c63c0482f83d56cf1eab48be1587103f7a827f367460897d6",
+      "size": 55911
     },
     {
       "path": "form-logic-host-shim.js",
@@ -40,12 +45,12 @@
     },
     {
       "path": "form-logic-conformance.json",
-      "sha256": "9958afecf58f149f0c2aa2cb36fce2f9c0c307c644f851aaccf6fedf103928dd",
-      "size": 21083
+      "sha256": "48cff6f2f65298af1ee0b33d2d7871c6c72961b2fd6494c2647064ef099a0dfc",
+      "size": 497574
     }
   ],
   "requires": [
-    "Either ECMAScript 2020 modules (the five .js modules) or any engine at ES2019 (form-logic.bundle.js, one script defining ConnectumFormLogic)",
+    "Either ECMAScript 2020 modules (the six .js modules) or any engine at ES2019 (form-logic.bundle.js, one script defining ConnectumFormLogic)",
     "Date, in the person's own time zone (Date() is today where the person is, Time() the local time)",
     "Intl.NumberFormat with en-IN and en-US, TextEncoder, TextDecoder, atob and btoa, and the English month name of Date.prototype.toLocaleString: form-logic-host-shim.js fills in whichever of these the engine lacks (load it first); it changes nothing where they exist",
     "Check an engine with form-logic-conformance.json: ConnectumFormLogic.runConformance(...) must report no failures"

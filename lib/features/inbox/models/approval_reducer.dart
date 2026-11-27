@@ -1,4 +1,4 @@
-import '../../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Keeps the Approvals list right when an event or an answer arrives. Pure.
 class ApprovalReducer {

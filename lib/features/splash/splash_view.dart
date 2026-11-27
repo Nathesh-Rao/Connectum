@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/logo_intro/logo_intro.dart';
-import '../../core/widgets/app_ambient_backdrop.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/logo_loader/logo_loader.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import 'splash_controller.dart';
 
 class SplashView extends GetView<SplashController> {

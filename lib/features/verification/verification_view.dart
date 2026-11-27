@@ -3,18 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/widgets/app_ambient_backdrop.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_flex_gap.dart';
-import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_text_field.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 import '../../demo/demo_mode.dart';
 import 'verification_controller.dart';
 
@@ -38,19 +28,16 @@ class VerificationView extends GetView<VerificationController> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Transform.translate(
-                        offset: const Offset(-12, 0),
-                        child: AppButton.icon(
-                          icon: Icons.chevron_left,
-                          semanticLabel: 'Back to email',
-                          onPressed: c.changeEmail,
-                        ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Transform.translate(
+                      offset: const Offset(-12, 0),
+                      child: AppButton.icon(
+                        icon: Icons.chevron_left,
+                        semanticLabel: 'Back to email',
+                        onPressed: c.changeEmail,
                       ),
-                      const Spacer(),
-                      const Text('02 / VERIFY', style: AppText.eyebrow),
-                    ],
+                    ),
                   ),
                   const AppFlexGap(flex: 9, min: 0, max: 24),
                   const Center(
@@ -163,32 +150,10 @@ class VerificationView extends GetView<VerificationController> {
                 ],
               ),
             ),
-            const _Footer(),
+            const AppAgileFooter(),
           ],
         );
       }),
-    );
-  }
-}
-
-class _Footer extends StatelessWidget {
-  const _Footer();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check, size: 13, color: AppColors.muted),
-          SizedBox(width: AppSpacing.xs),
-          Text(
-            'Private by design. Connected by choice.',
-            style: AppText.caption,
-          ),
-        ],
-      ),
     );
   }
 }

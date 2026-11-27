@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../core/utils/chat_time.dart';
+import 'package:connectum/core/utils/utils.dart';
 import 'ids.dart';
 
 enum FormEntryKind { text, yes, no, location }

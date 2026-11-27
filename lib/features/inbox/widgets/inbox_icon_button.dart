@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_inbox.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_tones.dart';
-import '../../../core/widgets/app_unread_badge.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// A header button of the Inbox: a round tonal disc in a 44 dp tap target,
 /// with a tooltip and a spoken label, and an optional count or dot.

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// The person's own conversation (My Work Space notes). It has no list row,
 /// no unread count and no peer. A plain note is sent with `/self`; an

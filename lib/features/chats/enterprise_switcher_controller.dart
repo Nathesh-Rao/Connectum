@@ -5,12 +5,11 @@ import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
-import '../../data/db/app_database.dart';
-import '../../data/models/identity_info.dart';
-import '../../data/models/ids.dart';
-import '../../data/repositories/auth_repository.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
 
 class EnterpriseSwitcherController extends GetxController {
   EnterpriseSwitcherController({

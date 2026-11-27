@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_tones.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../../data/smart_view/sv_file.dart';
 
 /// What a card row is about, which picks its icon and tint.

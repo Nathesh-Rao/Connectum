@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
-import '../../core/theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'crop_math.dart';
 
 /// A decoded picture and the size of the original it came from. The screen

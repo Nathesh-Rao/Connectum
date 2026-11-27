@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../conversation/conversation_controller.dart';
-import '../conversation/models/chat_item.dart';
-import '../conversation/widgets/document_card.dart';
-import '../conversation/widgets/chat_rows.dart';
-import '../conversation/widgets/message_bubble.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/conversation/conversation.dart';
 import 'debug_chat_controller.dart';
 import 'debug_chat_samples.dart';
 

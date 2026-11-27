@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_highlight_text.dart';
-import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_list_row.dart';
-import '../../enterprises/widgets/enterprise_tile.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/features/enterprises/enterprises.dart';
 import '../enterprise_switcher_controller.dart';
-import '../../../core/widgets/app_spinner.dart';
 
 class EnterpriseSwitcherSheet extends StatelessWidget {
   const EnterpriseSwitcherSheet({super.key, required this.controller});

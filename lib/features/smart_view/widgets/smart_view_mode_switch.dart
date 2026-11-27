@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
+import 'package:connectum/core/theme/theme.dart';
 import '../../../data/smart_view/sv_prefs.dart';
 
 /// The Cards / Table switch: a rounded track with a violet thumb that slides

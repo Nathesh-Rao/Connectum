@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
-import '../../core/log/app_log.dart';
-import '../../core/utils/attachment_tag.dart';
-import '../models/pending_upload.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
 import 'attachment_repository.dart';
 import 'e2e_repository.dart';
 import 'message_repository.dart';

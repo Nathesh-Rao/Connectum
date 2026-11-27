@@ -5,11 +5,10 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../core/theme/app_motion.dart';
-import '../../core/utils/link_launcher.dart';
-import '../../core/utils/link_open_policy.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
 import 'models/link_browser_args.dart';
-import '../../core/log/safe.dart';
 
 enum LinkBrowserError { offline, ssl, http, other }
 

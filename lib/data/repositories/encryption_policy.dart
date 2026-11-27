@@ -1,12 +1,11 @@
 import 'package:get/get.dart';
 
 import '../e2e/e2e_models.dart';
-import '../models/ids.dart';
-import '../models/self_conversation.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../session_store.dart';
-import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
-import '../../core/log/app_log.dart';
 
 enum EncryptionVerdict { encrypted, plain, unknown }
 

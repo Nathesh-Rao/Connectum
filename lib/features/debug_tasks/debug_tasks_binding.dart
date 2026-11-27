@@ -1,8 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../data/repositories/approval_repository.dart';
-import '../../data/repositories/task_repository.dart';
-import '../home_shell/home_shell_controller.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
 import 'debug_tasks_controller.dart';
 
 class DebugTasksBinding extends Bindings {

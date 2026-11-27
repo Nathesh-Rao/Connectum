@@ -9,7 +9,7 @@ Source of truth is the code in `connectum/src`. The web app is ONE page (no rout
 |---|---|---|---|
 | Splash | None in the web app (only a brief "booting" state while a saved identity is re-checked via `me`) | `GET me` | Y (prototype extra) |
 | Sign in tab | Email, then 6-digit code; optional "sign in with a password" if set; "Change email"; resend with 30 s cooldown; trusted device (15 days) skips the code | `login/start`, `login/verify`, `login/password` | Y (email + OTP) P (password sign-in N) |
-| Set up enterprise tab | Enterprise name, owner name, email, mobile -> code -> enterprise created, you become admin; "created" screen shows the enterprise Connectum ID/QR | `setup/start`, `setup/verify` | N |
+| New Org tab (set up enterprise) | Enterprise name, owner name, email, mobile -> code -> enterprise created, you become admin; "created" screen shows the enterprise Connectum ID/QR | `setup/start`, `setup/verify` | N |
 | Register tab | Username, email, mobile (PhoneField), country/city/state (pickers), "more details" -> code -> welcome | `register/start`, `register/verify`, `geo/countries`, `geo/cities` | P |
 | Enterprise list (after auth) | Your enterprises with status (pending / rejected / inactive); tap to enter; add/find another | `me`, `enter` | Y |
 | Find enterprise | Search by name or Connectum ID | `enterprises?q=`, `enterprise/<id>` | P |

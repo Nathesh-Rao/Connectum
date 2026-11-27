@@ -3,11 +3,7 @@ import './app_spinner.dart';
 import 'package:get/get.dart';
 
 import '../routes/invite_service.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_text.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'app_button.dart';
 import 'app_highlight_text.dart';
 

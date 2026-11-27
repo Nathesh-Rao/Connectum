@@ -3,12 +3,10 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
-import '../../data/models/approval.dart';
-import '../../data/repositories/inbox_field_kinds.dart';
-import '../../data/repositories/inbox_repository.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'inbox_approvals_controller.dart';
 import 'models/inbox_approval_rows.dart';
 import 'models/inbox_filter.dart';

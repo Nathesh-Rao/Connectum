@@ -1,5 +1,4 @@
-import '../../../data/models/form_card.dart';
-import '../../../data/models/form_entry.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// One submission in the list: its card data plus what the list needs to
 /// filter and search it.

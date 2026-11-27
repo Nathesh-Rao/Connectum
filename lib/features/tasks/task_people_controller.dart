@@ -5,12 +5,12 @@ import 'package:get/get.dart';
 
 import '../../core/debug/seed_tasks.dart';
 import '../../core/debug/seed_tickets.dart';
-import '../../data/models/group_add.dart';
-import '../../data/repositories/group_repository.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../chats/models/chat_person.dart';
 import 'tasks_texts.dart';
-import '../../core/log/app_log.dart';
 
 /// The people list of the assignee and "send to" sheets: the colleagues
 /// list (`users.colleagues`), searched by name. Made by the Tasks controller

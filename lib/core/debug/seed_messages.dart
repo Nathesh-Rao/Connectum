@@ -3,11 +3,9 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 
-import '../../data/models/form_entry.dart';
+import 'package:connectum/data/models/models.dart';
 import '../../demo/demo_mode.dart';
 import '../../demo/demo_replies.dart';
-import '../../data/models/ids.dart';
-import '../../data/models/message.dart';
 
 /// Debug-only sample messages for the conversation screen (SEED_UI=1). In
 /// memory only: nothing goes to SQLite, SessionStore or secure storage.

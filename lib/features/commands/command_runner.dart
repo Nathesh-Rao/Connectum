@@ -4,20 +4,17 @@ import '../../core/crash/crash_breadcrumbs.dart';
 import '../../core/routes/app_routes.dart';
 import '../../data/commands/command_line.dart';
 import '../../core/routes/conversation_route.dart';
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/command_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/smart_view_repository.dart';
-import '../../data/repositories/submission_repository.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
+import 'package:connectum/features/forms/forms.dart';
+import 'package:connectum/features/home_shell/home_shell.dart';
+import 'package:connectum/features/smart_view/smart_view.dart';
+import 'package:connectum/features/struct_records/struct_records.dart';
 import '../../data/smart_view/models/sv_source.dart';
-import '../../data/socket/socket_service.dart';
-import '../smart_view/models/smart_view_entry.dart';
-import '../forms/models/form_launch.dart';
-import '../struct_records/models/struct_records_launch.dart';
-import '../home_shell/home_shell_controller.dart';
 import '../conversation/models/command_prompt.dart';
 import 'widgets/command_sheets.dart';
-import '../../core/log/safe.dart';
 
 /// Runs a `#` line from a message box and shows what came back: a notice, a
 /// screen, a sheet, or a chat opened with a draft. One per composer; the

@@ -1,4 +1,4 @@
-import '../../../data/models/approval.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// Which side of the Me / My Team toggle.
 enum ApprovalSide { me, team }

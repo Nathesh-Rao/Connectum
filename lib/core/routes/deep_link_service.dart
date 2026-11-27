@@ -5,19 +5,17 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../data/session_store.dart';
-import '../../data/socket/connectivity_service.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../features/connect_target/connect_target_controller.dart';
 import '../../features/connect_target/connect_target_sheet.dart';
 import '../debug/connect_flow_log.dart';
 import '../debug/seed_ui.dart';
-import '../utils/connect_code.dart';
-import '../utils/install_referrer.dart';
 import '../widgets/app_notice_card.dart';
 import '../widgets/app_notices.dart';
 import 'app_routes.dart';
 import 'home_reload.dart';
-import '../log/safe.dart';
-import '../log/app_log.dart';
 
 /// The one receiver of Connectum links: the cold-start link, links while the
 /// app runs, and codes handed over by the in-app scanner. Raw text only ever

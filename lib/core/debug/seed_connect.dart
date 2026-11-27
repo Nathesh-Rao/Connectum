@@ -1,9 +1,8 @@
 import '../../data/api/api_client.dart';
-import '../../data/models/connect_card.dart';
-import '../../data/models/connect_lookup.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../data/socket/socket_service.dart';
-import '../utils/connect_code.dart';
 
 /// Debug-only fixtures for the QR join flow (SEED_UI=1): fake scan results for
 /// every state, no server. Remove before release (see CLAUDE.md).

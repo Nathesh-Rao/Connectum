@@ -1,6 +1,6 @@
-import '../../data/models/chat_thread.dart';
-import '../../data/models/conversation.dart';
-import '../theme/app_spacing.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/data/models/models.dart';
+import '../../data/profile/presence.dart';
 import 'app_avatar.dart';
 
 /// What the avatar of a conversation is drawn from. One rule for the chat
@@ -37,6 +37,7 @@ AppAvatar conversationAvatarFor(
   Conversation c, {
   double size = AppSpacing.avatar,
   AppPresenceDot presence = AppPresenceDot.none,
+  Presence? mood,
 }) {
   final spec = ConversationAvatarSpec.of(c);
   return AppAvatar(
@@ -45,5 +46,6 @@ AppAvatar conversationAvatarFor(
     picture: c.kind == 'dm' ? c.avatar : null,
     size: size,
     presence: presence,
+    mood: mood,
   );
 }

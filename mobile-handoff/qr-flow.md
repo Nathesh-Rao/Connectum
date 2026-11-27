@@ -72,7 +72,7 @@ Other observations: the page for a person's code, an unknown code and an inactiv
 - Bugs/gaps found in `map()`: (a) the app's own open link `connectum://connect/CODE` yields host `connect`, path `/CODE`, so the code becomes `/CODE` (slash kept); (b) no alphabet/length validation; no O/I/L/U mapping; (c) any host is accepted for https; (d) `connectum:CODE?branch=X` is fine. (e) `EnterprisesController.asConnectumId` is a second, different copy of the code rules.
 - Splash routes to chats / enterprises / authentication / onboarding and calls `deepLinks.openPending()` only when it did not route to authentication/onboarding. After login and OTP the app goes to `/enterprises` (`Get.offAllNamed`) but nothing calls `openPending()` there. So a signed-out link is not resumed.
 - Enterprises screen: membership list with `Pending`/`Rejected` handling in `enter()`, `refresh()` calls `auth.refreshMe()`; a join by search sheet (`join_sheet.dart`) using `/enterprise/{id}`, `/join/check`, `/join`. It does not send `connectBranch`, refuses categories with `requiredFields`, and shows only text for pending.
-- `AuthRepository.byId/publicPage/join/joinCheck/enter` exist. `startLogin` maps the 404 to `no_account`, which the form shows under the email field; it does not offer register. Register is the "Self register" tab and needs name, mobile, etc.; `register` → `register/verify` → identity; then Enterprises.
+- `AuthRepository.byId/publicPage/join/joinCheck/enter` exist. `startLogin` maps the 404 to `no_account`, which the form shows under the email field; it does not offer register. Register is the "Register" tab and needs name, mobile, etc.; `register` → `register/verify` → identity; then Enterprises.
 - No middleware exists (CLAUDE.md names `GetMiddleware` guards; none are in `lib`). The pending-link flow below is done in the service, not a guard.
 - Native: no intent filters, no URL types, no entitlements file, no camera permission, no referrer or clipboard code, no scanner, no QR renderer, no Connect screen. `launchMode=singleTop` is already set. Flutter's own deep-link handling is not disabled (see 6).
 - The Postman collection has no `connect` endpoints and still documents a private `http://10.0.2.146` server; `deep-links.md` still lists the production URL as UNCLEAR. Both are now superseded by MOBILE_QR.md and the live checks above; treat the code as the truth.
@@ -108,7 +108,7 @@ link → `ConnectService.receive` → `/connect/:code` → lookup (current org) 
 ### Flow B (not installed, existing user)
 landing page → store → install → first launch reads referrer (Android) / clipboard (iOS) → pending → onboarding → login → OTP → Enterprises → confirm → join or connect. The pending code must survive onboarding, OTP and an app kill: store it in secure storage and clear on success/cancel/24 h.
 ### Flow C (not installed, new user)
-Same, but `login/start` 404: the sign-in form shows `no_account`. Add a single action there: "Create an account" switching to the Self register tab with the email prefilled, while the pending notice stays visible. After `register/verify` the app joins with the code through the same confirm screen (the identity token is enough for `/join`). Needs one user decision (question 9): the register tab asks for several fields; is a shorter path wanted?
+Same, but `login/start` 404: the sign-in form shows `no_account`. Add a single action there: "Create an account" switching to the Register tab with the email prefilled, while the pending notice stays visible. After `register/verify` the app joins with the code through the same confirm screen (the identity token is enough for `/join`). Needs one user decision (question 9): the register tab asks for several fields; is a shorter path wanted?
 ### Person QR
 - Flow A: handled (same organisation) or `not_found` (different org).
 - Fresh install: impossible to know the organisation from the URL (section 1). The doc's flow says "join that organisation first" but does not say how the app learns which. Until the backend answers, the app keeps the code, lets the user pick an organisation they belong to, runs `connect.lookup` there, and says "Not found" otherwise.
@@ -249,7 +249,7 @@ For the backend developer:
 8. Is 24 hours acceptable for the pending code, and do branch QR codes expire?
 
 For me:
-9. Flow C: is the full "Self register" form acceptable after an unknown email, or do you want a shorter path (name only) when the backend allows it?
+9. Flow C: is the full "Register" form acceptable after an unknown email, or do you want a shorter path (name only) when the backend allows it?
 10. Is `com.agile.connectum` the final Android applicationId and iOS bundle id? It cannot change after upload and the backend files depend on it.
 11. Is team `ZDYX426H32` (in the Xcode project) the account that will publish to TestFlight and the App Store, and does the Play developer account exist?
 12. Which clipboard behaviour do you want: automatic first-launch read (system paste prompt) or only the explicit "Paste copied code" button?

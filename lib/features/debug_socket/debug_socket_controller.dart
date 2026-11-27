@@ -10,18 +10,11 @@ import '../../core/routes/conversation_route.dart';
 import '../../core/routes/home_reload.dart';
 import '../../data/e2e/e2e_models.dart';
 import '../../data/api/api_client.dart';
-import '../../data/db/app_database.dart';
-import '../../data/models/conversation.dart';
-import '../../data/models/ids.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../../data/redact.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/conversation_repository.dart';
-import '../../data/repositories/message_repository.dart';
-import '../../data/repositories/presence_repository.dart';
-import '../../data/repositories/session_repository.dart';
-import '../../data/repositories/submission_repository.dart';
-import '../../data/socket/connectivity_service.dart';
-import '../../data/socket/socket_service.dart';
 
 class DebugSocketController extends GetxController {
   DebugSocketController({

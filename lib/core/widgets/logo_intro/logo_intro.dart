@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../theme/app_colors.dart';
+import 'package:connectum/core/theme/theme.dart';
 import 'logo_intro_data.dart';
 
 /// Lets you replay the intro from code:  `controller.replay();`

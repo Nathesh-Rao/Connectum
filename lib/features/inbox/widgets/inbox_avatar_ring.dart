@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_motion.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/utils/avatar_tint.dart';
-import '../../../core/widgets/app_avatar.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/utils/utils.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// The person's face on an Inbox card: a solid ring in a colour taken from the
 /// picture (the initials colour without a picture or while it is read, then it
 /// animates to the read colour), a surface gap, then the photo.
 class InboxAvatarRing extends StatelessWidget {
-  const InboxAvatarRing({super.key, required this.name, this.picture});
+  const InboxAvatarRing({
+    super.key,
+    required this.name,
+    this.picture,
+    this.dimension = size,
+  });
 
   final String name;
   final String? picture;
+
+  /// The outer size; the Inbox card's by default.
+  final double dimension;
 
   static const size = AppSpacing.inboxRingSize;
   static const stroke = AppSpacing.inboxRingStroke;
@@ -35,8 +41,8 @@ class InboxAvatarRing extends StatelessWidget {
     curve: AppCurves.out,
     builder: (context, ring, child) => Container(
       key: const ValueKey('inbox-avatar-ring'),
-      width: size,
-      height: size,
+      width: dimension,
+      height: dimension,
       padding: const EdgeInsets.all(gap),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -45,6 +51,10 @@ class InboxAvatarRing extends StatelessWidget {
       ),
       child: child,
     ),
-    child: AppAvatar(name: name, size: photoSize, picture: picture),
+    child: AppAvatar(
+      name: name,
+      size: dimension - 2 * (stroke + gap),
+      picture: picture,
+    ),
   );
 }

@@ -2,16 +2,12 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import '../../core/log/app_log.dart';
-import '../../core/log/safe.dart';
-import '../db/app_database.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/db/db.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/socket/socket.dart';
 import '../marks/mark_commands.dart';
-import '../models/ids.dart';
-import '../models/message_mark.dart';
-import '../models/self_conversation.dart';
 import '../session_store.dart';
-import '../socket/read_gate.dart';
-import '../socket/socket_service.dart';
 
 enum _Field { saved, pinned }
 
@@ -573,7 +569,9 @@ class MarksRepository extends GetxService {
 
   // ---- events --------------------------------------------------------------
 
-  /// `pins_changed` for `self` re-reads the pins once for a burst;
+  /// `pins_changed` for `self` re-reads the pins once for a burst; with
+  /// `deleted: true` the note was deleted for everyone: its marks go at once,
+  /// no read;
   /// `saved_changed` sets one note; `self_deleted` drops the note's marks.
   Future<void> onEvent(Map<String, dynamic> e) async {
     if (!_socket.isCurrent(e) || !_canWork) return;
@@ -584,7 +582,12 @@ class MarksRepository extends GetxService {
         : e;
     switch (name) {
       case MarkEvents.pinsChanged:
-        if (idText(data['conv']) == _conv) requestPins();
+        if (idText(data['conv']) != _conv) return;
+        if (data['deleted'] == true && idText(data['id']).isNotEmpty) {
+          await _forget(idText(data['id']));
+        } else {
+          requestPins();
+        }
       case MarkEvents.savedChanged:
         await _onSavedChanged(data);
       case MarkEvents.selfDeleted:

@@ -6,9 +6,10 @@ import 'package:get/get.dart';
 import '../../core/routes/app_routes.dart';
 import '../../data/api/api_client.dart';
 import '../../data/api/api_messages.dart';
-import '../../data/models/auth_flow.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../core/log/safe.dart';
+import 'package:connectum/core/log/log.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/features/authentication/authentication.dart';
 
 class VerificationController extends GetxController {
   VerificationController({
@@ -223,7 +224,14 @@ class VerificationController extends GetxController {
       message.value = 'A new code is on its way.';
       _clearCells();
     } on ApiException catch (e) {
-      message.value = ApiMessages.of(e);
+      final wait = e.retryAfterSeconds;
+      if (e.code == 'rate_limited' && wait != null) {
+        CodeCooldown.start(flow, email, wait);
+        _startResendTimer(wait);
+        message.value = '${CodeCooldown.sentence(wait)}.';
+      } else {
+        message.value = ApiMessages.of(e);
+      }
     } finally {
       isBusy.value = false;
     }

@@ -1,4 +1,4 @@
-import '../../../data/models/ids.dart';
+import 'package:connectum/data/models/models.dart';
 import 'inbox_row.dart';
 
 /// One answer of `records.query`: a page of rows.

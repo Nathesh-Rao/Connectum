@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import '../../core/log/app_log.dart';
+import 'package:connectum/core/log/log.dart';
 
 /// The label this phone registers under: `Connectum mobile (model)`. The
 /// model comes from a small platform channel (Android `Build.MODEL`, iOS

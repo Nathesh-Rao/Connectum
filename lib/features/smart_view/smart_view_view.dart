@@ -1,23 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_sv.dart';
-import '../../core/theme/app_tones.dart';
-import '../../core/theme/app_text.dart';
-import '../../core/tour/tour_texts.dart';
-import '../../core/widgets/app_button.dart';
-import '../../core/widgets/app_drawer_shell.dart';
-import '../../core/widgets/app_speed_dial.dart';
-import '../../core/widgets/app_offline_bar.dart';
-import '../../core/widgets/app_refresh.dart';
-import '../../core/widgets/app_scaffold.dart';
-import '../../core/widgets/app_tag.dart';
-import '../../core/widgets/app_spinner.dart';
-import '../../core/widgets/app_state_image.dart';
-import '../../core/widgets/app_state_view.dart';
-import '../../data/repositories/smart_view_repository.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/tour/tour.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
 import '../../data/smart_view/sv_columns.dart';
 import '../../data/smart_view/sv_prefs.dart';
 import '../../data/smart_view/sv_query.dart';

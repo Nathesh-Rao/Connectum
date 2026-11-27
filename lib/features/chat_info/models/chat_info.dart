@@ -1,9 +1,6 @@
-import '../../../data/models/chat_thread.dart';
-import '../../../data/models/conversation.dart';
-import '../../../data/models/ticket.dart';
-import '../../chats/widgets/conversation_tile.dart';
-import '../../tickets/models/ticket_detail_row.dart';
-import '../../tickets/tickets_texts.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/chats/chats.dart';
+import 'package:connectum/features/tickets/tickets.dart';
 
 enum ChatInfoKind { personal, group, thread, ticket }
 

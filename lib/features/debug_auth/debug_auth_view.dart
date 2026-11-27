@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../authentication/authentication_view.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/features/authentication/authentication.dart';
 import 'debug_auth_controller.dart';
 import 'scripted_auth_repository.dart';
 

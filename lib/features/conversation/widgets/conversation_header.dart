@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_button.dart';
+import 'package:connectum/core/theme/theme.dart';
+import 'package:connectum/core/widgets/widgets.dart';
 
 /// Back, avatar, title and a status line; the avatar and the two lines open
 /// the chat info. Whatever is added on the right
@@ -19,6 +16,7 @@ class ConversationHeader extends StatelessWidget {
     required this.onBack,
     this.isEncrypted = false,
     this.onInfoTap,
+    this.onAvatarTap,
     this.trailing = const [],
   });
 
@@ -30,6 +28,10 @@ class ConversationHeader extends StatelessWidget {
   final bool isEncrypted;
   final VoidCallback onBack;
   final VoidCallback? onInfoTap;
+
+  /// Opens the person's profile (a direct chat); the avatar then has its own
+  /// 44 pt hit area. Null leaves the avatar part of the info tap.
+  final VoidCallback? onAvatarTap;
   final List<Widget> trailing;
 
   @override
@@ -57,7 +59,25 @@ class ConversationHeader extends StatelessWidget {
                 borderRadius: AppRadius.controlAll,
                 child: Row(
                   children: [
-                    avatar,
+                    if (onAvatarTap == null)
+                      avatar
+                    else
+                      Semantics(
+                        button: true,
+                        label: 'Profile, $title',
+                        excludeSemantics: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onAvatarTap,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minWidth: AppSpacing.minTapTarget,
+                              minHeight: AppSpacing.minTapTarget,
+                            ),
+                            child: Center(child: avatar),
+                          ),
+                        ),
+                      ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Column(

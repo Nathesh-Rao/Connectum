@@ -1,6 +1,6 @@
-import '../../core/widgets/app_notices.dart';
-import '../../data/repositories/feed_repository.dart';
-import '../../data/socket/socket_service.dart';
+import 'package:connectum/core/widgets/widgets.dart';
+import 'package:connectum/data/repositories/repositories.dart';
+import 'package:connectum/data/socket/socket.dart';
 import 'models/feed_item.dart';
 import 'notification_texts.dart';
 

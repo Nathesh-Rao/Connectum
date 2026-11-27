@@ -1,6 +1,6 @@
 import '../../../core/data/country_lookup.dart';
-import '../../../data/models/join_page.dart';
-import '../../authentication/auth_validators.dart';
+import 'package:connectum/data/models/models.dart';
+import 'package:connectum/features/authentication/authentication.dart';
 
 enum JoinStep { type, employee, category, affiliate, details, review }
 

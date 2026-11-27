@@ -1,8 +1,6 @@
 import 'dart:convert';
 
-import '../../data/models/form_definition.dart';
-import '../../data/models/form_option.dart';
-import '../../data/models/slot_day.dart';
+import 'package:connectum/data/models/models.dart';
 
 /// The `sample_*` forms for `SEED_UI=1` (debug only): the definitions from
 /// the backend pack's `docs/sample-forms`, so every state can be tried with
