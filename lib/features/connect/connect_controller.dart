@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/debug/seed_connect.dart';
+import '../../core/data/app_countries.dart';
+import '../../core/data/country_lookup.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
@@ -87,6 +89,8 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   final fieldErrors = <String, String>{}.obs;
   final isJoining = false.obs;
   final joinMessage = RxnString();
+  final _texts = <String, TextEditingController>{};
+  List<String> _countries = const [];
   final failure = ConnectFailure.other.obs;
   final failureDetail = RxnString();
   final retryAfter = 0.obs;
@@ -499,7 +503,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     if (found == null || isLoadingPage.value) return;
     pageMessage.value = null;
     if (SeedUi.isActive) {
-      joinFlow.value = JoinFlow(page: JoinPage(categories: found.categories));
+      _startFlow(JoinPage(categories: found.categories), found);
       return;
     }
     if (isOffline) {
@@ -510,7 +514,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     try {
       final data = await auth.publicPage(found.display);
       if (!_isOpen || card.value != found) return;
-      joinFlow.value = JoinFlow(page: JoinPage.fromJson(data));
+      _startFlow(JoinPage.fromJson(data), found);
     } on ApiException catch (e) {
       if (!_isOpen) return;
       pageMessage.value = ApiMessages.of(e);
@@ -527,12 +531,102 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     joinMessage.value = null;
   }
 
+  /// The flow's starting values: the account's name and username (as the web
+  /// prefills them), the scanned branch when the organisation has it.
+  void _startFlow(JoinPage page, ConnectCard found) {
+    final identity = store.identity.value;
+    final branch = page.branchNamed(found.branch);
+    final seed = {
+      'name': identity?.name ?? '',
+      'username': identity?.username ?? '',
+      'mobileIso': CountryLookup.deviceDefault().iso,
+      'branch': ?branch,
+    };
+    joinFlow.value = JoinFlow(page: page, values: seed, seed: seed);
+    _syncTexts();
+  }
+
+  String get identityEmail => store.identity.value?.email ?? '';
+
+  /// The text controller of a typed field. It lives with the controller, so
+  /// going back and forward keeps what was typed.
+  TextEditingController textFor(String key) => _texts.putIfAbsent(
+    key,
+    () => TextEditingController(text: joinFlow.value?.values[key] ?? ''),
+  );
+
+  void _syncTexts() {
+    final values = joinFlow.value?.values ?? const <String, String>{};
+    for (final e in _texts.entries) {
+      final text = values[e.key] ?? '';
+      if (e.value.text != text) e.value.text = text;
+    }
+  }
+
+  /// A typed or picked value of the employee or details step.
+  void setValue(String key, String text) {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.remove(key);
+    joinFlow.value = f.withValue(key, text);
+    _syncTexts();
+  }
+
   void chooseAssociate() {
     final f = joinFlow.value;
     if (f == null) return;
     fieldErrors.clear();
     _setFlow(f.chooseAssociate());
+    _syncTexts();
   }
+
+  void chooseEmployee() {
+    final f = joinFlow.value;
+    if (f == null) return;
+    fieldErrors.clear();
+    _setFlow(f.chooseEmployee());
+    _syncTexts();
+  }
+
+  Future<List<String>> loadCountries() async {
+    if (_countries.isNotEmpty) return _countries;
+    try {
+      _countries = await auth.countries();
+    } on ApiException catch (e) {
+      AppLog.w('connect_controller', 'countries ${e.code}');
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
+    }
+    return _countries;
+  }
+
+  Future<List<String>> loadCities() async {
+    final country = joinFlow.value?.value('country') ?? '';
+    if (country.isEmpty) return const [];
+    try {
+      return await auth.cities(country);
+    } on ApiException catch (e) {
+      AppLog.w('connect_controller', 'cities ${e.code}');
+    } catch (e, st) {
+      AppLog.e('connect_controller', e, st);
+    }
+    return const [];
+  }
+
+  /// A country's name picked for the profile: it also sets the mobile
+  /// number's country code while no number is typed.
+  void pickCountry(String name) {
+    final f = joinFlow.value;
+    if (f == null) return;
+    setValue('country', name);
+    final match = CountryLookup.matchName(name);
+    if (match != null && (f.values['mobile'] ?? '').trim().isEmpty) {
+      setValue('mobileIso', match.iso);
+    }
+  }
+
+  void pickMobileCountry(AppCountry picked) =>
+      setValue('mobileIso', picked.iso);
 
   void pickCategory(String value) {
     final f = joinFlow.value;
@@ -587,11 +681,6 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
       return;
     }
     fieldErrors.clear();
-    if (f.unsupportedFields.isNotEmpty && f.step != JoinStep.type) {
-      joinMessage.value =
-          'Joining as ${f.effectiveCategory} needs more details than the mobile app supports yet.';
-      return;
-    }
     final body = f.checkBody();
     if (body != null && !SeedUi.isActive) {
       isJoining.value = true;
@@ -600,7 +689,7 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
         if (!_isOpen) return;
         final fields = check['fields'];
         if (check['ok'] == false || (fields is Map && fields.isNotEmpty)) {
-          _showFields(fields is Map ? fields : const {});
+          _showFields(fields is Map ? fields : const {}, f);
           return;
         }
       } on ApiException catch (e) {
@@ -623,10 +712,12 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
     joinFlow.value = current.advance();
   }
 
-  void _showFields(Map fields) {
+  /// Puts the server's messages under their fields. A message for a field
+  /// that has no input on the step the person is on is shown as the message.
+  void _showFields(Map fields, JoinFlow f) {
     final errors = {for (final e in fields.entries) '${e.key}': '${e.value}'};
     fieldErrors.assignAll(errors);
-    const shown = {'category', 'affiliate', 'affiliateBranch'};
+    final shown = f.fieldKeys(f.step);
     final other = errors.entries.where((e) => !shown.contains(e.key));
     if (other.isNotEmpty) joinMessage.value = other.first.value;
   }
@@ -659,12 +750,29 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
             'Too many join requests. ${_waitText(e.retryAfterSeconds ?? 3600)}';
       } else {
         final fields = e.fieldErrors;
-        if (fields.isNotEmpty) _showFields(fields);
+        if (fields.isNotEmpty) _showFields(fields, f);
         joinMessage.value ??= ApiMessages.of(e);
+        _showJoinErrorStep(f, fields.isNotEmpty ? fields.keys : _codeKeys(e));
       }
     } finally {
       isJoining.value = false;
     }
+  }
+
+  static Iterable<String> _codeKeys(ApiException e) =>
+      e.code == 'code_required' ? const ['employeeCode'] : const [];
+
+  /// Goes back to the details step for a refused detail (as the web does) and
+  /// to the code step for the code; any other refusal stays on the review.
+  void _showJoinErrorStep(JoinFlow f, Iterable<String> keys) {
+    if (keys.isEmpty) return;
+    if (keys.contains('employeeCode') && fieldErrors['employeeCode'] == null) {
+      fieldErrors['employeeCode'] = joinMessage.value ?? JoinFlow.enterCode;
+    }
+    final target = f.stepOwning(keys);
+    if (target != JoinStep.details && target != JoinStep.employee) return;
+    final current = joinFlow.value;
+    if (current != null) joinFlow.value = current.copyWith(step: target);
   }
 
   Future<void> _afterJoin(
@@ -737,6 +845,9 @@ class ConnectController extends GetxController with WidgetsBindingObserver {
   @override
   void onClose() {
     close();
+    for (final t in _texts.values) {
+      t.dispose();
+    }
     query.dispose();
     queryFocus.dispose();
     super.onClose();

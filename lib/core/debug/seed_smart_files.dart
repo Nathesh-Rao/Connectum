@@ -107,12 +107,7 @@ class SeedSmartFiles {
       mime: 'application/octet-stream',
       size: 2048,
     ),
-    SvFile(
-      id: audioId,
-      name: 'voice-note.wav',
-      mime: 'audio/wav',
-      size: 32044,
-    ),
+    SvFile(id: audioId, name: 'voice-note.wav', mime: 'audio/wav', size: 32044),
   ];
 
   static final _byId = {for (final f in files) f.id: f};
@@ -124,15 +119,7 @@ class SeedSmartFiles {
     2 => const [textId, pdfId],
     3 => const [longId, zipId, imageId, bigTextId, pdfId],
     4 => const [failId],
-    _ => const [
-      docxId,
-      pptxId,
-      audioId,
-      badPdfId,
-      binId,
-      jpgId,
-      pdfId,
-    ],
+    _ => const [docxId, pptxId, audioId, badPdfId, binId, jpgId, pdfId],
   };
 
   /// The row's `files` map for [values]: field name to file details.
@@ -179,7 +166,8 @@ class SeedSmartFiles {
       '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
     ];
     for (var i = 0; i < pages; i++) {
-      final text = 'BT /F1 28 Tf 72 700 Td (Leave summary - page ${i + 1}) Tj ET';
+      final text =
+          'BT /F1 28 Tf 72 700 Td (Leave summary - page ${i + 1}) Tj ET';
       objs.add(
         '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] '
         '/Contents ${5 + i * 2} 0 R /Resources << /Font << /F1 3 0 R >> >> >>',
@@ -281,7 +269,9 @@ class SeedSmartFiles {
       case pdfId:
         return _pdf(5);
       case badPdfId || hiddenId:
-        return utf8.encode('%PDF-1.7\n/Encrypt << /Filter /Standard >>\n\u0000');
+        return utf8.encode(
+          '%PDF-1.7\n/Encrypt << /Filter /Standard >>\n\u0000',
+        );
       case docxId:
         return _docx();
       case pptxId:
@@ -335,10 +325,14 @@ class SeedSmartFiles {
 
   static const SvFileFetcher fetcher = _fetch;
 
-  static Future<void> _fetch(
+  static Future<SvFileReply> _fetch(
     SvFile file,
     String targetPath,
+    String? etag,
     void Function(double) onProgress,
     CancelToken cancel,
-  ) => fetch(file, targetPath, onProgress, cancel);
+  ) async {
+    await fetch(file, targetPath, onProgress, cancel);
+    return const SvFileReply(200);
+  }
 }

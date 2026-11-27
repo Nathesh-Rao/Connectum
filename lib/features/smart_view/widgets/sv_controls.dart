@@ -46,39 +46,53 @@ class SvControls extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Obx(
-                    () => SmartViewModeSwitch(
-                      mode: c.mode.value,
-                      onChanged: c.setMode,
+                  KeyedSubtree(
+                    key: c.tour?.modeKey,
+                    child: Obx(
+                      () => SmartViewModeSwitch(
+                        mode: c.mode.value,
+                        onChanged: c.setMode,
+                      ),
                     ),
                   ),
                   const Spacer(),
-                  Obx(
-                    () => SvIconAction(
-                      icon: Icons.search,
-                      label: 'Search',
-                      tone: AppSv.searchTone,
-                      isActive: c.query.value.search.isNotEmpty,
-                      onTap: c.openSearch,
+                  KeyedSubtree(
+                    key: c.tour?.searchKey,
+                    child: Obx(
+                      () => SvIconAction(
+                        icon: Icons.search,
+                        label: 'Search',
+                        tone: AppSv.searchTone,
+                        isActive: c.query.value.search.isNotEmpty,
+                        onTap: c.openSearch,
+                      ),
                     ),
                   ),
-                  Obx(
-                    () => SvIconAction(
-                      icon: Icons.filter_list,
-                      tone: AppSv.filterTone,
-                      label: 'Filter',
-                      badge: c.query.value.activeConditions.length,
-                      isActive: c.query.value.activeConditions.isNotEmpty,
-                      onTap: () => SvFilterSheet.show(context, c),
-                    ),
-                  ),
-                  Obx(
-                    () => SvIconAction(
-                      icon: Icons.swap_vert,
-                      tone: AppSv.sortTone,
-                      label: 'Sort',
-                      isActive: c.query.value.isSorting,
-                      onTap: () => SvSortSheet.show(context, c),
+                  KeyedSubtree(
+                    key: c.tour?.filterKey,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Obx(
+                          () => SvIconAction(
+                            icon: Icons.filter_list,
+                            tone: AppSv.filterTone,
+                            label: 'Filter',
+                            badge: c.query.value.activeConditions.length,
+                            isActive: c.query.value.activeConditions.isNotEmpty,
+                            onTap: () => SvFilterSheet.show(context, c),
+                          ),
+                        ),
+                        Obx(
+                          () => SvIconAction(
+                            icon: Icons.swap_vert,
+                            tone: AppSv.sortTone,
+                            label: 'Sort',
+                            isActive: c.query.value.isSorting,
+                            onTap: () => SvSortSheet.show(context, c),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Obx(

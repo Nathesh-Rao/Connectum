@@ -197,4 +197,141 @@ void main() {
     expect(repo.count.value, 0);
     expect(repo.hasRead.value, isFalse);
   });
+
+  group('req.team', () {
+    Map<String, dynamic> teamRaw(int id, {String from = 'rhea'}) => {
+      ...raw(id, canRespond: false, direction: 'other'),
+      'from': from,
+      'fromUser': from,
+      'team': true,
+    };
+
+    test('is not read at all when the person has no reports', () async {
+      await repo.start();
+      expect(socket.calls.where((c) => c.action == 'req.team'), isEmpty);
+      expect(repo.team, isEmpty);
+    });
+
+    test(
+      'asks status all, limit 200, and marks each item as the team\'s',
+      () async {
+        repo.hasReports.value = true;
+        socket.handler = (action, args) async => action == 'req.team'
+            ? page([teamRaw(11), teamRaw(12)])
+            : page([raw(1)]);
+        await repo.start();
+        final asked = socket.calls
+            .where((c) => c.action == 'req.team')
+            .toList();
+        expect(asked, hasLength(1));
+        expect(asked.single.args, {'status': 'all', 'limit': 200});
+        expect([for (final a in repo.team) a.id], [11, 12]);
+        expect(repo.team.every((a) => a.isTeam), isTrue);
+        expect(repo.all.every((a) => !a.isTeam), isTrue);
+      },
+    );
+
+    test('pages with offset until hasMore is false', () async {
+      repo.hasReports.value = true;
+      socket.handler = (action, args) async {
+        if (action != 'req.team') return page([raw(1)]);
+        final offset = (args['offset'] as int?) ?? 0;
+        return offset == 0
+            ? page([teamRaw(11), teamRaw(12)], more: true)
+            : page([teamRaw(13)]);
+      };
+      await repo.start();
+      final asked = socket.calls.where((c) => c.action == 'req.team').toList();
+      expect(asked, hasLength(2));
+      expect(asked.last.args['offset'], 2);
+      expect([for (final a in repo.team) a.id], [11, 12, 13]);
+    });
+
+    test(
+      'reads at most 5 pages even when the server always has more',
+      () async {
+        repo.hasReports.value = true;
+        var next = 100;
+        socket.handler = (action, args) async => action == 'req.team'
+            ? page([teamRaw(next++)], more: true)
+            : page([raw(1)]);
+        await repo.start();
+        expect(socket.calls.where((c) => c.action == 'req.team'), hasLength(5));
+        expect(repo.team, hasLength(5));
+      },
+    );
+
+    test('an error means an empty team list, never a visible error', () async {
+      repo.hasReports.value = true;
+      socket.handler = (action, args) async {
+        if (action == 'req.team') throw const SocketCallError('unknown_action');
+        return page([raw(1)]);
+      };
+      expect(await repo.start().then((_) => true), isTrue);
+      expect(repo.team, isEmpty);
+      expect(repo.hasError.value, isFalse);
+      expect(repo.hasRead.value, isTrue);
+      expect(repo.all, hasLength(1));
+    });
+
+    test('a late answer of an older read is dropped', () async {
+      repo.hasReports.value = true;
+      await repo.start();
+      socket.handler = null;
+      socket.waiting.clear();
+      final first = repo.refreshTeam();
+      await settle();
+      final older = socket.waiting.last;
+      final second = repo.refreshTeam();
+      await settle();
+      older.done.complete(page([teamRaw(99)]));
+      await first;
+      expect(repo.team.any((a) => a.id == 99), isFalse);
+      await settle();
+      final newer = socket.waiting.last;
+      expect(identical(newer, older), isFalse);
+      newer.done.complete(page([teamRaw(21)]));
+      await second;
+      expect([for (final a in repo.team) a.id], [21]);
+    });
+
+    test(
+      'a read goes through the shared gate (paced, one at a time)',
+      () async {
+        repo.hasReports.value = true;
+        socket.handler = (action, args) async => action == 'req.team'
+            ? page([teamRaw(11)], more: true)
+            : page([raw(1)]);
+        await repo.start();
+        expect(clock.waits, isNotEmpty);
+      },
+    );
+
+    test('losing the reports clears the list on the next read', () async {
+      repo.hasReports.value = true;
+      socket.handler = (action, args) async =>
+          action == 'req.team' ? page([teamRaw(11)]) : page([raw(1)]);
+      await repo.start();
+      expect(repo.team, hasLength(1));
+      repo.hasReports.value = false;
+      await repo.refresh();
+      expect(repo.team, isEmpty);
+    });
+
+    test('a returned request keeps its flag, and Return marks it', () async {
+      socket.handler = (action, args) async {
+        if (action == 'req.respond') {
+          return {
+            'request': {...raw(1), 'status': 'rejected', 'canRespond': false},
+          };
+        }
+        return page([raw(1)]);
+      };
+      await repo.start();
+      final done = await repo.respond(1, 'return', reason: 'Missing');
+      expect(done.returned, isTrue);
+      expect(repo.all.single.returned, isTrue);
+      expect(repo.all.single.status, 'rejected');
+    });
+  });
 }

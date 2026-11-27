@@ -25,6 +25,18 @@ class EngineTable {
   }
 }
 
+/// The two reserved condition names of the "My team" and "Linked as" lines.
+/// They ride in the list of conditions (so a saved view keeps them) but are
+/// not columns: the server cuts the records by them, the engine skips them.
+class SvTeamCols {
+  SvTeamCols._();
+
+  static const team = '__team';
+  static const linked = '__linked';
+
+  static bool isReserved(String col) => col == team || col == linked;
+}
+
 /// One filter condition. [value] is a String or number, a list (`in`) or a
 /// `{from, to}` map (`between`).
 class SvCondition {
@@ -190,7 +202,7 @@ class SvEngine {
     final cols = searchIn ?? t.columns;
     final active = [
       for (final c in conditions)
-        if (isActive(c)) c,
+        if (isActive(c) && !SvTeamCols.isReserved(c.col)) c,
     ];
     final types = {for (final c in t.columns) c.key: c.type};
     final out = <int>[];

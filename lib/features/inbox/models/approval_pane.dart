@@ -1,21 +1,8 @@
 import '../../../data/models/approval.dart';
+import 'approval_entries.dart';
 import 'approval_reducer.dart';
 
-/// Where a request stands, for the pane's filter and tag.
-enum ApprovalState { pending, approved, rejected, other }
-
-/// The pane's dropdown: All and one entry per [ApprovalState].
-enum ApprovalFilter {
-  all('All'),
-  pending('Pending'),
-  approved('Approved'),
-  rejected('Rejected'),
-  closed('Closed');
-
-  const ApprovalFilter(this.label);
-
-  final String label;
-}
+export 'approval_entries.dart' show ApprovalState;
 
 /// The Inbox's Approvals pane, as the web's `ApprovalsPane`: which requests
 /// show, their state and tag, the count on the button. Pure.
@@ -26,19 +13,15 @@ class ApprovalPane {
 
   static const noneText = 'There are no approvals.';
   static const noMatchText = 'No approvals are like that.';
-  static const errorText = 'Use Refresh to try again';
+  static const errorText = 'Pull down to try again';
 
   static const waitingForYou = 'Waiting for you';
   static const waitingForApproval = 'Waiting for approval';
   static const declined = 'Declined';
+  static const returned = 'Returned';
   static const approved = 'Approved';
 
-  static ApprovalState stateOf(Approval a) => switch (a.status) {
-    Approval.pending => ApprovalState.pending,
-    Approval.rejected => ApprovalState.rejected,
-    Approval.accepted || 'approved' => ApprovalState.approved,
-    _ => ApprovalState.other,
-  };
+  static ApprovalState stateOf(Approval a) => ApprovalEntries.stateOf(a);
 
   /// "Waiting for you" is only a request the server lets the person answer.
   static bool isWaitingForMe(Approval a) => a.isPending && a.canRespond;
@@ -47,13 +30,30 @@ class ApprovalPane {
   static String tagOf(Approval a) => switch (stateOf(a)) {
     ApprovalState.pending =>
       isWaitingForMe(a) ? waitingForYou : waitingForApproval,
-    ApprovalState.rejected => declined,
+    ApprovalState.rejected =>
+      ApprovalEntries.isReturned(a) ? returned : declined,
     ApprovalState.approved => approved,
     ApprovalState.other => '',
   };
 
-  /// A settled sign-up is not listed (it is a record of the past, not mail).
-  static bool isListed(Approval a) => !(a.type == 'onboarding' && !a.isPending);
+  /// The words of a request's state, also for a closed one (no tag): "Pending",
+  /// "Approved", "Declined", "Dismissed", "Closed"...
+  static String statusWord(Approval a) {
+    final tag = tagOf(a);
+    if (tag.isNotEmpty) return tag;
+    return switch (a.status.trim().toLowerCase()) {
+      'ignored' || 'dismissed' => 'Dismissed',
+      'withdrawn' => 'Withdrawn',
+      'cancelled' || 'canceled' => 'Cancelled',
+      'expired' => 'Expired',
+      'returned' => 'Returned',
+      _ => 'Closed',
+    };
+  }
+
+  /// Every request that is waiting, approved, declined or returned. A
+  /// dismissed or withdrawn one is not listed anywhere.
+  static bool isListed(Approval a) => ApprovalEntries.isListed(a);
 
   /// The button's number: requests waiting for the person. Requests the
   /// person sent are never counted, whoever they wait on.
@@ -68,32 +68,9 @@ class ApprovalPane {
     return age > escalateAfter.inMilliseconds;
   }
 
-  static bool inFilter(Approval a, ApprovalFilter f) => switch (f) {
-    ApprovalFilter.all => true,
-    ApprovalFilter.pending => stateOf(a) == ApprovalState.pending,
-    ApprovalFilter.approved => stateOf(a) == ApprovalState.approved,
-    ApprovalFilter.rejected => stateOf(a) == ApprovalState.rejected,
-    ApprovalFilter.closed => stateOf(a) == ApprovalState.other,
-  };
-
   /// Every listed request, newest first by `createdTs`.
   static List<Approval> listed(Iterable<Approval> all) =>
       ApprovalReducer.sorted(all.where(isListed));
-
-  /// How many listed requests each filter holds.
-  static Map<ApprovalFilter, int> countsOf(Iterable<Approval> all) {
-    final rows = all.where(isListed).toList();
-    return {
-      for (final f in ApprovalFilter.values)
-        f: rows.where((a) => inFilter(a, f)).length,
-    };
-  }
-
-  /// The filters worth offering: All, and each answer that has rows.
-  static List<ApprovalFilter> offered(Map<ApprovalFilter, int> counts) => [
-    for (final f in ApprovalFilter.values)
-      if (f == ApprovalFilter.all || (counts[f] ?? 0) > 0) f,
-  ];
 
   /// The search text narrows the rows by what a card shows.
   static bool matches(Approval a, String query, {String personName = ''}) {
@@ -113,17 +90,14 @@ class ApprovalPane {
         a.lines.any((l) => has(l.caption) || has(l.value));
   }
 
-  /// The rows of [filter] that match [query], newest first.
+  /// The listed rows that match [query], newest first.
   static List<Approval> rows(
     Iterable<Approval> all, {
-    ApprovalFilter filter = ApprovalFilter.all,
     String query = '',
     String Function(Approval)? nameOf,
   }) => [
     for (final a in listed(all))
-      if (inFilter(a, filter) &&
-          matches(a, query, personName: nameOf?.call(a) ?? ''))
-        a,
+      if (matches(a, query, personName: nameOf?.call(a) ?? '')) a,
   ];
 
   /// "Sign-up", "Connection request", "Form"...

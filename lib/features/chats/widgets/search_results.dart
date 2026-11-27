@@ -107,7 +107,7 @@ class _MessageRow extends StatelessWidget {
                     hit.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.rowTitle,
+                    style: AppText.chatName,
                   ),
                 ),
                 Obx(
@@ -122,7 +122,7 @@ class _MessageRow extends StatelessWidget {
               hit.snippet,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppText.rowCaption,
+              style: AppText.chatPreview,
             ),
           ],
         ),

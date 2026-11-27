@@ -143,16 +143,25 @@ class VerificationController extends GetxController {
       switch (flow) {
         case AuthFlow.login:
           await auth.verifyLogin(email, code);
-          fireAndLog('verification_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
+          fireAndLog(
+            'verification_controller',
+            () async => Get.offAllNamed(AppRoutes.enterprises),
+          );
         case AuthFlow.register:
           await auth.verifyRegister(email, code);
-          fireAndLog('verification_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
+          fireAndLog(
+            'verification_controller',
+            () async => Get.offAllNamed(AppRoutes.enterprises),
+          );
         case AuthFlow.setup:
           final created = await auth.verifySetup(email, code);
-          fireAndLog('verification_controller', () async => Get.offAllNamed(
-            AppRoutes.enterpriseCreated,
-            arguments: {'name': created.name, 'id': created.enterpriseId},
-          ));
+          fireAndLog(
+            'verification_controller',
+            () async => Get.offAllNamed(
+              AppRoutes.enterpriseCreated,
+              arguments: {'name': created.name, 'id': created.enterpriseId},
+            ),
+          );
       }
     } on UnsupportedStep catch (e) {
       blockedReasons.assignAll(e.reasons);
@@ -198,7 +207,10 @@ class VerificationController extends GetxController {
         case AuthFlow.login:
           final result = await auth.startLogin(email);
           if (result.kind == LoginStartKind.trusted) {
-            fireAndLog('verification_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
+            fireAndLog(
+              'verification_controller',
+              () async => Get.offAllNamed(AppRoutes.enterprises),
+            );
             return;
           }
           _startResendTimer(

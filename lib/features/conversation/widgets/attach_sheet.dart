@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
-import '../../../core/widgets/app_list_row.dart';
+import '../../../core/widgets/app_sheet_header.dart';
 import '../../../data/repositories/attachment_repository.dart';
 import '../conversation_controller.dart';
+import 'attach_circle_button.dart';
 
-/// "Photo library", "Camera" and "Document".
+/// "Photo library", "Camera" and "Document" as three circles.
 class AttachSheet extends StatelessWidget {
   const AttachSheet({super.key, required this.controller});
 
@@ -16,9 +17,8 @@ class AttachSheet extends StatelessWidget {
   static Future<void> show(
     BuildContext context,
     ConversationController controller,
-  ) => AppBottomSheet.show<void>(
+  ) => AppBottomSheet.showPinned<void>(
     context,
-    title: 'Attach',
     child: AttachSheet(controller: controller),
   );
 
@@ -30,38 +30,35 @@ class AttachSheet extends StatelessWidget {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppListRow(
-          title: 'Photo library',
-          minHeight: AppSpacing.settingRowHeight,
-          leading: const Icon(
-            Icons.photo_library_outlined,
-            size: 20,
-            color: AppColors.muted,
-          ),
-          onTap: () => choose(AttachSource.library),
+        const AppSheetHeader(title: 'Attach', titleSize: 18),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            AttachCircleButton(
+              icon: Icons.photo_library_outlined,
+              label: 'Photo library',
+              accent: AppColors.primaryBright,
+              onTap: () => choose(AttachSource.library),
+            ),
+            AttachCircleButton(
+              icon: Icons.photo_camera_outlined,
+              label: 'Camera',
+              accent: AppColors.violet,
+              onTap: () => choose(AttachSource.camera),
+            ),
+            AttachCircleButton(
+              icon: Icons.description_outlined,
+              label: 'Document',
+              accent: AppColors.yesDot,
+              onTap: () => choose(AttachSource.document),
+            ),
+          ],
         ),
-        AppListRow(
-          title: 'Camera',
-          minHeight: AppSpacing.settingRowHeight,
-          leading: const Icon(
-            Icons.photo_camera_outlined,
-            size: 20,
-            color: AppColors.muted,
-          ),
-          onTap: () => choose(AttachSource.camera),
-        ),
-        AppListRow(
-          title: 'Document',
-          minHeight: AppSpacing.settingRowHeight,
-          leading: const Icon(
-            Icons.description_outlined,
-            size: 20,
-            color: AppColors.muted,
-          ),
-          onTap: () => choose(AttachSource.document),
-        ),
+        SizedBox(height: AppSpacing.xl + MediaQuery.paddingOf(context).bottom),
       ],
     );
   }

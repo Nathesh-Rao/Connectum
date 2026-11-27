@@ -9,14 +9,19 @@ import '../../../core/widgets/app_spinner.dart';
 
 /// "Today", "Yesterday", a weekday or a date, centred between messages.
 class DayDivider extends StatelessWidget {
-  const DayDivider({super.key, required this.label});
+  const DayDivider({
+    super.key,
+    required this.label,
+    this.style = AppText.caption,
+  });
 
   final String label;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-    child: Center(child: Text(label, style: AppText.caption)),
+    child: Center(child: Text(label, style: style)),
   );
 }
 
@@ -89,11 +94,18 @@ class OlderErrorRow extends StatelessWidget {
 /// A small centred line of my own that is not a message: the answer of a `#`
 /// command, or "Sent to @name" in the workspace (which opens that chat).
 class SystemRow extends StatelessWidget {
-  const SystemRow({super.key, required this.text, this.onTap, this.isProblem});
+  const SystemRow({
+    super.key,
+    required this.text,
+    this.onTap,
+    this.isProblem,
+    this.style = AppText.caption,
+  });
 
   final String text;
   final VoidCallback? onTap;
   final bool? isProblem;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -118,7 +130,7 @@ class SystemRow extends StatelessWidget {
                 child: Text(
                   text,
                   textAlign: TextAlign.center,
-                  style: AppText.caption.copyWith(
+                  style: style.copyWith(
                     color: isProblem == true ? AppColors.error : null,
                   ),
                 ),

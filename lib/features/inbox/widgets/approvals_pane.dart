@@ -5,26 +5,52 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/app_filter_chips.dart';
+import '../../../core/tour/tour_texts.dart';
+import '../../../core/widgets/app_tag.dart';
 import '../../../core/widgets/app_refresh.dart';
 import '../../../core/widgets/app_state_view.dart';
 import '../inbox_approvals_controller.dart';
+import '../inbox_tour.dart';
 import '../models/approval_pane.dart';
 import 'approval_card.dart';
+import 'approval_filter_bar.dart';
 
 /// The Approvals pane: shown by the Inbox in place of its list. The filter
-/// chips with their counts, then the cards, or the shared state view.
+/// row, then the cards, or the shared state view.
 class ApprovalsPane extends StatelessWidget {
-  const ApprovalsPane({super.key, required this.controller});
+  const ApprovalsPane({
+    super.key,
+    required this.controller,
+    this.tour,
+    this.isSample,
+  });
 
   final InboxApprovals controller;
+
+  /// The first-run tour: its keys, and its sample requests while
+  /// [isSample] says they show (never with a request of the person's own).
+  final InboxTour? tour;
+  final bool Function()? isSample;
 
   @override
   Widget build(BuildContext context) {
     final c = controller;
+    final demo = tour?.demo;
+    if (demo != null) {
+      return Obx(() {
+        if (isSample?.call() ?? false) {
+          return _SampleApprovals(controller: c, tour: tour!);
+        }
+        return _real(c);
+      });
+    }
+    return _real(c);
+  }
+
+  Widget _real(InboxApprovals c) {
     return Column(
       children: [
-        _Filters(controller: c),
+        _Filters(controller: c, tour: tour),
         Obx(
           () => c.hasError
               ? Padding(
@@ -58,7 +84,7 @@ class ApprovalsPane extends StatelessWidget {
                     : ApprovalPane.noneText,
                 errorMessage: ApprovalPane.errorText,
                 onRetry: c.reload,
-                child: _List(controller: c),
+                child: _List(controller: c, tour: tour),
               ),
             );
           }),
@@ -68,42 +94,89 @@ class ApprovalsPane extends StatelessWidget {
   }
 }
 
-class _Filters extends StatelessWidget {
-  const _Filters({required this.controller});
+/// The tour's sample requests: the real filter row and the real cards, with a
+/// "Sample" tag on each. The buttons answer nothing.
+class _SampleApprovals extends StatelessWidget {
+  const _SampleApprovals({required this.controller, required this.tour});
 
   final InboxApprovals controller;
+  final InboxTour tour;
+
+  @override
+  Widget build(BuildContext context) {
+    final demo = tour.demo;
+    return Column(
+      children: [
+        ApprovalFilterBar(controller: controller),
+        Expanded(
+          child: ListView(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.page,
+              AppSpacing.xs,
+              AppSpacing.page,
+              AppSpacing.lg,
+            ),
+            children: [
+              for (final (i, a) in demo.approvals.indexed)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.xxs),
+                        child: AppTag(
+                          label: TourTexts.sampleTag,
+                          tone: AppTagTone.accent,
+                        ),
+                      ),
+                      KeyedSubtree(
+                        key: i == 0 ? tour.approvalKey : null,
+                        child: ApprovalCard(
+                          controller: controller,
+                          request: a,
+                          sample: demo,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Filters extends StatelessWidget {
+  const _Filters({required this.controller, this.tour});
+
+  final InboxApprovals controller;
+  final InboxTour? tour;
 
   @override
   Widget build(BuildContext context) {
     final c = controller;
     return Obx(() {
-      if (c.viewState == AppViewState.loading ||
-          c.viewState == AppViewState.offline ||
-          c.viewState == AppViewState.error) {
+      final state = c.viewState;
+      if (state == AppViewState.loading ||
+          state == AppViewState.offline ||
+          state == AppViewState.error ||
+          state == AppViewState.empty) {
         return const SizedBox.shrink();
       }
-      final counts = c.counts;
-      final offered = c.offered;
-      if (offered.length < 2) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-        child: AppFilterChips(
-          chips: [
-            for (final f in offered)
-              AppFilterChip(label: f.label, count: counts[f] ?? 0),
-          ],
-          selected: offered.indexOf(c.activeFilter),
-          onSelected: (i) => c.select(offered[i]),
-        ),
-      );
+      return ApprovalFilterBar(controller: c);
     });
   }
 }
 
 class _List extends StatelessWidget {
-  const _List({required this.controller});
+  const _List({required this.controller, this.tour});
 
   final InboxApprovals controller;
+  final InboxTour? tour;
 
   @override
   Widget build(BuildContext context) {
@@ -122,10 +195,13 @@ class _List extends StatelessWidget {
             ),
             sliver: SliverList.builder(
               itemCount: rows.length,
-              itemBuilder: (context, i) => ApprovalSlot(
-                key: ValueKey(rows[i].id),
-                controller: c,
-                request: rows[i],
+              itemBuilder: (context, i) => KeyedSubtree(
+                key: i == 0 ? tour?.approvalKey : null,
+                child: ApprovalSlot(
+                  key: ValueKey(rows[i].id),
+                  controller: c,
+                  request: rows[i],
+                ),
               ),
             ),
           );

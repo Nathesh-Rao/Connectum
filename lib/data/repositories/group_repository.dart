@@ -88,6 +88,7 @@ class GroupRepository extends GetxService {
                 ? idText(u['name'])
                 : idText(u['username']),
             source: 'search',
+            avatar: idText(u['avatar']).isEmpty ? null : idText(u['avatar']),
             canInteract: u['canInteract'] is bool
                 ? u['canInteract'] as bool
                 : null,
@@ -107,6 +108,7 @@ class GroupRepository extends GetxService {
           : idText(u['username']),
       source: u['connected'] == true ? 'connection' : 'colleague',
       detail: detail,
+      avatar: idText(u['avatar']).isEmpty ? null : idText(u['avatar']),
     );
   }
 

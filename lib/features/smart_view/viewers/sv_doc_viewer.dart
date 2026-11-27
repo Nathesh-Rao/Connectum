@@ -73,9 +73,7 @@ class _SvDocViewerState extends State<SvDocViewer> {
                 AppButton.icon(
                   icon: Icons.chevron_left,
                   semanticLabel: 'Previous slide',
-                  onPressed: _slide > 0
-                      ? () => setState(() => _slide--)
-                      : null,
+                  onPressed: _slide > 0 ? () => setState(() => _slide--) : null,
                 ),
                 Text(
                   'Slide ${_slide + 1} / ${pages.length}',

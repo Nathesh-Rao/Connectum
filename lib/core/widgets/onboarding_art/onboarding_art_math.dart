@@ -62,6 +62,7 @@ Tf xf(
 
 /// `mix()` of the shield script (colour interpolation, channel rounding).
 Color mixColor(Color a, Color b, double t) {
-  int ch(double x, double y) => (lerp(x * 255, y * 255, t) + 0.5).floor().clamp(0, 255);
+  int ch(double x, double y) =>
+      (lerp(x * 255, y * 255, t) + 0.5).floor().clamp(0, 255);
   return Color.fromARGB(255, ch(a.r, b.r), ch(a.g, b.g), ch(a.b, b.b));
 }

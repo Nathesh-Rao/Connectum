@@ -41,6 +41,7 @@ class AppTextField extends StatefulWidget {
     this.helperText,
     this.fillColor = AppColors.white,
     this.hasFocusRing = true,
+    this.focusBorderColor,
     this.textCapitalization = TextCapitalization.none,
     this.autocorrect = true,
   });
@@ -78,6 +79,9 @@ class AppTextField extends StatefulWidget {
   /// False when the field sits inside a container that shows the focus.
   final bool hasFocusRing;
 
+  /// A softer focus: this border on focus and no glow.
+  final Color? focusBorderColor;
+
   final TextCapitalization textCapitalization;
   final bool autocorrect;
 
@@ -100,7 +104,7 @@ class _AppTextFieldState extends State<AppTextField> {
     final borderColor = _hasError
         ? AppColors.error
         : _isFocused && widget.hasFocusRing
-        ? AppColors.primaryBright
+        ? (widget.focusBorderColor ?? AppColors.primaryBright)
         : widget.borderColor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +126,11 @@ class _AppTextFieldState extends State<AppTextField> {
               color: widget.fillColor,
               borderRadius: widget.borderRadius,
               border: Border.all(color: borderColor),
-              boxShadow: _isFocused && widget.hasFocusRing && !_hasError
+              boxShadow:
+                  _isFocused &&
+                      widget.hasFocusRing &&
+                      !_hasError &&
+                      widget.focusBorderColor == null
                   ? AppShadows.focusRing
                   : null,
             ),
@@ -166,7 +174,10 @@ class _AppTextFieldState extends State<AppTextField> {
                 errorBorder: InputBorder.none,
                 disabledBorder: InputBorder.none,
                 hintText: widget.hint,
-                hintStyle: widget.textStyle.copyWith(color: AppColors.muted),
+                hintStyle: widget.textStyle.copyWith(
+                  color: AppColors.muted.withAlpha(120),
+                  fontWeight: FontWeight.w500,
+                ),
                 suffixIcon: widget.suffix,
                 // A suffix must not push the field past its own height.
                 suffixIconConstraints: BoxConstraints(

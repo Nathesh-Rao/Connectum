@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/theme/app_tones.dart';
 import '../../../core/utils/chat_time.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../data/models/record_state.dart';
 import '../../../data/models/ticket.dart';
 import '../models/ticket_text.dart';
@@ -21,6 +22,7 @@ class HistoryFeed {
     required this.nameOf,
     required this.ticket,
     this.first,
+    this.pictureOf,
     List<RecordEvent>? events,
     DateTime? now,
   }) : now = now ?? DateTime.now(),
@@ -40,6 +42,9 @@ class HistoryFeed {
 
   /// The status a record starts at, for the tone of a status pill.
   final String? first;
+
+  /// A person's picture address, for the small face beside the name.
+  final String? Function(String user)? pictureOf;
   final DateTime now;
 
   /// Newest first. Ids stay as the server sent them.
@@ -170,29 +175,46 @@ class TicketHistoryItem extends StatelessWidget {
             padding: const EdgeInsets.only(top: 3),
             child: Text(title, style: AppText.bodyStrong),
           ),
-          Text.rich(
-            TextSpan(
-              style: AppText.rowCaption,
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(
               children: [
-                TextSpan(
-                  text: [
-                    who(e.by),
-                    if (e.isAsAdmin) TicketsTexts.byAdmin,
-                    if (e.isClaimed) TicketsTexts.claimed,
-                  ].where((s) => s.isNotEmpty).join(' · '),
-                ),
-                if (ago.isNotEmpty) ...[
-                  const TextSpan(text: ' · '),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.baseline,
-                    baseline: TextBaseline.alphabetic,
-                    child: Tooltip(
-                      message: exact,
-                      triggerMode: TooltipTriggerMode.tap,
-                      child: Text(ago, style: AppText.rowCaption),
+                if (e.by.isNotEmpty) ...[
+                  AppAvatar(
+                    name: who(e.by),
+                    size: AppSpacing.chipAvatar,
+                    picture: feed.pictureOf?.call(e.by),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: AppText.rowCaption,
+                      children: [
+                        TextSpan(
+                          text: [
+                            who(e.by),
+                            if (e.isAsAdmin) TicketsTexts.byAdmin,
+                            if (e.isClaimed) TicketsTexts.claimed,
+                          ].where((s) => s.isNotEmpty).join(' · '),
+                        ),
+                        if (ago.isNotEmpty) ...[
+                          const TextSpan(text: ' · '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: Tooltip(
+                              message: exact,
+                              triggerMode: TooltipTriggerMode.tap,
+                              child: Text(ago, style: AppText.rowCaption),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),

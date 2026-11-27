@@ -1137,6 +1137,12 @@ class E2eRepository extends GetxService with WidgetsBindingObserver {
         signKeyFor: lookup,
         expectConv: expectConv ?? expectedConv(convId),
       );
+      // My own conversation holds only notes I wrote: an envelope signed by
+      // anybody else is never shown there (the server refuses it too).
+      if (convId == 'self' &&
+          opened.from.toLowerCase() != (_me ?? '').toLowerCase()) {
+        return _logged(const E2eReading.cannot('wrong_conversation'));
+      }
       return E2eReading.ok(opened.text);
     } on E2eException catch (e) {
       return _logged(E2eReading.cannot(e.code));

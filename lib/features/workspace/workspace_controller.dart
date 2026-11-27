@@ -1,16 +1,27 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
+import '../commands/commands_tour.dart';
+import 'workspace_tour.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/selection/message_selection.dart';
+import '../../core/selection/selection_rules.dart';
+import '../../core/utils/attachment_tag.dart';
 import '../../core/utils/chat_time.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_form_card.dart';
 import '../../data/models/form_card.dart';
+import '../../data/models/ids.dart';
+import '../../data/repositories/marks_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/workspace_repository.dart';
@@ -23,6 +34,7 @@ import '../../data/commands/command_line.dart';
 import '../../data/commands/command_reply.dart';
 import '../../data/models/hash_command.dart';
 import '../../data/models/message.dart';
+import '../../data/models/self_conversation.dart';
 import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
@@ -35,6 +47,7 @@ import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../commands/command_runner.dart';
 import '../conversation/models/command_prompt.dart';
+import 'models/pinned_line.dart';
 import 'models/workspace_note.dart';
 import 'models/workspace_row.dart';
 import '../../core/log/app_log.dart';
@@ -51,10 +64,13 @@ class WorkspaceController extends GetxController {
     required this.shell,
     required this.commands,
     required this.messages,
+    required this.marks,
     required this.workspace,
     required this.tickets,
     required this.newTicketDetail,
     this.smartView,
+    this.tour,
+    this.commandsTour,
   });
 
   final SubmissionRepository submissions;
@@ -64,18 +80,28 @@ class WorkspaceController extends GetxController {
   final HomeShellController? shell;
   final CommandRepository commands;
   final MessageRepository messages;
+  final MarksRepository marks;
   final WorkspaceRepository workspace;
   final TicketRepository tickets;
   final SmartViewRepository? smartView;
+
+  /// The first-run tours of this screen; null where tours are not set up.
+  final WorkspaceTour? tour;
+  final CommandsTour? commandsTour;
+  late final TourTrigger _tourTrigger = TourTrigger(
+    canTry: _canTryTour,
+    start: _startTour,
+  );
+  final _tourWorkers = <Worker>[];
   final TicketDetailController Function(int id) newTicketDetail;
 
   /// The latest own records shown as cards (the web's `MWS_CARDS`); older
   /// ones are in My submissions.
   static const ownCards = 100;
 
-  static const placeholder = 'Type #<commands> or @<name>';
-  static const nudgeText =
-      'Start with # for commands or @name to message someone.';
+  static const placeholder = 'Note, #command or @name';
+  static const tooLongText =
+      'A note can have at most ${SelfConversation.maxLength} characters.';
 
   final text = TextEditingController();
   final focus = FocusNode();
@@ -123,6 +149,8 @@ class WorkspaceController extends GetxController {
   Worker? _workspaceStateWorker;
   Worker? _connectivityWorker;
   Worker? _selfWorker;
+  StreamSubscription<String>? _noticesSub;
+  StreamSubscription<String>? _marksNoticesSub;
 
   /// My notes kept on the server, read from SQLite (shown with no network).
   final selfNotes = <Message>[].obs;
@@ -131,6 +159,13 @@ class WorkspaceController extends GetxController {
   String get me => store.userId ?? SeedMessages.me;
 
   void openTasks() => Get.toNamed(AppRoutes.tasks);
+
+  /// The existing encryption setup (devices and recovery).
+  void openEncryptionSetup() => Get.toNamed(AppRoutes.security);
+
+  /// Notes written before this phone was set up that it cannot open yet.
+  bool get hasLockedNotes =>
+      rows.any((r) => r.message?.unreadableCode == 'not_for_this_device');
 
   /// The Inbox with its Approvals pane open.
   void openApprovals() => shell?.openInbox(approvals: true);
@@ -149,6 +184,15 @@ class WorkspaceController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (tour != null) {
+      _tourWorkers.add(ever(viewState, (_) => _tourTrigger.schedule()));
+      _tourWorkers.add(ever(selection.ids, (_) => _tourTrigger.schedule()));
+    }
+    final cmdTour = commandsTour;
+    if (cmdTour != null) {
+      _tourWorkers.add(ever(prompt.query, (_) => cmdTour.onListChanged()));
+      _tourWorkers.add(ever(prompt.command, (_) => cmdTour.onListChanged()));
+    }
     _submissionsWorker = ever(submissions.submissions, (_) => _apply());
     _definitionsWorker = ever(submissions.definitions, (_) => _apply());
     _loadedWorker = ever(submissions.isLoaded, (_) => _apply());
@@ -172,6 +216,14 @@ class WorkspaceController extends GetxController {
       workspace.isSyncing,
     ], (_) => _apply());
     _connectivityWorker = ever(connectivity.state, (_) => _apply());
+    _noticesSub = messages.notices.listen(
+      _say,
+      onError: streamOnError('workspace_controller'),
+    );
+    _marksNoticesSub = marks.notices.listen(
+      _say,
+      onError: streamOnError('workspace_controller'),
+    );
     _apply();
     fireAndLog('workspace_controller', _openNotes);
     if (connectivity.state.value == AppConnectivity.online) {
@@ -190,6 +242,7 @@ class WorkspaceController extends GetxController {
         _apply();
       });
       _apply();
+      await marks.open();
     } catch (e, st) {
       AppLog.e('workspace_controller', e, st, 'open notes');
     }
@@ -245,9 +298,15 @@ class WorkspaceController extends GetxController {
         ),
       for (final n in _notes) (ts: n.ts, row: WorkspaceRow.note(n)),
       for (final m in selfNotes)
-        if (!m.isDeleted && !m.isLocalTemp)
-          (ts: m.ts, row: WorkspaceRow.message(m)),
-    ]..sort((a, b) => a.ts.compareTo(b.ts));
+        if (!m.isDeleted) (ts: m.ts, row: WorkspaceRow.message(m)),
+    ];
+    // Same time keeps the order the rows were added (a pending note after the
+    // one before it).
+    final order = {for (var i = 0; i < entries.length; i++) entries[i].row: i};
+    entries.sort((a, b) {
+      final byTime = a.ts.compareTo(b.ts);
+      return byTime != 0 ? byTime : order[a.row]!.compareTo(order[b.row]!);
+    });
     final asc = <WorkspaceRow>[];
     int? prevTs;
     for (final e in entries) {
@@ -258,6 +317,10 @@ class WorkspaceController extends GetxController {
       prevTs = e.ts;
     }
     rows.assignAll(asc.reversed);
+    selection.prune({
+      for (final r in asc)
+        if (r.message != null) r.message!.msgId,
+    });
     for (final s in mine) {
       final sig = '${s.valuesJson.hashCode}|${s.editedTs}|${s.status}';
       final before = _signatures[s.submissionId];
@@ -295,6 +358,7 @@ class WorkspaceController extends GetxController {
     nudge.value = null;
     final caret = text.selection;
     prompt.onTextChanged(value, caret: caret.isValid ? caret.baseOffset : null);
+    commandsTour?.onTyped();
   }
 
   /// Puts `#name ` into the field; nothing runs until send.
@@ -320,20 +384,27 @@ class WorkspaceController extends GetxController {
     _noticeTimer = Timer(const Duration(seconds: 4), () => notice.value = null);
   }
 
-  /// `#` lines run as commands, `@name text` is a direct message; anything
-  /// else is kept in the field with a hint and sent nowhere.
+  /// `#` lines run as commands (not stored), `@name text` is a direct
+  /// message; any other text is a note of mine, kept on the server.
   Future<void> send() async {
     if (_isRunning || runner.isRunning.value) return;
     final body = text.text.trim();
     if (body.isEmpty) return;
     nudge.value = null;
+    final edited = editing.value;
+    if (edited != null) {
+      await _saveEdit(edited, body);
+      return;
+    }
     final at = RegExp(r'^@(\S+)\s+([\s\S]+)$').firstMatch(body);
     final isCommand =
         CommandRepository.isHashLine(body) || CommandLine.isEscape(body);
     if (!isCommand && at == null) {
-      nudge.value = body.startsWith('@') && !body.contains(RegExp(r'\s'))
-          ? 'Add a message after $body.'
-          : nudgeText;
+      if (body.startsWith('@') && !body.contains(RegExp(r'\s'))) {
+        nudge.value = 'Add a message after $body.';
+        return;
+      }
+      await _sendNote(body);
       return;
     }
     if (isCommand) {
@@ -382,6 +453,294 @@ class WorkspaceController extends GetxController {
     } finally {
       _isRunning = false;
     }
+  }
+
+  /// The text becomes a note: it shows at once as pending and goes out
+  /// through the outbox (offline too). It stays in the field when refused.
+  Future<void> _sendNote(String body) async {
+    if (body.length > SelfConversation.maxLength) {
+      nudge.value = tooLongText;
+      return;
+    }
+    _isRunning = true;
+    try {
+      final quoted = replying.value;
+      final result = await messages.sendText(
+        SelfConversation.id,
+        body,
+        replyTo: quoted?.msgId,
+      );
+      switch (result) {
+        case SendResult.queued:
+          replying.value = null;
+          text.clear();
+          length.value = 0;
+          prompt.close();
+        case SendResult.tooLong:
+          nudge.value = tooLongText;
+        case SendResult.blocked:
+          nudge.value = messages.lastBlock;
+        case SendResult.invalid:
+          if (quoted != null) {
+            replying.value = null;
+            nudge.value = 'That note is no longer there.';
+          }
+        case SendResult.noSession:
+          break;
+      }
+    } finally {
+      _isRunning = false;
+    }
+  }
+
+  // ---- selection -----------------------------------------------------------
+
+  /// The notes picked with a long press, then taps. Notes take no reaction.
+  final selection = MessageSelection();
+
+  /// The selected notes, oldest first.
+  List<Message> get selectedNotes => [
+    for (final r in rows)
+      if (r.message != null && selection.isSelected(r.message!.msgId))
+        r.message!,
+  ]..sort((a, b) => a.ts.compareTo(b.ts));
+
+  bool isUnsent(Message m) => m.isLocalTemp || m.status == MessageStatus.failed;
+
+  /// What one note allows from the selection bar. A note that was not sent
+  /// only keeps retry (when it failed) and remove.
+  SelectionTarget targetOf(Message m) {
+    final isSent = !isUnsent(m);
+    return SelectionTarget(
+      id: m.msgId,
+      canReply: isSent && canReplyNote(m),
+      canStar: isSent && canMarkNote(m),
+      canPin: isSent && canMarkNote(m),
+      canEdit: isSent && canEditNote(m),
+      canCopy: isSent && canCopyNote(m),
+      canDelete: isSent ? canDeleteNote(m) : true,
+      canRetry: m.status == MessageStatus.failed,
+    );
+  }
+
+  /// Saves every selected note, or takes them all off the saved list when
+  /// each one is saved already.
+  Future<void> toggleSaveMany(List<Message> list) async {
+    final isAllSaved = list.every(isSaved);
+    for (final m in list) {
+      if (isSaved(m) == isAllSaved) await toggleSave(m);
+    }
+  }
+
+  Future<void> copyMany(List<Message> list) => Clipboard.setData(
+    ClipboardData(text: list.map((m) => m.text).join('\n')),
+  );
+
+  Future<void> deleteMany(List<Message> list) async {
+    for (final m in list) {
+      await deleteNote(m);
+    }
+  }
+
+  // ---- edit, reply, delete a note ------------------------------------------
+
+  /// The note being edited (the composer shows its text and an "Editing note"
+  /// bar), or null.
+  final editing = Rxn<Message>();
+
+  /// The note a new note quotes (the composer shows it above the field).
+  final replying = Rxn<Message>();
+
+  bool canEditNote(Message m) => messages.canEditNote(m);
+
+  bool canReplyNote(Message m) => messages.canReplyToNote(m);
+
+  /// A sent note can be deleted at any age; one that never reached the server
+  /// keeps its retry and remove actions instead.
+  bool canDeleteNote(Message m) =>
+      m.isMine && !m.isLocalTemp && m.status != MessageStatus.failed;
+
+  bool canCopyNote(Message m) =>
+      !m.isEncryptedUnsupported && AttachmentTag.parse(m.text) == null;
+
+  // ---- save and pin a note -------------------------------------------------
+
+  /// The thread's scroll, so a pinned or saved note can be shown.
+  final scroll = ScrollController();
+
+  /// The note that flashes after it was shown from the pinned bar or the
+  /// saved list.
+  final flashId = RxnString();
+
+  /// The list of every pinned note is open under the bar.
+  final isPinListOpen = false.obs;
+  final _noteKeys = <String, GlobalKey>{};
+  Timer? _flashTimer;
+
+  static const olderNoteText =
+      'That note is older than what is loaded. Scroll up to find it.';
+
+  GlobalKey keyForNote(String id) => _noteKeys.putIfAbsent(id, GlobalKey.new);
+
+  /// A sent note (it has a server id) can be saved or pinned.
+  bool canMarkNote(Message m) =>
+      m.isMine &&
+      !m.isLocalTemp &&
+      numericId(m.msgId) != null &&
+      m.status != MessageStatus.failed &&
+      !m.isDeleted &&
+      m.kind == 'chat';
+
+  bool isSaved(Message m) => marks.isSaved(m.msgId);
+
+  bool isPinned(Message m) => marks.isPinned(m.msgId);
+
+  Future<void> toggleSave(Message m) =>
+      safeCall<void>('workspace_controller', () => marks.toggleSave(m.msgId));
+
+  Future<void> togglePin(Message m) =>
+      safeCall<void>('workspace_controller', () => marks.togglePin(m.msgId));
+
+  Future<void> unpinNote(String id) =>
+      safeCall<void>('workspace_controller', () => marks.unpin(id));
+
+  void togglePinList() => isPinListOpen.value = !isPinListOpen.value;
+
+  /// The words of a note in one line (the bar, the saved list).
+  String noteLine(Message m) {
+    if (m.isEncryptedUnsupported) return 'Encrypted note';
+    if (AttachmentTag.parse(m.text) != null) return 'Attachment';
+    final line = m.text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return line.isEmpty ? 'Note' : line;
+  }
+
+  /// The pinned notes, newest pin first. A note on the phone gives its own
+  /// words; one that is not loaded gives the server's (an envelope shows as
+  /// "Encrypted note"). A note deleted here is left out.
+  List<PinnedLine> pinLines() {
+    final notes = {for (final n in selfNotes) n.msgId: n};
+    final out = <PinnedLine>[];
+    for (final p in marks.pinned) {
+      final note = notes[p.msgId];
+      if (note != null && note.isDeleted) continue;
+      out.add(PinnedLine(id: p.msgId, text: _pinWords(note, p.preview)));
+    }
+    return out;
+  }
+
+  String _pinWords(Message? note, String preview) {
+    if (note != null) return noteLine(note);
+    if (preview.isEmpty) return 'Encrypted note';
+    if (AttachmentTag.parse(preview) != null) return 'Attachment';
+    return preview.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  /// The notes I saved that are on the phone, newest first.
+  List<Message> savedNotes() => [
+    for (final m in selfNotes)
+      if (!m.isDeleted && marks.isSaved(m.msgId)) m,
+  ]..sort((a, b) => b.ts.compareTo(a.ts));
+
+  /// Scrolls to the note and flashes it. A note older than what is loaded
+  /// says so.
+  Future<void> openNote(String id) async {
+    isPinListOpen.value = false;
+    final target = rows.firstWhereOrNull((r) => r.message?.msgId == id);
+    if (target == null) {
+      _say(olderNoteText);
+      return;
+    }
+    final key = keyForNote(id);
+    if (key.currentContext == null &&
+        scroll.hasClients &&
+        scroll.position.pixels > 0) {
+      scroll.jumpTo(0);
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    for (var tries = 0; tries < 60; tries++) {
+      final ctx = key.currentContext;
+      if (ctx != null && ctx.mounted) {
+        await Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.4,
+          duration: AppDurations.base,
+          curve: AppCurves.out,
+        );
+        flashId.value = id;
+        _flashTimer?.cancel();
+        _flashTimer = Timer(AppDurations.slow * 3, () => flashId.value = null);
+        return;
+      }
+      if (!scroll.hasClients) return;
+      final p = scroll.position;
+      if (p.pixels >= p.maxScrollExtent) return;
+      scroll.jumpTo(
+        math.min(p.maxScrollExtent, p.pixels + p.viewportDimension * 0.8),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
+
+  void startEdit(Message m) {
+    if (!canEditNote(m)) return;
+    replying.value = null;
+    editing.value = m;
+    _setText(m.text);
+  }
+
+  void cancelEdit() {
+    if (editing.value == null) return;
+    editing.value = null;
+    text.clear();
+    onChanged('');
+  }
+
+  void startReply(Message m) {
+    if (!canReplyNote(m)) return;
+    cancelEdit();
+    replying.value = m;
+    focus.requestFocus();
+  }
+
+  void cancelReply() => replying.value = null;
+
+  Future<void> copyNote(Message m) =>
+      Clipboard.setData(ClipboardData(text: m.text));
+
+  /// Removes the note at once; it is sent to the server by the outbox.
+  Future<void> deleteNote(Message m) async {
+    if (editing.value?.msgId == m.msgId) cancelEdit();
+    if (replying.value?.msgId == m.msgId) cancelReply();
+    await safeCall<void>('workspace_controller', () async {
+      await messages.deleteMessage(m);
+    });
+  }
+
+  Future<void> _saveEdit(Message note, String body) async {
+    if (body.length > SelfConversation.maxLength) {
+      nudge.value = tooLongText;
+      return;
+    }
+    _isRunning = true;
+    try {
+      final isDone = await messages.editText(note.msgId, body);
+      if (isDone) {
+        editing.value = null;
+        text.clear();
+        length.value = 0;
+        prompt.close();
+      } else if (messages.lastBlock.isNotEmpty) {
+        nudge.value = messages.lastBlock;
+        messages.lastBlock = '';
+      }
+    } finally {
+      _isRunning = false;
+    }
+  }
+
+  /// Tap on a note that was not sent.
+  void retryNote(Message note) {
+    fireAndLog('workspace_controller', () => messages.retry(note.msgId));
   }
 
   void _addNote(WorkspaceNote note) {
@@ -557,8 +916,46 @@ class WorkspaceController extends GetxController {
     );
   }
 
+  // ---- first-run tour -----------------------------------------------------
+
+  bool _canTryTour() =>
+      tour != null &&
+      !isClosed &&
+      viewState.value == AppViewState.content &&
+      !selection.isActive;
+
+  Future<TourStart> _startTour() async {
+    final tour = this.tour;
+    if (tour == null || isClosed) return TourStart.failed;
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    final notes = [
+      for (final r in rows)
+        if (r.message != null) r.message!,
+    ];
+    final hold = WorkspaceTour.holdNote(notes);
+    return tour.start(
+      hasNote: hold != null,
+      holdId: hold?.msgId,
+      target: hold == null ? null : targetOf(hold),
+      select: selection.onLongPress,
+      clear: selection.clear,
+    );
+  }
+
+  bool get isTourActive => tour?.service.isActive.value ?? false;
+
+  /// Back while a tour shows ends the tour and stays on the screen.
+  void cancelTour() => tour?.service.cancel();
+
   @override
   void onClose() {
+    _tourTrigger.dispose();
+    for (final w in _tourWorkers) {
+      w.dispose();
+    }
+    tour?.cancel();
+    commandsTour?.dispose();
     prompt.dispose();
     _submissionsWorker?.dispose();
     _definitionsWorker?.dispose();
@@ -569,6 +966,11 @@ class WorkspaceController extends GetxController {
     _workspaceStateWorker?.dispose();
     _connectivityWorker?.dispose();
     _selfWorker?.dispose();
+    _noticesSub?.cancel();
+    _marksNoticesSub?.cancel();
+    _flashTimer?.cancel();
+    selection.clear();
+    scroll.dispose();
     for (final c in _details.values) {
       c.onClose();
     }

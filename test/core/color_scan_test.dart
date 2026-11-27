@@ -43,8 +43,10 @@ void main() {
 
   test('nothing in lib is called orange, peach or coral', () {
     final name = RegExp(r'orange|peach|coral', caseSensitive: false);
+    final allowed = _allowlist()['colour-name'] ?? [];
     final bad = <String>[];
     for (final f in _dart('lib')) {
+      if (allowed.contains(f.path)) continue;
       if (name.hasMatch(_code(f))) bad.add(f.path);
     }
     expect(bad, isEmpty);

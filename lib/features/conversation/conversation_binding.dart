@@ -1,6 +1,9 @@
 import 'package:get/get.dart';
 
 import '../../data/repositories/people_avatars.dart';
+import '../../core/tour/tour_service.dart';
+import '../commands/commands_tour.dart';
+import 'conversation_tour.dart';
 
 import '../../core/routes/home_reload.dart';
 import '../../data/ai/ai_repository.dart';
@@ -31,7 +34,11 @@ class ConversationBinding extends Bindings {
   @override
   void dependencies() {
     final id = Uri.decodeComponent(Get.parameters['id'] ?? '');
-    final controller = Get.put(
+    final tours = Get.isRegistered<TourService>()
+        ? Get.find<TourService>()
+        : null;
+    late final ConversationController controller;
+    controller = Get.put(
       ConversationController(
         conversationId: id,
         messages: Get.find<MessageRepository>(),
@@ -55,6 +62,14 @@ class ConversationBinding extends Bindings {
         aiRepository: Get.find<AiRepository>(),
         aiSetup: Get.find<AiSetupCache>(),
         avatars: Get.find<PeopleAvatars>(),
+        tour: tours == null ? null : ConversationTour(service: tours),
+        commandsTour: tours == null
+            ? null
+            : CommandsTour(
+                service: tours,
+                isListOpen: () => controller.prompt.isNameList,
+                hasRows: () => controller.prompt.hasRows,
+              ),
         newTicketDetail: (ticketId) => TicketDetailController(
           ticketId: ticketId,
           tickets: Get.find<TicketRepository>(),

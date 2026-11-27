@@ -29,9 +29,19 @@ class SvEvents {
 class SvLimits {
   SvLimits._();
 
+  /// `fileMeta` on `submissions.list` and `records.mine`: each file entry also
+  /// carries `ext`, `uploadedAt` and `etag`. Exactly the number 2; an older
+  /// server ignores it.
+  static const fileMeta = 2;
+
   /// `submissions.list`: 500 a page, at most 20 pages (10,000 records).
   static const rowsPageSize = 500;
   static const rowsMaxPages = 20;
+
+  /// `records.query` with the team lines: 200 a page (the server's limit),
+  /// at most 50 pages (10,000 records).
+  static const teamPageSize = 200;
+  static const teamMaxPages = 50;
 
   /// `records.mine` with and involved: 200 a page, at most 3 pages each.
   static const mineMaxPages = 3;

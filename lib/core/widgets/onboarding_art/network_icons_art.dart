@@ -38,18 +38,40 @@ class NetworkIcons {
       info: {
         // [level, kind, t0, ts, x, y, id] of the left half; level 0 = mid persons
         'people': [
-          for (final m in f.mids) [0, m.person, m.start, m.spawnT, m.cx, m.cy, m.id],
+          for (final m in f.mids)
+            [0, m.person, m.start, m.spawnT, m.cx, m.cy, m.id],
           for (final n in f.nodes) [n.lvl, n.k, n.t0, n.ts, n.x, n.y, n.pid],
         ],
         // [from, to, drawn from, arrives at, x1, y1, x2, y2]
         'connectors': [
           for (final m in f.mids)
-            ['c', m.id, m.start, m.start + _SymFrame.ld, m.hubPa[0], m.hubPa[1], m.hubPb[0], m.hubPb[1]],
+            [
+              'c',
+              m.id,
+              m.start,
+              m.start + _SymFrame.ld,
+              m.hubPa[0],
+              m.hubPa[1],
+              m.hubPb[0],
+              m.hubPb[1],
+            ],
           for (final n in f.nodes)
-            [n.par!.pid, n.pid, n.t0, n.t0 + 0.5, n.pa[0], n.pa[1], n.pb[0], n.pb[1]],
+            [
+              n.par!.pid,
+              n.pid,
+              n.t0,
+              n.t0 + 0.5,
+              n.pa[0],
+              n.pa[1],
+              n.pb[0],
+              n.pb[1],
+            ],
         ],
         // [id, badge art, x, y] of the left badges
-        'badges': [for (final m in f.mids) [m.id, m.badgeArt, m.badgeAt[0], m.badgeAt[1]]],
+        'badges': [
+          for (final m in f.mids)
+            [m.id, m.badgeArt, m.badgeAt[0], m.badgeAt[1]],
+        ],
         'mirrorPairs': kNetworkMirrorPairs,
         'visible': list,
         'period': f.period,
@@ -88,18 +110,18 @@ class NetworkIcons {
         // and the links between small people
         'connectors': [
           for (final n in f.nodes.where((n) => n.hasDom))
-            [n.par!.pid, n.pid, n.t0, n.t0 + 0.5, n.pa[0], n.pa[1], n.pb[0], n.pb[1]],
-          for (final l in f.lat)
             [
-              l.a,
-              l.b,
-              l.t0,
-              l.t0 + 0.7,
-              l.el.x1,
-              l.el.y1,
-              l.el.x2,
-              l.el.y2,
+              n.par!.pid,
+              n.pid,
+              n.t0,
+              n.t0 + 0.5,
+              n.pa[0],
+              n.pa[1],
+              n.pb[0],
+              n.pb[1],
             ],
+          for (final l in f.lat)
+            [l.a, l.b, l.t0, l.t0 + 0.7, l.el.x1, l.el.y1, l.el.x2, l.el.y2],
         ],
         'nodes': f.nodes.length,
         'electrons': f.e.length,
@@ -122,10 +144,10 @@ class NetworkIcons {
 
 typedef _P = List<double>;
 
-
 _P _pt(Object? o) => [for (final e in o! as List) (e as num).toDouble()];
 
-double _cbrt(double x) => x < 0 ? -math.pow(-x, 1 / 3).toDouble() : math.pow(x, 1 / 3).toDouble();
+double _cbrt(double x) =>
+    x < 0 ? -math.pow(-x, 1 / 3).toDouble() : math.pow(x, 1 / 3).toDouble();
 
 double _eo(double u) => eOutCubic(u);
 
@@ -133,13 +155,19 @@ double _eio(double u) => eInOutCubic(u);
 
 double _back(double x, double c1) => eOutBack(x, c1);
 
-Tf _tf(double x, double y, double s, [double dy = 0, double rot = 0, double dx = 0]) =>
-    Tf.identity
-        .translate(dx, dy)
-        .translate(x, y)
-        .rotate(rot)
-        .scale(s)
-        .translate(-x, -y);
+Tf _tf(
+  double x,
+  double y,
+  double s, [
+  double dy = 0,
+  double rot = 0,
+  double dx = 0,
+]) => Tf.identity
+    .translate(dx, dy)
+    .translate(x, y)
+    .rotate(rot)
+    .scale(s)
+    .translate(-x, -y);
 
 _P _edge(_P c, double rx, double ry, double tx, double ty) {
   var dx = tx - c[0], dy = ty - c[1];
@@ -255,7 +283,13 @@ class _NetworkFrame {
     'bl': [278, 790],
     'l': [296, 354],
   };
-  static const ls = <String, double>{'top': 1.2, 'tr': 1.4, 'br': 1.6, 'bl': 1.8, 'l': 2.0};
+  static const ls = <String, double>{
+    'top': 1.2,
+    'tr': 1.4,
+    'br': 1.6,
+    'bl': 1.8,
+    'l': 2.0,
+  };
   static const ld = 0.75;
   static const ch0 = 3.1, chd = 0.85;
   static const nodeXY = <String, _P>{
@@ -270,7 +304,13 @@ class _NetworkFrame {
   static const lenL = [0.0, 300.0, 200.0, 130.0];
   static const opa = [1.0, 0.92, 0.74, 0.56];
   static const base = [0.0, 4.1, 5.0, 5.8];
-  static const mir = {'l': 'tr', 'tr': 'l', 'bl': 'br', 'br': 'bl', 'top': 'top'};
+  static const mir = {
+    'l': 'tr',
+    'tr': 'l',
+    'bl': 'br',
+    'br': 'bl',
+    'top': 'top',
+  };
   static const spreads = [0.0, 0.6, 0.36, 0.0];
 
   late final Map<String, List<_P>> cn;
@@ -297,7 +337,10 @@ class _NetworkFrame {
   static const slotCount = 9;
 
   void _build() {
-    vk = [for (final k in keys) if (visible.contains(k)) k];
+    vk = [
+      for (final k in keys)
+        if (visible.contains(k)) k,
+    ];
     all = [if (visible.contains('c')) 'c', ...vk];
     // the chat link joins the left and the top person
     hasCh = visible.contains('l') && visible.contains('top');
@@ -307,12 +350,18 @@ class _NetworkFrame {
     };
     _removeStatic();
     final cfgCn = networkArtCfg['cn']! as Map;
-    cn = {for (final k in cfgCn.keys) k as String: [for (final p in cfgCn[k] as List) _pt(p)]};
+    cn = {
+      for (final k in cfgCn.keys)
+        k as String: [for (final p in cfgCn[k] as List) _pt(p)],
+    };
     final cfgIc = networkArtCfg['ic']! as Map;
     icPos = {for (final k in cfgIc.keys) k as String: _pt(cfgIc[k])};
     spawnT = {'c': 0.0, for (final k in keys) k: ls[k]! + ld - 0.15};
     throwT = {for (final k in keys) k: spawnT[k]! + 0.35};
-    lnk = {for (final k in vk) k: [ls[k]!, ld], if (hasCh) 'ch': [ch0, chd]};
+    lnk = {
+      for (final k in vk) k: [ls[k]!, ld],
+      if (hasCh) 'ch': [ch0, chd],
+    };
 
     for (final k in all) {
       av[k] = scene.byId('av_$k');
@@ -337,31 +386,50 @@ class _NetworkFrame {
       final rx = r[2] as double, ry = r[3] as double;
       final col = r[4] as Color;
       final flash = scene.create('ellipse', {
-        'cx': cx, 'cy': cy, 'rx': rx * 1.1, 'ry': ry * 1.6,
-        'fill': col, 'opacity': 0, 'filter': 'url(#blur)',
+        'cx': cx,
+        'cy': cy,
+        'rx': rx * 1.1,
+        'ry': ry * 1.6,
+        'fill': col,
+        'opacity': 0,
+        'filter': 'url(#blur)',
       }, backG);
       final rip = <SvgNode>[
         for (var i = 0; i < 3; i++)
           scene.create('ellipse', {
-            'cx': cx, 'cy': cy, 'rx': rx, 'ry': ry, 'fill': 'none',
-            'stroke': i == 1 ? cyan : col, 'stroke-width': 5, 'opacity': 0,
+            'cx': cx,
+            'cy': cy,
+            'rx': rx,
+            'ry': ry,
+            'fill': 'none',
+            'stroke': i == 1 ? cyan : col,
+            'stroke-width': 5,
+            'opacity': 0,
           }, backG),
       ];
       final n = k == 'c' ? 14 : 9;
       final dots = <SvgNode>[
         for (var i = 0; i < n; i++)
           scene.create('circle', {
-            'r': 5, 'fill': i % 2 != 0 ? cyan : col, 'opacity': 0,
+            'r': 5,
+            'fill': i % 2 != 0 ? cyan : col,
+            'opacity': 0,
           }, front),
       ];
       sfx[k] = _Sfx(flash, rip, dots);
     }
     for (final k in lnk.keys) {
-      final g = scene.create('g', {'opacity': 0, 'filter': 'url(#glow)'}, front);
+      final g = scene.create('g', {
+        'opacity': 0,
+        'filter': 'url(#glow)',
+      }, front);
       cmt[k] = _Comet(
         g,
         scene.create('line', {
-          'stroke': cyan, 'stroke-width': 7, 'stroke-linecap': 'round', 'opacity': .9,
+          'stroke': cyan,
+          'stroke-width': 7,
+          'stroke-linecap': 'round',
+          'opacity': .9,
         }, g),
         scene.create('circle', {'r': 13, 'fill': cyan, 'opacity': .55}, g),
         scene.create('circle', {'r': 6, 'fill': white}, g),
@@ -369,44 +437,70 @@ class _NetworkFrame {
     }
     for (final k in nodeXYv.keys) {
       nrip[k] = scene.create('circle', {
-        'cx': nodeXYv[k]![0], 'cy': nodeXYv[k]![1], 'r': 14, 'fill': 'none',
-        'stroke': cyan, 'stroke-width': 4, 'opacity': 0,
+        'cx': nodeXYv[k]![0],
+        'cy': nodeXYv[k]![1],
+        'r': 14,
+        'fill': 'none',
+        'stroke': cyan,
+        'stroke-width': 4,
+        'opacity': 0,
       }, front);
     }
     nodeT = {};
     for (final k in nodeXYv.keys) {
       final a = cn[k]![0], b = cn[k]![1], n = nodeXYv[k]!;
       final l = dist2(a, b);
-      final f = clamp01(((n[0] - a[0]) * (b[0] - a[0]) + (n[1] - a[1]) * (b[1] - a[1])) / (l * l));
+      final f = clamp01(
+        ((n[0] - a[0]) * (b[0] - a[0]) + (n[1] - a[1]) * (b[1] - a[1])) /
+            (l * l),
+      );
       final u = f < .5 ? _cbrt(f / 4) : 1 - _cbrt(2 * (1 - f)) / 2;
       nodeT[k] = lnk[k]![0] + u * lnk[k]![1];
     }
     for (final k in vk) {
       final a = cn[k]![0], b = cn[k]![1];
       flowL[k] = scene.create('line', {
-        'x1': a[0], 'y1': a[1], 'x2': b[0], 'y2': b[1], 'stroke': white,
-        'stroke-width': 3.5, 'stroke-linecap': 'round',
-        'stroke-dasharray': '0.1 34', 'opacity': 0,
+        'x1': a[0],
+        'y1': a[1],
+        'x2': b[0],
+        'y2': b[1],
+        'stroke': white,
+        'stroke-width': 3.5,
+        'stroke-linecap': 'round',
+        'stroke-dasharray': '0.1 34',
+        'opacity': 0,
       }, flow);
     }
     for (final k in vk) {
       final x = icPos[k]![0], y = icPos[k]![1], col = glowCol[k]!;
       ifx[k] = _Ifx(
         scene.create('circle', {
-          'cx': x, 'cy': y, 'r': 74, 'fill': col, 'opacity': 0, 'filter': 'url(#blur)',
+          'cx': x,
+          'cy': y,
+          'r': 74,
+          'fill': col,
+          'opacity': 0,
+          'filter': 'url(#blur)',
         }, backG),
         [
           for (var i = 0; i < 2; i++)
             scene.create('circle', {
-              'cx': x, 'cy': y, 'r': 50, 'fill': 'none',
-              'stroke': i != 0 ? cyan : col, 'stroke-width': 4, 'opacity': 0,
+              'cx': x,
+              'cy': y,
+              'r': 50,
+              'fill': 'none',
+              'stroke': i != 0 ? cyan : col,
+              'stroke-width': 4,
+              'opacity': 0,
             }, front),
         ],
         [
           for (var i = 0; i < 7; i++)
             scene.create('path', {
-              'd': 'M0 -9 L2.6 -2.6 L9 0 L2.6 2.6 L0 9 L-2.6 2.6 L-9 0 L-2.6 -2.6Z',
-              'fill': i % 2 != 0 ? cyan : col, 'opacity': 0,
+              'd':
+                  'M0 -9 L2.6 -2.6 L9 0 L2.6 2.6 L0 9 L-2.6 2.6 L-9 0 L-2.6 -2.6Z',
+              'fill': i % 2 != 0 ? cyan : col,
+              'opacity': 0,
             }, front),
         ],
       );
@@ -433,8 +527,20 @@ class _NetworkFrame {
     nd.t0 = base[lvl] + ord * 0.11;
     nd.ts = nd.t0 + 0.38;
     final rp = ring[p.k]!, rc = ring[k]!;
-    nd.pa = _edge([p.x, p.y], (rp[2] as double) * p.s, (rp[3] as double) * p.s, x, y);
-    nd.pb = _edge([x, y], (rc[2] as double) * nd.s, (rc[3] as double) * nd.s, p.x, p.y);
+    nd.pa = _edge(
+      [p.x, p.y],
+      (rp[2] as double) * p.s,
+      (rp[3] as double) * p.s,
+      x,
+      y,
+    );
+    nd.pb = _edge(
+      [x, y],
+      (rc[2] as double) * nd.s,
+      (rc[3] as double) * nd.s,
+      p.x,
+      p.y,
+    );
     nd.len = dist2(nd.pa, nd.pb);
     nd.pid = '${p.pid}-${p.kids.length}';
     p.kids.add(nd);
@@ -466,17 +572,34 @@ class _NetworkFrame {
       if (lvl >= 2 && (ry0 > 1185 || rx0 < -385 || rx0 > 1925)) continue;
       final xy = _clampP(rx0, ry0, p.x);
       final x = xy[0], y = xy[1];
-      if (lvl >= 2 && nodes.any((o) => math.sqrt(math.pow(o.x - x, 2) + math.pow(o.y - y, 2)) < 75)) {
+      if (lvl >= 2 &&
+          nodes.any(
+            (o) => math.sqrt(math.pow(o.x - x, 2) + math.pow(o.y - y, 2)) < 75,
+          )) {
         continue;
       }
-      final nd = _make(p, x, y, kinds[(kinds.indexOf(p.k) * 2 + i + lvl) % 5], lvl, orderCnt[lvl]++);
+      final nd = _make(
+        p,
+        x,
+        y,
+        kinds[(kinds.indexOf(p.k) * 2 + i + lvl) % 5],
+        lvl,
+        orderCnt[lvl]++,
+      );
       if (lvl < 3) _grow(nd, lvl + 1);
     }
   }
 
   void _mirrorKids(_Node src, _Node dst) {
     for (final c in src.kids) {
-      final nd = _make(dst, dst.x - (c.x - src.x), dst.y + (c.y - src.y), mir[c.k]!, c.lvl, c.ord);
+      final nd = _make(
+        dst,
+        dst.x - (c.x - src.x),
+        dst.y + (c.y - src.y),
+        mir[c.k]!,
+        c.lvl,
+        c.ord,
+      );
       _mirrorKids(c, nd);
     }
   }
@@ -484,7 +607,16 @@ class _NetworkFrame {
   void _buildBackground() {
     for (final k in keys) {
       final r = ring[k]!;
-      final n = _Node(k, r[0] as double, r[1] as double, 1, 0, null, nodes.length, 0);
+      final n = _Node(
+        k,
+        r[0] as double,
+        r[1] as double,
+        1,
+        0,
+        null,
+        nodes.length,
+        0,
+      );
       n.pid = k;
       prim[k] = n;
       nodes.add(n);
@@ -520,21 +652,42 @@ class _NetworkFrame {
       final col = r[4] as Color;
       final w = 6 * math.pow(n.s, 0.8);
       n.line = scene.create('line', {
-        'x1': n.pa[0], 'y1': n.pa[1], 'x2': n.pb[0], 'y2': n.pb[1], 'stroke': col,
-        'stroke-width': w, 'stroke-linecap': 'round',
-        'stroke-dasharray': '${n.len.toStringAsFixed(1)} ${(n.len + 5).toStringAsFixed(1)}',
-        'stroke-dashoffset': n.len.toStringAsFixed(1), 'opacity': opa[n.lvl],
+        'x1': n.pa[0],
+        'y1': n.pa[1],
+        'x2': n.pb[0],
+        'y2': n.pb[1],
+        'stroke': col,
+        'stroke-width': w,
+        'stroke-linecap': 'round',
+        'stroke-dasharray':
+            '${n.len.toStringAsFixed(1)} ${(n.len + 5).toStringAsFixed(1)}',
+        'stroke-dashoffset': n.len.toStringAsFixed(1),
+        'opacity': opa[n.lvl],
       }, bgL);
       final m = lerp2(n.pa, n.pb, 0.5);
       n.dot = scene.create('circle', {
-        'cx': m[0], 'cy': m[1], 'r': 16 * n.s, 'fill': nodeFill[n.k]!, 'opacity': 0,
+        'cx': m[0],
+        'cy': m[1],
+        'r': 16 * n.s,
+        'fill': nodeFill[n.k]!,
+        'opacity': 0,
       }, bgL);
-      n.head = scene.create('circle', {'r': 6 * n.s + 2, 'fill': cyan, 'opacity': 0}, bgL);
+      n.head = scene.create('circle', {
+        'r': 6 * n.s + 2,
+        'fill': cyan,
+        'opacity': 0,
+      }, bgL);
       n.g = scene.create('g', {'opacity': 0}, bgA);
       scene.create('use', {'href': '#s_${n.k}'}, n.g);
       n.rip = scene.create('ellipse', {
-        'cx': n.x, 'cy': n.y, 'rx': (r[2] as double) * n.s, 'ry': (r[3] as double) * n.s,
-        'fill': 'none', 'stroke': col, 'stroke-width': 3, 'opacity': 0,
+        'cx': n.x,
+        'cy': n.y,
+        'rx': (r[2] as double) * n.s,
+        'ry': (r[3] as double) * n.s,
+        'fill': 'none',
+        'stroke': col,
+        'stroke-width': 3,
+        'opacity': 0,
       }, bgA);
       n.hasDom = true;
     }
@@ -551,18 +704,38 @@ class _NetworkFrame {
       final a = best.a, b = best.b;
       // a link toward a hidden person is trimmed, it would dangle
       if (!a.isShown || !b.isShown) continue;
-      final ra = [(ring[a.k]![2] as double) * a.s, (ring[a.k]![3] as double) * a.s];
-      final rb = [(ring[b.k]![2] as double) * b.s, (ring[b.k]![3] as double) * b.s];
+      final ra = [
+        (ring[a.k]![2] as double) * a.s,
+        (ring[a.k]![3] as double) * a.s,
+      ];
+      final rb = [
+        (ring[b.k]![2] as double) * b.s,
+        (ring[b.k]![3] as double) * b.s,
+      ];
       final pa = _edge([a.x, a.y], ra[0], ra[1], b.x, b.y);
       final pb = _edge([b.x, b.y], rb[0], rb[1], a.x, a.y);
       final len = dist2(pa, pb);
-      lat.add(_Lat(5.0 + i * 0.12, len, scene.create('line', {
-        'x1': pa[0], 'y1': pa[1], 'x2': pb[0], 'y2': pb[1],
-        'stroke': OnboardingArtPalette.networkSky, 'stroke-width': 3,
-        'stroke-linecap': 'round',
-        'stroke-dasharray': '${len.toStringAsFixed(1)} ${(len + 5).toStringAsFixed(1)}',
-        'stroke-dashoffset': len.toStringAsFixed(1), 'opacity': 0.55,
-      }, bgL), a.pid, b.pid));
+      lat.add(
+        _Lat(
+          5.0 + i * 0.12,
+          len,
+          scene.create('line', {
+            'x1': pa[0],
+            'y1': pa[1],
+            'x2': pb[0],
+            'y2': pb[1],
+            'stroke': OnboardingArtPalette.networkSky,
+            'stroke-width': 3,
+            'stroke-linecap': 'round',
+            'stroke-dasharray':
+                '${len.toStringAsFixed(1)} ${(len + 5).toStringAsFixed(1)}',
+            'stroke-dashoffset': len.toStringAsFixed(1),
+            'opacity': 0.55,
+          }, bgL),
+          a.pid,
+          b.pid,
+        ),
+      );
     }
   }
 
@@ -574,10 +747,23 @@ class _NetworkFrame {
 
   void _buildElectrons() {
     final leaves = nodes.where((n) => n.lvl == 3).toList()
-      ..sort((a, b) => math.atan2(a.y - 710, a.x - 770).compareTo(math.atan2(b.y - 710, b.x - 770)));
-    final picks = [0, 5, 2, 7, 4, 9, 1, 6, 3, 8]
-        .map((i) => (i * leaves.length / 10 + .5).floor())
-        .toList();
+      ..sort(
+        (a, b) => math
+            .atan2(a.y - 710, a.x - 770)
+            .compareTo(math.atan2(b.y - 710, b.x - 770)),
+      );
+    final picks = [
+      0,
+      5,
+      2,
+      7,
+      4,
+      9,
+      1,
+      6,
+      3,
+      8,
+    ].map((i) => (i * leaves.length / 10 + .5).floor()).toList();
     const r0 = 6.9, rStep = 0.55;
     const depths = [4, 3, 4, 2, 4, 3, 4, 4, 3, 4];
     // where the HTML's last electron effect ends (the loop tail keeps that gap)
@@ -611,7 +797,10 @@ class _NetworkFrame {
       }
     }
     if (hasCh) _pushSeg(cn['ch']![0], cn['ch']![1], 8.0 - idleTrim, 1);
-    htmlEnd = math.max(htmlEnd, 8.0 + math.max(0.34, dist2(cn['ch']![0], cn['ch']![1]) / 330) + 0.7);
+    htmlEnd = math.max(
+      htmlEnd,
+      8.0 + math.max(0.34, dist2(cn['ch']![0], cn['ch']![1]) / 330) + 0.7,
+    );
     for (final q in e) {
       activityEnd = math.max(activityEnd, q.t0 + q.d + 0.7);
     }
@@ -629,15 +818,32 @@ class _NetworkFrame {
     }
     introEnd = intro;
     // the outro keeps the HTML's gap after the last effect; the loop keeps its tail
-    out0 = ((math.max(activityEnd, introEnd) + (htmlOut0 - htmlEnd)) * 1000).round() / 1000;
-    period = ((out0 + (NetworkIcons.htmlPeriod - htmlOut0)) * 1000).round() / 1000;
+    out0 =
+        ((math.max(activityEnd, introEnd) + (htmlOut0 - htmlEnd)) * 1000)
+            .round() /
+        1000;
+    period =
+        ((out0 + (NetworkIcons.htmlPeriod - htmlOut0)) * 1000).round() / 1000;
     for (var i = 0; i < slotCount; i++) {
-      final g = scene.create('g', {'opacity': 0, 'filter': 'url(#glow)'}, front);
+      final g = scene.create('g', {
+        'opacity': 0,
+        'filter': 'url(#glow)',
+      }, front);
       final trail = [
-        for (var j = 0; j < 8; j++) scene.create('circle', {'r': 6, 'fill': cyan}, g),
+        for (var j = 0; j < 8; j++)
+          scene.create('circle', {'r': 6, 'fill': cyan}, g),
       ];
-      final halo = scene.create('circle', {'r': 17, 'fill': cyan, 'opacity': .5}, g);
-      final hd = scene.create('circle', {'r': 8, 'fill': cyan, 'stroke': white, 'stroke-width': 3}, g);
+      final halo = scene.create('circle', {
+        'r': 17,
+        'fill': cyan,
+        'opacity': .5,
+      }, g);
+      final hd = scene.create('circle', {
+        'r': 8,
+        'fill': cyan,
+        'stroke': white,
+        'stroke-width': 3,
+      }, g);
       slots.add(_Slot(g, trail, halo, hd));
     }
     erip = [
@@ -646,8 +852,13 @@ class _NetworkFrame {
           t: q.t0 + q.d,
           sc: q.sc,
           e: scene.create('circle', {
-            'cx': q.b[0], 'cy': q.b[1], 'r': 10, 'fill': 'none', 'stroke': cyan,
-            'stroke-width': 4 * math.max(.5, q.sc), 'opacity': 0,
+            'cx': q.b[0],
+            'cy': q.b[1],
+            'r': 10,
+            'fill': 'none',
+            'stroke': cyan,
+            'stroke-width': 4 * math.max(.5, q.sc),
+            'opacity': 0,
           }, front),
         ),
     ];
@@ -660,8 +871,14 @@ class _NetworkFrame {
         (
           t: t,
           e: scene.create('ellipse', {
-            'cx': 770, 'cy': 710, 'rx': 240, 'ry': 72, 'fill': 'none',
-            'stroke': cyan, 'stroke-width': 5, 'opacity': 0,
+            'cx': 770,
+            'cy': 710,
+            'rx': 240,
+            'ry': 72,
+            'fill': 'none',
+            'stroke': cyan,
+            'stroke-width': 5,
+            'opacity': 0,
           }, backG),
         ),
     ];
@@ -676,7 +893,9 @@ class _NetworkFrame {
     final el = av[k]!;
     final p = u <= 0 ? 0.0 : _back(seg(u, 0, 0.7), 1.3);
     final q = _eo(seg(u, 0, 0.7));
-    final idle = u > 0.9 ? math.sin(t * 1.35 + cx * 0.01) * 2.4 * _eo(seg(u, 0.9, 0.8)) : 0.0;
+    final idle = u > 0.9
+        ? math.sin(t * 1.35 + cx * 0.01) * 2.4 * _eo(seg(u, 0.9, 0.8))
+        : 0.0;
     el.opacity = toFixed(_eo(seg(u, 0, 0.22)), 3);
     el.transform = _tf(cx, cy, 0.4 + 0.6 * p, 46 * (1 - q) + idle);
     o.flash.opacity = toFixed(0.5 * bump(seg(u, -0.05, 0.9)), 3);
@@ -732,7 +951,10 @@ class _NetworkFrame {
     }
     for (final k in nrip.keys) {
       final v = seg(t, nodeT[k]!, 0.7);
-      nrip[k]!.opacity = toFixed(t > nodeT[k]! && v < 1 ? 0.85 * (1 - v) : 0, 3);
+      nrip[k]!.opacity = toFixed(
+        t > nodeT[k]! && v < 1 ? 0.85 * (1 - v) : 0,
+        3,
+      );
       nrip[k]!.r = toFixed(12 + 40 * _eo(v), 1);
     }
     for (final k in flowL.keys) {
@@ -751,14 +973,24 @@ class _NetworkFrame {
       final ev = _eo(v);
       final dx = (s[0] - x) * (1 - ev);
       final dy = (s[1] - y) * (1 - ev) - 70 * math.sin(math.pi * ev);
-      final fl = on ? math.sin(t * 1.6 + x * 0.02) * 3 * _eo(seg(u, 0.9, 0.7)) : 0.0;
-      final scl = (0.15 + 0.85 * (on ? _back(v, 1.6) : 0)) * (1 + 0.05 * bump(seg(u, 0.7, 0.55)));
+      final fl = on
+          ? math.sin(t * 1.6 + x * 0.02) * 3 * _eo(seg(u, 0.9, 0.7))
+          : 0.0;
+      final scl =
+          (0.15 + 0.85 * (on ? _back(v, 1.6) : 0)) *
+          (1 + 0.05 * bump(seg(u, 0.7, 0.55)));
       el.opacity = toFixed(_eo(seg(u, 0, 0.15)), 3);
       el.transform = _tf(x, y, scl, dy + fl, -22 * (1 - ev), dx);
       final l = t - (throwT[k]! + 0.62);
-      final rest = 0.22 * _eo(seg(l, 0.2, 0.8)) * (0.82 + 0.18 * math.sin(t * 1.9 + y * 0.01));
+      final rest =
+          0.22 *
+          _eo(seg(l, 0.2, 0.8)) *
+          (0.82 + 0.18 * math.sin(t * 1.9 + y * 0.01));
       f.glow.opacity = l > 0
-          ? toFixed(math.min(1.0, 0.42 * bump(seg(l, 0, 1.0)) + rest) * (1 - _eo(o)), 3)
+          ? toFixed(
+              math.min(1.0, 0.42 * bump(seg(l, 0, 1.0)) + rest) * (1 - _eo(o)),
+              3,
+            )
           : 0;
       f.glow.transform = _tf(x, y, 0.6 + 0.6 * _eo(seg(l, 0, 0.9)), fl);
       for (var i = 0; i < f.rings.length; i++) {
@@ -773,7 +1005,10 @@ class _NetworkFrame {
         final d = 52 + 56 * w + (i % 2) * 12;
         st.opacity = l > 0 && w < 1 ? 1 : 0;
         st.transform = Tf.identity
-            .translate(toFixed(x + math.cos(a) * d, 1), toFixed(y + math.sin(a) * d * 0.9, 1))
+            .translate(
+              toFixed(x + math.cos(a) * d, 1),
+              toFixed(y + math.sin(a) * d * 0.9, 1),
+            )
             .rotate(w * 70)
             .scale(toFixed(1.8 * (1 - w) + 0.1, 2));
       }
@@ -799,7 +1034,9 @@ class _NetworkFrame {
       final dd = _eo(seg(t, n.t0 + 0.3, 0.4));
       n.dot.opacity = toFixed(dd * opa[n.lvl] * (1 - _eo(o)), 3);
       n.dot.transform = _tf(n.dot.cx, n.dot.cy, 0.4 + 0.6 * dd);
-      final idle = u > 0.8 ? math.sin(t * 1.2 + n.id * 0.9) * 2 * n.s * _eo(seg(u, 0.8, 0.8)) : 0.0;
+      final idle = u > 0.8
+          ? math.sin(t * 1.2 + n.id * 0.9) * 2 * n.s * _eo(seg(u, 0.8, 0.8))
+          : 0.0;
       final sc2 = n.s * (0.4 + 0.6 * (u > 0 ? dp : 0));
       n.g.transform = Tf.identity
           .translate(n.x, n.y + 40 * n.s * (1 - dq) + idle)
@@ -821,7 +1058,10 @@ class _NetworkFrame {
       if (t < q.t0 || t > q.t0 + q.d || si >= slotCount) continue;
       final s = slots[si++];
       final u = (t - q.t0) / q.d;
-      final f = math.min(_eo(clamp01(u / 0.15)), 1 - _eo(clamp01((u - 0.88) / 0.12)));
+      final f = math.min(
+        _eo(clamp01(u / 0.15)),
+        1 - _eo(clamp01((u - 0.88) / 0.12)),
+      );
       final k = 0.45 + 0.55 * q.sc;
       final h = lerp2(q.a, q.b, u);
       s.g.opacity = toFixed(f, 3);
@@ -833,7 +1073,10 @@ class _NetworkFrame {
       s.halo.r = toFixed(17 * k, 2);
       for (var j = 0; j < s.trail.length; j++) {
         final c = s.trail[j];
-        final w = math.max(0.0, u - (j + 1) * 0.035 * (dist2(q.a, q.b) > 150 ? 1 : 2));
+        final w = math.max(
+          0.0,
+          u - (j + 1) * 0.035 * (dist2(q.a, q.b) > 150 ? 1 : 2),
+        );
         final p = lerp2(q.a, q.b, w);
         c.cx = toFixed(p[0], 1);
         c.cy = toFixed(p[1], 1);

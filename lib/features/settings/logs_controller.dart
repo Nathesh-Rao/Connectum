@@ -6,6 +6,8 @@ import '../../core/log/log_file_sink.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_notices.dart';
+import '../../data/repositories/share_repository.dart';
+import '../share/share_to_connectum_sheet.dart';
 import 'logs_exporter.dart';
 import 'widgets/logs_options_sheet.dart';
 import 'widgets/old_log_dialog.dart';
@@ -13,14 +15,20 @@ import 'widgets/old_log_dialog.dart';
 /// State and actions of the Logs section. Owned by the Profile controller,
 /// which calls [dispose].
 class LogsController {
-  LogsController({required this.sink, LogExporter? exporter})
-    : exporter = exporter ?? LogExporter() {
+  LogsController({
+    required this.sink,
+    LogExporter? exporter,
+    this.connectumShare,
+  }) : exporter = exporter ?? LogExporter() {
     state.value = sink.state.value;
     sink.state.addListener(_sync);
   }
 
   final LogFileSink sink;
   final LogExporter exporter;
+
+  /// "Share to Connectum"; null hides it from the Logs menu.
+  final ShareRepository? connectumShare;
 
   final state = const LogState().obs;
   final isBusy = false.obs;
@@ -72,18 +80,44 @@ class LogsController {
         onView: openViewer,
         onSave: saveToDevice,
         onShare: share,
-        onUpload: () => AppNotices.info('Coming soon'),
+        onShareToConnectum: connectumShare == null
+            ? null
+            : () => shareToConnectum(context),
       ),
     );
+  }
+
+  /// Opens the picker with the log file. It is the file the sink wrote,
+  /// already redacted as it was written, the same one Share file hands out.
+  Future<void> shareToConnectum(BuildContext context) async {
+    final repo = connectumShare;
+    if (repo == null) return;
+    try {
+      final file = await sink.fileForExport();
+      if (file == null) {
+        return AppNotices.error("Couldn't share the log file");
+      }
+      if (!context.mounted) return;
+      await showShareToConnectum(
+        context,
+        repository: repo,
+        files: [ShareFile(name: file.uri.pathSegments.last, path: file.path)],
+      );
+    } catch (e, st) {
+      AppLog.e('logs_controller', e, st, 'share to connectum');
+      AppNotices.error("Couldn't share the log file");
+    }
   }
 
   /// Flushes the buffer, then opens the in-app viewer. Never creates a file.
   Future<void> openViewer() async {
     try {
+      AppLog.i('logs_controller', 'open viewer');
       await sink.flush();
-      await Get.toNamed<void>(AppRoutes.logViewer);
+      await Get.toNamed<dynamic>(AppRoutes.logViewer);
     } catch (e, st) {
-      AppLog.e('logs_controller', e, st, 'view');
+      AppLog.e('logs_controller', e, st, 'view $e');
+      AppNotices.error("Couldn't open the log file");
     }
   }
 

@@ -100,7 +100,7 @@ class _Editor extends StatelessWidget {
                   errorText: problem,
                   onChanged: c.onNameChanged,
                   textInputAction: TextInputAction.next,
-                  textCapitalization: TextCapitalization.sentences,
+                  textCapitalization: TextCapitalization.words,
                   inputFormatters: [
                     FilteringTextInputFormatter.deny(
                       RegExp(r'[\u0000-\u001F\u007F-\u009F]'),

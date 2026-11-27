@@ -9,8 +9,10 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../data/repositories/sv_file_repository.dart';
 import '../../../data/smart_view/sv_file.dart';
+import '../../share/share_to_connectum_sheet.dart';
 import '../sv_file_preview_controller.dart';
 import '../viewers/sv_file_card.dart';
+import '../viewers/sv_sheet_skeleton.dart';
 import '../viewers/sv_viewers.dart';
 import 'sv_file_chips.dart';
 
@@ -221,12 +223,10 @@ class _Header extends StatelessWidget {
           Expanded(
             child: Obx(() {
               final file = c.current.file;
-              final parts = [
-                file.typeLabel,
-                if (file.sizeText.isNotEmpty) file.sizeText,
-                if (c.files.length > 1)
-                  '${c.index.value + 1} of ${c.files.length}',
-              ];
+              final line = file.headerText(
+                position: c.index.value + 1,
+                total: c.files.length,
+              );
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +240,7 @@ class _Header extends StatelessWidget {
                     overflow: TextOverflow.clip,
                   ),
                   Text(
-                    parts.join(' · '),
+                    line,
                     key: const ValueKey('sv-file-subtitle'),
                     style: AppSv.fileChipSize,
                     maxLines: 1,
@@ -338,6 +338,16 @@ class _BottomBar extends StatelessWidget {
 
   final SvFilePreviewController controller;
 
+  /// The file is made local first (progress shows on its page), then the
+  /// picker opens over the dialog; sending leaves the dialog where it is.
+  Future<void> _shareToConnectum(BuildContext context) async {
+    final share = controller.repo.connectumShare;
+    if (share == null) return;
+    final file = await controller.fileForConnectum();
+    if (file == null || !context.mounted) return;
+    await showShareToConnectum(context, repository: share, files: [file]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = controller;
@@ -345,23 +355,63 @@ class _BottomBar extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Obx(() {
         final isBusy = c.current.phase.value == SvFilePhase.loading;
-        return Row(
+        // Without sharing set up, the two buttons keep their own look.
+        if (!c.canShareToConnectum) {
+          return Row(
+            children: [
+              Expanded(
+                child: AppButton.primary(
+                  key: const ValueKey('sv-file-download'),
+                  label: 'Download',
+                  leadingIcon: Icons.download_outlined,
+                  isCentered: true,
+                  onPressed: isBusy ? null : c.download,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AppButton.secondary(
+                  key: const ValueKey('sv-file-open'),
+                  label: 'Open with…',
+                  leadingIcon: Icons.open_in_new,
+                  onPressed: isBusy ? null : c.openWith,
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: AppButton.primary(
-                label: 'Download',
-                leadingIcon: Icons.download_outlined,
-                isCentered: true,
-                onPressed: isBusy ? null : c.download,
-              ),
+            AppButton.primary(
+              key: const ValueKey('sv-file-share-connectum'),
+              label: 'Share to Connectum',
+              leadingIcon: Icons.send_rounded,
+              isCentered: true,
+              onPressed: isBusy ? null : () => _shareToConnectum(context),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: AppButton.secondary(
-                label: 'Open with…',
-                leadingIcon: Icons.open_in_new,
-                onPressed: isBusy ? null : c.openWith,
-              ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton.secondary(
+                    key: const ValueKey('sv-file-download'),
+                    label: 'Download',
+                    leadingIcon: Icons.download_outlined,
+                    onPressed: isBusy ? null : c.download,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton.secondary(
+                    key: const ValueKey('sv-file-open'),
+                    label: 'Open with…',
+                    leadingIcon: Icons.open_in_new,
+                    onPressed: isBusy ? null : c.openWith,
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -392,20 +442,44 @@ class _FilePage extends StatelessWidget {
         case SvFilePhase.error:
           return _Problem(load: load, onRetry: controller.retry);
         case SvFilePhase.ready:
-          if (load.isShowable.value) {
-            return viewers.build(
-              context,
-              controller,
-              load,
-              controller.index.value == index,
-            );
-          }
-          return SvFileCard(file: load.file);
+          final Widget body = load.isShowable.value
+              ? viewers.build(
+                  context,
+                  controller,
+                  load,
+                  controller.index.value == index,
+                )
+              : SvFileCard(file: load.file);
+          if (!load.isMaybeStale.value) return body;
+          return Column(
+            children: [
+              const _StaleNote(),
+              Expanded(child: body),
+            ],
+          );
         case SvFilePhase.idle:
           return SvFileCard(file: load.file);
       }
     });
   }
+}
+
+class _StaleNote extends StatelessWidget {
+  const _StaleNote();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    key: const ValueKey('sv-file-stale'),
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppSpacing.md,
+      vertical: AppSpacing.xs,
+    ),
+    child: Text(
+      "Couldn't check for a newer version. This copy may be out of date.",
+      style: AppSv.fileChipSize,
+      textAlign: TextAlign.center,
+    ),
+  );
 }
 
 class _Progress extends StatelessWidget {
@@ -415,9 +489,16 @@ class _Progress extends StatelessWidget {
   final VoidCallback onCancel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Obx(() => _body());
+
+  Widget _body() {
+    if (load.isParsing.value) {
+      return const SvSheetSkeleton(key: ValueKey('sv-sheet-skeleton'));
+    }
     final value = load.progress.value;
     final known = value > 0;
+    final bytes = load.transfer.value;
+    final detail = bytes.isStarted ? bytes.text : '';
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -444,7 +525,7 @@ class _Progress extends StatelessWidget {
                   ),
                   if (known)
                     Text(
-                      '${(value * 100).round()}%',
+                      '${(value * 100).floor()}%',
                       style: AppText.readableStrong,
                     ),
                 ],
@@ -457,6 +538,17 @@ class _Progress extends StatelessWidget {
             style: AppText.readable,
             maxLines: 1,
           ),
+          if (detail.isNotEmpty)
+            Padding(
+              key: const ValueKey('sv-file-bytes'),
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                detail,
+                style: AppSv.fileChipSize,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+              ),
+            ),
           const SizedBox(height: AppSpacing.xs),
           AppButton.text(label: 'Cancel', onPressed: onCancel),
         ],

@@ -10,6 +10,7 @@ import '../../../core/utils/attachment_tag.dart';
 import '../../../core/utils/forwarded_text.dart';
 import '../../../core/utils/mention_text.dart';
 import '../../../core/widgets/app_mention_text.dart';
+import '../../../core/widgets/app_png_icon.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -17,6 +18,7 @@ import '../../../data/e2e/e2e_texts.dart';
 import '../../../data/models/message.dart';
 import '../../forms/widgets/forms_picker_sheet.dart';
 import '../conversation_controller.dart';
+import '../../workspace/widgets/workspace_context_bar.dart';
 import 'attach_sheet.dart';
 import 'commands_panel.dart';
 import 'key_change_sheet.dart';
@@ -24,7 +26,7 @@ import 'mention_panel.dart';
 
 /// The composer: a field that grows to five lines, a send button that wakes
 /// as text appears, an attach button for photos and the forms button. In an
-/// encrypted thread the lock and the hint "Encrypted message" show; where a send can never work (the peer has no encryption set
+/// encrypted thread the hint is "Message"; where a send can never work (the peer has no encryption set
 /// up, a security key changed) the field is replaced by a note saying why, and
 /// the forms button stays.
 class ConversationComposer extends StatelessWidget {
@@ -37,7 +39,6 @@ class ConversationComposer extends StatelessWidget {
     final c = controller;
     return Obx(() {
       if (c.isBlocked.value) return _Blocked(controller: c);
-      final isLocked = c.isLocked.value;
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -83,12 +84,22 @@ class ConversationComposer extends StatelessWidget {
             onPickItem: c.pickCommandItem,
             onPickName: c.renameCommand,
             isOnline: () => c.commands.isOnline,
+            panelKey: c.commandsTour?.panelKey,
+            rowKeyOf: c.commandsTour?.rowKeyOf,
           ),
           MentionPanel(
             rows: c.mentionRows,
             onPick: c.pickMention,
             onClose: c.closeMentions,
             pictureOf: c.pictureOf,
+          ),
+          Obx(
+            () => WorkspaceContextBar(
+              message: c.editing.value,
+              label: 'Editing message',
+              cancelLabel: 'Cancel edit',
+              onCancel: c.cancelEdit,
+            ),
           ),
           Obx(
             () => _ReplyBar(
@@ -125,26 +136,13 @@ class ConversationComposer extends StatelessWidget {
                   FormsButton(
                     onTap: () => FormsPickerSheet.show(context, c.picker),
                   ),
-                  if (isLocked)
-                    const SizedBox(
-                      height: AppSpacing.composerButton,
-                      child: Padding(
-                        padding: EdgeInsets.only(left: AppSpacing.xxs),
-                        child: Icon(
-                          Icons.lock,
-                          size: AppSpacing.statusIcon,
-                          color: AppColors.yesText,
-                          semanticLabel: 'End-to-end encrypted',
-                        ),
-                      ),
-                    ),
                   Expanded(
                     child: AppTextField(
                       controller: c.text,
                       focusNode: c.focus,
-                      hint: isLocked
-                          ? 'Encrypted message'
-                          : "Type a message or '#' for commands…",
+                      hint: 'Message',
+                      textStyle: AppText.chatInput,
+
                       minLines: 1,
                       maxLines: 5,
                       minHeight: AppSpacing.composerButton,
@@ -154,6 +152,7 @@ class ConversationComposer extends StatelessWidget {
                       borderColor: Colors.transparent,
                       borderRadius: BorderRadius.zero,
                       keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
                       textInputAction: TextInputAction.newline,
                       onChanged: c.onChanged,
                     ),
@@ -164,6 +163,7 @@ class ConversationComposer extends StatelessWidget {
                         c.canSend &&
                         !c.runner.isRunning.value;
                     return ComposerSendButton(
+                      key: c.commandsTour?.sendKey,
                       isActive: isActive,
                       onTap: c.send,
                     );
@@ -200,10 +200,12 @@ class _AttachButton extends StatelessWidget {
         child: SizedBox(
           width: AppSpacing.composerButton,
           height: AppSpacing.composerButton,
-          child: Icon(
-            Icons.add,
-            size: 22,
-            color: isDisabled ? AppColors.cardMuted : AppColors.ink,
+          child: Center(
+            child: AppPngIcon(
+              asset: 'assets/icons/chat/attachements.png',
+              size: 22,
+              color: isDisabled ? AppColors.disabledInk : AppColors.avatarText,
+            ),
           ),
         ),
       ),
@@ -365,7 +367,13 @@ class FormsButton extends StatelessWidget {
       child: const SizedBox(
         width: AppSpacing.composerButton,
         height: AppSpacing.composerButton,
-        child: Icon(Icons.grid_view, size: 22, color: AppColors.ink),
+        child: Center(
+          child: AppPngIcon(
+            asset: 'assets/icons/chat/add_forms.png',
+            size: 20,
+            color: AppColors.avatarText,
+          ),
+        ),
       ),
     ),
   );

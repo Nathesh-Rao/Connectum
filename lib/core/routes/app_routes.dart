@@ -25,7 +25,6 @@ class AppRoutes {
   static const security = '/security';
   static const newGroup = '/new-group';
   static const tasks = '/tasks';
-  static const approvals = '/approvals';
   static const ticket = '/tickets/:id';
   static const chatInfo = '/chat-info/:id';
 
@@ -58,7 +57,6 @@ class AppRoutes {
   static const debugSmartDrawer = '/debug/smartdrawer';
   static const debugSmartQuery = '/debug/smartquery';
   static const debugSmartViews = '/debug/smartviews';
-  static const debugSmartOverview = '/debug/smartoverview';
   static const debugSmartFiles = '/debug/smartfiles';
   static const debugSmartInsights = '/debug/smartinsights';
 

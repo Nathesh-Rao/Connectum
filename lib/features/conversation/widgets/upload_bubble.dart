@@ -10,7 +10,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/utils/attachment_tag.dart';
 import '../../../core/widgets/app_progress_bar.dart';
 
-import '../models/pending_upload.dart';
+import '../../../data/models/pending_upload.dart';
 
 /// My photo or document while it uploads: the picture (or the file's name)
 /// with a thin progress bar over it and a cancel; on failure the reason with Retry and Cancel.
@@ -99,7 +99,7 @@ class _FileFace extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppText.message,
+            style: AppText.chatMessage,
           ),
           Text(AttachmentTag.sizeText(size), style: AppText.caption),
         ],

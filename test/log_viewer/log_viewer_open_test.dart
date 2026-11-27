@@ -96,8 +96,10 @@ void main() {
 
       final big = File('${dir.path}/b.txt')
         ..writeAsStringSync(
-          List.generate(60000, (i) => '10:00:01.000  I  APP  line $i padding')
-              .join('\n'),
+          List.generate(
+            60000,
+            (i) => '10:00:01.000  I  APP  line $i padding',
+          ).join('\n'),
         );
       expect(big.lengthSync(), greaterThan(LogDocument.maxBytes));
       final b = await const LogTextReader().read(big);

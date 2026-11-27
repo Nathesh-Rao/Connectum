@@ -16,7 +16,10 @@ void main() {
   });
 
   test('safeCall returns fallback and logs on error', () async {
-    expect(await safeCall<int>('t', () async => throw StateError('x'), fallback: 7), 7);
+    expect(
+      await safeCall<int>('t', () async => throw StateError('x'), fallback: 7),
+      7,
+    );
     expect(await safeCall<int>('t', () async => throw StateError('x')), isNull);
     expect(lines.length, 2);
     expect(lines.first, contains('[t]'));
@@ -24,7 +27,10 @@ void main() {
 
   test('safeSync', () {
     expect(safeSync('t', () => 1), 1);
-    expect(safeSync<int>('t', () => throw const FormatException('s'), fallback: 2), 2);
+    expect(
+      safeSync<int>('t', () => throw const FormatException('s'), fallback: 2),
+      2,
+    );
     expect(lines.length, 1);
   });
 

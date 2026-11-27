@@ -108,11 +108,12 @@ class DocumentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _ActionButton(
-                state: state,
-                progress: progress,
-                onCancel: onCancel,
-              ),
+              if (state != DocumentButtonState.done)
+                _ActionButton(
+                  state: state,
+                  progress: progress,
+                  onCancel: onCancel,
+                ),
             ],
           ),
         ),
@@ -187,7 +188,7 @@ class _ActionButton extends StatelessWidget {
                 progress: progress,
                 onCancel: onCancel,
               ),
-              DocumentButtonState.done => const _OpenPill(),
+              DocumentButtonState.done => const SizedBox.shrink(),
               DocumentButtonState.failed => const _Round(
                 color: AppColors.white,
                 borderColor: AppColors.error,
@@ -224,30 +225,6 @@ class _Round extends StatelessWidget {
   );
 }
 
-class _OpenPill extends StatelessWidget {
-  const _OpenPill();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 32,
-    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: AppColors.primaryTint,
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      border: Border.all(color: AppColors.tileCurrentBorder),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.check, size: 14, color: AppColors.primaryStrong),
-        const SizedBox(width: AppSpacing.xxs),
-        Text('Open', style: AppText.label.copyWith(color: AppColors.primaryStrong)),
-      ],
-    ),
-  );
-}
-
 /// The progress ring with the percentage in it, or a cross while the length
 /// is unknown. A tap cancels.
 class _Ring extends StatelessWidget {
@@ -279,7 +256,11 @@ class _Ring extends StatelessWidget {
                   '${(progress * 100).round()}%',
                   style: AppText.label.copyWith(color: AppColors.primaryStrong),
                 )
-              : const Icon(Icons.close, size: 16, color: AppColors.primaryStrong),
+              : const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: AppColors.primaryStrong,
+                ),
         ],
       ),
     ),

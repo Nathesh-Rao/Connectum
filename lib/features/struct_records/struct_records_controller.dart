@@ -62,7 +62,8 @@ class StructRecordsController extends GetxController {
   void _onScroll() {
     if (!scroll.hasClients) return;
     final p = scroll.position;
-    if (p.maxScrollExtent - p.pixels < 300) fireAndLog('struct_records_controller', () => loadMore());
+    if (p.maxScrollExtent - p.pixels < 300)
+      fireAndLog('struct_records_controller', () => loadMore());
   }
 
   /// The first page (the whole list is read again).
@@ -176,7 +177,8 @@ class StructRecordsController extends GetxController {
         convId: launch.convId,
       ),
     );
-    if (result == true) fireAndLog('struct_records_controller', () => load(isQuiet: true));
+    if (result == true)
+      fireAndLog('struct_records_controller', () => load(isQuiet: true));
   }
 
   /// Edit: the app's edit form of a saved record (`submissions.update`),

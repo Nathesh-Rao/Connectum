@@ -35,10 +35,7 @@ class AppTag extends StatelessWidget {
     return Container(
       height: AppSpacing.tagHeight,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: AppRadius.pillAll,
-      ),
+      decoration: BoxDecoration(color: fill, borderRadius: AppRadius.pillAll),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

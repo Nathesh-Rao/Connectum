@@ -23,6 +23,10 @@ class RecordCmd {
   static const queryPeople = 'records.people';
   static const peopleCards = 'people.cards';
 
+  /// ONE record as the Inbox's cards read it (a notification's "View
+  /// submission"): `{submissions: [record], structures}`.
+  static const card = 'record.card';
+
   /// The Inbox's saved views (`sd_inboxview.erl`).
   static const viewsGet = 'inbox.views.get';
   static const viewsSave = 'inbox.views.save';

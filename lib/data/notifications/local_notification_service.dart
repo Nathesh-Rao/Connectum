@@ -103,11 +103,21 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
     wasAsked.value = await _store.readValue(_askedKey) != null;
     await refreshPermission();
     _subscriptions
-      ..add(_feed.onItem.listen(
-          (item) => fireAndLog('local_notification_service', () async => _onItem(item)),
+      ..add(
+        _feed.onItem.listen(
+          (item) => fireAndLog(
+            'local_notification_service',
+            () async => _onItem(item),
+          ),
           onError: streamOnError('local_notification_service'),
-        ))
-      ..add(_feed.onGone.listen(_cancelAll, onError: streamOnError('local_notification_service')));
+        ),
+      )
+      ..add(
+        _feed.onGone.listen(
+          _cancelAll,
+          onError: streamOnError('local_notification_service'),
+        ),
+      );
     await _loadGroups();
     ever(_store.current, (_) {
       _shown.clear();
@@ -134,7 +144,8 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _log('lifecycle=$state');
-    if (state == AppLifecycleState.resumed) fireAndLog('local_notification_service', () => refreshPermission());
+    if (state == AppLifecycleState.resumed)
+      fireAndLog('local_notification_service', () => refreshPermission());
   }
 
   // ---- permission ----------------------------------------------------------
@@ -192,6 +203,7 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
     }
     await markAsked();
     await refreshPermission();
+    AppLog.i('notifications', 'permission result enabled=${isEnabled.value}');
     return isEnabled.value;
   }
 
@@ -271,6 +283,7 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
       'category=${item.category} actionType=${item.actionType} '
       'chatId=${item.chatId}',
     );
+    AppLog.i('notifications', 'notification received');
     final decision = _decide(item);
     if (decision.show == NotificationShow.none) {
       _log('decision id=${item.id} ${decision.reason}');
@@ -454,10 +467,14 @@ class LocalNotificationService extends GetxService with WidgetsBindingObserver {
   void _onTap(String? raw) {
     final payload = PushPayload.tryParse(raw);
     if (payload == null) return;
+    AppLog.i('notifications', 'notification opened');
     _router.handlePayload(payload);
     final id = payload.itemId;
     if (id != null) {
-      fireAndLog('local_notification_service', () => _feed.setRead([id], isRead: true));
+      fireAndLog(
+        'local_notification_service',
+        () => _feed.setRead([id], isRead: true),
+      );
     }
   }
 }

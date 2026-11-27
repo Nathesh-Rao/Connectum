@@ -79,7 +79,8 @@ class LogoLoaderController extends ChangeNotifier {
   /// Called during STOPPING it turns around smoothly from the current motion.
   bool start() {
     if (_isDisposed) return false;
-    if (_state == LogoLoaderState.starting || _state == LogoLoaderState.loading) {
+    if (_state == LogoLoaderState.starting ||
+        _state == LogoLoaderState.loading) {
       return false;
     }
     _rhythm = _Rhythm(config, _rnd);

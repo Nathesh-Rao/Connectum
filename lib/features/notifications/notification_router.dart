@@ -119,6 +119,16 @@ class NotificationRouter extends GetxService {
   /// Set by the home shell: selects a tab of the home.
   void Function(HomeTab tab)? selectTab;
 
+  /// Set by the home shell: the Inbox with the Approvals pane open.
+  void Function()? openApprovals;
+
+  /// Set by the home shell: the Inbox on the Records tab showing that one
+  /// record (`record.card`), under a "Submission #N" strip.
+  void Function(int id)? openRecord;
+
+  /// Set by the home shell: the Inbox on its usual list.
+  void Function()? openInboxList;
+
   Destination? _pending;
   String? _pendingOwner;
   bool _isHomeReady = false;
@@ -256,10 +266,10 @@ class NotificationRouter extends GetxService {
         ConversationRoute.jumpTo(d.conversationId!, d.messageId!);
         ConversationRoute.open(d.conversationId!);
       case DestinationKind.submissions:
-        Get.until((r) => r.isFirst);
-        selectTab?.call(HomeTab.submits);
+        // No record number: the Inbox Records tab, not the Submits tab.
+        openInboxList?.call();
       case DestinationKind.approvals:
-        _openScreen(AppRoutes.approvals);
+        openApprovals?.call();
       case DestinationKind.tasks:
         _openScreen(AppRoutes.tasks);
       case DestinationKind.task:
@@ -274,9 +284,16 @@ class NotificationRouter extends GetxService {
         }
       case DestinationKind.ticket:
         fireAndLog('notification_router', () => _openTicket(d));
-      // TODO: open a submission itself when its screen takes a link; the
-      // sheet meanwhile.
       case DestinationKind.submission:
+        // "New submission: <form>" (ref.submissionId is the record number):
+        // the Inbox shows that one record. Without a usable number, the
+        // usual Inbox list.
+        final id = submissionIdOf(d);
+        if (id != null) {
+          openRecord?.call(id);
+        } else {
+          openInboxList?.call();
+        }
       case DestinationKind.detail:
         final item = d.item;
         if (item == null) {
@@ -312,7 +329,16 @@ class NotificationRouter extends GetxService {
       }
     }
     final route = AppRoutes.ticketOf(id);
-    if (Get.currentRoute != route) fireAndLog('notification_router', () async => Get.toNamed(route));
+    if (Get.currentRoute != route)
+      fireAndLog('notification_router', () async => Get.toNamed(route));
+  }
+
+  /// The record number of a submission destination; null when it is not a
+  /// positive number.
+  static int? submissionIdOf(Destination d) {
+    if (d.kind != DestinationKind.submission) return null;
+    final id = idNumber(d.submissionId);
+    return id != null && id > 0 ? id : null;
   }
 
   /// The ticket id of a ticket destination; null when it is not a number.
@@ -329,7 +355,6 @@ class NotificationRouter extends GetxService {
     final isRoutable = switch (destination.kind) {
       DestinationKind.none ||
       DestinationKind.detail ||
-      DestinationKind.submission ||
       DestinationKind.ticket => false,
       _ => true,
     };
@@ -343,8 +368,8 @@ class NotificationRouter extends GetxService {
     );
   }
 
-  /// Tasks and Approvals open on their first tab. Already there: nothing to
-  /// do, the screen refreshes itself.
+  /// Tasks open on their first tab. Already there: nothing to do, the screen
+  /// refreshes itself.
   void _openScreen(String route) {
     if (Get.currentRoute != route) Get.toNamed(route);
   }

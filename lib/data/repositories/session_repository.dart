@@ -93,6 +93,7 @@ class SessionRepository extends GetxService {
     );
     loginNotice.value = null;
     _isHandling = false;
+    AppLog.i('session', 'sign-in ok (organisation session started)');
     _socket.start();
   }
 
@@ -123,6 +124,10 @@ class SessionRepository extends GetxService {
     final token = _store.token;
     final info = _store.current.value;
     if (info == null) return;
+    AppLog.i(
+      'session',
+      'organisation switch: leaving current (endOnServer=$endOnServer)',
+    );
     _isHandling = true;
     await _socket.stop();
     await _db.update(
@@ -143,6 +148,7 @@ class SessionRepository extends GetxService {
   Future<void> handleSessionReplaced() async {
     final info = _store.current.value;
     if (_isHandling || info == null) return;
+    AppLog.w('session', 'session_replaced: local data wiped, back to login');
     _isHandling = true;
     await _socket.stop();
     await _db.wipeScope(info.orgId, info.userId);
@@ -160,6 +166,7 @@ class SessionRepository extends GetxService {
   /// the outbox stay and flush after the next login to the same org and user.
   Future<void> handleAuthFailed([String notice = endedNotice]) async {
     if (_isHandling || _store.current.value == null) return;
+    AppLog.w('session', 'auth failed or expired: token cleared, back to login');
     _isHandling = true;
     await _socket.stop();
     await _store.clear();
@@ -169,6 +176,7 @@ class SessionRepository extends GetxService {
   Future<void> signOut() async {
     final info = _store.current.value;
     if (info == null) return;
+    AppLog.i('session', 'sign-out (organisation)');
     _isHandling = true;
     try {
       await _api.logout();
@@ -199,6 +207,7 @@ class SessionRepository extends GetxService {
   /// device id. The people and screens behind it read from the stores, which
   /// are emptied here, so nothing stale is left for the next sign-in.
   Future<void> logOut({required String notice}) async {
+    AppLog.i('session', 'log out (account)');
     _isHandling = true;
     final email = _store.identity.value?.email;
     final info = _store.current.value;

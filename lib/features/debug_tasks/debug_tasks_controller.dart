@@ -8,14 +8,20 @@ import '../../data/models/task.dart';
 import '../../data/repositories/approval_repository.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../data/socket/socket_service.dart';
+import '../home_shell/home_shell_controller.dart';
 
 /// Tasks and Approvals with sample data and injected events, no server. Debug
 /// builds only (see "Before release" in CLAUDE.md).
 class DebugTasksController extends GetxController {
-  DebugTasksController({required this.tasks, required this.approvals});
+  DebugTasksController({
+    required this.tasks,
+    required this.approvals,
+    this.shell,
+  });
 
   final TaskRepository tasks;
   final ApprovalRepository approvals;
+  final HomeShellController? shell;
 
   final isSample = SeedTasks.isActive.obs;
   final nextFailure = RxnString();
@@ -34,7 +40,7 @@ class DebugTasksController extends GetxController {
   }
 
   void openTasks() => Get.toNamed(AppRoutes.tasks);
-  void openApprovals() => Get.toNamed(AppRoutes.approvals);
+  void openApprovals() => shell?.openInbox(approvals: true);
 
   static const failures = {
     'rate_limited': 'Too many tasks this hour; try later.',

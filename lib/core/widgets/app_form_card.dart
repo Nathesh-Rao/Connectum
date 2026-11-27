@@ -19,6 +19,60 @@ enum AppFormCardState { sent, waiting, failed }
 /// set. It shows the first eight fields in two columns and "+N more" for the
 /// rest. [isFresh] makes it enter with a small spring (sent from the right,
 /// received from the left).
+/// The text styles of a form card. [chat] is the card in a conversation;
+/// [workspace] is the larger set of My Work Space.
+class AppFormCardText {
+  const AppFormCardText({
+    required this.sender,
+    required this.strip,
+    required this.title,
+    required this.label,
+    required this.value,
+    required this.time,
+    required this.note,
+    required this.more,
+  });
+
+  final TextStyle sender;
+  final TextStyle strip;
+  final TextStyle title;
+  final TextStyle label;
+  final TextStyle value;
+  final TextStyle time;
+  final TextStyle note;
+  final TextStyle more;
+
+  static final chat = AppFormCardText(
+    sender: AppText.label.copyWith(color: AppColors.primaryStrong),
+    strip: AppText.label.copyWith(
+      color: AppColors.white,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.1,
+    ),
+    title: AppText.bodyStrong.copyWith(
+      fontWeight: FontWeight.w700,
+      height: 1.25,
+      letterSpacing: -0.2,
+    ),
+    label: AppText.caption.copyWith(color: AppColors.cardMuted, height: 1.25),
+    value: AppText.body.copyWith(fontWeight: FontWeight.w500, height: 1.3),
+    time: AppText.caption.copyWith(color: AppColors.cardMuted),
+    note: AppText.caption.copyWith(color: AppColors.cardMuted),
+    more: AppText.caption.copyWith(color: AppColors.cardMuted),
+  );
+
+  static final workspace = AppFormCardText(
+    sender: AppText.wsMeta.copyWith(color: AppColors.primaryStrong),
+    strip: AppText.wsChip.copyWith(color: AppColors.white),
+    title: AppText.wsTitle,
+    label: AppText.wsMeta.copyWith(color: AppColors.cardMuted),
+    value: AppText.wsSubtitle,
+    time: AppText.wsTime.copyWith(color: AppColors.cardMuted),
+    note: AppText.wsTime.copyWith(color: AppColors.cardMuted),
+    more: AppText.wsMeta.copyWith(color: AppColors.cardMuted),
+  );
+}
+
 class AppFormCard extends StatefulWidget {
   const AppFormCard({
     super.key,
@@ -36,6 +90,7 @@ class AppFormCard extends StatefulWidget {
     this.isHighlighted = false,
     this.statusMark,
     this.actions,
+    this.text,
   });
 
   static const widthFraction = 0.92;
@@ -70,6 +125,9 @@ class AppFormCard extends StatefulWidget {
   /// Under the fields, above the time: a ticket's actions, in an
   /// [AppFormCardActionArea]. It may build to nothing.
   final Widget? actions;
+
+  /// Defaults to [AppFormCardText.chat].
+  final AppFormCardText? text;
 
   @override
   State<AppFormCard> createState() => _AppFormCardState();
@@ -107,6 +165,7 @@ class _AppFormCardState extends State<AppFormCard> {
   @override
   Widget build(BuildContext context) {
     final d = widget.data;
+    final t = widget.text ?? AppFormCardText.chat;
     final fields = d.cardEntries;
     final shown = fields.take(AppFormCard.visibleFields).toList();
     final extra = fields.skip(AppFormCard.visibleFields).toList();
@@ -116,11 +175,13 @@ class _AppFormCardState extends State<AppFormCard> {
       problem: widget.state == AppFormCardState.failed ? widget.problem : null,
       note: widget.note,
       isAwaitingApproval: d.isAwaitingApproval,
+      style: t.note,
     );
     final stamp = _Stamp(
       time: time,
       isWaiting: isWaiting,
       statusMark: widget.statusMark,
+      style: t.time,
     );
     final footer = _Footer(line: line, stamp: stamp);
     Widget card = Listener(
@@ -158,8 +219,9 @@ class _AppFormCardState extends State<AppFormCard> {
                             : d.label),
                     isSent: widget.isSent,
                     onEdit: widget.onEdit,
+                    style: t.strip,
                   ),
-                  _Title(caption: d.caption),
+                  _Title(caption: d.caption, style: t.title),
                   if (fields.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.fromLTRB(
@@ -176,7 +238,7 @@ class _AppFormCardState extends State<AppFormCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _Columns(entries: shown),
+                          _Columns(entries: shown, text: t),
                           if (extra.isNotEmpty) ...[
                             AnimatedSize(
                               duration: AppDurations.base,
@@ -187,13 +249,14 @@ class _AppFormCardState extends State<AppFormCard> {
                                 curve: AppCurves.out,
                                 opacity: _isOpen ? 1 : 0,
                                 child: _isOpen
-                                    ? _Columns(entries: extra)
+                                    ? _Columns(entries: extra, text: t)
                                     : const SizedBox(width: double.infinity),
                               ),
                             ),
                             _MoreRow(
                               isOpen: _isOpen,
                               count: extra.length,
+                              style: t.more,
                               onTap: () {
                                 if (mounted) setState(() => _isOpen = !_isOpen);
                               },
@@ -236,10 +299,7 @@ class _AppFormCardState extends State<AppFormCard> {
               if (widget.senderName != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
-                  child: Text(
-                    widget.senderName!,
-                    style: AppText.label.copyWith(color: AppColors.primaryStrong),
-                  ),
+                  child: Text(widget.senderName!, style: t.sender),
                 ),
               card,
             ],
@@ -310,11 +370,13 @@ class _Stamp extends StatelessWidget {
     required this.time,
     required this.isWaiting,
     required this.statusMark,
+    required this.style,
   });
 
   final String time;
   final bool isWaiting;
   final Widget? statusMark;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +387,7 @@ class _Stamp extends StatelessWidget {
           const Icon(Icons.schedule, size: 12, color: AppColors.cardMuted),
           const SizedBox(width: AppSpacing.xxs),
         ],
-        Text(time, style: AppText.caption.copyWith(color: AppColors.cardMuted)),
+        Text(time, style: style),
         if (statusMark != null) ...[
           const SizedBox(width: AppSpacing.xxs),
           statusMark!,
@@ -345,15 +407,13 @@ class _Footer extends StatelessWidget {
     required String? problem,
     required String? note,
     required bool isAwaitingApproval,
+    required TextStyle style,
   }) => problem != null
-      ? Text(problem, style: AppText.caption.copyWith(color: AppColors.error))
+      ? Text(problem, style: style.copyWith(color: AppColors.error))
       : note != null
-      ? Text(note, style: AppText.caption.copyWith(color: AppColors.cardMuted))
+      ? Text(note, style: style)
       : isAwaitingApproval
-      ? Text(
-          'Waiting for approval',
-          style: AppText.caption.copyWith(color: AppColors.cardMuted),
-        )
+      ? Text('Waiting for approval', style: style)
       : null;
 
   @override
@@ -382,11 +442,13 @@ class _Strip extends StatelessWidget {
     required this.label,
     required this.isSent,
     required this.onEdit,
+    required this.style,
   });
 
   final String label;
   final bool isSent;
   final VoidCallback? onEdit;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -401,11 +463,7 @@ class _Strip extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.label.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.1,
-              ),
+              style: style,
             ),
           ),
           if (onEdit != null)
@@ -449,9 +507,10 @@ class _Strip extends StatelessWidget {
 }
 
 class _Title extends StatelessWidget {
-  const _Title({required this.caption});
+  const _Title({required this.caption, required this.style});
 
   final String caption;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -478,11 +537,7 @@ class _Title extends StatelessWidget {
               '$caption submitted',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppText.bodyStrong.copyWith(
-                fontWeight: FontWeight.w700,
-                height: 1.25,
-                letterSpacing: -0.2,
-              ),
+              style: style,
             ),
           ),
         ],
@@ -493,9 +548,10 @@ class _Title extends StatelessWidget {
 
 /// Two columns, the left one filled first, with a hairline between them.
 class _Columns extends StatelessWidget {
-  const _Columns({required this.entries});
+  const _Columns({required this.entries, required this.text});
 
   final List<FormEntry> entries;
+  final AppFormCardText text;
 
   @override
   Widget build(BuildContext context) {
@@ -509,7 +565,7 @@ class _Columns extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: _Column(entries: left),
+              child: _Column(entries: left, text: text),
             ),
           ),
           Expanded(
@@ -518,7 +574,7 @@ class _Columns extends StatelessWidget {
               decoration: const BoxDecoration(
                 border: Border(left: BorderSide(color: AppColors.cardLine)),
               ),
-              child: _Column(entries: right),
+              child: _Column(entries: right, text: text),
             ),
           ),
         ],
@@ -528,9 +584,10 @@ class _Columns extends StatelessWidget {
 }
 
 class _Column extends StatelessWidget {
-  const _Column({required this.entries});
+  const _Column({required this.entries, required this.text});
 
   final List<FormEntry> entries;
+  final AppFormCardText text;
 
   @override
   Widget build(BuildContext context) {
@@ -538,26 +595,22 @@ class _Column extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < entries.length; i++)
-          _Field(entry: entries[i], isLast: i == entries.length - 1),
+          _Field(
+            entry: entries[i],
+            isLast: i == entries.length - 1,
+            text: text,
+          ),
       ],
     );
   }
 }
 
 class _Field extends StatelessWidget {
-  const _Field({required this.entry, required this.isLast});
+  const _Field({required this.entry, required this.isLast, required this.text});
 
   final FormEntry entry;
   final bool isLast;
-
-  static final _label = AppText.caption.copyWith(
-    color: AppColors.cardMuted,
-    height: 1.25,
-  );
-  static final _value = AppText.body.copyWith(
-    fontWeight: FontWeight.w500,
-    height: 1.3,
-  );
+  final AppFormCardText text;
 
   @override
   Widget build(BuildContext context) {
@@ -572,7 +625,7 @@ class _Field extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(entry.caption, style: _label),
+          Text(entry.caption, style: text.label),
           const SizedBox(height: 3),
           switch (entry.kind) {
             FormEntryKind.yes || FormEntryKind.no => AppStatusPill(
@@ -595,7 +648,7 @@ class _Field extends StatelessWidget {
                     entry.text,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: _value,
+                    style: text.value,
                   ),
                 ),
               ],
@@ -604,7 +657,7 @@ class _Field extends StatelessWidget {
               entry.text,
               maxLines: 6,
               overflow: TextOverflow.ellipsis,
-              style: _value,
+              style: text.value,
             ),
           },
         ],
@@ -618,11 +671,13 @@ class _MoreRow extends StatelessWidget {
     required this.isOpen,
     required this.count,
     required this.onTap,
+    required this.style,
   });
 
   final bool isOpen;
   final int count;
   final VoidCallback onTap;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -635,10 +690,7 @@ class _MoreRow extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              isOpen ? 'Show less' : '+$count more',
-              style: AppText.caption.copyWith(color: AppColors.cardMuted),
-            ),
+            Text(isOpen ? 'Show less' : '+$count more', style: style),
             const SizedBox(width: AppSpacing.xxs),
             AnimatedRotation(
               turns: isOpen ? 0.5 : 0,

@@ -3,26 +3,43 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
+import '../../core/log/app_log.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
+import '../../data/models/approval.dart';
 import '../../data/models/ids.dart';
 import '../../data/models/record_state.dart';
 import '../../data/models/ticket.dart';
 import '../../data/records/record_commands.dart';
+import '../../data/repositories/approval_repository.dart';
 import '../../data/repositories/attachment_repository.dart';
 import '../../data/repositories/form_file_repository.dart';
+import '../../data/repositories/inbox_field_kinds.dart';
+import '../../data/repositories/inbox_repository.dart';
+import '../../data/repositories/sv_file_repository.dart';
+import '../../data/smart_view/sv_file.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/socket/call_problem.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../../data/socket/socket_service.dart';
 import '../forms/models/field_input.dart';
 import '../forms/models/form_launch.dart';
+import '../inbox/models/approval_rules.dart';
+import '../inbox/models/inbox_card_rows.dart';
+import '../inbox/models/inbox_field_kind.dart';
+import '../inbox/models/inbox_record_tone.dart';
+import '../inbox/models/inbox_row.dart';
+import '../inbox/widgets/inbox_card_frame.dart';
+import '../smart_view/sv_file_preview_controller.dart';
 import '../tasks/task_people_controller.dart';
 import '../../data/models/group_add.dart';
 import '../chats/models/chat_person.dart';
+import 'models/record_kind.dart';
+import 'models/ticket_detail_row.dart';
 import 'models/ticket_input.dart';
+import 'models/ticket_rows.dart';
 import 'ticket_action_form.dart';
 import 'tickets_texts.dart';
 import '../../core/log/safe.dart';
@@ -40,6 +57,10 @@ class TicketDetailController extends GetxController {
     required this.tickets,
     required this.files,
     required this.connectivity,
+    this.inbox,
+    this.approvals,
+    this.fieldKinds,
+    this.svFiles,
     this.busyDelay = const Duration(seconds: 2),
     this.coolDown = const Duration(seconds: 3),
   });
@@ -48,6 +69,17 @@ class TicketDetailController extends GetxController {
   final TicketRepository tickets;
   final FormFileRepository files;
   final ConnectivityService connectivity;
+
+  /// `record.card` (`fileMeta:2`) and the people cards; null: the screen
+  /// shows the values `submission.get` gave, files as "n files".
+  final InboxRepository? inbox;
+
+  /// The requests of the person, for the approval of a record.
+  final ApprovalRepository? approvals;
+  final InboxFieldKinds? fieldKinds;
+
+  /// Opens a file in the preview; null: file chips stay plain.
+  final SvFileRepository? svFiles;
 
   /// `busy`: the one automatic retry waits this long.
   final Duration busyDelay;
@@ -71,6 +103,10 @@ class TicketDetailController extends GetxController {
   /// The list showed this record but `submission.get` refuses it (a person who
   /// sees every record of the form): the list row, a calm notice, no history.
   final isUnopenable = false.obs;
+
+  /// The record as the Inbox card reads it (`record.card`, `fileMeta:2`):
+  /// labels of choices, file details, the form's field names.
+  final card = Rxn<InboxRow>();
 
   final history = Rxn<RecordHistory>();
   final historyState = AppViewState.loading.obs;
@@ -112,6 +148,152 @@ class TicketDetailController extends GetxController {
     return t != null && !t.isAwaitingApproval && t.isRaisedBy(me);
   }
 
+  // ---- what the screen shows -------------------------------------------------
+
+  /// The request (`req.*`) that decides this record, when the person has it.
+  Approval? get approval {
+    final list = approvals?.all;
+    if (list == null) return null;
+    Approval? found;
+    for (final a in list) {
+      if (a.submissionId != ticketId || !a.isSubmission) continue;
+      if (a.isPending) return a;
+      found ??= a;
+    }
+    return found;
+  }
+
+  RecordKind get kind {
+    final t = ticket.value;
+    if (t == null) return RecordKind.submission;
+    return RecordKind.of(
+      t,
+      hasRequest: approval != null,
+      hasStatus: _hasStatusTable,
+    );
+  }
+
+  /// The form has a status table: its structure says so, or the server
+  /// lists statuses for this record.
+  bool get _hasStatusTable =>
+      (ticket.value?.hasStatus ?? false) ||
+      (state.value?.statuses.isNotEmpty ?? false) ||
+      (card.value?.statusField.isNotEmpty ?? false);
+
+  /// The approval answers this person may give (the server stays the judge).
+  List<ApprovalAction> get approvalActions {
+    final a = approval;
+    return a == null ? const [] : ApprovalRules.actionsFor(a);
+  }
+
+  /// The status as the strip says it: the live status, else the card's chip,
+  /// else the record's own words.
+  String get statusText {
+    final live = state.value?.status ?? '';
+    if (live.trim().isNotEmpty) return live;
+    final t = ticket.value;
+    final c = card.value;
+    if (c != null && c.chipText(null).isNotEmpty) return c.chipText(null);
+    if (t == null) return '';
+    if (t.isAwaitingApproval) return 'Waiting for approval';
+    if (t.status.isNotEmpty) return t.status;
+    return switch (t.recordStatus.toLowerCase()) {
+      'approved' => 'Approved',
+      'rejected' => 'Declined',
+      _ => '',
+    };
+  }
+
+  /// The colour and icon of the strip, by the card's own rule.
+  InboxCardStatus get cardStatus {
+    final t = ticket.value;
+    final c = card.value;
+    if (c != null) return InboxCardStatus.of(c.stateFor(me));
+    if (t == null) return InboxCardStatus.closed;
+    final isFinal = state.value?.isFinal ?? t.isFinal;
+    return InboxCardStatus.of(
+      recordStateOf(
+        isFinal: isFinal || (t.recordStatus == 'approved' && !_hasStatusTable),
+        isWaiting: t.isAwaitingApproval,
+        isDeclined: t.recordStatus.toLowerCase() == 'rejected',
+        statusText: statusText,
+        holder: holders.join(', '),
+        me: me,
+      ),
+    );
+  }
+
+  /// The person the header is about: who raised it.
+  String get raiser => ticket.value?.by ?? card.value?.raiser ?? '';
+
+  String nameOfUser(String user) {
+    inbox?.cardRevision.value;
+    final u = user.replaceFirst('@', '').trim();
+    if (tickets.isMe(u)) return TicketsTexts.youCapital;
+    final name = inbox?.cardOf(u)?.name.trim() ?? '';
+    return name.isNotEmpty ? name : tickets.nameOf(u);
+  }
+
+  String? pictureOf(String user) {
+    inbox?.cardRevision.value;
+    final a = inbox?.cardOf(user.replaceFirst('@', '').trim())?.avatar ?? '';
+    return a.isEmpty ? null : a;
+  }
+
+  String? fieldTypeOf(String field) {
+    final c = card.value;
+    return c == null ? null : fieldKinds?.typeOf(c.formId, field);
+  }
+
+  /// Every answer as a typed line, in the form's order: from `record.card`
+  /// (labels, files with details), else from the values `submission.get`
+  /// gave.
+  List<InboxCardRow> get rows {
+    final c = card.value;
+    if (c != null) return inboxCardRows(c, typeOf: fieldTypeOf);
+    final t = ticket.value;
+    if (t == null) return const [];
+    return [
+      for (final r in ticketValueRows(t, status: state.value?.status ?? ''))
+        _plainRow(r),
+    ];
+  }
+
+  static InboxCardRow _plainRow(TicketDetailRow r) => InboxCardRow(
+    name: r.label,
+    value: r.value,
+    kind: InboxFieldKind.of(name: r.label, key: '', raw: r.value),
+  );
+
+  bool get hasFiles => svFiles != null;
+
+  /// File lines whose chips are all shown ("+N more"), by field name.
+  final openFiles = <String>{}.obs;
+
+  void toggleFiles(String name) {
+    if (!openFiles.remove(name)) openFiles.add(name);
+  }
+
+  SvFilePreviewController newFilePreview(List<SvFile> list, int index) =>
+      SvFilePreviewController(files: list, repo: svFiles!, index: index);
+
+  /// People to look up: who raised it, who holds it, and the people in the
+  /// answers.
+  Set<String> get _peopleNames => {
+    if (raiser.isNotEmpty) raiser,
+    for (final h in holders)
+      if (h.isNotEmpty) h,
+    for (final r in rows)
+      if (r.kind == InboxFieldKind.person) ...peopleOf(r.value),
+  };
+
+  /// "@a, b" as usernames or names.
+  static List<String> peopleOf(String value) => [
+    for (final p in value.split(','))
+      if (p.replaceFirst('@', '').trim().isNotEmpty)
+        p.replaceFirst('@', '').trim(),
+  ];
+
   @override
   void onInit() {
     super.onInit();
@@ -121,8 +303,14 @@ class TicketDetailController extends GetxController {
       state.value = tickets.stateOf(ticketId);
       viewState.value = AppViewState.content;
     }
-    _refreshes = tickets.refreshes.listen((_) => fireAndLog('ticket_detail_controller', () => reload()), onError: streamOnError('ticket_detail_controller'));
-    fireAndLog('ticket_detail_controller', () => reload(isQuiet: known != null));
+    _refreshes = tickets.refreshes.listen(
+      (_) => fireAndLog('ticket_detail_controller', () => reload()),
+      onError: streamOnError('ticket_detail_controller'),
+    );
+    fireAndLog(
+      'ticket_detail_controller',
+      () => reload(isQuiet: known != null),
+    );
   }
 
   @override
@@ -147,7 +335,16 @@ class TicketDetailController extends GetxController {
         _wantsAgain = false;
         final seq = ++_seq;
         if (ticket.value == null) viewState.value = AppViewState.loading;
-        await Future.wait([_readRecord(seq, isQuiet), _readHistory(seq)]);
+        await Future.wait([
+          _readRecord(seq, isQuiet),
+          _readHistory(seq),
+          _readCard(seq),
+          _readApprovals(),
+        ]);
+        final names = _peopleNames;
+        if (names.isNotEmpty) {
+          await inbox?.loadCards(names.map((n) => n.toLowerCase()));
+        }
       } while (_wantsAgain);
     } finally {
       _isReading = false;
@@ -179,6 +376,75 @@ class TicketDetailController extends GetxController {
             ? AppViewState.error
             : AppViewState.offline;
       }
+    }
+  }
+
+  /// `record.card` with `fileMeta:2`: the labels and the file details the
+  /// card shows. A refusal keeps the plain values; it is not an error here.
+  Future<void> _readCard(int seq) async {
+    final repo = inbox;
+    if (repo == null) return;
+    try {
+      final row = await repo.loadCard(ticketId);
+      if (seq != _seq) return;
+      card.value = row;
+    } on SocketCallError catch (e) {
+      AppLog.w('ticket_detail_controller', 'record.card ${e.code}');
+    }
+  }
+
+  /// The requests, once, so a record that waits for this person shows its
+  /// answer buttons.
+  Future<void> _readApprovals() async {
+    final repo = approvals;
+    if (repo == null || repo.hasRead.value) return;
+    try {
+      await repo.start();
+    } on SocketCallError catch (e) {
+      AppLog.w('ticket_detail_controller', 'approvals ${e.code}');
+    }
+  }
+
+  /// One answer to the request of this record. True when the server took it;
+  /// a refusal shows the server's own words.
+  Future<bool> respond(
+    ApprovalAction action, {
+    String reason = '',
+    String comment = '',
+    bool allowResubmit = false,
+  }) async {
+    final a = approval;
+    final repo = approvals;
+    if (a == null || repo == null || isBusy.value) return false;
+    final answer = ApprovalRules.answerFor(
+      a,
+      action,
+      reason: reason,
+      comment: comment,
+      allowResubmit: allowResubmit,
+    );
+    if (answer == null) return false;
+    isBusy.value = true;
+    try {
+      await repo.respond(
+        a.id,
+        action.wire,
+        reason: answer.reason,
+        comment: answer.comment,
+        allowResubmit: answer.allowResubmit,
+      );
+      fireAndLog('ticket_detail_controller', () => reload());
+      tickets.scheduleRefresh();
+      return true;
+    } on SocketCallError catch (e) {
+      final problem = CallProblem.of(e, isWrite: true);
+      AppNotices.error(problem.text);
+      if (problem.shouldRefresh) {
+        fireAndLog('ticket_detail_controller', () => reload());
+      }
+      return false;
+    } finally {
+      isBusy.value = false;
     }
   }
 
@@ -289,7 +555,9 @@ class TicketDetailController extends GetxController {
     }
     _tell(
       failure,
-      retry: outcome.canRetry ? () => fireAndLog('ticket_detail_controller', () => submit(form)) : null,
+      retry: outcome.canRetry
+          ? () => fireAndLog('ticket_detail_controller', () => submit(form))
+          : null,
     );
     if (outcome.shouldBackOff) _coolDown();
     if (outcome.shouldLeave) {
@@ -297,7 +565,8 @@ class TicketDetailController extends GetxController {
       tickets.scheduleRefresh();
       return ActionResult.gone;
     }
-    if (outcome.shouldReload) fireAndLog('ticket_detail_controller', () => _refreshForm(form));
+    if (outcome.shouldReload)
+      fireAndLog('ticket_detail_controller', () => _refreshForm(form));
     return ActionResult.failed;
   }
 

@@ -53,6 +53,7 @@ class InboxFilterController extends GetxController {
     this.fieldKinds,
     this.approvals,
     this.wait = const Duration(milliseconds: 150),
+    this.isSample = false,
   }) : draft = Rx<InboxFilter>(
          initial.wheres.isEmpty
              ? initial.copyWith(wheres: [baseWhere])
@@ -101,6 +102,9 @@ class InboxFilterController extends GetxController {
   final void Function(InboxFilter) onApply;
   final void Function() onClear;
   final Duration wait;
+
+  /// The panel of a first-run tour: it never reads anything.
+  final bool isSample;
 
   /// The field kinds for conditions; null when there is no source for them.
   final InboxFieldKinds? fieldKinds;
@@ -160,6 +164,7 @@ class InboxFilterController extends GetxController {
   List<String> get team => inbox.people.last.value?.team ?? const [];
 
   Future<void> _loadPeople() async {
+    if (isSample) return;
     if (inbox.people.last.value != null) return;
     try {
       await inbox.loadPeople();
@@ -553,6 +558,7 @@ class InboxFilterController extends GetxController {
   /// depends on both): a change of a line the facets do not read is no new
   /// ask.
   void _plan() {
+    if (isSample) return;
     final f = draft.value;
     if (f.serverViews(team).isEmpty) return;
     final key = _keyOf(f);
@@ -619,6 +625,15 @@ class InboxFilterController extends GetxController {
     if (isChanged) draft.value = next;
   }
 
+  /// Has the sheet closed this panel?
+  bool isDisposed = false;
+
+  /// A live event: ask for the lists again, whatever they were.
+  void refreshFacets() {
+    _plannedKey = '';
+    _plan();
+  }
+
   void _stop() {
     _timer?.cancel();
     _seq++;
@@ -626,6 +641,7 @@ class InboxFilterController extends GetxController {
 
   @override
   void onClose() {
+    isDisposed = true;
     _stop();
     for (final w in _workers) {
       w.dispose();

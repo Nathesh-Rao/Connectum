@@ -73,7 +73,8 @@ class SubmissionsController extends GetxController {
         if (name != null) _build();
       }),
       ever(shell.tab, (t) {
-        if (t == HomeTab.submits) fireAndLog('submissions_controller', () => _syncIfStale());
+        if (t == HomeTab.submits)
+          fireAndLog('submissions_controller', () => _syncIfStale());
       }),
     ]);
     _build();

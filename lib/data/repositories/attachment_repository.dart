@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 
+import '../api/api_log_interceptor.dart';
 import '../../core/config/app_config.dart';
 import '../session_store.dart';
 import '../../core/log/app_log.dart';
@@ -65,6 +66,7 @@ class AttachmentRepository {
         receiveTimeout: const Duration(seconds: 30),
       ),
     );
+    _dio.interceptors.add(ApiLogInterceptor());
     (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       if (kDebugMode) {
@@ -198,17 +200,77 @@ class AttachmentRepository {
       throw const AttachmentException("The file picker isn't available.");
     }
     if (picked == null) return null;
-    final ext = p.extension(picked.name).replaceFirst('.', '').toLowerCase();
-    final mime = documentMimes[ext];
     final path = picked.path;
-    if (mime == null || path == null) {
+    if (path == null) {
+      throw const AttachmentException(
+        'Only PDF, Word, Excel, PowerPoint (.docx, .xlsx, .pptx) or text files can be sent.',
+        isRetryable: false,
+      );
+    }
+    return _checkDocument(path, picked.name);
+  }
+
+  /// A file the app already holds (a previewed file, the log), checked by the
+  /// same rules as a picked photo or document, so a share can never send what
+  /// a chat would refuse (video, audio, svg, html, csv, zip, old Office, too
+  /// large). Throws [AttachmentException] with the reason.
+  Future<PickedAttachment> describeFile(String path, String name) async {
+    final file = File(path);
+    final int length;
+    final List<int> head;
+    try {
+      length = await file.length();
+      head = await file.openRead(0, 8192).expand((b) => b).toList();
+    } on FileSystemException {
+      throw const AttachmentException(
+        "That file couldn't be read.",
+        isRetryable: false,
+      );
+    }
+    final mime = lookupMimeType(name, headerBytes: head) ?? '';
+    if (!_allowed.contains(mime)) return _checkDocument(path, name);
+    if (length == 0) {
+      throw const AttachmentException(
+        "That photo couldn't be read.",
+        isRetryable: false,
+      );
+    }
+    if (length > maxImageBytes) {
+      throw const AttachmentException(
+        'That photo is larger than 8 MB.',
+        isRetryable: false,
+      );
+    }
+    return PickedAttachment(
+      kind: 'image',
+      path: path,
+      name: name,
+      mime: mime,
+      bytes: length,
+    );
+  }
+
+  Future<PickedAttachment> _checkDocument(String path, String name) async {
+    final ext = p.extension(name).replaceFirst('.', '').toLowerCase();
+    final mime = documentMimes[ext];
+    if (mime == null) {
       throw const AttachmentException(
         'Only PDF, Word, Excel, PowerPoint (.docx, .xlsx, .pptx) or text files can be sent.',
         isRetryable: false,
       );
     }
     final file = File(path);
-    final length = await file.length();
+    final int length;
+    final List<int> head;
+    try {
+      length = await file.length();
+      head = await file.openRead(0, 8192).expand((b) => b).toList();
+    } on FileSystemException {
+      throw const AttachmentException(
+        "That file couldn't be read.",
+        isRetryable: false,
+      );
+    }
     if (length == 0) {
       throw const AttachmentException(
         "That file couldn't be read.",
@@ -218,7 +280,6 @@ class AttachmentRepository {
     if (length > maxDocumentBytes) {
       throw const AttachmentException(tooLargeNotice, isRetryable: false);
     }
-    final head = await file.openRead(0, 8192).expand((b) => b).toList();
     if (!_looksLike(ext, head)) {
       throw AttachmentException(
         "That file doesn't look like a real .$ext file.",
@@ -228,7 +289,7 @@ class AttachmentRepository {
     return PickedAttachment(
       kind: 'file',
       path: path,
-      name: picked.name,
+      name: name,
       mime: mime,
       bytes: length,
     );

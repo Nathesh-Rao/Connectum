@@ -1,3 +1,5 @@
+import '../../core/selection/message_selection.dart';
+import '../../core/selection/selection_rules.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -9,6 +11,10 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_messages.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
+import '../commands/commands_tour.dart';
+import 'conversation_tour.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
@@ -39,6 +45,7 @@ import '../../data/e2e/e2e_texts.dart';
 import '../../data/models/message.dart';
 import '../../data/models/reaction.dart';
 import '../../data/repositories/attachment_repository.dart';
+import '../../data/repositories/attachment_sender.dart';
 import '../../data/repositories/command_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/e2e_repository.dart';
@@ -71,7 +78,7 @@ import 'models/command_prompt.dart';
 import 'models/file_download.dart';
 import 'models/forward.dart';
 import 'models/mention_picker.dart';
-import 'models/pending_upload.dart';
+import '../../data/models/pending_upload.dart';
 import '../../core/log/safe.dart';
 import '../../core/log/app_log.dart';
 
@@ -103,6 +110,8 @@ class ConversationController extends GetxController
     required this.aiRepository,
     required this.aiSetup,
     this.avatars,
+    this.tour,
+    this.commandsTour,
   });
 
   static const maxLength = 2000;
@@ -116,6 +125,15 @@ class ConversationController extends GetxController
 
   /// People's pictures for mentions; null in tests.
   final PeopleAvatars? avatars;
+
+  /// The first-run tours of this chat; null where tours are not set up.
+  final ConversationTour? tour;
+  final CommandsTour? commandsTour;
+  late final TourTrigger _tourTrigger = TourTrigger(
+    canTry: _canTryTour,
+    start: _startTour,
+  );
+  final _tourWorkers = <Worker>[];
 
   /// A person's picture address, or null. Reads an Rx value: call it in Obx.
   String? pictureOf(String username) => avatars?.urlOf(username);
@@ -220,6 +238,11 @@ class ConversationController extends GetxController
   final length = 0.obs;
   final reply = Rxn<Message>();
 
+  /// The message being edited (the composer shows its text and an "Editing
+  /// message" bar), or null.
+  final editing = Rxn<Message>();
+  StreamSubscription<String>? _noticesSub;
+
   /// Photos being uploaded, newest last; shown after the last message.
   final uploads = <PendingUpload>[].obs;
 
@@ -252,6 +275,11 @@ class ConversationController extends GetxController
   final savedFiles = <String>{}.obs;
   final _savedChecked = <String>{};
   int _uploadSeq = 0;
+  late final _sender = AttachmentSender(
+    messages: messages,
+    attachments: attachments,
+    e2e: e2e,
+  );
   bool _hasSeedFailed = false;
   final notice = RxnString();
 
@@ -633,7 +661,8 @@ class ConversationController extends GetxController
   void openRecordMenu(Message m) {
     final d = formCardOf(m);
     final id = d == null ? null : recordIdOf(d);
-    if (id != null) fireAndLog('conversation_controller', () => tickets.ensureMenu(id));
+    if (id != null)
+      fireAndLog('conversation_controller', () => tickets.ensureMenu(id));
   }
 
   /// The controller the status sheet works on for the ticket on [d].
@@ -675,6 +704,10 @@ class ConversationController extends GetxController
     WidgetsBinding.instance.addObserver(this);
     scroll.addListener(_onScroll);
     text.addListener(_updateMentions);
+    _noticesSub = messages.notices.listen(
+      _say,
+      onError: streamOnError('conversation_controller'),
+    );
     _noticeWorker = ever(submissions.notice, (message) {
       if (message == null) return;
       _say(message);
@@ -683,7 +716,10 @@ class ConversationController extends GetxController
     _onlineWorker = ever(socket.connection, (state) {
       if (state == SocketState.online && !SeedUi.isActive) {
         _sync();
-        fireAndLog('conversation_controller', () => _refreshGate(isLookup: true));
+        fireAndLog(
+          'conversation_controller',
+          () => _refreshGate(isLookup: true),
+        );
       }
     });
     _setupWorker = ever(e2e.phase, (_) {
@@ -694,6 +730,15 @@ class ConversationController extends GetxController
       }
     });
     ConversationRoute.jumpListeners[conversationId] = _runJump;
+    if (tour != null) {
+      _tourWorkers.add(ever(isLoaded, (_) => _tourTrigger.schedule()));
+      _tourWorkers.add(ever(selection.ids, (_) => _tourTrigger.schedule()));
+    }
+    final cmdTour = commandsTour;
+    if (cmdTour != null) {
+      _tourWorkers.add(ever(prompt.query, (_) => cmdTour.onListChanged()));
+      _tourWorkers.add(ever(prompt.command, (_) => cmdTour.onListChanged()));
+    }
     final draft = ConversationRoute.takeDraft(conversationId);
     if (draft != null) {
       text.text = draft;
@@ -872,6 +917,7 @@ class ConversationController extends GetxController
     _byId
       ..clear()
       ..addEntries(asc.map((m) => MapEntry(m.msgId, m)));
+    selection.prune(_byId.keys.toSet());
     final near = !isAway.value;
     for (final m in asc) {
       final key = m.cid ?? m.msgId;
@@ -976,7 +1022,8 @@ class ConversationController extends GetxController
     final away = p.pixels > _nearBottom;
     if (away != isAway.value) isAway.value = away;
     if (!away) newAway.value = 0;
-    if (p.maxScrollExtent - p.pixels < 400) fireAndLog('conversation_controller', () => loadOlder());
+    if (p.maxScrollExtent - p.pixels < 400)
+      fireAndLog('conversation_controller', () => loadOlder());
     _scheduleRead();
   }
 
@@ -1062,7 +1109,10 @@ class ConversationController extends GetxController
           math.min(y + render.size.height, box.size.height) - math.max(y, 0);
       if (visible >= render.size.height * 0.6) {
         if (SeedUi.isActive) return;
-        fireAndLog('conversation_controller', () => conversations.markRead(conversationId, m.msgId));
+        fireAndLog(
+          'conversation_controller',
+          () => conversations.markRead(conversationId, m.msgId),
+        );
         return;
       }
     }
@@ -1074,6 +1124,7 @@ class ConversationController extends GetxController
     length.value = value.characters.length;
     final caret = text.selection;
     prompt.onTextChanged(value, caret: caret.isValid ? caret.baseOffset : null);
+    commandsTour?.onTyped();
     if (value.trim().isEmpty || !canType || !socket.isOnline) return;
     final now = DateTime.now();
     if (now.difference(_lastTyping) < _typingEvery) return;
@@ -1084,7 +1135,8 @@ class ConversationController extends GetxController
       'global' => '/typing global',
       _ => null,
     };
-    if (command != null) fireAndLog('conversation_controller', () => socket.sendCommand(command));
+    if (command != null)
+      fireAndLog('conversation_controller', () => socket.sendCommand(command));
   }
 
   bool get canSend {
@@ -1132,9 +1184,51 @@ class ConversationController extends GetxController
     }
   }
 
+  /// Starts editing one of my messages: the composer takes its text.
+  void startEdit(Message m) {
+    if (!messages.canEditChat(m)) return;
+    reply.value = null;
+    editing.value = m;
+    _setText(m.text);
+  }
+
+  void cancelEdit() {
+    if (editing.value == null) return;
+    editing.value = null;
+    text.clear();
+    length.value = 0;
+    prompt.close();
+  }
+
+  Future<void> _saveEdit(Message message, String body) async {
+    if (body.characters.length > maxLength) {
+      _say('Messages can be up to $maxLength characters.');
+      return;
+    }
+    messages.lastBlock = '';
+    final isDone = await messages.editText(message.msgId, body);
+    if (isDone) {
+      editing.value = null;
+      text.clear();
+      length.value = 0;
+      prompt.close();
+      return;
+    }
+    if (messages.lastBlock.isNotEmpty) {
+      _say(messages.lastBlock);
+      messages.lastBlock = '';
+    } else if (!messages.canEditChat(message)) {
+      editing.value = null;
+      text.clear();
+      length.value = 0;
+    }
+  }
+
   Future<void> send() async {
     final body = text.text.trim();
     if (body.isEmpty) return;
+    final edited = editing.value;
+    if (edited != null) return _saveEdit(edited, body);
     if (CommandRepository.isHashLine(body) || CommandLine.isEscape(body)) {
       return _runHash(body);
     }
@@ -1306,49 +1400,8 @@ class ConversationController extends GetxController
   /// Makes sure the server holds this file in the form the thread needs. The
   /// thread is asked again every time: a blob made for another answer (plain
   /// for an encrypted thread, or the reverse) is dropped, never sent.
-  Future<void> _uploadFor(PendingUpload upload) async {
-    final mode = await messages.attachMode(conversationId);
-    if (mode == null) throw AttachmentException(messages.lastBlock);
-    final isSealed = mode == AttachMode.encrypted;
-    if (upload.isEncrypted != isSealed) {
-      upload.uploaded = null;
-      upload.e2eKey = null;
-      upload.e2eIv = null;
-      upload.sealed = null;
-    }
-    if (upload.uploaded != null) return;
-    if (!isSealed) {
-      upload.uploaded = await attachments.upload(
-        upload.file,
-        onProgress: (p) => upload.progress.value = p,
-        cancel: upload.cancel,
-      );
-      return;
-    }
-    attachments.checkBlobSize(upload.file);
-    var sealed = upload.sealed;
-    if (sealed == null) {
-      final bytes = await attachments.readBytes(upload.file);
-      try {
-        sealed = await e2e.encryptFile(bytes);
-      } catch (e, st) {
-        AppLog.e('conversation_controller', e, st);
-        throw const AttachmentException(
-          "That file couldn't be encrypted. Try again.",
-        );
-      }
-      upload.sealed = sealed;
-      upload.e2eKey = sealed.key;
-      upload.e2eIv = sealed.iv;
-    }
-    upload.uploaded = await attachments.uploadBlob(
-      Uint8List.fromList(sealed.ciphertext),
-      onProgress: (p) => upload.progress.value = p,
-      cancel: upload.cancel,
-      isImage: upload.file.isImage,
-    );
-    upload.sealed = null;
-  }
+  Future<void> _uploadFor(PendingUpload upload) =>
+      _sender.uploadFor(upload, conversationId);
 
   /// Debug only: walks the progress, and fails once so the retry shows.
   Future<void> _seedUpload(PendingUpload upload) async {
@@ -1365,7 +1418,8 @@ class ConversationController extends GetxController
     }
   }
 
-  void retryUpload(PendingUpload upload) => fireAndLog('conversation_controller', () => _runUpload(upload));
+  void retryUpload(PendingUpload upload) =>
+      fireAndLog('conversation_controller', () => _runUpload(upload));
 
   void cancelUpload(PendingUpload upload) {
     upload.cancel.cancel();
@@ -1493,7 +1547,8 @@ class ConversationController extends GetxController
   /// The viewer is about to open: counts as the file's latest use.
   void viewedImage(AttachmentTag tag) {
     final file = imageFiles[tag.url];
-    if (file != null) fireAndLog('conversation_controller', () => attachmentCache.touch(file));
+    if (file != null)
+      fireAndLog('conversation_controller', () => attachmentCache.touch(file));
   }
 
   void retryImage(AttachmentTag tag) {
@@ -1690,6 +1745,7 @@ class ConversationController extends GetxController
   }
 
   void startReply(Message m) {
+    cancelEdit();
     reply.value = m;
     focus.requestFocus();
   }
@@ -1702,6 +1758,80 @@ class ConversationController extends GetxController
     } else {
       await messages.retry(m.msgId);
     }
+  }
+
+  // ---- selection -----------------------------------------------------------
+
+  /// The messages picked with a long press, then taps. One for the screen;
+  /// cleared when it closes.
+  final selection = MessageSelection();
+
+  /// The selected messages, oldest first.
+  List<Message> get selectedMessages =>
+      [for (final id in selection.ids) _byId[id]].whereType<Message>().toList()
+        ..sort((a, b) => a.ts.compareTo(b.ts));
+
+  /// What one message allows from the selection bar. A message that is not on
+  /// the server yet, or failed, only takes retry and delete (remove).
+  SelectionTarget targetOf(Message m) {
+    final isSettled = !m.isLocalTemp && m.status != MessageStatus.failed;
+    final isForm = m.kind == 'form';
+    // The text of a sealed file is its tag, which holds the key.
+    final canCopy =
+        isSettled &&
+        !m.isDeleted &&
+        !m.isEncryptedUnsupported &&
+        !isForm &&
+        !(m.isEncrypted && AttachmentTag.parse(m.text) != null);
+    return SelectionTarget(
+      id: m.msgId,
+      canReply:
+          !isForm &&
+          canReply &&
+          isSettled &&
+          !m.isDeleted &&
+          !m.isEncryptedUnsupported,
+      canForward: isSettled && !isForm && canForward(m),
+      canCopy: canCopy,
+      // A form that reached the server stays: it is a record. Only one that
+      // never got there can be removed.
+      canDelete:
+          m.isMine && canDelete && !m.isDeleted && (!isForm || !isSettled),
+      canRetry: !isForm && m.status == MessageStatus.failed,
+      canEdit: !SeedUi.isActive && !isForm && messages.canEditChat(m),
+      canReact: canReact(m),
+      hasFormMenu: isForm,
+    );
+  }
+
+  /// A long press on a message: it is selected (a form card also reads its
+  /// menu, so the form menu opens ready).
+  void onMessageLongPress(Message m) {
+    if (m.kind == 'form' && selection.ids.isEmpty) openRecordMenu(m);
+    selection.onLongPress(m.msgId);
+  }
+
+  /// Quick reaction on the one selected message: leaves selection, then
+  /// toggles (a second tap on my own emoji removes it).
+  Future<void> reactSelected(String emoji) async {
+    final m = selectedMessages.singleOrNull;
+    selection.clear();
+    if (m != null) await toggleReaction(m, emoji);
+  }
+
+  Future<void> copyMany(List<Message> list) => Clipboard.setData(
+    ClipboardData(
+      text: [for (final m in list) ForwardedText.parse(m.text).text].join('\n'),
+    ),
+  );
+
+  /// Deletes each message in turn; stops at the first refusal and returns it.
+  Future<String?> deleteMany(List<Message> list) async {
+    for (final m in list) {
+      final problem = await delete(m);
+      if (problem != null) return problem;
+    }
+    return null;
   }
 
   // ---- reactions -----------------------------------------------------------
@@ -1755,6 +1885,26 @@ class ConversationController extends GetxController
       for (final c in rows)
         if (Forward.canGoTo(m, c)) c,
     ];
+  }
+
+  /// The chats every one of [list] may go to.
+  List<Conversation> forwardTargetsFor(List<Message> list) {
+    final rows = SeedUi.isActive
+        ? SeedUi.conversations()
+        : conversations.conversations;
+    return [
+      for (final c in rows)
+        if (list.every((m) => Forward.canGoTo(m, c))) c,
+    ];
+  }
+
+  Future<void> forwardMany(
+    List<Message> list,
+    List<Conversation> chosen,
+  ) async {
+    for (final m in list) {
+      await forward(m, chosen);
+    }
   }
 
   String get _myName {
@@ -1827,12 +1977,68 @@ class ConversationController extends GetxController
     };
   }
 
+  // ---- first-run tour -----------------------------------------------------
+
+  bool _canTryTour() =>
+      tour != null &&
+      !isClosed &&
+      !isRetired.value &&
+      isLoaded.value &&
+      !selection.isActive;
+
+  Future<TourStart> _startTour() async {
+    final tour = this.tour;
+    if (tour == null || isClosed) return TourStart.failed;
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    final hold = ConversationTour.holdMessage(items, targetOf);
+    return tour.start(
+      tourCaps(hold),
+      hasMessage: hold != null,
+      holdId: hold?.msgId,
+      select: selection.onLongPress,
+      clear: selection.clear,
+    );
+  }
+
+  /// What this chat lets the person do, for the tour's steps. [hold] is the
+  /// real message the tour will select, if the chat has one.
+  ConversationTourCaps tourCaps([Message? hold]) {
+    final isBlockedNow = isBlocked.value;
+    final isEncryptedNow = isLocked.value || isBlockedNow;
+    return ConversationTourCaps(
+      isEncrypted: isEncryptedNow,
+      isBlocked: isBlockedNow,
+      isDirect: isDirect,
+      canAttach: !isBlockedNow && attachBlock == null,
+      canReact: kind != 'host',
+      canEdit:
+          !isEncryptedNow &&
+          (kind == 'dm' || kind == 'group' || kind == 'global'),
+      canReply: canReply,
+      canDelete: canDelete,
+      holdTarget: hold == null ? null : targetOf(hold),
+    );
+  }
+
+  bool get isTourActive => tour?.service.isActive.value ?? false;
+
+  /// Back while a tour shows ends the tour and stays on the screen.
+  void cancelTour() => tour?.service.cancel();
+
   @override
   void onClose() {
+    _tourTrigger.dispose();
+    for (final w in _tourWorkers) {
+      w.dispose();
+    }
+    tour?.cancel();
+    commandsTour?.dispose();
     for (final d in _ticketDetails.values) {
       d.onClose();
     }
     _ticketDetails.clear();
+    selection.clear();
     HomeReload.overlays.remove(conversationId);
     ConversationRoute.jumpListeners.remove(conversationId);
     WidgetsBinding.instance.removeObserver(this);
@@ -1843,6 +2049,7 @@ class ConversationController extends GetxController
     _onlineWorker?.dispose();
     _setupWorker?.dispose();
     _noticeWorker?.dispose();
+    _noticesSub?.cancel();
     for (final upload in uploads) {
       upload.cancel.cancel();
     }

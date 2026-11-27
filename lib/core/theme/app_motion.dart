@@ -22,6 +22,18 @@ class AppDurations {
   static const smartControls = Duration(milliseconds: 220);
   static const fileFull = Duration(milliseconds: 240);
   static const smartChip = Duration(milliseconds: 190);
+  static const tourHint = Duration(milliseconds: 1600);
+  static const tourPulse = Duration(milliseconds: 900);
+  static const tourPointerMove = Duration(milliseconds: 450);
+  static const tourTap = Duration(milliseconds: 380);
+  static const tourHold = Duration(milliseconds: 800);
+  static const tourSwipe = Duration(milliseconds: 520);
+  static const tourFade = Duration(milliseconds: 160);
+  static const searchToggle = Duration(milliseconds: 300);
+  static const popupMenu = Duration(milliseconds: 380);
+  static const popupItem = Duration(milliseconds: 170);
+  static const popupStagger = Duration(milliseconds: 60);
+  static const popupMerge = Duration(milliseconds: 100);
 }
 
 class AppCurves {
@@ -30,6 +42,7 @@ class AppCurves {
   static const out = Cubic(0.25, 0.06, 0.12, 1);
   static const easeIn = Cubic(0.4, 0, 1, 1);
   static const inOut = Cubic(0.65, 0, 0.35, 1);
+  static const softOvershoot = Cubic(0.3, 0.9, 0.4, 1.18);
 
   static const sheetSpring = SpringDescription(
     mass: 1,

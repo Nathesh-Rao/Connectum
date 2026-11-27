@@ -10,10 +10,12 @@ import '../../conversation/widgets/commands_panel.dart';
 import '../../conversation/widgets/conversation_composer.dart';
 import '../../forms/widgets/forms_picker_sheet.dart';
 import '../workspace_controller.dart';
+import 'workspace_context_bar.dart';
 
 /// The workspace composer: `#` opens the commands list, `@name text` messages
-/// that person, and any other text is not sent (a hint says what to type).
-/// The forms button works as everywhere else.
+/// that person, and any other text is a note of mine (kept on the server, sent
+/// again by the outbox until it is acknowledged). The forms button works as
+/// everywhere else. There is no attach button: a file note is not built.
 class WorkspaceComposer extends StatelessWidget {
   const WorkspaceComposer({super.key, required this.controller});
 
@@ -32,6 +34,24 @@ class WorkspaceComposer extends StatelessWidget {
           onPickItem: c.pickCommandItem,
           onPickName: c.renameCommand,
           isOnline: () => c.commands.isOnline,
+          panelKey: c.commandsTour?.panelKey,
+          rowKeyOf: c.commandsTour?.rowKeyOf,
+        ),
+        Obx(
+          () => WorkspaceContextBar(
+            message: c.editing.value,
+            label: 'Editing note',
+            cancelLabel: 'Cancel edit',
+            onCancel: c.cancelEdit,
+          ),
+        ),
+        Obx(
+          () => WorkspaceContextBar(
+            message: c.replying.value,
+            label: 'Replying to note',
+            cancelLabel: 'Cancel reply',
+            onCancel: c.cancelReply,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -60,6 +80,7 @@ class WorkspaceComposer extends StatelessWidget {
                     controller: c.text,
                     focusNode: c.focus,
                     hint: WorkspaceController.placeholder,
+                    textStyle: AppText.chatInput,
                     minLines: 1,
                     maxLines: 5,
                     minHeight: AppSpacing.composerButton,
@@ -69,12 +90,14 @@ class WorkspaceComposer extends StatelessWidget {
                     borderColor: Colors.transparent,
                     borderRadius: BorderRadius.zero,
                     keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.sentences,
                     textInputAction: TextInputAction.newline,
                     onChanged: c.onChanged,
                   ),
                 ),
                 Obx(
                   () => ComposerSendButton(
+                    key: c.commandsTour?.sendKey,
                     isActive: c.length.value > 0 && !c.runner.isRunning.value,
                     onTap: c.send,
                   ),
@@ -93,7 +116,7 @@ class WorkspaceComposer extends StatelessWidget {
               AppSpacing.md,
               AppSpacing.xs,
             ),
-            child: Text(hint, style: AppText.caption),
+            child: Text(hint, style: AppText.wsMeta),
           );
         }),
       ],

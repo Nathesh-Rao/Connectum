@@ -20,15 +20,19 @@ class AttachmentView extends StatelessWidget {
     super.key,
     required this.tag,
     required this.controller,
+    this.isMine = false,
   });
 
   final AttachmentTag tag;
   final ConversationController controller;
 
+  /// A file I sent: it counts as on the phone, so its card has no download.
+  final bool isMine;
+
   @override
   Widget build(BuildContext context) => tag.isImage
       ? _Picture(tag: tag, controller: controller)
-      : _Document(tag: tag, controller: controller);
+      : _Document(tag: tag, controller: controller, isMine: isMine);
 }
 
 class _Picture extends StatelessWidget {
@@ -113,10 +117,15 @@ class _PictureError extends StatelessWidget {
 }
 
 class _Document extends StatelessWidget {
-  const _Document({required this.tag, required this.controller});
+  const _Document({
+    required this.tag,
+    required this.controller,
+    required this.isMine,
+  });
 
   final AttachmentTag tag;
   final ConversationController controller;
+  final bool isMine;
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +135,7 @@ class _Document extends StatelessWidget {
       return DocumentCard(
         tag: tag,
         state: DocumentButtonState.of(
-          isSaved: c.isSaved(tag),
+          isSaved: c.isSaved(tag) || isMine,
           download: download,
         ),
         progress: download?.progress.value ?? 0,

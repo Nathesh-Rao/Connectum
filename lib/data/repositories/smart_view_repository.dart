@@ -12,6 +12,8 @@ import '../session_store.dart';
 import '../smart_view/models/sv_row.dart';
 import '../smart_view/models/sv_source.dart';
 import '../smart_view/smart_view_commands.dart';
+import '../smart_view/sv_file.dart';
+import '../smart_view/sv_team.dart';
 import '../socket/read_gate.dart';
 import '../socket/socket_service.dart';
 import 'ticket_repository.dart';
@@ -47,6 +49,10 @@ class SvTable {
 
   int loadId = 0;
   bool isLoading = false;
+
+  /// The "My team" / "Linked as" lines the rows are read by (null: the plain
+  /// list). Every later read of this table, a refresh or a live one, uses it.
+  SvTeamFilter? team;
 
   SvRow? rowOf(int id) {
     for (final r in rows) {
@@ -231,6 +237,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       if (args['as'] != null) 'as=${args['as']}',
       if (args['id'] != null) 'id=${args['id']}',
       if (args['offset'] != null) 'offset=${args['offset']}',
+      if (args['team'] != null) 'team=on',
     ].join(' ');
     if (error != null) {
       RecordsLog.line('$asked -> ERROR $error');
@@ -310,23 +317,41 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     t.isLoading = true;
     if (!isQuiet || t.rows.isEmpty) t.phase.value = SvPhase.loading;
     t.hasPartialError.value = false;
+    t.errorMessage.value = '';
     t.isPaging.value = true;
     final own = <SvRow>[];
+    final team = t.team;
+    final pageSize = team == null
+        ? SvLimits.rowsPageSize
+        : SvLimits.teamPageSize;
+    final cap = team == null ? SvLimits.rowsMaxPages : SvLimits.teamMaxPages;
     try {
       var offset = 0;
       var pages = 0;
       var isFirst = true;
-      final pageLimit = maxPages ?? SvLimits.rowsMaxPages;
+      final pageLimit = maxPages ?? cap;
       while (pages < pageLimit) {
         final Map<String, dynamic> data;
         try {
-          data = await _call(SvCmd.rows, {
-            'tstruct': t.source.name,
-            'limit': SvLimits.rowsPageSize,
-            'offset': offset,
-            'fetch': true,
-            'withDetails': true,
-          });
+          data = await _call(
+            team == null ? SvCmd.rows : RecordCmd.query,
+            team == null
+                ? {
+                    'tstruct': t.source.name,
+                    'limit': pageSize,
+                    'offset': offset,
+                    'fetch': true,
+                    'withDetails': true,
+                    'fileMeta': SvLimits.fileMeta,
+                  }
+                : {
+                    'forms': [t.source.name],
+                    if (!team.isEmpty) 'team': team.toArgs(),
+                    'limit': pageSize,
+                    'offset': offset,
+                    'withDetails': true,
+                  },
+          );
         } on SocketCallError catch (e) {
           if (isStale()) return;
           if (isFirst) {
@@ -338,6 +363,10 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         }
         if (isStale()) return;
         final page = SvPage.parse(data, isReceived: false);
+        _logFiles(
+          team == null ? 'submissions.list' : 'records.query',
+          page.rows,
+        );
         final watch = Stopwatch()..start();
         final names = _namesOf(t.source);
         own.addAll([for (final r in page.rows) _cut(t.source, r, names)]);
@@ -349,17 +378,17 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         );
         isFirst = false;
         pages++;
-        offset += SvLimits.rowsPageSize;
+        offset += team == null ? pageSize : page.received;
         if (!page.hasMore || page.received == 0) break;
-        if (pages >= SvLimits.rowsMaxPages) {
+        if (pages >= cap) {
           t.isCapped.value = true;
           RecordsLog.line(
             'smartview struct=${t.source.name} stopped at the '
-            '${SvLimits.rowsMaxPages}-page cap',
+            '$cap-page cap',
           );
         }
       }
-      if (!isOwnOnly) {
+      if (!isOwnOnly && team == null) {
         for (final as in const ['with', 'involved']) {
           if (isStale()) return;
           await _readMine(t, as, own, isStale);
@@ -391,6 +420,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       try {
         data = await _call(SvCmd.mine, {
           'as': as,
+          'fileMeta': SvLimits.fileMeta,
           'limit': RecordLimits.mineLimit(as, RecordLimits.mineMaxLimit),
           if (offset > 0) 'offset': offset,
         });
@@ -399,6 +429,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       }
       if (isStale()) return;
       final page = SvPage.parse(data, isReceived: true);
+      _logFiles('records.mine:$as', page.rows);
       final have = {for (final r in own) r.id};
       final names = _namesOf(t.source);
       for (final r in page.rows) {
@@ -548,7 +579,7 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     for (final t in _tables) {
       if (!_isMine(t, data)) continue;
       if (id == null) {
-        _needsNewest.add(t);
+        (t.team == null ? _needsNewest : _needsFull).add(t);
         continue;
       }
       final action = idText(data['action']).toLowerCase();
@@ -561,6 +592,11 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       final held = t.rowOf(id);
       if (record is Map && held != null) {
         _patch(t, held, record.cast<String, dynamic>());
+        continue;
+      }
+      if (t.team != null) {
+        // Whether a record belongs to the team lines is the server's call.
+        _needsFull.add(t);
         continue;
       }
       (_dirtyIds[t] ??= {}).add(id);
@@ -688,12 +724,17 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
           completion: row.completion,
           values: row.values,
           labels: held?.labels ?? const {},
-          files: held?.files ?? const {},
+          files: held?.files ?? row.files,
           canEdit: held?.canEdit ?? false,
           isReceived: held?.isReceived ?? !isMine,
         ),
       );
       _replace(t, next);
+      _logFiles('submission.get', [next]);
+      if (held == null && _lacksFileInfo(next)) {
+        _needsNewest.add(t);
+        _scheduleFlush();
+      }
       if (t.source.hasStatus) {
         _tickets.rememberRows([next.toTicket(t.source)]);
       }
@@ -708,6 +749,10 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
   /// A record with no id in its event, or a new one: page 1 only (50 rows)
   /// merged by id.
   Future<void> _readNewest(SvTable t) async {
+    if (t.team != null) {
+      await load(t, isQuiet: true);
+      return;
+    }
     try {
       final data = await _call(SvCmd.rows, {
         'tstruct': t.source.name,
@@ -715,8 +760,10 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
         'offset': 0,
         'fetch': true,
         'withDetails': true,
+        'fileMeta': SvLimits.fileMeta,
       });
       final page = SvPage.parse(data, isReceived: false);
+      _logFiles('newest', page.rows);
       for (final r in page.rows) {
         final held = t.rowOf(r.id);
         if (held == null || _differs(held, r)) _replace(t, _cut(t.source, r));
@@ -733,7 +780,57 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
       a.ts != b.ts ||
       a.holder != b.holder ||
       a.completion != b.completion ||
-      a.values.toString() != b.values.toString();
+      a.values.toString() != b.values.toString() ||
+      a.files.toString() != b.files.toString();
+
+  /// A file id in a value that the row's `files` map gives no details for.
+  bool _lacksFileInfo(SvRow r) {
+    for (final e in r.values.entries) {
+      final v = e.value;
+      if (v is! List) continue;
+      final ids = {
+        for (final x in v)
+          if (SvFile.isFileId(idText(x))) idText(x),
+      };
+      if (ids.isEmpty) continue;
+      final info = r.files[e.key];
+      final known = {
+        if (info is List)
+          for (final f in info) ?SvFile.tryParse(f)?.id,
+      };
+      if (!known.containsAll(ids)) return true;
+    }
+    return false;
+  }
+
+  /// One line per page: which file details arrived and by which command
+  /// (ids only, never names).
+  void _logFiles(String path, List<SvRow> rows) {
+    var files = 0, size = 0, ext = 0, at = 0, tag = 0, bare = 0;
+    String? first;
+    for (final r in rows) {
+      if (_lacksFileInfo(r)) bare++;
+      for (final info in r.files.values) {
+        if (info is! List) continue;
+        for (final raw in info) {
+          final f = SvFile.tryParse(raw);
+          if (f == null) continue;
+          first ??= f.id;
+          files++;
+          if (f.size > 0) size++;
+          if (f.ext != null) ext++;
+          if (f.uploadedAt != null) at++;
+          if (f.etag != null) tag++;
+        }
+      }
+    }
+    if (files == 0 && bare == 0) return;
+    AppLog.i(
+      'sv_files_parse',
+      'path=$path rows=${rows.length} files=$files size=$size ext=$ext '
+          'uploadedAt=$at etag=$tag rowsWithoutDetails=$bare first=$first',
+    );
+  }
 
   /// Reconnect or the app back in front: every open table is read again, once.
   void _reconnected() {
@@ -765,6 +862,16 @@ class SmartViewRepository extends GetxService with WidgetsBindingObserver {
     await _delay(after);
     if (!_tables.contains(t)) return;
     await _readNewest(t);
+  }
+
+  /// The table is read by [team] from now on (null: the plain list again).
+  /// The rows stay until the new ones land; a failed read keeps them and
+  /// leaves the server's message in [SvTable.errorMessage]. Nothing is read
+  /// when the lines did not change.
+  Future<void> applyTeam(SvTable t, SvTeamFilter? team) async {
+    if (t.team == team) return;
+    t.team = team;
+    await load(t, isQuiet: true);
   }
 
   /// A person-requested refresh: pull to refresh or Retry.

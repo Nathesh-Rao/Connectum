@@ -88,7 +88,10 @@ class OnboardingController extends GetxController {
     if (isReplay) {
       Get.back<void>();
     } else {
-      fireAndLog('onboarding_controller', () async => Get.offNamed(AppRoutes.authentication));
+      fireAndLog(
+        'onboarding_controller',
+        () async => Get.offNamed(AppRoutes.authentication),
+      );
     }
   }
 

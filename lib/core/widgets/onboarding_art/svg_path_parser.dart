@@ -45,7 +45,10 @@ class _Box {
 
   static double _cubicAt(double a, double b, double c, double d, double t) {
     final u = 1 - t;
-    return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+    return u * u * u * a +
+        3 * u * u * t * b +
+        3 * u * t * t * c +
+        t * t * t * d;
   }
 
   static List<double> _roots(double p0, double p1, double p2, double p3) {
@@ -67,9 +70,8 @@ class _Box {
     return out.where((t) => t > 0 && t < 1).toList();
   }
 
-  Rect get rect => minX.isFinite
-      ? Rect.fromLTRB(minX, minY, maxX, maxY)
-      : Rect.zero;
+  Rect get rect =>
+      minX.isFinite ? Rect.fromLTRB(minX, minY, maxX, maxY) : Rect.zero;
 }
 
 class _Scan {
@@ -122,7 +124,9 @@ class _Scan {
       i++;
       if (i < s.length && (s[i] == '-' || s[i] == '+')) i++;
       final digits = i;
-      while (i < s.length && s.codeUnitAt(i) >= 0x30 && s.codeUnitAt(i) <= 0x39) {
+      while (i < s.length &&
+          s.codeUnitAt(i) >= 0x30 &&
+          s.codeUnitAt(i) <= 0x39) {
         i++;
       }
       if (i == digits) i = save;

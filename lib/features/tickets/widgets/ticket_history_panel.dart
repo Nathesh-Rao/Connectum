@@ -6,7 +6,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/theme/app_tones.dart';
 import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_refresh.dart';
 import '../../../core/widgets/app_spinner.dart';
 import '../../../core/widgets/app_state_view.dart';
 import '../../../data/models/record_state.dart';
@@ -15,10 +14,7 @@ import '../tickets_texts.dart';
 import 'ticket_history_timeline.dart';
 
 /// The History panel: a soft sheet with its header and the events, newest
-/// first. In the fixed layout it fills the rest of the screen and the list
-/// scrolls inside it (pull to refresh works from the list); [isInline] is the
-/// fallback, where the page itself scrolls and the panel is as tall as its
-/// events, at least [minHeight].
+/// first, as tall as its events (at least [minHeight]); the page scrolls.
 class TicketHistoryPanel extends StatefulWidget {
   const TicketHistoryPanel({
     super.key,
@@ -28,16 +24,16 @@ class TicketHistoryPanel extends StatefulWidget {
     required this.nameOf,
     required this.onRefresh,
     this.first,
-    this.isInline = false,
+    this.pictureOf,
   });
 
   final RecordHistory? history;
   final AppViewState state;
   final Ticket ticket;
   final String? first;
+  final String? Function(String user)? pictureOf;
   final String Function(String user) nameOf;
   final Future<void> Function() onRefresh;
-  final bool isInline;
 
   /// The least height the panel gets before the page scrolls instead.
   static const minHeight = 160.0;
@@ -50,7 +46,6 @@ class _TicketHistoryPanelState extends State<TicketHistoryPanel> {
   List<RecordEvent> _shown = const [];
   Set<int> _fresh = {};
   bool _isFirst = true;
-  bool _isAtTop = true;
 
   List<RecordEvent> get _incoming => widget.history?.events ?? const [];
 
@@ -63,11 +58,6 @@ class _TicketHistoryPanelState extends State<TicketHistoryPanel> {
   @override
   void didUpdateWidget(TicketHistoryPanel old) {
     super.didUpdateWidget(old);
-    final known = {for (final e in _shown) e.id};
-    final hasNew = _incoming.any((e) => !known.contains(e.id));
-    // While the user is down the list, a new event waits at the top: the
-    // list keeps its place and shows it when the user is back at the top.
-    if (hasNew && !_isAtTop && !widget.isInline) return;
     _apply();
   }
 
@@ -86,23 +76,12 @@ class _TicketHistoryPanelState extends State<TicketHistoryPanel> {
     }
   }
 
-  bool _onScroll(ScrollNotification n) {
-    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
-    final isAtTop = n.metrics.pixels <= 1;
-    if (isAtTop == _isAtTop) return false;
-    _isAtTop = isAtTop;
-    final known = {for (final e in _shown) e.id};
-    if (isAtTop && _incoming.any((e) => !known.contains(e.id))) {
-      setState(_apply);
-    }
-    return false;
-  }
-
   HistoryFeed _feed() => HistoryFeed(
     history: widget.history!,
     nameOf: widget.nameOf,
     ticket: widget.ticket,
     first: widget.first,
+    pictureOf: widget.pictureOf,
     events: _shown,
   );
 
@@ -119,87 +98,37 @@ class _TicketHistoryPanelState extends State<TicketHistoryPanel> {
           side: BorderSide(color: AppColors.line),
         ),
       ),
-      child: widget.isInline
-          ? ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: TicketHistoryPanel.minHeight,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: TicketHistoryPanel.minHeight,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Header(count: count),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                AppSpacing.xs,
+                AppSpacing.page,
+                AppSpacing.xl,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Header(count: count),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.page,
-                      AppSpacing.xs,
-                      AppSpacing.page,
-                      AppSpacing.xl,
-                    ),
-                    child: _inlineBody(),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Header(count: count),
-                Expanded(
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: _onScroll,
-                    child: Scrollbar(
-                      child: AppRefresh(
-                        onRefresh: widget.onRefresh,
-                        slivers: _slivers(context),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              child: _body(),
             ),
+          ],
+        ),
+      ),
     );
   }
 
   bool get _hasEvents => widget.history != null && _shown.isNotEmpty;
 
-  Widget _inlineBody() {
+  Widget _body() {
     if (_hasEvents) {
       return TicketHistoryTimeline(feed: _feed(), freshIds: _fresh);
     }
     return _Notice(state: widget.state, onRetry: widget.onRefresh);
-  }
-
-  List<Widget> _slivers(BuildContext context) {
-    if (!_hasEvents) {
-      return [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: _Notice(state: widget.state, onRetry: widget.onRefresh),
-        ),
-      ];
-    }
-    final feed = _feed();
-    final bottom = MediaQuery.viewPaddingOf(context).bottom;
-    return [
-      SliverPadding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.page,
-          AppSpacing.xs,
-          AppSpacing.page,
-          AppSpacing.md + bottom,
-        ),
-        sliver: SliverList.builder(
-          itemCount: feed.events.length,
-          itemBuilder: (context, i) => TicketHistoryItem(
-            key: ValueKey(feed.events[i].id),
-            feed: feed,
-            index: i,
-            isFresh: _fresh.contains(feed.events[i].id),
-          ),
-        ),
-      ),
-    ];
   }
 }
 

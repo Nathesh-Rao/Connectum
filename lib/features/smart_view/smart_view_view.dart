@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_sv.dart';
 import '../../core/theme/app_tones.dart';
 import '../../core/theme/app_text.dart';
+import '../../core/tour/tour_texts.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_drawer_shell.dart';
 import '../../core/widgets/app_speed_dial.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_refresh.dart';
 import '../../core/widgets/app_scaffold.dart';
+import '../../core/widgets/app_tag.dart';
 import '../../core/widgets/app_spinner.dart';
 import '../../core/widgets/app_state_image.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/smart_view/sv_columns.dart';
 import '../../data/smart_view/sv_prefs.dart';
+import '../../data/smart_view/sv_query.dart';
 import 'smart_view_controller.dart';
 import 'widgets/smart_view_drawer.dart';
 import 'widgets/smart_view_card.dart';
@@ -29,11 +33,12 @@ import 'widgets/sv_controls.dart';
 import 'widgets/sv_group_header.dart';
 import 'widgets/sv_view_tabs.dart';
 import 'widgets/sv_file_chips.dart';
+import 'widgets/sv_filter_draft.dart';
+import 'widgets/sv_filter_sheet.dart';
 import 'widgets/sv_file_preview_dialog.dart';
 import 'widgets/sv_kpi_sheet.dart';
 import 'widgets/sv_no_match.dart';
 import 'widgets/sv_record_sheet.dart';
-import 'widgets/sv_overview_body.dart';
 
 /// The Smart view tab: the open structure's records as cards or as a table,
 /// newest first, with the list of structures in a drawer. No filters, groups
@@ -45,6 +50,7 @@ class SmartViewView extends GetView<SmartViewController> {
   static const noAccessMessage =
       "This structure is gone, or you can't open it.";
   static const emptyTitle = 'There is nothing here yet';
+  static const chooseTitle = 'Choose a smart view';
   static const loadFailed = 'It could not be loaded.';
 
   @override
@@ -86,6 +92,7 @@ class SmartViewView extends GetView<SmartViewController> {
                       return const SizedBox.shrink();
                     }
                     return AppSpeedDial(
+                      buttonKey: c.tour?.fabKey,
                       semanticLabel: 'Actions',
                       closeKey: Object.hash(
                         c.isActive.value,
@@ -116,12 +123,51 @@ class SmartViewView extends GetView<SmartViewController> {
                     );
                   }),
                 ),
+                _TourFilter(controller: c),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+/// The filter sheet the tour shows for a moment, drawn over the screen (a
+/// route would end the tour). It is the real sheet body on the rows now on
+/// screen; Apply does nothing and nothing is kept.
+class _TourFilter extends StatelessWidget {
+  const _TourFilter({required this.controller});
+
+  final SmartViewController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final demo = controller.tour?.demo;
+    if (demo == null) return const SizedBox.shrink();
+    return Obx(() {
+      final input = controller.engineInput;
+      if (!demo.isFilterOpen.value || input == null) {
+        return const SizedBox.shrink();
+      }
+      return Positioned.fill(
+        child: IgnorePointer(
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: ColoredBox(color: AppColors.sheetBackdrop),
+              ),
+              Positioned.fill(
+                child: SvFilterSheetBody(
+                  draft: SvFilterDraft(input, SmartViewQuery.none),
+                  onApply: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -142,10 +188,13 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          AppButton.icon(
-            icon: Icons.menu,
-            semanticLabel: 'Smart views',
-            onPressed: c.openDrawer,
+          KeyedSubtree(
+            key: c.tour?.menuKey,
+            child: AppButton.icon(
+              icon: Icons.menu,
+              semanticLabel: 'Smart views',
+              onPressed: c.openDrawer,
+            ),
           ),
           Expanded(
             child: Obx(
@@ -156,6 +205,17 @@ class _Header extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          ),
+          Obx(
+            () => c.isTourSampleShown
+                ? const Padding(
+                    padding: EdgeInsets.only(left: AppSpacing.xs),
+                    child: AppTag(
+                      label: TourTexts.sampleTag,
+                      tone: AppTagTone.accent,
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
           Obx(() {
             final t = c.table.value;
@@ -182,64 +242,6 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    final isInstant = MediaQuery.disableAnimationsOf(context);
-    return Obx(() {
-      final isOverview = c.isOverview;
-      return AnimatedSwitcher(
-        duration: isInstant ? Duration.zero : AppSv.ovSwitch,
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeOutCubic,
-        child: KeyedSubtree(
-          key: ValueKey(isOverview ? 'sv-page-overview' : 'sv-page-view'),
-          child: isOverview
-              ? _Overview(controller: c)
-              : _OpenView(controller: c),
-        ),
-      );
-    });
-  }
-}
-
-class _Overview extends StatelessWidget {
-  const _Overview({required this.controller});
-
-  final SmartViewController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = controller;
-    return Obx(() {
-      final phase = c.listPhase.value;
-      final state = switch (phase) {
-        SvPhase.loading => AppViewState.loading,
-        SvPhase.error => AppViewState.error,
-        SvPhase.offline => AppViewState.offline,
-        _ => AppViewState.content,
-      };
-      return AppStateView(
-        state: state,
-        errorMessage: 'The list could not be loaded.',
-        onRetry: c.reload,
-        child: SvOverviewBody(
-          model: c.overview,
-          isEmpty: phase == SvPhase.empty,
-          onOpen: c.show,
-          onRefresh: c.reload,
-          scroll: c.overviewScroll,
-        ),
-      );
-    });
-  }
-}
-
-class _OpenView extends StatelessWidget {
-  const _OpenView({required this.controller});
-
-  final SmartViewController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = controller;
     return Obx(() {
       final state = c.viewState;
       final t = c.table.value;
@@ -249,14 +251,20 @@ class _OpenView extends StatelessWidget {
         state: state,
         emptyTitle: state == AppViewState.locked
             ? SmartViewView.noAccessTitle
+            : c.isChoosing
+            ? SmartViewView.chooseTitle
+            : t == null
+            ? SmartViewDrawer.emptyTitle
             : SmartViewView.emptyTitle,
         emptyMessage: state == AppViewState.locked
             ? SmartViewView.noAccessMessage
             : null,
-        emptyActionLabel: state == AppViewState.empty && canAdd
+        emptyActionLabel: c.isChoosing
+            ? 'Show smart views'
+            : state == AppViewState.empty && canAdd
             ? 'Add a record'
             : null,
-        onEmptyAction: c.add,
+        onEmptyAction: c.isChoosing ? c.openDrawer : c.add,
         errorMessage: message.isEmpty ? SmartViewView.loadFailed : message,
         onRetry: c.reload,
         child: SmartViewContent(controller: c),
@@ -297,6 +305,7 @@ class SmartViewContent extends StatelessWidget {
                 (c.table.value?.rows.isNotEmpty ?? false) &&
                 c.shownRows.isEmpty;
             if (isNoMatch) return SvNoMatch(controller: c);
+            final page = c.pageSeq.value;
             return AnimatedSwitcher(
               duration: _modeDuration,
               switchInCurve: Curves.easeOutCubic,
@@ -314,7 +323,7 @@ class SmartViewContent extends StatelessWidget {
               child: KeyedSubtree(
                 key: ValueKey((mode, c.selectedViewId.value)),
                 child: mode == SvViewMode.cards
-                    ? _Cards(controller: c)
+                    ? _Cards(controller: c, page: page)
                     : _Table(controller: c),
               ),
             );
@@ -331,9 +340,13 @@ class SmartViewContent extends StatelessWidget {
 }
 
 class _Cards extends StatelessWidget {
-  const _Cards({required this.controller});
+  const _Cards({required this.controller, required this.page});
 
   final SmartViewController controller;
+
+  /// The page switch this page was built for. While the mode switcher fades
+  /// the old page out, only the newest page holds the tour key.
+  final int page;
 
   @override
   Widget build(BuildContext context) {
@@ -345,6 +358,10 @@ class _Cards extends StatelessWidget {
       final rows = grouped?.rows ?? c.shownRows;
       final versions = Map<int, int>.of(t.versions);
       final columns = c.shownColumns ?? SmartViewColumns.of(t.source);
+      final isCurrent = page == c.pageSeq.value;
+      final firstCard = grouped == null
+          ? 0
+          : grouped.flat.indexWhere((l) => !l.isGroup);
       return KeyedSubtree(
         key: PageStorageKey('sv-cards-${t.source.name}'),
         child: AppRefresh(
@@ -381,21 +398,24 @@ class _Cards extends StatelessWidget {
                   return Padding(
                     key: ValueKey('sv-${row.id}'),
                     padding: const EdgeInsets.only(bottom: AppSv.cardGap),
-                    child: Obx(
-                      () => SmartViewCard(
-                        data: columns.cardOf(row),
-                        position: i + 1,
-                        isExpanded: c.expanded.contains(row.id),
-                        onToggle: () => c.toggleExpanded(row.id),
-                        isFilesExpanded: c.filesExpanded.contains(row.id),
-                        onToggleFiles: () => c.toggleFilesExpanded(row.id),
-                        onTap: () => SvRecordSheet.show(
-                          context,
-                          columns.cardOf(row),
+                    child: KeyedSubtree(
+                      key: isCurrent && n == firstCard ? c.tour?.cardKey : null,
+                      child: Obx(
+                        () => SmartViewCard(
+                          data: columns.cardOf(row),
+                          position: i + 1,
+                          isExpanded: c.expanded.contains(row.id),
+                          onToggle: () => c.toggleExpanded(row.id),
+                          isFilesExpanded: c.filesExpanded.contains(row.id),
+                          onToggleFiles: () => c.toggleFilesExpanded(row.id),
+                          onTap: () => SvRecordSheet.show(
+                            context,
+                            columns.cardOf(row),
+                            onOpenFiles: _opener(context, c),
+                          ),
                           onOpenFiles: _opener(context, c),
+                          version: versions[row.id] ?? 0,
                         ),
-                        onOpenFiles: _opener(context, c),
-                        version: versions[row.id] ?? 0,
                       ),
                     ),
                   );

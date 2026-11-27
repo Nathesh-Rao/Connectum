@@ -49,10 +49,10 @@ class _FormChipSectionState extends State<FormChipSection> {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.xxs,
+          spacing: AppSpacing.chipGap,
+          runSpacing: AppSpacing.chipRunGap,
           children: chips,
         ),
         if (isCollapsed)

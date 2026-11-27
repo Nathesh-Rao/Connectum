@@ -97,13 +97,16 @@ class SvgNode {
         );
         return Path()..addRRect(rr);
       case 'circle':
-        return Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
+        return Path()
+          ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
       case 'ellipse':
-        return Path()..addOval(Rect.fromCenter(
-          center: Offset(cx, cy),
-          width: rx * 2,
-          height: ry * 2,
-        ));
+        return Path()..addOval(
+          Rect.fromCenter(
+            center: Offset(cx, cy),
+            width: rx * 2,
+            height: ry * 2,
+          ),
+        );
       case 'line':
         return Path()
           ..moveTo(x1, y1)
@@ -124,7 +127,11 @@ class SvgNode {
       case 'circle':
         return Rect.fromCircle(center: Offset(cx, cy), radius: r);
       case 'ellipse':
-        return Rect.fromCenter(center: Offset(cx, cy), width: rx * 2, height: ry * 2);
+        return Rect.fromCenter(
+          center: Offset(cx, cy),
+          width: rx * 2,
+          height: ry * 2,
+        );
       case 'line':
         return Rect.fromPoints(Offset(x1, y1), Offset(x2, y2));
       case 'use':
@@ -185,8 +192,14 @@ class SvgScene {
   final createdByTag = <String, int>{};
 
   static SvgScene fromArt(ArtEl art, {Color Function(Color)? remap}) {
-    final vb = art.attrs['viewBox']!.split(RegExp(r'\s+')).map(double.parse).toList();
-    final s = SvgScene._(Rect.fromLTWH(vb[0], vb[1], vb[2], vb[3]), remap ?? (c) => c);
+    final vb = art.attrs['viewBox']!
+        .split(RegExp(r'\s+'))
+        .map(double.parse)
+        .toList();
+    final s = SvgScene._(
+      Rect.fromLTWH(vb[0], vb[1], vb[2], vb[3]),
+      remap ?? (c) => c,
+    );
     for (final c in art.children) {
       s._build(c, s.root);
     }
@@ -278,12 +291,14 @@ class SvgScene {
         return;
       case 'mask':
         final a = el.attrs;
-        final m = SvgMask(Rect.fromLTWH(
-          double.parse(a['x'] ?? '0'),
-          double.parse(a['y'] ?? '0'),
-          double.parse(a['width'] ?? '0'),
-          double.parse(a['height'] ?? '0'),
-        ));
+        final m = SvgMask(
+          Rect.fromLTWH(
+            double.parse(a['x'] ?? '0'),
+            double.parse(a['y'] ?? '0'),
+            double.parse(a['width'] ?? '0'),
+            double.parse(a['height'] ?? '0'),
+          ),
+        );
         final holder = SvgNode('g');
         for (final c in el.children) {
           _build(c, holder);
@@ -455,8 +470,12 @@ class SvgRenderer {
   final _plainLayer = Paint();
   final _blurs = <double, ImageFilter>{};
   final _maskBase = Paint()..color = _black;
-  final _fillPaint = Paint()..style = PaintingStyle.fill..isAntiAlias = true;
-  final _strokePaint = Paint()..style = PaintingStyle.stroke..isAntiAlias = true;
+  final _fillPaint = Paint()
+    ..style = PaintingStyle.fill
+    ..isAntiAlias = true;
+  final _strokePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..isAntiAlias = true;
   final _layerPaint = Paint();
   static final _lumaFilter = ColorFilter.matrix(<double>[
     0, 0, 0, 0, 0, //
@@ -493,13 +512,14 @@ class SvgRenderer {
     final hasMask = mask != null && maskClip == null;
     final plain = isShape && n.filter == null && !hasMask;
     final hasFill = n.tag != 'line' && st.fill != null && st.fill!.a > 0;
-    final hasStroke = st.stroke != null && st.stroke!.a > 0 && st.strokeWidth > 0;
+    final hasStroke =
+        st.stroke != null && st.stroke!.a > 0 && st.strokeWidth > 0;
     final foldOpacity = plain && n.opacity < 1 && !(hasFill && hasStroke);
     // a blur-only filter folds the opacity into its own layer
-    final opacityInFilter =
-        n.filter != null && !n.filter!.isGlow && !hasMask;
+    final opacityInFilter = n.filter != null && !n.filter!.isGlow && !hasMask;
     final needsLayer = n.opacity < 1 && !foldOpacity && !opacityInFilter;
-    final bare = n.transform == null &&
+    final bare =
+        n.transform == null &&
         n.clip == null &&
         mask == null &&
         n.filter == null &&
@@ -634,13 +654,20 @@ class SvgRenderer {
               _fillPaint,
             );
           } else {
-            canvas.drawRect(Rect.fromLTWH(n.x, n.y, n.width, n.height), _fillPaint);
+            canvas.drawRect(
+              Rect.fromLTWH(n.x, n.y, n.width, n.height),
+              _fillPaint,
+            );
           }
         case 'circle':
           canvas.drawCircle(Offset(n.cx, n.cy), n.r, _fillPaint);
         case 'ellipse':
           canvas.drawOval(
-            Rect.fromCenter(center: Offset(n.cx, n.cy), width: n.rx * 2, height: n.ry * 2),
+            Rect.fromCenter(
+              center: Offset(n.cx, n.cy),
+              width: n.rx * 2,
+              height: n.ry * 2,
+            ),
             _fillPaint,
           );
       }
@@ -666,7 +693,11 @@ class SvgRenderer {
           canvas.drawCircle(Offset(n.cx, n.cy), n.r, p);
         case 'ellipse':
           canvas.drawOval(
-            Rect.fromCenter(center: Offset(n.cx, n.cy), width: n.rx * 2, height: n.ry * 2),
+            Rect.fromCenter(
+              center: Offset(n.cx, n.cy),
+              width: n.rx * 2,
+              height: n.ry * 2,
+            ),
             p,
           );
         default:
@@ -700,7 +731,7 @@ class SvgRenderer {
       var k = (off / period).ceil();
       if (n.tag == 'circle') {
         final len = 2 * math.pi * n.r;
-        for (;; k++) {
+        for (; ; k++) {
           final s = k * period - off;
           if (s >= len) break;
           final a = s / n.r;
@@ -710,7 +741,7 @@ class SvgRenderer {
         final dx = n.x2 - n.x1, dy = n.y2 - n.y1;
         final len = math.sqrt(dx * dx + dy * dy);
         if (len == 0) return;
-        for (;; k++) {
+        for (; ; k++) {
           final s = k * period - off;
           if (s >= len) break;
           pts.add(Offset(n.x1 + dx / len * s, n.y1 + dy / len * s));
@@ -773,7 +804,8 @@ class SvgRenderer {
       case 'filter':
         return const [];
       default:
-        final hasStroke = st.stroke != null && st.stroke!.a > 0 && st.strokeWidth > 0;
+        final hasStroke =
+            st.stroke != null && st.stroke!.a > 0 && st.strokeWidth > 0;
         var r = n.getBBox();
         if (hasStroke) r = r.inflate(st.strokeWidth / 2);
         items.add(DrawnRect(n, label, r, via));
@@ -781,7 +813,10 @@ class SvgRenderer {
     if (items.isEmpty) return items;
     if (n.filter != null) {
       final grow = n.filter!.sigma * 3;
-      items = [for (final d in items) DrawnRect(d.node, d.label, d.rect.inflate(grow), d.via)];
+      items = [
+        for (final d in items)
+          DrawnRect(d.node, d.label, d.rect.inflate(grow), d.via),
+      ];
     }
     final clip = n.clip;
     if (clip != null) {
@@ -810,7 +845,10 @@ class SvgRenderer {
     }
     final tf = n.transform;
     if (tf != null) {
-      items = [for (final d in items) DrawnRect(d.node, d.label, tf.mapRect(d.rect), d.via)];
+      items = [
+        for (final d in items)
+          DrawnRect(d.node, d.label, tf.mapRect(d.rect), d.via),
+      ];
     }
     return items;
   }
@@ -830,7 +868,8 @@ class SvgRenderer {
 
   /// The clip equal to [m] when every child is an opaque white fill, else null.
   Path? _maskClip(SvgMask m) {
-    m._isClip ??= m.children.isNotEmpty &&
+    m._isClip ??=
+        m.children.isNotEmpty &&
         m.children.every(
           (c) =>
               (c.tag == 'path' ||
@@ -942,4 +981,3 @@ class SvgRenderer {
     return 1;
   }
 }
-

@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
+import '../../../core/widgets/app_png_icon.dart';
 import '../../../core/widgets/app_search_field.dart';
+import '../../../core/widgets/app_sheet_header.dart';
 import '../../../core/widgets/app_skeleton.dart';
 import '../../../core/widgets/app_state_image.dart';
 import '../../../core/widgets/app_state_view.dart';
+import '../../../data/models/form_option.dart';
 import '../forms_picker_controller.dart';
 import 'form_chip.dart';
 import 'form_chip_section.dart';
@@ -47,7 +51,10 @@ class FormsPickerSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _Header(),
+        const AppSheetHeader(
+          title: 'Forms',
+          subtitle: 'Choose a form to fill in',
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
@@ -95,7 +102,7 @@ class _Content extends StatelessWidget {
   Widget build(BuildContext context) => Obx(() {
     final c = controller;
     final isSearching = c.query.value.trim().isNotEmpty;
-    final recents = isSearching ? const [] : c.recents;
+    final recents = isSearching ? const <FormOption>[] : c.recentOptions;
     final shown = c.shown;
     final available = [
       for (final o in shown)
@@ -127,21 +134,20 @@ class _Content extends StatelessWidget {
                         FormChipSection(
                           label: 'Recent',
                           chips: [
-                            for (final r in recents)
+                            for (final o in recents)
                               FormChip(
-                                label: r.caption.isEmpty ? r.name : r.caption,
+                                label: o.caption,
                                 icon: Icons.history,
-                                tintKey: r.name,
-                                semanticsLabel:
-                                    'Open ${r.caption.isEmpty ? r.name : r.caption}',
+                                tintKey: o.id,
+                                semanticsLabel: 'Open ${o.caption}',
                                 onTap: () {
                                   Navigator.of(context).pop();
-                                  c.openRecent(r);
+                                  c.open(o);
                                 },
                               ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        const SizedBox(height: AppSpacing.xl),
                       ],
                       if (available.isNotEmpty)
                         FormChipSection(
@@ -311,7 +317,11 @@ class _BottomBar extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.history, size: 18),
+                  AppPngIcon(
+                    asset: AppIcons.bottomNav.submissionsUnselected,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: AppSpacing.xxs + 2),
                   const Text(
                     'My Submissions',
@@ -342,7 +352,7 @@ class _DashedDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+    padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
     child: SizedBox(
       height: 1,
       child: CustomPaint(painter: _DashPainter(), size: Size.fromHeight(1)),
@@ -395,70 +405,6 @@ class _NoResults extends StatelessWidget {
             fontSize: 13,
             fontWeight: FontWeight.w400,
             color: AppColors.muted,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.only(
-      start: AppSpacing.md,
-      end: AppSpacing.xxs,
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Semantics(
-                  header: true,
-                  child: const Text(
-                    'Forms',
-                    style: TextStyle(
-                      fontFamily: AppText.fontFamily,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      height: 1.3,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                ),
-                const Text(
-                  'Choose a form to fill in',
-                  style: TextStyle(
-                    fontFamily: AppText.fontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    height: 1.3,
-                    color: AppColors.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Semantics(
-          button: true,
-          label: 'Close',
-          excludeSemantics: true,
-          child: InkResponse(
-            onTap: () => Navigator.of(context).pop(),
-            radius: AppSpacing.minTapTarget / 2,
-            child: const SizedBox(
-              width: AppSpacing.minTapTarget,
-              height: AppSpacing.minTapTarget,
-              child: Icon(Icons.close, size: 22, color: AppColors.muted),
-            ),
           ),
         ),
       ],

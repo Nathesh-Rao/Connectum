@@ -77,11 +77,12 @@ Future<LogViewerController> _open(
   LogTextReader reader, {
   File? file,
   double scale = 1,
+  bool isMissing = false,
 }) async {
   Get.testMode = true;
   final f =
       file ?? File('${Directory.systemTemp.path}/ConnectumMobileLog_x.txt');
-  final sink = _FakeSink(f);
+  final sink = _FakeSink(isMissing ? null : f);
   final c = LogViewerController(
     sink: sink,
     logs: LogsController(sink: sink),
@@ -214,9 +215,43 @@ void main() {
     expect(find.byType(SingleChildScrollView), findsOneWidget);
   });
 
+  testWidgets('a partial document shows the note', (tester) async {
+    final c = await _open(tester, _FakeReader(_sample));
+    expect(find.byKey(const ValueKey('log-partial')), findsNothing);
+    c.doc.value = LogDocument(
+      c.doc.value.lines,
+      c.doc.value.kinds,
+      c.doc.value.longest,
+      isPartial: true,
+    );
+    await tester.pump();
+    expect(find.text('Showing last part of file'), findsOneWidget);
+  });
+
   testWidgets('empty file shows the empty state', (tester) async {
     await _open(tester, _FakeReader(''));
     expect(find.text('No log entries yet'), findsOneWidget);
+  });
+
+  testWidgets('a missing file shows the empty state', (tester) async {
+    await _open(tester, _FakeReader(_sample), isMissing: true);
+    expect(find.text('No log entries yet'), findsOneWidget);
+    expect(find.text('Could not load'), findsNothing);
+  });
+
+  test('a file over 2 MB is read from the end and marked partial', () async {
+    final dir = await Directory.systemTemp.createTemp('logtail');
+    addTearDown(() => dir.delete(recursive: true));
+    final f = File('${dir.path}/big.txt');
+    final line = '10:00:01.000  I  APP       ${'x' * 90}\n';
+    final count = (3 * 1024 * 1024) ~/ line.length;
+    await f.writeAsString('FIRST LINE\n${line * count}LAST LINE\n');
+    final doc = await LogDocument.readFile(f.path);
+    expect(doc.isPartial, isTrue);
+    expect(doc.lines.first, isNot('FIRST LINE'));
+    expect(doc.lines.last, 'LAST LINE');
+    final small = File('${dir.path}/small.txt')..writeAsStringSync('a\nb\n');
+    expect((await LogDocument.readFile(small.path)).isPartial, isFalse);
   });
 
   testWidgets('a failed read shows the error state and Retry reads again', (
@@ -225,6 +260,7 @@ void main() {
     final reader = _FakeReader(_sample, failures: 1);
     await _open(tester, reader);
     expect(find.text('Could not load'), findsOneWidget);
+    expect(find.textContaining('boom'), findsOneWidget);
     await tester.tap(find.text('Retry'));
     await tester.pump();
     await tester.pump();

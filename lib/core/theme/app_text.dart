@@ -131,12 +131,168 @@ class AppText {
     color: AppColors.ink,
   );
 
+  /// The Inbox card: title, person, meta line, field label, field value.
+  static const inboxTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    height: 1.3,
+    color: AppColors.ink,
+  );
+
+  static const inboxName = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    height: 1.35,
+    color: AppColors.ink,
+  );
+
+  static const inboxMeta = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.muted,
+  );
+
+  static const inboxLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: sizeCaption,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    color: AppColors.muted,
+  );
+
+  static const inboxValue = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14.5,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+    color: AppColors.ink,
+  );
+
   static const message = TextStyle(
     fontFamily: fontFamily,
     fontSize: sizeReadable,
     fontWeight: FontWeight.w400,
     height: 1.6,
     color: AppColors.ink,
+  );
+
+  static const chatMessage = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.ink,
+  );
+
+  static const chatName = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    letterSpacing: -0.3,
+    color: AppColors.ink,
+  );
+
+  static const chatPreview = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.35,
+    letterSpacing: 0.1,
+    color: AppColors.muted,
+  );
+
+  static const chatHeaderName = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
+    color: AppColors.ink,
+  );
+
+  static const chatInput = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    color: AppColors.ink,
+  );
+
+  static const chatTime = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.muted,
+  );
+
+  static const chatStatus = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.muted,
+  );
+
+  static const chatUnread = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
+    color: AppColors.white,
+  );
+
+  static const wsTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.25,
+    letterSpacing: -0.2,
+    color: AppColors.ink,
+  );
+
+  static const wsSubtitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    color: AppColors.ink,
+  );
+
+  static const wsMeta = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.25,
+    color: AppColors.muted,
+  );
+
+  static const wsTime = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    color: AppColors.muted,
+  );
+
+  static const wsChip = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    color: AppColors.muted,
+  );
+
+  static const wsSection = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    color: AppColors.muted,
   );
 
   static const label = TextStyle(
@@ -247,6 +403,15 @@ class AppText {
     fontWeight: FontWeight.w600,
     height: 1.5,
     letterSpacing: -0.3,
+    color: AppColors.ink,
+  );
+
+  /// A row of the compact popup menu.
+  static const menuItem = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14.5,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
     color: AppColors.ink,
   );
 

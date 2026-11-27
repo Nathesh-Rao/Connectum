@@ -40,7 +40,11 @@ class OutboxEntry {
   /// The stored payload could not be read; it is never sent.
   final bool isUnreadable;
 
-  bool get isChat => kind == 'message' || kind == 'reply' || kind == 'edit';
+  bool get isChat =>
+      kind == 'message' ||
+      kind == 'reply' ||
+      kind == 'edit' ||
+      kind == 'delete';
 
   bool get isSend => kind == 'message' || kind == 'reply';
 

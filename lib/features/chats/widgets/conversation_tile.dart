@@ -79,10 +79,10 @@ class ConversationTile extends StatelessWidget {
                             c.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppText.rowTitle.copyWith(
+                            style: AppText.chatName.copyWith(
                               fontWeight: hasUnread
                                   ? FontWeight.w700
-                                  : FontWeight.w600,
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -130,6 +130,7 @@ class ConversationTile extends StatelessWidget {
                             label: c.unreadLabel,
                             isMuted: c.isMuted,
                             color: tone,
+                            textStyle: AppText.chatUnread,
                           ),
                         ],
                       ],
@@ -194,7 +195,7 @@ class _Preview extends StatelessWidget {
             _text(c),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppText.rowCaption,
+            style: AppText.chatPreview,
           ),
         ),
       ],

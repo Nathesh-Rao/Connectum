@@ -27,6 +27,7 @@ class TicketsTexts {
 
   static const withLabel = 'with';
   static const you = 'you';
+  static const youCapital = 'You';
   static const waitingForApproval = 'Waiting for approval';
   static const waitingForApprovalNote =
       "It can't be acted on until it is approved.";
@@ -145,8 +146,7 @@ class TicketsTexts {
   static const assignedMoved = 'A ticket is now with you.';
   static const saved = 'Saved';
   static const savedWaiting = 'Waiting for approval';
-  static const savedNotPosted =
-      "Saved, but it couldn't be posted to the chat";
+  static const savedNotPosted = "Saved, but it couldn't be posted to the chat";
   static String sentOn(List<String> names) => names.length == 1
       ? 'Sent to ${names.first}.'
       : 'Shared with ${names.join(', ')}.';

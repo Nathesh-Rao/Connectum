@@ -35,9 +35,7 @@ class LottieInfo {
 }
 
 class DebugAssetsController extends GetxController {
-  static const lottieAssets = [
-    'assets/lottie/state_success_blue.json',
-  ];
+  static const lottieAssets = ['assets/lottie/state_success_blue.json'];
 
   final pngs = <PngInfo>[].obs;
   final lotties = <LottieInfo>[].obs;

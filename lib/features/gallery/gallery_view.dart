@@ -86,7 +86,6 @@ class GalleryView extends GetView<GalleryController> {
     'debug/smartdrawer': AppRoutes.debugSmartDrawer,
     'debug/smartquery': AppRoutes.debugSmartQuery,
     'debug/smartviews': AppRoutes.debugSmartViews,
-    'debug/smartoverview': AppRoutes.debugSmartOverview,
     'debug/smartfiles': AppRoutes.debugSmartFiles,
     'debug/smartinsights': AppRoutes.debugSmartInsights,
     'debug/commands': AppRoutes.debugCommands,

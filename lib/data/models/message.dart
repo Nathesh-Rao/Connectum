@@ -1,5 +1,6 @@
 import '../e2e/e2e_models.dart';
 import 'ids.dart';
+import 'self_conversation.dart';
 
 enum MessageStatus { pending, sending, sent, delivered, read, failed }
 
@@ -68,6 +69,23 @@ class Message {
   }
 
   bool get isLocalTemp => msgId.startsWith('temp-');
+
+  /// A My Work Space note queued until encryption is ready (never sent plain).
+  bool get isWaitingForEncryption =>
+      status == MessageStatus.pending &&
+      (failReason == SelfConversation.waitingForEncryption ||
+          failReason == SelfConversation.waitingForSetup);
+
+  /// A waiting note that has waited long enough to ask for setup.
+  bool get isSetupNeeded =>
+      status == MessageStatus.pending &&
+      failReason == SelfConversation.waitingForSetup;
+
+  /// A sent note whose edit has not reached the server yet.
+  bool get isEditPending => failReason == SelfConversation.editPending;
+
+  /// A note that stayed unsent for more than the server remembers its id.
+  bool get isTooOld => failReason == SelfConversation.tooOld;
 
   Message copyWith({
     String? msgId,

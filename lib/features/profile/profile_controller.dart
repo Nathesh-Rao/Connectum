@@ -10,6 +10,9 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/home_reload.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
+import '../../core/tour/tour_texts.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
@@ -24,7 +27,9 @@ import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../chats/enterprise_switcher_controller.dart';
 import '../password/password_sheet.dart';
+import '../settings/logs_controller.dart';
 import '../qr/qr_sheet.dart';
+import 'profile_tour.dart';
 import '../../core/log/app_log.dart';
 
 class ProfileController extends GetxController {
@@ -37,6 +42,9 @@ class ProfileController extends GetxController {
     required this.avatars,
     required this.photos,
     required this.picker,
+    this.logs,
+    this.tour,
+    this.profileTour,
   });
 
   final SessionStore store;
@@ -47,6 +55,19 @@ class ProfileController extends GetxController {
   final PeopleAvatars avatars;
   final ProfilePhotoRepository photos;
   final ProfilePhotoPicker picker;
+
+  /// The first-run tours; null where they are not set up.
+  final TourService? tour;
+
+  /// The first-run tour of this screen; null where tours are not set up.
+  final ProfileTour? profileTour;
+  late final TourTrigger _tourTrigger = TourTrigger(
+    canTry: () => profileTour != null && !isClosed && !isPhotoBusy.value,
+    start: _startTour,
+  );
+
+  /// The Logs section's controller; null when logging could not be set up.
+  final LogsController? logs;
 
   /// True while a new picture is being sent or the old one removed.
   final isPhotoBusy = false.obs;
@@ -212,6 +233,19 @@ class ProfileController extends GetxController {
   void replayIntroduction() =>
       Get.toNamed(AppRoutes.onboarding, arguments: {'replay': true});
 
+  /// "Replay all tours": every tour plays again as the person visits its
+  /// screen.
+  Future<void> replayTours() async {
+    final tour = this.tour;
+    if (tour == null) return;
+    try {
+      await tour.resetAll();
+      AppNotices.info(TourTexts.replayDone);
+    } catch (e, st) {
+      AppLog.e('profile_controller', e, st);
+    }
+  }
+
   Future<int> unsentCount() async =>
       SeedUi.isActive ? SeedUi.profileUnsent.value : session.unsentCount();
 
@@ -238,8 +272,25 @@ class ProfileController extends GetxController {
   }
 
   @override
+  void onReady() {
+    super.onReady();
+    if (profileTour != null) _tourTrigger.schedule();
+  }
+
+  Future<TourStart> _startTour() async {
+    final tour = profileTour;
+    if (tour == null || isClosed) return TourStart.failed;
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    return tour.start();
+  }
+
+  @override
   void onClose() {
+    _tourTrigger.dispose();
+    profileTour?.cancel();
     _copiedTimer?.cancel();
+    logs?.dispose();
     super.onClose();
   }
 }

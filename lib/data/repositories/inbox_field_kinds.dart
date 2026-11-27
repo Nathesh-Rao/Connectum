@@ -103,4 +103,15 @@ class InboxFieldKinds {
     }
     return 'text';
   }
+
+  /// The column type of one field of [form] (`date`, `file`...) when the
+  /// source list is already held; null otherwise. Never reads.
+  String? typeOf(String form, String field) {
+    final s = _sourceOf(form);
+    if (s == null) return null;
+    for (final f in s.fields) {
+      if (f.name == field) return f.type;
+    }
+    return null;
+  }
 }

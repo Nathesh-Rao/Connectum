@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../core/routes/deep_link_service.dart';
+import '../../core/tour/tour_service.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/notifications/local_notification_service.dart';
 import '../ai_agents/ai_agents_binding.dart';
@@ -37,6 +38,7 @@ class HomeShellBinding extends Bindings {
         notifications: Get.find<LocalNotificationService>(),
         notificationRouter: Get.find<NotificationRouter>(),
         smartView: Get.find<SmartViewController>(),
+        tour: Get.isRegistered<TourService>() ? Get.find<TourService>() : null,
       ),
     );
     Get.put(HandOnController(Get.find<HandOnRepository>()));

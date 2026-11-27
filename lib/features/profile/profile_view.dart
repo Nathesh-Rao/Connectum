@@ -8,8 +8,10 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/tour/tour_texts.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../chats/widgets/enterprise_switcher_sheet.dart';
+import '../settings/widgets/logs_settings_tile.dart';
 import 'profile_controller.dart';
 import 'widgets/logout_sheet.dart';
 import 'widgets/profile_identity_card.dart';
@@ -97,18 +99,21 @@ class ProfileView extends GetView<ProfileController> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ProfileIdentityCard(
-                      name: c.name,
-                      username: c.username,
-                      organisation: c.organisation,
-                      isOnline: c.isOnline,
-                      picture: c.picture,
-                      progress: c.isPhotoBusy.value
-                          ? (c.photoProgress.value ?? 0)
-                          : null,
-                      onPhotoTap: c.isPhotoBusy.value
-                          ? null
-                          : () => _openPhotoSheet(context),
+                    KeyedSubtree(
+                      key: c.profileTour?.identityKey,
+                      child: ProfileIdentityCard(
+                        name: c.name,
+                        username: c.username,
+                        organisation: c.organisation,
+                        isOnline: c.isOnline,
+                        picture: c.picture,
+                        progress: c.isPhotoBusy.value
+                            ? (c.photoProgress.value ?? 0)
+                            : null,
+                        onPhotoTap: c.isPhotoBusy.value
+                            ? null
+                            : () => _openPhotoSheet(context),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     ProfileGroup(
@@ -141,11 +146,14 @@ class ProfileView extends GetView<ProfileController> {
                     ProfileGroup(
                       title: 'WORKSPACE',
                       children: [
-                        ProfileActionRow(
-                          icon: Icons.swap_horiz_rounded,
-                          title: 'Switch enterprise',
-                          subtitle: c.organisation,
-                          onTap: () => _openSwitcher(context),
+                        KeyedSubtree(
+                          key: c.profileTour?.switchKey,
+                          child: ProfileActionRow(
+                            icon: Icons.swap_horiz_rounded,
+                            title: 'Switch enterprise',
+                            subtitle: c.organisation,
+                            onTap: () => _openSwitcher(context),
+                          ),
                         ),
                         ProfileActionRow(
                           icon: Icons.lock_outline,
@@ -155,11 +163,14 @@ class ProfileView extends GetView<ProfileController> {
                               : 'Sign in without waiting for a code',
                           onTap: () => c.openPassword(context),
                         ),
-                        ProfileActionRow(
-                          icon: Icons.shield_outlined,
-                          title: 'Security',
-                          subtitle: 'Devices and encryption',
-                          onTap: c.openSecurity,
+                        KeyedSubtree(
+                          key: c.profileTour?.securityKey,
+                          child: ProfileActionRow(
+                            icon: Icons.shield_outlined,
+                            title: 'Security',
+                            subtitle: 'Devices and encryption',
+                            onTap: c.openSecurity,
+                          ),
                         ),
                         ProfileActionRow(
                           icon: Icons.play_circle_outline,
@@ -169,6 +180,27 @@ class ProfileView extends GetView<ProfileController> {
                         ),
                       ],
                     ),
+                    if (c.tour != null) ...[
+                      const SizedBox(height: AppSpacing.xl),
+                      ProfileGroup(
+                        title: TourTexts.sectionTitle,
+                        children: [
+                          KeyedSubtree(
+                            key: c.profileTour?.replayKey,
+                            child: ProfileActionRow(
+                              icon: Icons.explore_outlined,
+                              title: TourTexts.replayTitle,
+                              subtitle: TourTexts.replaySubtitle,
+                              onTap: c.replayTours,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (c.logs != null) ...[
+                      const SizedBox(height: AppSpacing.xl),
+                      LogsSettingsTile(controller: c.logs!),
+                    ],
                     const SizedBox(height: AppSpacing.xl),
                     AppButton.secondary(
                       label: 'Log out',

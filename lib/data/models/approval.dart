@@ -34,6 +34,10 @@ class Approval {
     this.stage,
     this.stages,
     this.lines = const [],
+    this.fromUser = '',
+    this.returned = false,
+    this.submissionId,
+    this.isTeam = false,
   });
 
   static const pending = 'pending';
@@ -78,6 +82,18 @@ class Approval {
   final int? stages;
   final List<ApprovalLine> lines;
 
+  /// Who raised it, lower case (`fromUser`, else `username`, else `from`).
+  final String fromUser;
+
+  /// A return is stored as a rejection; the request says it was returned.
+  final bool returned;
+
+  /// The record a submission request is about (`submissionId`).
+  final int? submissionId;
+
+  /// It came from `req.team`: a direct report raised it (read only).
+  final bool isTeam;
+
   bool get isPending => status == pending;
   bool get isSubmission => type == submissionType;
   bool get isIncoming => direction == incoming;
@@ -95,6 +111,7 @@ class Approval {
     String? resolvedByName,
     String? resolvedByDesignation,
     String? reason,
+    bool? returned,
   }) => Approval(
     id: id,
     type: type,
@@ -118,6 +135,40 @@ class Approval {
     stage: stage,
     stages: stages,
     lines: lines,
+    fromUser: fromUser,
+    returned: returned ?? this.returned,
+    submissionId: submissionId,
+    isTeam: isTeam,
+  );
+
+  /// The same request marked as one of a direct report's (`req.team`).
+  Approval asTeam() => Approval(
+    id: id,
+    type: type,
+    status: status,
+    from: from,
+    fromName: fromName,
+    subject: subject,
+    subjectName: subjectName,
+    approvers: approvers,
+    direction: direction,
+    canRespond: canRespond,
+    createdTs: createdTs,
+    resolvedTs: resolvedTs,
+    resolvedBy: resolvedBy,
+    resolvedByName: resolvedByName,
+    resolvedByDesignation: resolvedByDesignation,
+    formId: formId,
+    caption: caption,
+    message: message,
+    reason: reason,
+    stage: stage,
+    stages: stages,
+    lines: lines,
+    fromUser: fromUser,
+    returned: returned,
+    submissionId: submissionId,
+    isTeam: true,
   );
 
   /// Null when the map has no usable id. [viewer] works out [direction] and
@@ -146,6 +197,11 @@ class Approval {
           (status.isEmpty || status == pending) && direction == incoming;
     }
     final summary = data['summary'];
+    final fromUser = _text(json['fromUser']).isNotEmpty
+        ? _text(json['fromUser'])
+        : _text(json['username']).isNotEmpty
+        ? _text(json['username'])
+        : from;
     return Approval(
       id: id,
       type: _text(json['type']),
@@ -172,6 +228,12 @@ class Approval {
       reason: _text(data['reason']),
       stage: data['stage'] == null ? null : intOf(data['stage']),
       stages: data['stages'] == null ? null : intOf(data['stages']),
+      fromUser: fromUser.toLowerCase(),
+      returned: json['returned'] == true,
+      submissionId: json['type'] == submissionType
+          ? idNumber(json['submissionId'])
+          : null,
+      isTeam: json['team'] == true,
       lines: [
         if (summary is List)
           for (final s in summary)

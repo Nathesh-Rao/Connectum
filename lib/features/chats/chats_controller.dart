@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import '../../core/debug/seed_ui.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/routes/conversation_route.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
 import '../../core/utils/attachment_tag.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/app_state_view.dart';
@@ -21,6 +23,8 @@ import '../../data/session_store.dart';
 import '../../data/socket/socket_service.dart';
 import '../../data/socket/connectivity_service.dart';
 import '../home_shell/home_shell_controller.dart';
+import '../home_shell/home_tab.dart';
+import 'chats_tour.dart';
 import 'enterprise_switcher_controller.dart';
 import 'models/chat_filter.dart';
 import 'models/message_hit.dart';
@@ -41,6 +45,7 @@ class ChatsController extends GetxController {
     required this.switcher,
     required this.newChat,
     required this.avatars,
+    this.tour,
   });
 
   static const _searchDelay = Duration(milliseconds: 250);
@@ -56,6 +61,9 @@ class ChatsController extends GetxController {
   final EnterpriseSwitcherController switcher;
   final NewChatController newChat;
   final PeopleAvatars avatars;
+
+  /// The first-run tour; null where tours are not set up.
+  final ChatsTour? tour;
 
   final searchField = TextEditingController();
   final searchFocus = FocusNode();
@@ -78,6 +86,10 @@ class ChatsController extends GetxController {
   final _all = <String, Conversation>{};
   Timer? _minuteTimer;
   Timer? _searchTimer;
+  late final TourTrigger _tourTrigger = TourTrigger(
+    canTry: _canTryTour,
+    start: _startTour,
+  );
   int _searchSeq = 0;
 
   bool get isOffline => connectivity.state.value == AppConnectivity.offline;
@@ -97,6 +109,15 @@ class ChatsController extends GetxController {
     ever(conversations.isSynced, (_) => _apply());
     ever(conversations.hasSyncStalled, (_) => _apply());
     ever(connectivity.state, (_) => _apply());
+    ever(viewState, (_) => _scheduleTour());
+    ever(shell.tab, (tab) {
+      if (tab == HomeTab.chats) {
+        _scheduleTour();
+      } else {
+        _tourTrigger.cancel();
+        tour?.cancel();
+      }
+    });
     ever(store.current, (_) {
       clearSearch();
       _rows.clear();
@@ -199,6 +220,36 @@ class ChatsController extends GetxController {
           : AppViewState.loading;
     }
     return AppViewState.content;
+  }
+
+  // ---- first-run tour ----------------------------------------------------------
+
+  /// The one place the chat list tour is triggered: once the list has settled
+  /// (rows or the empty state); [TourTrigger] adds the beat and the retries.
+  void _scheduleTour() {
+    if (tour == null || isClosed) return;
+    _tourTrigger.schedule();
+  }
+
+  bool _canTryTour() {
+    if (tour == null || isClosed) return false;
+    final state = viewState.value;
+    final isSettled =
+        state == AppViewState.content || state == AppViewState.empty;
+    return isSettled &&
+        shell.tab.value == HomeTab.chats &&
+        !isSearching &&
+        filter.value == ChatFilterKind.all;
+  }
+
+  Future<TourStart> _startTour() async {
+    final tour = this.tour;
+    if (tour == null || isClosed) return TourStart.failed;
+    final isEmpty = viewState.value == AppViewState.empty;
+    showNewChat();
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    return tour.start(isEmpty: isEmpty);
   }
 
   // ---- header ----------------------------------------------------------------
@@ -420,6 +471,8 @@ class ChatsController extends GetxController {
   void onClose() {
     _minuteTimer?.cancel();
     _searchTimer?.cancel();
+    _tourTrigger.dispose();
+    tour?.cancel();
     searchField.dispose();
     searchFocus.dispose();
     super.onClose();

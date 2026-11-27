@@ -13,10 +13,12 @@ import '../../../core/widgets/app_popup_menu.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../data/smart_view/engine/sv_engine.dart';
 import '../../../data/smart_view/sv_columns.dart';
+import '../../../core/log/safe.dart';
 import '../smart_view_controller.dart';
 import 'sv_col_icon.dart';
 import 'sv_filter_draft.dart';
 import 'sv_pill.dart';
+import 'sv_team_lines.dart';
 
 /// The filter sheet: one line per condition (field, operator, value), a live
 /// "N of M records" and Apply. Edits live in a draft; closing without Apply
@@ -28,6 +30,7 @@ class SvFilterSheet {
     final input = c.engineInput;
     if (input == null) return Future.value();
     final draft = SvFilterDraft(input, c.query.value);
+    fireAndLog('sv_filter_sheet', c.loadTeam);
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -54,6 +57,7 @@ class SvFilterSheet {
           Positioned.fill(
             child: SvFilterSheetBody(
               draft: draft,
+              team: c.teamChoices,
               onApply: () {
                 c.setConditions(draft.conditions);
                 Navigator.of(sheet).pop();
@@ -71,10 +75,14 @@ class SvFilterSheetBody extends StatelessWidget {
     super.key,
     required this.draft,
     required this.onApply,
+    this.team,
   });
 
   final SvFilterDraft draft;
   final VoidCallback onApply;
+
+  /// Who reports to the person; null or nobody: no team lines.
+  final SvTeamChoices? team;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +133,8 @@ class SvFilterSheetBody extends StatelessWidget {
                                       leadingIcon: Icons.add,
                                       onPressed: draft.add,
                                     ),
+                              if (team != null)
+                                SvTeamLines(draft: draft, choices: team!),
                               const SizedBox(height: AppSpacing.md),
                             ],
                           ),
@@ -187,12 +197,7 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               const Expanded(child: Text('Filters', style: AppText.subtitle)),
-              Obx(
-                () => _ClearAll(
-                  isEnabled: draft.rows.isNotEmpty,
-                  onTap: draft.clear,
-                ),
-              ),
+              Obx(() => _ClearAll(isEnabled: draft.hasAny, onTap: draft.clear)),
               const SizedBox(width: AppSpacing.xs),
             ],
           ),
@@ -540,11 +545,15 @@ class SvChoiceChip extends StatelessWidget {
     required this.label,
     required this.isOn,
     required this.onTap,
+    this.leading,
   });
 
   final String label;
   final bool isOn;
   final VoidCallback onTap;
+
+  /// A picture before the label (a team member's face).
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -575,11 +584,24 @@ class SvChoiceChip extends StatelessWidget {
               ),
               child: Center(
                 widthFactor: 1,
-                child: Text(
-                  label,
-                  style: AppText.readableStrong.copyWith(
-                    color: isOn ? AppColors.white : AppColors.ink,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (leading != null) ...[
+                      leading!,
+                      const SizedBox(width: AppSpacing.xxs),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.readableStrong.copyWith(
+                          color: isOn ? AppColors.white : AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

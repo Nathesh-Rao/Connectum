@@ -46,7 +46,7 @@ void main() {
           child: child!,
         ),
         home: Scaffold(
-          body: Padding(
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: RepaintBoundary(
               key: const ValueKey('golden'),
@@ -64,8 +64,11 @@ void main() {
     }
   }
 
-  Finder band(AppTone tone) => find.byWidgetPredicate(
-    (w) => w is ColoredBox && w.color == tone.tintMedium,
+  Finder circle(AppTone tone) => find.byWidgetPredicate(
+    (w) =>
+        w is Container &&
+        w.key == const ValueKey('inbox-status-circle') &&
+        (w.decoration as BoxDecoration).color == tone.solid,
   );
 
   setUp(() {
@@ -113,14 +116,14 @@ void main() {
       tester,
     ) async {
       await pumpCard(tester, e.value.row);
-      expect(band(e.value.tone), findsOneWidget);
+      expect(circle(e.value.tone), findsOneWidget);
       for (final other in states.entries.where((o) => o.key != e.key)) {
         if (other.value.tone != e.value.tone) {
-          expect(band(other.value.tone), findsNothing);
+          expect(circle(other.value.tone), findsNothing);
         }
       }
       expect(find.text('Thing'), findsOneWidget);
-      expect(find.textContaining('#${e.value.row.id} · '), findsOneWidget);
+      expect(find.text('#${e.value.row.id}'), findsOneWidget);
       expect(find.text(e.value.chip), findsWidgets);
       expect(find.text('Laptop request'), findsOneWidget);
       await expectLater(
@@ -199,6 +202,79 @@ void main() {
     await pumpCard(tester, states['pending']!.row, settleMs: 3000);
     expect(rig.asked, contains('record.actions'));
     expect(find.byIcon(Icons.more_horiz), findsOneWidget);
+  });
+
+  group('the new card', () {
+    testWidgets('the name sits between the title and the subtitle', (
+      tester,
+    ) async {
+      await pumpCard(tester, states['assigned']!.row);
+      final title = tester.getTopLeft(find.text('Thing')).dy;
+      final name = tester.getTopLeft(find.text('ben')).dy;
+      final sub = tester.getTopLeft(find.text('#5')).dy;
+      expect(title, lessThan(name));
+      expect(name, lessThan(sub));
+    });
+
+    testWidgets('no inner scrolling and no coloured band', (tester) async {
+      await pumpCard(tester, states['pending']!.row);
+      expect(
+        find.descendant(
+          of: find.byType(InboxCard),
+          matching: find.byType(Scrollable),
+        ),
+        findsNothing,
+      );
+      // The status strip is the one coloured band, across the bottom.
+      final bands = find.descendant(
+        of: find.byType(InboxCard),
+        matching: find.byWidgetPredicate(
+          (w) => w is ColoredBox && w.color != Colors.transparent,
+        ),
+      );
+      expect(bands, findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('inbox-status-strip')),
+          matching: bands,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the status circle says its state to a screen reader', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpCard(tester, states['completed']!.row);
+      expect(find.bySemanticsLabel(RegExp('Completed')), findsWidgets);
+      handle.dispose();
+    });
+
+    testWidgets('many rows: four show, Show more opens the rest, Show less '
+        'closes them', (tester) async {
+      final more = {for (var i = 1; i <= 9; i++) 'f$i': 'value $i'};
+      final row = rowOf(record(8, values: values(more: more)));
+      await pumpCard(tester, row);
+      expect(find.text('value 1'), findsOneWidget);
+      expect(find.text('value 9'), findsNothing);
+      expect(find.textContaining('Show more'), findsOneWidget);
+      await tester.tap(find.textContaining('Show more'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('value 9'), findsOneWidget);
+      expect(find.text('Show less'), findsOneWidget);
+      await tester.tap(find.text('Show less'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('value 9'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a few rows have no expand control', (tester) async {
+      await pumpCard(tester, states['pending']!.row);
+      expect(find.textContaining('Show more'), findsNothing);
+    });
   });
 
   for (final scale in [1.0, 1.5]) {

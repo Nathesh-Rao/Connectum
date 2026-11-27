@@ -1,41 +1,13 @@
 import 'package:connectum/core/debug/seed_tickets.dart';
-import 'package:connectum/core/routes/app_routes.dart';
 import 'package:connectum/core/widgets/app_state_view.dart';
 import 'package:connectum/data/models/record_state.dart';
 import 'package:connectum/data/models/ticket.dart';
 import 'package:connectum/data/records/record_commands.dart';
-import 'package:connectum/data/repositories/form_file_repository.dart';
-import 'package:connectum/data/repositories/ticket_repository.dart';
-import 'package:connectum/data/socket/connectivity_service.dart';
-import 'package:connectum/data/socket/socket_service.dart';
-import 'package:connectum/features/tickets/ticket_detail_binding.dart';
-import 'package:connectum/features/tickets/ticket_detail_view.dart';
 import 'package:connectum/features/tickets/tickets_texts.dart';
 import 'package:connectum/features/tickets/widgets/ticket_history_panel.dart';
 import 'package:connectum/features/tickets/widgets/ticket_history_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
-
-import '../support/fake_socket.dart';
-import 'ticket_fixtures.dart';
-
-Future<void> _settle() async {
-  for (var i = 0; i < 10; i++) {
-    await Future<void>.delayed(Duration.zero);
-  }
-}
-
-class _Connectivity extends ConnectivityService {
-  @override
-  // ignore: must_call_super
-  Future<void> onInit() async {
-    state.value = AppConnectivity.online;
-  }
-
-  @override
-  void attachSocket(Rx<SocketState> socketState) {}
-}
 
 final _now = DateTime.now().millisecondsSinceEpoch;
 
@@ -357,18 +329,15 @@ void main() {
       RecordHistory? history,
       AppViewState state = AppViewState.content,
       Future<void> Function()? onRefresh,
-      bool isInline = false,
     }) => MaterialApp(
       home: Scaffold(
-        body: SizedBox(
-          height: 400,
+        body: SingleChildScrollView(
           child: TicketHistoryPanel(
             history: history,
             state: state,
             ticket: _ticket,
             nameOf: (u) => u,
             onRefresh: onRefresh ?? () async {},
-            isInline: isInline,
           ),
         ),
       ),
@@ -401,9 +370,7 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('a live event fades in; scrolled down it waits', (
-      tester,
-    ) async {
+    testWidgets('a live event fades in', (tester) async {
       tester.view.physicalSize = const Size(420, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -416,8 +383,7 @@ void main() {
         home: Scaffold(
           body: ValueListenableBuilder(
             valueListenable: data,
-            builder: (_, h, _) => SizedBox(
-              height: 400,
+            builder: (_, h, _) => SingleChildScrollView(
               child: TicketHistoryPanel(
                 history: h,
                 state: AppViewState.content,
@@ -454,209 +420,6 @@ void main() {
       expect(fade.opacity.value, lessThan(1));
       await tester.pump(const Duration(milliseconds: 200));
       expect(fade.opacity.value, 1);
-
-      // Scrolled down: the list does not move.
-      final list = find
-          .descendant(
-            of: find.byType(CustomScrollView),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      await tester.drag(list, const Offset(0, -500));
-      await tester.pump();
-      final before = tester.state<ScrollableState>(list).position.pixels;
-      expect(before, greaterThan(100));
-      data.value = withNew(32);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(tester.state<ScrollableState>(list).position.pixels, before);
-      expect(find.text('event 32'), findsNothing);
-
-      // Back at the top it shows.
-      tester.state<ScrollableState>(list).position.jumpTo(0);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(find.text('event 32'), findsOneWidget);
-    });
-  });
-
-  group('the screen', () {
-    late FakeSocket socket;
-    late TicketRepository repo;
-
-    setUp(() {
-      Get.reset();
-      socket = FakeSocket()..goOnline();
-      repo = Get.put(
-        TicketRepository(socket, FakeStore(user: 'ana'), FakeConversations()),
-      );
-      Get.put<FormFileRepository>(FakeFiles());
-      Get.put<ConnectivityService>(_Connectivity());
-      socket.answers[RecordCmd.get] = {
-        'submission': {
-          'id': 24,
-          'tstruct': 'help_ticket',
-          'by': 'rhea',
-          'holder': 'ana',
-          'ts': 5,
-          'values': {'title': 'Printer is jammed', 'stage': 'Open'},
-        },
-      };
-      socket.answers[RecordCmd.actions] = fixtureData('record_actions');
-    });
-
-    tearDown(() {
-      repo.onClose();
-      Get.reset();
-    });
-
-    Future<void> open(
-      WidgetTester tester,
-      Size size, {
-      double scale = 1,
-    }) async {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1;
-      tester.platformDispatcher.textScaleFactorTestValue = scale;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: const ValueKey('shot'),
-          child: GetMaterialApp(
-            debugShowCheckedModeBanner: false,
-            initialRoute: AppRoutes.ticketOf(24),
-            getPages: [
-              GetPage(
-                name: AppRoutes.ticket,
-                page: () => const TicketDetailView(),
-                binding: TicketDetailBinding(),
-              ),
-            ],
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(_settle);
-      for (var i = 0; i < 4; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-    }
-
-    List<Map<String, dynamic>> many(int n) => [
-      _ev(1, 'created', by: 'rhea', minutes: n + 5),
-      for (var i = 2; i <= n; i++)
-        _ev(
-          i,
-          'status',
-          minutes: n + 5 - i,
-          extra: {
-            'fromStatus': 'Open',
-            'toStatus': 'In progress',
-            'remarks': i == n ? 'newest' : 'event $i',
-          },
-        ),
-    ];
-
-    for (final size in const [Size(360, 640), Size(320, 568)]) {
-      testWidgets('the page stays fixed and the list scrolls at $size', (
-        tester,
-      ) async {
-        socket.answers[RecordCmd.history] = _history(many(40));
-        await open(tester, size);
-        expect(tester.takeException(), isNull);
-        final panel = tester.widget<TicketHistoryPanel>(
-          find.byType(TicketHistoryPanel),
-        );
-        // The smallest phone leaves a tall top block too little room: the
-        // page scrolls as one there, and the next test covers it.
-        expect(panel.isInline, size.height < 600);
-        if (panel.isInline) {
-          expect(tester.takeException(), isNull);
-          return;
-        }
-        // One scrollable only: the list inside the panel.
-        expect(find.byType(CustomScrollView), findsOneWidget);
-        expect(
-          find.descendant(
-            of: find.byType(TicketHistoryPanel),
-            matching: find.byType(CustomScrollView),
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('newest'), findsOneWidget);
-        expect(find.text('40'), findsOneWidget);
-        final title = tester
-            .getTopLeft(find.text('Printer is jammed').first)
-            .dy;
-        await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
-        await tester.pump();
-        expect(
-          tester.getTopLeft(find.text('Printer is jammed').first).dy,
-          title,
-        );
-        expect(find.text('newest'), findsNothing);
-        expect(tester.takeException(), isNull);
-      });
-    }
-
-    testWidgets(
-      'a tall top block and 200% text turn the page into one scroll',
-      (tester) async {
-        socket.answers[RecordCmd.history] = _history(many(6));
-        await open(tester, const Size(320, 568), scale: 2);
-        expect(tester.takeException(), isNull);
-        // The panel sits below the top block, inside the one scroll view.
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -3000),
-        );
-        await tester.pump();
-        final panel = tester.widget<TicketHistoryPanel>(
-          find.byType(TicketHistoryPanel),
-        );
-        expect(panel.isInline, isTrue);
-        expect(find.byType(CustomScrollView), findsOneWidget);
-        expect(
-          find.ancestor(
-            of: find.byType(TicketHistoryPanel),
-            matching: find.byType(CustomScrollView),
-          ),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
-
-    Future<void> golden(WidgetTester tester, String name) => expectLater(
-      find.byKey(const ValueKey('shot')),
-      matchesGoldenFile('goldens/$name.png'),
-    );
-
-    testWidgets('golden: a short history', (tester) async {
-      socket.answers[RecordCmd.history] = _history(many(3));
-      await open(tester, const Size(390, 800));
-      await golden(tester, 'ticket_detail_short');
-    });
-
-    testWidgets('golden: a long history, scrolled to the top', (tester) async {
-      socket.answers[RecordCmd.history] = _history(many(40));
-      await open(tester, const Size(390, 800));
-      await golden(tester, 'ticket_detail_long');
-    });
-
-    testWidgets('golden: the single-scroll fallback', (tester) async {
-      socket.answers[RecordCmd.history] = _history(many(6));
-      await open(tester, const Size(360, 520));
-      await golden(tester, 'ticket_detail_fallback');
-    });
-
-    testWidgets('a short history and an empty one', (tester) async {
-      socket.answers[RecordCmd.history] = _history(many(2));
-      await open(tester, const Size(360, 640));
-      expect(find.text('2'), findsOneWidget);
-      expect(tester.takeException(), isNull);
     });
   });
 

@@ -87,21 +87,38 @@ void main() {
   };
 
   group('opening', () {
-    test(
-      'the Default View opens at start, even when another is the default',
-      () async {
-        final c = start([
-          sv('Mine', {'folder': 'completed'}),
-          sv('Default View', requestsView),
-        ], def: 'Mine');
-        await settle();
-        expect(c.filter.value.wheres, ['requests']);
-        expect(c.filter.value.sort, 'oldest');
-        expect(c.views.current.value, '');
-        expect(c.isViewChanged, isFalse);
-        expect(rig.argsOf('records.query').last['views'], isNotEmpty);
-      },
-    );
+    test('the view saved last (the server\'s default) opens at start, even '
+        'when a Default View exists', () async {
+      final c = start([
+        sv('Mine', {'folder': 'completed'}),
+        sv('Default View', requestsView),
+      ], def: 'Mine');
+      await settle();
+      expect(c.filter.value.wheres, ['completed']);
+      expect(c.views.current.value, 'Mine');
+      expect(c.isViewChanged, isFalse);
+    });
+
+    test('the Default View opens when no default is named', () async {
+      final c = start([
+        sv('Mine', {'folder': 'completed'}),
+        sv('Default View', requestsView),
+      ]);
+      await settle();
+      expect(c.filter.value.wheres, ['requests']);
+      expect(c.filter.value.sort, 'oldest');
+      expect(c.views.current.value, '');
+      expect(c.isViewChanged, isFalse);
+      expect(rig.argsOf('records.query').last['views'], isNotEmpty);
+    });
+
+    test('a default naming a view that is gone falls back to the Default '
+        'View', () async {
+      final c = start([sv('Default View', requestsView)], def: 'Gone');
+      await settle();
+      expect(c.filter.value.wheres, ['requests']);
+      expect(c.views.current.value, '');
+    });
 
     test('without a Default View the one named by default opens', () async {
       final c = start([
@@ -152,13 +169,87 @@ void main() {
         final before = rig.argsOf('records.query').length;
         expect(await c.openView('A'), isTrue);
         await settle();
-        expect(c.isApprovalsOpen.value, isFalse);
+        expect(c.isApprovalsOpen, isFalse);
         expect(c.views.current.value, 'A');
         expect(rig.argsOf('records.query').length, greaterThan(before));
         expect(rig.argsOf('records.query').last['offset'], 0);
         expect(c.filter.value.wheres, ['requests']);
       },
     );
+
+    test('Save view and Save as new view make the view the default; '
+        'Create view does not', () async {
+      final c = start([sv('A', requestsView)]);
+      await settle();
+      await c.openView('A');
+      await settle();
+      expect(await c.saveView(), '');
+      expect(rig.argsOf('inbox.views.save').last['default'], isTrue);
+      expect(server.defaultName, 'A');
+      expect(await c.saveAsNew('B'), '');
+      expect(rig.argsOf('inbox.views.save').last['default'], isTrue);
+      expect(server.defaultName, 'B');
+      expect(await c.createView('C'), '');
+      expect(
+        rig.argsOf('inbox.views.save').last.containsKey('default'),
+        isFalse,
+      );
+      expect(server.defaultName, 'B');
+    });
+
+    test('Save view on the Default View also makes it the default', () async {
+      final c = start([sv('Default View', requestsView)], def: 'Other');
+      await settle();
+      expect(await c.saveView(), '');
+      expect(rig.argsOf('inbox.views.save').last['default'], isTrue);
+      expect(server.defaultName, 'Default View');
+    });
+
+    test(
+      'an approvals key in a saved view is ignored and never written',
+      () async {
+        final c = start([
+          sv('A', {
+            ...requestsView,
+            'approvals': {'chip': 'rejected', 'side': 'team'},
+          }),
+        ], def: 'A');
+        await settle();
+        expect(c.filter.value.wheres, ['requests']);
+        expect(c.views.base.containsKey('approvals'), isFalse);
+        expect(c.isViewChanged, isFalse);
+        c.applyFilter(c.filter.value.copyWith(sort: 'desc'));
+        expect(await c.saveView(), '');
+        expect(rig.argsOf('inbox.views.save').last['view'], isA<Map>());
+        expect(
+          (rig.argsOf('inbox.views.save').last['view'] as Map).containsKey(
+            'approvals',
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test('the view that opens first lands under the Approvals tab a '
+        'notification opened', () async {
+      final r = InboxRig();
+      r.shell.approvalsRequest.value = true;
+      rig = r;
+      addTearDown(r.dispose);
+      r.routes['records.query'] = (_) => queryReply([record(1)]);
+      server = ViewServer(
+        r,
+        initial: [sv('A', requestsView)],
+        defaultName: 'A',
+      );
+      r.controller.onInit();
+      await settle();
+      final c = r.controller;
+      expect(c.isApprovalsOpen, isTrue);
+      expect(c.filter.value.wheres, ['requests']);
+      expect(c.views.current.value, 'A');
+      expect(c.approvals.primary.value.name, 'all');
+    });
 
     test('a view that was never saved is the plain list', () async {
       final c = start([sv('A', requestsView)]);

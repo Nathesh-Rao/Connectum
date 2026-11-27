@@ -361,7 +361,7 @@ class SeedSmartView {
       'submissions': [
         for (var i = 0; i < page.length; i++)
           // Leave requests are spread over a month (one every 5 hours, none
-          // on some days) so the Overview's bars and "last entry" show.
+          // on some days).
           for (final r in [page[i]])
             {
               'id': r['id'],

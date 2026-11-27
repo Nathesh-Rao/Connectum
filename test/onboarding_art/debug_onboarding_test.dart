@@ -197,7 +197,9 @@ void main() {
     await tester.pump(_step);
     expect(c.isBlueOnly.value, isTrue);
     expect(
-      tester.widgetList<OnboardingArt>(find.byType(OnboardingArt)).every((w) => w.blueOnly),
+      tester
+          .widgetList<OnboardingArt>(find.byType(OnboardingArt))
+          .every((w) => w.blueOnly),
       isTrue,
     );
 
@@ -233,14 +235,18 @@ void main() {
     // full width crop is the default; the switch shows the original viewBox
     expect(c.isCropped.value, isTrue);
     expect(
-      tester.widgetList<OnboardingArt>(find.byType(OnboardingArt)).every((w) => w.window == OnboardingArtWindow.crop),
+      tester
+          .widgetList<OnboardingArt>(find.byType(OnboardingArt))
+          .every((w) => w.window == OnboardingArtWindow.crop),
       isTrue,
     );
     await tester.tap(find.byType(Switch).last);
     await tester.pump(_step);
     expect(c.isCropped.value, isFalse);
     expect(
-      tester.widgetList<OnboardingArt>(find.byType(OnboardingArt)).every((w) => w.window == OnboardingArtWindow.original),
+      tester
+          .widgetList<OnboardingArt>(find.byType(OnboardingArt))
+          .every((w) => w.window == OnboardingArtWindow.original),
       isTrue,
     );
     expect(find.text('Original viewBox'), findsOneWidget);

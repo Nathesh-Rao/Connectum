@@ -26,7 +26,10 @@ class ConnectivityService extends GetxService {
     } catch (e, st) {
       AppLog.e('connectivity_service', e, st, 'initial check');
     }
-    _subscription = connectivity.onConnectivityChanged.listen(_apply, onError: streamOnError('connectivity_service'));
+    _subscription = connectivity.onConnectivityChanged.listen(
+      _apply,
+      onError: streamOnError('connectivity_service'),
+    );
     ever(hasNetwork, (_) => _recompute());
     ever(simulateOffline, (_) => _recompute());
   }
@@ -39,6 +42,7 @@ class ConnectivityService extends GetxService {
 
   void _apply(List<ConnectivityResult> results) {
     hasNetwork.value = results.any((r) => r != ConnectivityResult.none);
+    AppLog.i('connectivity', 'network=${hasNetwork.value}');
   }
 
   void _recompute() {

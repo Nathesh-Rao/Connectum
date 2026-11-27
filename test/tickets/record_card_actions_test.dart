@@ -10,6 +10,7 @@ import 'package:connectum/core/widgets/app_form_card.dart';
 import 'package:connectum/features/tickets/models/card_menu.dart';
 import 'package:connectum/features/tickets/widgets/record_card_actions.dart';
 import 'package:flutter/material.dart';
+import 'package:connectum/data/socket/read_gate.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_socket.dart';
@@ -265,11 +266,10 @@ void main() {
         final inWindow = all
             .where(
               (x) =>
-                  !x.isBefore(all[i]) &&
-                  x.difference(all[i]) < RecordActionsQueue.window,
+                  !x.isBefore(all[i]) && x.difference(all[i]) < ReadGate.window,
             )
             .length;
-        expect(inWindow, lessThanOrEqualTo(RecordActionsQueue.budget));
+        expect(inWindow, lessThanOrEqualTo(ReadGate.budget));
       }
       for (var i = 1; i < all.length; i++) {
         expect(

@@ -22,45 +22,84 @@ JoinPage _page({
 
 void main() {
   group('which steps show', () {
-    test('categories and affiliates: type, category, affiliate, review', () {
-      expect(JoinFlow(page: _page()).steps, [
+    test('before a kind is chosen the web counts four steps', () {
+      final f = JoinFlow(page: _page());
+      expect(f.steps, [JoinStep.type]);
+      expect(f.total, 4);
+    });
+
+    test('associate with categories and affiliates', () {
+      expect(JoinFlow(page: _page()).chooseAssociate().steps, [
         JoinStep.type,
         JoinStep.category,
         JoinStep.affiliate,
+        JoinStep.details,
         JoinStep.review,
       ]);
     });
 
     test('no affiliates: the affiliate step is left out', () {
-      final f = JoinFlow(page: _page(affiliates: const []));
-      expect(f.steps, [JoinStep.type, JoinStep.category, JoinStep.review]);
-      expect(f.total, 3);
+      final f = JoinFlow(page: _page(affiliates: const [])).chooseAssociate();
+      expect(f.steps, [
+        JoinStep.type,
+        JoinStep.category,
+        JoinStep.details,
+        JoinStep.review,
+      ]);
+      expect(f.total, 4);
     });
 
-    test('no categories: type, affiliate, review', () {
-      final f = JoinFlow(page: _page(categories: const []));
-      expect(f.steps, [JoinStep.type, JoinStep.affiliate, JoinStep.review]);
+    test('no categories: type, affiliate, details, review', () {
+      final f = JoinFlow(page: _page(categories: const [])).chooseAssociate();
+      expect(f.steps, [
+        JoinStep.type,
+        JoinStep.affiliate,
+        JoinStep.details,
+        JoinStep.review,
+      ]);
+    });
+
+    test('employee: type, employee, details, review', () {
+      expect(JoinFlow(page: _page()).chooseEmployee().steps, [
+        JoinStep.type,
+        JoinStep.employee,
+        JoinStep.details,
+        JoinStep.review,
+      ]);
+      expect(JoinFlow(page: _page()).chooseEmployee().step, JoinStep.employee);
     });
 
     test('the Associate card shows only when there is a choice', () {
-      expect(JoinFlow(page: _page()).isOpen, isTrue);
-      expect(JoinFlow(page: _page(affiliates: const [])).isOpen, isTrue);
-      expect(JoinFlow(page: _page(categories: const [])).isOpen, isTrue);
+      expect(JoinFlow(page: _page()).isAssociateOffered, isTrue);
+      expect(
+        JoinFlow(page: _page(affiliates: const [])).isAssociateOffered,
+        isTrue,
+      );
+      expect(
+        JoinFlow(page: _page(categories: const [])).isAssociateOffered,
+        isTrue,
+      );
       expect(
         JoinFlow(
           page: _page(categories: const [], affiliates: const []),
-        ).isOpen,
+        ).isAssociateOffered,
         isFalse,
       );
     });
 
-    test('the Associate card goes to category, or to affiliate without one', () {
-      expect(JoinFlow(page: _page()).chooseAssociate().step, JoinStep.category);
-      expect(
-        JoinFlow(page: _page(categories: const [])).chooseAssociate().step,
-        JoinStep.affiliate,
-      );
-    });
+    test(
+      'the Associate card goes to category, or to affiliate without one',
+      () {
+        expect(
+          JoinFlow(page: _page()).chooseAssociate().step,
+          JoinStep.category,
+        );
+        expect(
+          JoinFlow(page: _page(categories: const [])).chooseAssociate().step,
+          JoinStep.affiliate,
+        );
+      },
+    );
 
     test('back from the first step stays on it (the view leaves)', () {
       final f = JoinFlow(page: _page());
@@ -77,7 +116,10 @@ void main() {
       expect(at(JoinStep.category).problems(), {
         'category': 'Choose what describes you.',
       });
-      expect(at(JoinStep.category).pickCategory('Customer').problems(), isEmpty);
+      expect(
+        at(JoinStep.category).pickCategory('Customer').problems(),
+        isEmpty,
+      );
     });
 
     test('with categories an affiliate is optional (an individual)', () {
@@ -133,10 +175,9 @@ void main() {
     });
 
     test('category, affiliate with several branches: the branch goes too', () {
-      final f = at(JoinStep.review)
-          .pickCategory('Customer')
-          .pickAffiliate('Twin')
-          .pickBranch('North');
+      final f = at(
+        JoinStep.review,
+      ).pickCategory('Customer').pickAffiliate('Twin').pickBranch('North');
       expect(f.joinBody(), {
         'isEmployee': false,
         'category': 'Customer',
@@ -146,18 +187,23 @@ void main() {
     });
 
     test('a branch of a single-branch affiliate is not sent', () {
-      final f = at(JoinStep.review).pickCategory('Customer').pickAffiliate('Solo');
+      final f = at(
+        JoinStep.review,
+      ).pickCategory('Customer').pickAffiliate('Solo');
       expect(f.joinBody().containsKey('affiliateBranch'), isFalse);
     });
 
-    test('affiliate only (organisation with no categories): no category key', () {
-      final f = JoinFlow(
-        page: _page(categories: const []),
-        step: JoinStep.review,
-      ).pickAffiliate('Acme');
-      expect(f.joinBody(), {'isEmployee': false, 'affiliate': 'Acme'});
-      expect(f.effectiveCategory, 'Vendor');
-    });
+    test(
+      'affiliate only (organisation with no categories): no category key',
+      () {
+        final f = JoinFlow(
+          page: _page(categories: const []),
+          step: JoinStep.review,
+        ).pickAffiliate('Acme');
+        expect(f.joinBody(), {'isEmployee': false, 'affiliate': 'Acme'});
+        expect(f.effectiveCategory, 'Vendor');
+      },
+    );
 
     test('the old path (categories only, no affiliates): as before', () {
       final f = JoinFlow(
@@ -167,45 +213,31 @@ void main() {
       expect(f.joinBody(), {'isEmployee': false, 'category': 'Vendor'});
     });
 
-    test('the category step checks category; the affiliate step the web body', () {
-      expect(
-        at(JoinStep.category).pickCategory('Vendor').checkBody(),
-        {'isEmployee': false, 'category': 'Vendor'},
-      );
-      expect(at(JoinStep.affiliate).checkBody(), {'isEmployee': false});
-      expect(
-        at(JoinStep.affiliate)
-            .pickCategory('Vendor')
-            .pickAffiliate('Twin')
-            .pickBranch('South')
-            .checkBody(),
-        {
+    test(
+      'the category step checks category; the affiliate step the web body',
+      () {
+        expect(at(JoinStep.category).pickCategory('Vendor').checkBody(), {
           'isEmployee': false,
           'category': 'Vendor',
-          'affiliate': 'Twin',
-          'affiliateBranch': 'South',
-        },
-      );
-      expect(at(JoinStep.type).checkBody(), isNull);
-      expect(at(JoinStep.review).checkBody(), isNull);
-    });
-  });
-
-  group('details the app cannot collect', () {
-    test('required fields of the chosen category (or the affiliate\'s)', () {
-      final f = JoinFlow(
-        page: _page(required: const {'Vendor': ['address']}),
-      );
-      expect(f.pickCategory('Customer').unsupportedFields, isEmpty);
-      expect(f.pickCategory('Vendor').unsupportedFields, ['address']);
-      final g = JoinFlow(
-        page: _page(
-          categories: const [],
-          required: const {'Vendor': ['dob']},
-        ),
-      ).pickAffiliate('Acme');
-      expect(g.unsupportedFields, ['dob']);
-    });
+        });
+        expect(at(JoinStep.affiliate).checkBody(), {'isEmployee': false});
+        expect(
+          at(JoinStep.affiliate)
+              .pickCategory('Vendor')
+              .pickAffiliate('Twin')
+              .pickBranch('South')
+              .checkBody(),
+          {
+            'isEmployee': false,
+            'category': 'Vendor',
+            'affiliate': 'Twin',
+            'affiliateBranch': 'South',
+          },
+        );
+        expect(at(JoinStep.type).checkBody(), isNull);
+        expect(at(JoinStep.review).checkBody(), isNull);
+      },
+    );
   });
 
   group('JoinPage.fromJson', () {

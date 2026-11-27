@@ -42,11 +42,14 @@ Future<void> openAi(BuildContext context, AiSummaryController c) async {
     if (setup == null || !isOpen || !context.mounted) return;
     isOpen = false;
     Navigator.of(context).pop();
-    fireAndLog('ai_entry', () => AiNoticeDialog.show(
+    fireAndLog(
+      'ai_entry',
+      () => AiNoticeDialog.show(
         context,
         title: AiTexts.setupTitle,
         text: c.setupText,
-      ));
+      ),
+    );
   });
   final sheet = AppBottomSheet.show<void>(
     context,

@@ -90,10 +90,7 @@ class _SvMediaViewerState extends State<SvMediaViewer> {
                       color: AppColors.primary,
                     ),
                   if (s.isReady && !s.isBuffering && !_isAudio)
-                    _PlayButton(
-                      isPlaying: s.isPlaying,
-                      onTap: _player.toggle,
-                    ),
+                    _PlayButton(isPlaying: s.isPlaying, onTap: _player.toggle),
                 ],
               ),
             ),
@@ -308,10 +305,7 @@ class _Transport extends StatelessWidget {
                 ],
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Text(
-                    '${state.speed}×',
-                    style: AppText.readableStrong,
-                  ),
+                  child: Text('${state.speed}×', style: AppText.readableStrong),
                 ),
               ),
             ],

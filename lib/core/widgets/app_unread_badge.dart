@@ -13,6 +13,7 @@ class AppUnreadBadge extends StatelessWidget {
     required this.label,
     this.isMuted = false,
     this.color = AppColors.primary,
+    this.textStyle = AppText.caption,
   });
 
   /// The text to show: a number, or "99+" past the cap.
@@ -23,6 +24,9 @@ class AppUnreadBadge extends StatelessWidget {
 
   /// The fill when not muted.
   final Color color;
+
+  /// The count's style; the chat's badges pass [AppText.chatUnread].
+  final TextStyle textStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -43,17 +47,22 @@ class AppUnreadBadge extends StatelessWidget {
             minHeight: AppSpacing.unreadBadge,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 5),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isMuted ? AppColors.noDot : color,
             borderRadius: BorderRadius.circular(AppSpacing.unreadBadge),
           ),
-          child: Text(
-            label,
-            style: AppText.caption.copyWith(
-              color: AppColors.white,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              label,
+              style: textStyle == AppText.caption
+                  ? textStyle.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    )
+                  : textStyle,
             ),
           ),
         ),

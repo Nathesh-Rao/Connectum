@@ -5,7 +5,7 @@ import 'package:connectum/data/repositories/ticket_repository.dart';
 import 'package:connectum/data/socket/connectivity_service.dart';
 import 'package:connectum/data/socket/socket_service.dart';
 import 'package:connectum/features/tickets/ticket_detail_binding.dart';
-import 'package:connectum/features/tickets/ticket_detail_view.dart';
+import 'package:connectum/features/tickets/record_detail_view.dart';
 import 'package:connectum/features/tickets/tickets_controller.dart';
 import 'package:connectum/features/tickets/widgets/tickets_pane.dart';
 import 'package:flutter/material.dart';
@@ -112,7 +112,7 @@ void main() {
           ),
           GetPage(
             name: AppRoutes.ticket,
-            page: () => const TicketDetailView(),
+            page: () => const RecordDetailView(),
             binding: TicketDetailBinding(),
           ),
         ],
@@ -131,7 +131,7 @@ void main() {
     await tester.runAsync(_settle);
     await tester.pump(const Duration(milliseconds: 600));
     expect(Get.currentRoute, AppRoutes.ticketOf(24));
-    expect(find.text('Ticket'), findsWidgets);
+    expect(find.text('Ticket #24'), findsOneWidget);
     expect(find.text('Update status'), findsOneWidget);
     expect(find.text('Send'), findsOneWidget);
     expect(find.text('History'), findsOneWidget);

@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../core/routes/app_routes.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
 import '../../core/utils/app_settings.dart';
 import '../../core/widgets/app_pill_bar.dart';
 import '../../core/widgets/app_notices.dart';
@@ -18,6 +22,7 @@ import 'notification_router.dart';
 import 'notification_texts.dart';
 import 'widgets/notifications_more_menu.dart';
 import '../../core/log/safe.dart';
+import 'notifications_tour.dart';
 
 class NotificationsController extends GetxController {
   NotificationsController({
@@ -26,6 +31,7 @@ class NotificationsController extends GetxController {
     required this.notifications,
     required this.connectivity,
     required this.conversations,
+    this.tour,
   });
 
   final FeedRepository feed;
@@ -33,6 +39,9 @@ class NotificationsController extends GetxController {
   final LocalNotificationService notifications;
   final ConnectivityService connectivity;
   final ConversationRepository conversations;
+
+  /// The first-run tour; null where tours are not set up.
+  final NotificationsTour? tour;
 
   /// The chips, in order: the priority each one asks the server for.
   static const priorities = ['all', 'high', 'medium', 'low', 'resolved'];
@@ -104,9 +113,44 @@ class NotificationsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (tour != null) {
+      ever(feed.isLoading, (_) => _trigger?.schedule());
+      ever(feed.hasError, (_) => _trigger?.schedule());
+      ever(isFilterLoading, (_) => _trigger?.schedule());
+      ever(feed.items, (_) => _trigger?.schedule());
+    }
     if (feed.items.isEmpty) {
       fireAndLog('notifications_controller', () => feed.refresh());
     }
+  }
+
+  // ---- first-run tour ----------------------------------------------------------
+
+  TourTrigger? _trigger;
+
+  /// The screen was opened (the controller outlives it): a fresh try of the
+  /// tour, so a tour that had to wait gets its turn on the next visit.
+  void onScreenOpened() {
+    if (tour == null) return;
+    _trigger?.dispose();
+    _trigger = TourTrigger(canTry: _canTryTour, start: _startTour)..schedule();
+  }
+
+  bool _canTryTour() {
+    final state = viewState;
+    return tour != null &&
+        !isClosed &&
+        Get.currentRoute == AppRoutes.notifications &&
+        !isFilterLoading.value &&
+        (state == AppViewState.content || state == AppViewState.empty);
+  }
+
+  Future<TourStart> _startTour() async {
+    final tour = this.tour;
+    if (tour == null || isClosed) return TourStart.failed;
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    return tour.start();
   }
 
   Future<void> retry() async {
@@ -168,7 +212,8 @@ class NotificationsController extends GetxController {
   /// shows its detail.
   Future<void> open(FeedItem item) async {
     final destination = NotificationRouter.resolve(item);
-    if (!item.isRead) fireAndLog('notifications_controller', () => setRead(item, isRead: true));
+    if (!item.isRead)
+      fireAndLog('notifications_controller', () => setRead(item, isRead: true));
     if (destination.kind == DestinationKind.none) {
       router.showDetail(item);
     } else {
@@ -189,9 +234,18 @@ class NotificationsController extends GetxController {
       !notifications.shouldNotifyGroups.value,
     ),
     NotificationsMenuItem.unreadOnly => setUnreadOnly(!isUnreadOnly.value),
-    NotificationsMenuItem.markAllRead => fireAndLog('notifications_controller', () => markAllRead()),
-    NotificationsMenuItem.markAllResolved => fireAndLog('notifications_controller', () => resolveAll()),
-    NotificationsMenuItem.clearResolved => fireAndLog('notifications_controller', () => clearResolved()),
+    NotificationsMenuItem.markAllRead => fireAndLog(
+      'notifications_controller',
+      () => markAllRead(),
+    ),
+    NotificationsMenuItem.markAllResolved => fireAndLog(
+      'notifications_controller',
+      () => resolveAll(),
+    ),
+    NotificationsMenuItem.clearResolved => fireAndLog(
+      'notifications_controller',
+      () => clearResolved(),
+    ),
   };
 
   Future<void> markAllRead() => _actions.run(feed.markAllRead);
@@ -200,8 +254,10 @@ class NotificationsController extends GetxController {
 
   Future<void> clearResolved() => _actions.run(feed.clearResolved);
 
-  void setNotifyGroups(bool value) =>
-      fireAndLog('notifications_controller', () => notifications.setNotifyGroups(value));
+  void setNotifyGroups(bool value) => fireAndLog(
+    'notifications_controller',
+    () => notifications.setNotifyGroups(value),
+  );
 
   Future<void> onPermissionAction() async {
     if (notifications.wasAsked.value) {

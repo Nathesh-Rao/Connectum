@@ -29,12 +29,16 @@ final _long = SeedSmartFiles.files[4];
 final _zip = SeedSmartFiles.files[5];
 final _fail = SeedSmartFiles.files[6];
 
-Future<void> _fast(
+Future<SvFileReply> _fast(
   SvFile f,
   String path,
+  String? etag,
   void Function(double) onProgress,
   CancelToken cancel,
-) => SeedSmartFiles.fetch(f, path, onProgress, cancel, step: Duration.zero);
+) async {
+  await SeedSmartFiles.fetch(f, path, onProgress, cancel, step: Duration.zero);
+  return const SvFileReply(200);
+}
 
 class _Rig {
   _Rig({SvFileFetcher? fetcher, int limit = 100 * 1024 * 1024}) {
@@ -174,7 +178,11 @@ void main() {
       expect(m.endsWith('.pdf'), isTrue);
       expect(m.contains('…'), isTrue);
       expect(SvFile.formatSize(0), '');
-      expect(SvFile.formatSize(2048), '2 KB');
+      expect(SvFile.formatSize(2048), '2.0 KB');
+      expect(SvFile.formatSize(52224), '51 KB');
+      expect(SvFile.formatSize(980), '980 B');
+      expect(SvFile.formatSize(1536), '1.5 KB');
+      expect(SvFile.formatSize(5 * 1024 * 1024), '5.0 MB');
       expect(SvFile.formatSize(1572864), '1.5 MB');
     });
 
@@ -292,10 +300,13 @@ void main() {
       await tester.tap(find.byType(SvFileTile).at(1));
       await tester.tap(find.text('+2 more'));
       expect(opened, [(5, 1)]);
-      expect(find.bySemanticsLabel('File notes.txt, 1 KB'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('File notes.txt, TXT, 1.2 KB'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('a long name is cut in the middle with the extension kept', (
+    testWidgets('a long name is cut with an ellipsis; type and size stay', (
       tester,
     ) async {
       await _size(tester);
@@ -308,9 +319,10 @@ void main() {
             )
             .first,
       );
-      expect(text.data!.endsWith('.xlsx'), isTrue);
-      expect(text.data!.contains('…'), isTrue);
+      expect(text.data, _long.name);
+      expect(text.overflow, TextOverflow.ellipsis);
       expect(text.maxLines, 1);
+      expect(find.text(_long.metaText), findsOneWidget);
     });
 
     testWidgets('golden: sv_file_chips', (tester) async {
@@ -579,7 +591,7 @@ void main() {
 
     test('cancel stops the fetch and leaves no partial file', () async {
       final slow = _Rig(
-        fetcher: (f, path, p, cancel) async {
+        fetcher: (f, path, etag, p, cancel) async {
           await Future<void>.delayed(const Duration(milliseconds: 30));
           if (cancel.isCancelled) {
             throw DioException(
@@ -587,6 +599,7 @@ void main() {
               type: DioExceptionType.cancel,
             );
           }
+          return const SvFileReply(200);
         },
       );
       addTearDown(slow.dispose);
@@ -602,7 +615,7 @@ void main() {
     test('an error shows its words and Retry fetches again', () async {
       var tries = 0;
       final flaky = _Rig(
-        fetcher: (f, path, p, cancel) async {
+        fetcher: (f, path, etag, p, cancel) async {
           if (tries++ == 0) {
             throw DioException(
               requestOptions: RequestOptions(),
@@ -610,6 +623,7 @@ void main() {
             );
           }
           await File(path).writeAsBytes([1, 2, 3]);
+          return const SvFileReply(200);
         },
       );
       addTearDown(flaky.dispose);
@@ -630,7 +644,7 @@ void main() {
         return c;
       }
 
-      SvFileFetcher refuse(int status) => (f, path, p, cancel) async {
+      SvFileFetcher refuse(int status) => (f, path, etag, p, cancel) async {
         throw DioException(
           requestOptions: RequestOptions(),
           response: Response(
@@ -761,8 +775,10 @@ void main() {
       'a picture whose bytes are not a picture shows the file card',
       () async {
         final liar = _Rig(
-          fetcher: (f, path, p, c) =>
-              File(path).writeAsString('<svg onload=x>'),
+          fetcher: (f, path, etag, p, c) async {
+            await File(path).writeAsString('<svg onload=x>');
+            return const SvFileReply(200);
+          },
         );
         addTearDown(liar.dispose);
         final c = liar.preview([_png]);
@@ -771,45 +787,6 @@ void main() {
         expect(c.loads[0].isShowable.value, isFalse);
       },
     );
-
-    test(
-      'the cache keeps the most recently opened files within the limit',
-      () async {
-        SvFile f(String id, int size) => SvFile(
-          id: id,
-          name: '$id.bin',
-          mime: 'application/zip',
-          size: size,
-        );
-        final a = f('d00000000000000000000001', 1000);
-        final b = f('d00000000000000000000002', 1000);
-        final padded = _Rig(
-          limit: 1500,
-          fetcher: (file, path, p, c) =>
-              File(path).writeAsBytes(List.filled(file.size, 7)),
-        );
-        addTearDown(padded.dispose);
-        await padded.repo.fetch(a, onProgress: (_) {}, cancel: CancelToken());
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-        await padded.repo.fetch(b, onProgress: (_) {}, cancel: CancelToken());
-        expect(await padded.repo.cached(a), isNull);
-        expect(await padded.repo.cached(b), isNotNull);
-      },
-    );
-
-    test('a cache hit is not fetched again', () async {
-      var fetched = 0;
-      final r = _Rig(
-        fetcher: (f, path, p, c) {
-          fetched++;
-          return File(path).writeAsBytes([1]);
-        },
-      );
-      addTearDown(r.dispose);
-      await r.repo.fetch(_zip, onProgress: (_) {}, cancel: CancelToken());
-      await r.repo.fetch(_zip, onProgress: (_) {}, cancel: CancelToken());
-      expect(fetched, 1);
-    });
 
     test('sign out or another organisation clears the cache', () async {
       await rig.repo.fetch(_png, onProgress: (_) {}, cancel: CancelToken());

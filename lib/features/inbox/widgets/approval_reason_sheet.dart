@@ -26,17 +26,31 @@ class ApprovalReasonSheet extends StatelessWidget {
     InboxApprovals controller,
     Approval request,
     ApprovalAction action,
+  ) => showFor(
+    context,
+    request,
+    action,
+    (reason, note, allowResubmit) => controller.respond(
+      request,
+      action,
+      reason: reason,
+      comment: note,
+      allowResubmit: allowResubmit,
+    ),
+  );
+
+  /// The sheet for any sender of the answer (the record screen too).
+  static Future<void> showFor(
+    BuildContext context,
+    Approval request,
+    ApprovalAction action,
+    Future<bool> Function(String reason, String note, bool allowResubmit)
+    onSend,
   ) {
     final form = ApprovalReasonController(
       request: request,
       action: action,
-      onSend: (reason, note, allowResubmit) => controller.respond(
-        request,
-        action,
-        reason: reason,
-        comment: note,
-        allowResubmit: allowResubmit,
-      ),
+      onSend: onSend,
     );
     return AppBottomSheet.show<void>(
       context,

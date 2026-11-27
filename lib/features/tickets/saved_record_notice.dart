@@ -22,7 +22,10 @@ class SavedRecordNotice extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _sub = _submissions.saved.listen((r) => fireAndLog('saved_record_notice', () => handle(r)), onError: streamOnError('saved_record_notice'));
+    _sub = _submissions.saved.listen(
+      (r) => fireAndLog('saved_record_notice', () => handle(r)),
+      onError: streamOnError('saved_record_notice'),
+    );
   }
 
   @override

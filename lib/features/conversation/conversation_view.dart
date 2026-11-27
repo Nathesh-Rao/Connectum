@@ -14,15 +14,21 @@ import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_skeleton.dart';
 import '../../core/widgets/app_state_image.dart';
+import '../../core/widgets/message_selection/selectable_row.dart';
+import '../../core/widgets/message_selection/selection_app_bar.dart';
+import '../../core/widgets/message_selection/swipe_to_reply.dart';
+import 'conversation_tour.dart';
 import 'conversation_controller.dart';
 import 'models/chat_item.dart';
 import '../tickets/widgets/record_card_actions.dart';
 import '../tickets/widgets/ticket_action_sheet.dart';
 import 'widgets/attachment_view.dart';
+import '../../data/models/message.dart';
 import 'widgets/chat_rows.dart';
 import 'widgets/conversation_composer.dart';
+import 'widgets/conversation_sample_row.dart';
 import 'widgets/conversation_header.dart';
-import 'widgets/message_actions_sheet.dart';
+import 'widgets/conversation_selection.dart';
 import 'widgets/device_limit_banner.dart';
 import 'widgets/key_change_sheet.dart';
 import 'widgets/message_bubble.dart';
@@ -56,62 +62,110 @@ class ConversationView extends GetView<ConversationController> {
         // A home reload takes this screen down first, then closes its
         // controller: nothing below may be mounted by then.
         if (c.isRetired.value) return const SizedBox.shrink();
-        return Column(
-          children: [
-            Obx(() {
-              // The sample data has no Rx behind the title; the loaded flag
-              // keeps this Obx observing something.
-              final isReady = c.isLoaded.value;
-              final conv = c.avatarConversation;
-              return ConversationHeader(
-                title: c.title,
-                status: isReady ? c.status : null,
-                avatar: conversationAvatarFor(conv, presence: c.presenceDot),
-                isEncrypted: c.isLocked.value || c.isBlocked.value,
-                onInfoTap: () => Get.toNamed(
-                  AppRoutes.chatInfoOf(c.conversationId),
-                  arguments: c.isLocked.value || c.isBlocked.value,
+        return PopScope(
+          canPop: !c.selection.isActive && !c.isTourActive,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (c.isTourActive) {
+              c.cancelTour();
+            } else {
+              c.selection.clear();
+            }
+          },
+          child: Column(
+            children: [
+              SelectionHeaderSwitcher(
+                isSelecting:
+                    c.selection.isActive ||
+                    (c.tour?.demo.selection.isActive ?? false),
+                selectionBar: KeyedSubtree(
+                  key: c.tour?.selectionBarKey,
+                  child: _selectionBar(c),
                 ),
-                onBack: Get.back,
-                trailing: [
-                  if (c.canUseAi)
-                    AiHeaderButton(onPressed: () => openAi(context, c.ai)),
-                ],
-              );
-            }),
-            const AppOfflineBar(),
-            Obx(
-              () => c.isDeviceLimit.value
-                  ? DeviceLimitBanner(onTap: c.openDeviceLimit)
-                  : const SizedBox.shrink(),
-            ),
-            Expanded(child: _MessageArea(controller: c)),
-            Obx(() {
-              final label = c.typingLabel;
-              return AnimatedSize(
-                duration: AppDurations.fast,
-                curve: AppCurves.out,
-                alignment: Alignment.topLeft,
-                child: label == null
-                    ? const SizedBox(width: double.infinity)
-                    : Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.xs,
-                          AppSpacing.lg,
-                          AppSpacing.xs,
-                        ),
-                        child: TypingDots(label: label),
+                header: KeyedSubtree(
+                  key: c.tour?.headerKey,
+                  child: Obx(() {
+                    // The sample data has no Rx behind the title; the loaded flag
+                    // keeps this Obx observing something.
+                    final isReady = c.isLoaded.value;
+                    final conv = c.avatarConversation;
+                    return ConversationHeader(
+                      title: c.title,
+                      status: isReady ? c.status : null,
+                      avatar: conversationAvatarFor(
+                        conv,
+                        presence: c.presenceDot,
                       ),
-              );
-            }),
-            ConversationComposer(controller: c),
-          ],
+                      isEncrypted: c.isLocked.value || c.isBlocked.value,
+                      onInfoTap: () => Get.toNamed(
+                        AppRoutes.chatInfoOf(c.conversationId),
+                        arguments: c.isLocked.value || c.isBlocked.value,
+                      ),
+                      onBack: Get.back,
+                      trailing: [
+                        if (c.canUseAi)
+                          AiHeaderButton(
+                            onPressed: () => openAi(context, c.ai),
+                          ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+              const AppOfflineBar(),
+              Obx(
+                () => c.isDeviceLimit.value
+                    ? DeviceLimitBanner(onTap: c.openDeviceLimit)
+                    : const SizedBox.shrink(),
+              ),
+              Expanded(
+                child: KeyedSubtree(
+                  key: c.tour?.areaKey,
+                  child: _MessageArea(controller: c),
+                ),
+              ),
+              Obx(() {
+                final label = c.typingLabel;
+                return AnimatedSize(
+                  duration: AppDurations.fast,
+                  curve: AppCurves.out,
+                  alignment: Alignment.topLeft,
+                  child: label == null
+                      ? const SizedBox(width: double.infinity)
+                      : Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.xs,
+                            AppSpacing.lg,
+                            AppSpacing.xs,
+                          ),
+                          child: TypingDots(label: label),
+                        ),
+                );
+              }),
+              KeyedSubtree(
+                key: c.tour?.composerKey,
+                child: ConversationComposer(controller: c),
+              ),
+            ],
+          ),
         );
       }),
     );
   }
 }
+
+/// The selection bar: the chat's own, or the sample's while the tour shows
+/// sample messages.
+Widget _selectionBar(ConversationController c) => Obx(() {
+  final demo = c.tour?.demo;
+  final isSample = demo != null && demo.isOn.value;
+  final bar = ConversationSelectionBar(
+    controller: c,
+    sample: isSample ? demo : null,
+  );
+  return isSample ? IgnorePointer(child: bar) : bar;
+});
 
 class _MessageArea extends StatelessWidget {
   const _MessageArea({required this.controller});
@@ -128,7 +182,20 @@ class _MessageArea extends StatelessWidget {
             if (!c.isLoaded.value) return const _SkeletonBubbles();
             final items = c.items;
             final uploads = c.uploads;
-            if (items.isEmpty && uploads.isEmpty) {
+            final tour = c.tour;
+            final demo = tour?.demo;
+            final samples = demo != null && demo.isOn.value
+                ? demo.items
+                : const <ChatItem>[];
+            // The tour presses and holds one of my messages, and slides one
+            // that can be replied to.
+            final holdId = tour == null
+                ? null
+                : ConversationTour.holdMessage(items, c.targetOf)?.msgId;
+            final swipeId = tour == null
+                ? null
+                : ConversationTour.swipeMessage(items, c.targetOf)?.msgId;
+            if (items.isEmpty && uploads.isEmpty && samples.isEmpty) {
               return const _EmptyConversation();
             }
             return ListView.builder(
@@ -140,10 +207,31 @@ class _MessageArea extends StatelessWidget {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.sm,
               ),
-              itemCount: uploads.length + items.length,
+              itemCount: samples.length + uploads.length + items.length,
               itemBuilder: (context, index) {
+                if (index < samples.length) {
+                  return ConversationSampleRow(
+                    key: ValueKey(samples[index].message?.msgId),
+                    tour: tour!,
+                    item: samples[index],
+                    isDirect: c.isDirect,
+                  );
+                }
+                index -= samples.length;
                 if (index >= uploads.length) {
-                  return _row(context, c, items[index - uploads.length]);
+                  final item = items[index - uploads.length];
+                  final id = item.message?.msgId;
+                  return _row(
+                    context,
+                    c,
+                    item,
+                    tourKey: id != null && id == holdId
+                        ? tour?.messageKey
+                        : null,
+                    swipeKey: id != null && id == swipeId
+                        ? tour?.swipeKey
+                        : null,
+                  );
                 }
                 final upload = uploads[uploads.length - 1 - index];
                 return UploadBubble(
@@ -153,6 +241,17 @@ class _MessageArea extends StatelessWidget {
                   onCancel: () => c.cancelUpload(upload),
                 );
               },
+            );
+          }),
+        ),
+        Positioned.fill(
+          child: Obx(() {
+            final demo = c.tour?.demo;
+            final isSample = demo != null && demo.isOn.value;
+            return ConversationReactionOverlay(
+              controller: c,
+              barKey: c.tour?.reactionKey,
+              sample: isSample ? demo : null,
             );
           }),
         ),
@@ -171,9 +270,23 @@ class _MessageArea extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, ConversationController c, ChatItem item) {
+  Widget _row(
+    BuildContext context,
+    ConversationController c,
+    ChatItem item, {
+    GlobalKey? tourKey,
+    GlobalKey<SwipeToReplyState>? swipeKey,
+  }) {
     final child = switch (item.kind) {
-      ChatItemKind.message => _message(context, c, item),
+      ChatItemKind.message => SelectableRow(
+        selection: c.selection,
+        id: item.message?.msgId ?? '',
+        onSwipeReply: _swipeReplyOf(c, item.message),
+        swipeKey: swipeKey,
+        child: tourKey == null
+            ? _message(context, c, item)
+            : KeyedSubtree(key: tourKey, child: _message(context, c, item)),
+      ),
       ChatItemKind.day => DayDivider(label: item.label),
       ChatItemKind.unread => UnreadDivider(label: item.label),
       ChatItemKind.system => SystemRow(text: item.label),
@@ -186,6 +299,12 @@ class _MessageArea extends StatelessWidget {
       child: child,
     );
   }
+}
+
+/// The swipe starts the same reply as the selection bar, under the same rule.
+VoidCallback? _swipeReplyOf(ConversationController c, Message? m) {
+  if (m == null || !c.targetOf(m).canReply) return null;
+  return () => c.startReply(m);
 }
 
 Widget _message(BuildContext context, ConversationController c, ChatItem item) {
@@ -234,7 +353,7 @@ Widget _message(BuildContext context, ConversationController c, ChatItem item) {
                 : null,
             onTap: () => c.tapForm(m, card),
             onEdit: c.canEditForm(m, card) ? () => c.editForm(m, card) : null,
-            onLongPress: () => MessageActionsSheet.show(context, c, m),
+            onLongPress: () => c.onMessageLongPress(m),
           ),
           ReactionChips(
             reactions: reactions,
@@ -267,11 +386,12 @@ Widget _bubbleOf(
     item: item,
     isDirect: c.isDirect,
     original: c.originalOf(m),
-    onLongPress: () => MessageActionsSheet.show(context, c, m),
+    onLongPress: () => c.onMessageLongPress(m),
     onRetry: () => c.retry(m),
     reactions: c.reactionsOf(m),
     onReact: (emoji) => c.toggleReaction(m, emoji),
-    attachmentOf: (tag) => AttachmentView(tag: tag, controller: c),
+    attachmentOf: (tag) =>
+        AttachmentView(tag: tag, controller: c, isMine: m.isMine),
     people: c.mentionPeople,
     onReviewKey: () {
       c.keyChangeMember = m.sender.toLowerCase();

@@ -79,7 +79,10 @@ class FormOptionsRepository extends GetxService {
       final last = _lastScope;
       // A different organisation or person: what was kept for the last one goes.
       if (scope != null && last != null && scope != last) {
-        fireAndLog('form_options_repository', () => clearScope(last.$1, last.$2));
+        fireAndLog(
+          'form_options_repository',
+          () => clearScope(last.$1, last.$2),
+        );
       }
       if (scope != null) _lastScope = scope;
       fireAndLog('form_options_repository', () => load());
@@ -132,7 +135,10 @@ class FormOptionsRepository extends GetxService {
         throw const LinkOpenError('That link has no address.');
       }
       final name = idText(opened['name']);
-      return LinkTarget(url: url, name: name.isEmpty ? idText(link['name']) : name);
+      return LinkTarget(
+        url: url,
+        name: name.isEmpty ? idText(link['name']) : name,
+      );
     } on SocketCallError catch (e) {
       throw LinkOpenError(switch (e.code) {
         'no_access' => "You don't have access to that link.",

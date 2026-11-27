@@ -25,7 +25,9 @@ class InboxViewError implements Exception {
 }
 
 /// One saved view as `inbox.views.get` sends it. [setup] keeps every key it
-/// came with, also the ones the phone does not model.
+/// came with, also the ones the phone does not model, except `approvals`:
+/// the Approvals chips and toggle are never part of a view (ignored on read,
+/// never written).
 class InboxSavedView {
   const InboxSavedView({
     required this.name,
@@ -46,7 +48,10 @@ class InboxSavedView {
     final ts = raw['savedTs'];
     return InboxSavedView(
       name: name,
-      setup: {for (final e in view.entries) '${e.key}': e.value},
+      setup: {
+        for (final e in view.entries)
+          if (e.key != 'approvals') '${e.key}': e.value,
+      },
       savedTs: ts is num ? ts.toInt() : 0,
     );
   }

@@ -29,9 +29,8 @@ class ViewfinderOverlay extends StatelessWidget {
               end: isSuccess ? AppColors.yesDot : AppColors.white,
             ),
             duration: AppDurations.scanSuccess,
-            builder: (_, color, _) => CustomPaint(
-              painter: _BracketPainter(color ?? AppColors.white),
-            ),
+            builder: (_, color, _) =>
+                CustomPaint(painter: _BracketPainter(color ?? AppColors.white)),
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.scanLineInset),
@@ -178,6 +177,5 @@ class _BracketPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BracketPainter oldDelegate) =>
-      oldDelegate.color != color;
+  bool shouldRepaint(_BracketPainter oldDelegate) => oldDelegate.color != color;
 }

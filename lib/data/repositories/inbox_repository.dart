@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../core/log/app_log.dart';
 import '../../features/inbox/models/inbox_page.dart';
+import '../../features/inbox/models/inbox_row.dart';
 import '../../features/inbox/models/inbox_query.dart';
 import '../models/ids.dart';
 import '../records/record_commands.dart';
@@ -41,6 +42,11 @@ class InboxRepository extends GetxService {
   final ReadGate _gate;
 
   static const _timeout = Duration(seconds: 30);
+
+  /// What every Inbox list read adds (never the facets read): the files of
+  /// each record with name, type, size and the labels of choices. The server
+  /// reads the file facts per record, so the duration of each page is logged.
+  static const fileArgs = {'withDetails': true, 'fileMeta': 2};
 
   final list = InboxRead<InboxPage>();
   final counts = InboxRead<InboxCounts>();
@@ -83,12 +89,13 @@ class InboxRepository extends GetxService {
     int offset = 0,
     int limit = RecordLimits.queryPageSize,
   }) async {
-    final args = q.toArgs(limit: limit, offset: offset);
+    final args = {...q.toArgs(limit: limit, offset: offset), ...fileArgs};
     return _read(
       list,
       RecordCmd.query,
       args,
       InboxPage.parse,
+      timed: true,
       merge: (prev, page) =>
           offset > 0 && prev != null && prev.received == offset
           ? prev.append(page)
@@ -100,6 +107,36 @@ class InboxRepository extends GetxService {
   /// offset 0); null when a newer ask replaced it.
   Future<InboxFacets?> queryFacets(InboxQuery q) async =>
       _read(facets, RecordCmd.query, q.toArgs(limit: 1), InboxFacets.parse);
+
+  /// ONE record as the cards read it (`record.card`, a notification's "View
+  /// submission"). Not part of the list's sequence. Throws [SocketCallError]
+  /// with the server's own words when it refuses ("I cannot view it.", "No
+  /// such submission.") or the answer has no record.
+  Future<InboxRow> loadCard(int id) async {
+    try {
+      if (!_socket.isOnline) throw const SocketCallError('not_connected');
+      final data = await _gate.run(
+        () => _socket.sdCall(RecordCmd.card, {
+          'id': id,
+          'fileMeta': 2,
+        }, timeout: _timeout),
+      );
+      final page = InboxPage.parse(data);
+      if (page.rows.isEmpty) {
+        throw const SocketCallError('not_found', 'No such submission.');
+      }
+      return page.rows.first;
+    } on SocketCallError catch (e) {
+      AppLog.w(
+        'inbox_repository',
+        '${RecordCmd.card} failed code=${e.code} message=${e.message}',
+      );
+      rethrow;
+    } catch (e, st) {
+      AppLog.e('inbox_repository', e, st, '${RecordCmd.card} unreadable');
+      throw const SocketCallError('parse');
+    }
+  }
 
   /// `records.counts`; null when dropped. An answer without me, team and all
   /// as numbers is a failed read (the screen then counts what it holds).
@@ -121,13 +158,22 @@ class InboxRepository extends GetxService {
     Map<String, dynamic> args,
     T Function(Map<String, dynamic>) parse, {
     T Function(T? previous, T next)? merge,
+    bool timed = false,
   }) async {
     final seq = ++r._seq;
     try {
       if (!_socket.isOnline) throw const SocketCallError('not_connected');
+      final clock = Stopwatch()..start();
       final data = await _gate.run(
         () => _socket.sdCall(cmd, args, timeout: _timeout),
       );
+      if (timed) {
+        AppLog.i(
+          'inbox_repository',
+          '$cmd page offset=${args['offset']} limit=${args['limit']} '
+              'ms=${clock.elapsedMilliseconds}',
+        );
+      }
       if (seq != r._seq) return null;
       final value = parse(data);
       r.last.value = merge == null ? value : merge(r.last.value, value);

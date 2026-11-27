@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_bottom_sheet.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_image.dart';
+import '../../core/widgets/app_search_field.dart';
 import '../../core/widgets/app_state_view.dart';
 import '../../core/widgets/app_notices.dart';
-import '../../core/widgets/app_text_field.dart';
 import 'chats_controller.dart';
 import 'models/chat_filter.dart';
 import 'widgets/chat_filter_bar.dart';
@@ -46,28 +44,33 @@ class ChatsView extends GetView<ChatsController> {
       padding: EdgeInsets.zero,
       body: Column(
         children: [
-          ChatsHeader(
-            enterpriseName: () {
-              c.store.current.value;
-              c.store.identity.value;
-              return c.enterpriseName;
-            },
-            unread: () => c.feed.unread.value,
-            onSwitchEnterprise: () {
-              c.switcher.prepare();
-              AppBottomSheet.show<void>(
-                context,
-                title: 'Enterprises',
-                child: EnterpriseSwitcherSheet(controller: c.switcher),
-              );
-            },
-            onOpenNotifications: c.openNotifications,
-            profileName: () {
-              c.store.identity.value;
-              return c.profileName;
-            },
-            profilePicture: () => c.profilePicture,
-            onOpenProfile: c.openProfile,
+          KeyedSubtree(
+            key: c.tour?.headerKey,
+            child: ChatsHeader(
+              switcherKey: c.tour?.switcherKey,
+              actionsKey: c.tour?.actionsKey,
+              enterpriseName: () {
+                c.store.current.value;
+                c.store.identity.value;
+                return c.enterpriseName;
+              },
+              unread: () => c.feed.unread.value,
+              onSwitchEnterprise: () {
+                c.switcher.prepare();
+                AppBottomSheet.show<void>(
+                  context,
+                  title: 'Enterprises',
+                  child: EnterpriseSwitcherSheet(controller: c.switcher),
+                );
+              },
+              onOpenNotifications: c.openNotifications,
+              profileName: () {
+                c.store.identity.value;
+                return c.profileName;
+              },
+              profilePicture: () => c.profilePicture,
+              onOpenProfile: c.openProfile,
+            ),
           ),
           const AppOfflineBar(),
           _SearchRow(controller: c),
@@ -96,11 +99,14 @@ class ChatsView extends GetView<ChatsController> {
                 Positioned(
                   right: AppSpacing.fabMargin,
                   bottom: AppSpacing.fabMargin,
-                  child: Obx(
-                    () => NewChatFab(
-                      isShown: c.newChatButton.isShown.value,
-                      isKeyboardOpen: isKeyboardOpen,
-                      onPressed: () => _openNewChat(context, c),
+                  child: KeyedSubtree(
+                    key: c.tour?.newChatKey,
+                    child: Obx(
+                      () => NewChatFab(
+                        isShown: c.newChatButton.isShown.value,
+                        isKeyboardOpen: isKeyboardOpen,
+                        onPressed: () => _openNewChat(context, c),
+                      ),
                     ),
                   ),
                 ),
@@ -115,9 +121,8 @@ class ChatsView extends GetView<ChatsController> {
 
 void _openNewChat(BuildContext context, ChatsController c) {
   c.newChat.prepare();
-  AppBottomSheet.show<void>(
+  AppBottomSheet.showPinned<void>(
     context,
-    title: 'New Group / Chat',
     child: NewChatSheet(controller: c.newChat),
   );
 }
@@ -141,32 +146,15 @@ class _SearchRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: AppTextField(
-              controller: c.searchField,
-              focusNode: c.searchFocus,
-              hint: 'Search people, teams, messages',
-              minHeight: AppSpacing.searchHeight,
-              fillColor: AppColors.searchFill,
-              borderColor: Colors.transparent,
-              borderRadius: const BorderRadius.all(
-                Radius.circular(AppRadius.xs),
+            child: KeyedSubtree(
+              key: c.tour?.searchKey,
+              child: AppSearchField(
+                controller: c.searchField,
+                focusNode: c.searchFocus,
+                hint: 'Search people, teams, messages',
+                onChanged: c.onQueryChanged,
+                onClear: c.clearSearch,
               ),
-              leading: const Icon(
-                Icons.search,
-                size: 18,
-                color: AppColors.muted,
-              ),
-              suffix: Obx(
-                () => c.query.value.isEmpty
-                    ? const SizedBox.shrink()
-                    : AppButton.icon(
-                        icon: Icons.close,
-                        semanticLabel: 'Clear search',
-                        onPressed: c.clearSearch,
-                      ),
-              ),
-              textInputAction: TextInputAction.search,
-              onChanged: c.onQueryChanged,
             ),
           ),
         ],
@@ -215,7 +203,10 @@ class _Body extends StatelessWidget {
           if (!isSearching && c.filter.value != ChatFilterKind.threads)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: WorkspaceRow(onTap: c.openWorkspace),
+              child: KeyedSubtree(
+                key: c.tour?.workspaceKey,
+                child: WorkspaceRow(onTap: c.openWorkspace),
+              ),
             ),
           Expanded(
             child: AnimatedSwitcher(
@@ -298,6 +289,7 @@ class _List extends StatelessWidget {
                 final id = ids[index];
                 final row = c.rowOf(id);
                 return Obx(
+                  key: index == 0 ? c.tour?.firstRowKey : null,
                   () => ConversationTile(
                     key: ValueKey(id),
                     conversation: row.value,

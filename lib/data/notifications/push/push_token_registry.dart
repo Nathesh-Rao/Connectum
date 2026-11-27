@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/log/app_log.dart';
 import 'dart:io';
 
 import 'package:get/get.dart';
@@ -36,7 +37,10 @@ class PushTokenRegistry extends GetxService {
   void onInit() {
     super.onInit();
     _scope = _scopeOf();
-    _tokens = _push.tokenStream.listen(_onToken, onError: streamOnError('push_token_registry'));
+    _tokens = _push.tokenStream.listen(
+      _onToken,
+      onError: streamOnError('push_token_registry'),
+    );
     ever(_store.current, (_) => _onSessionChanged());
     _load();
   }
@@ -58,6 +62,7 @@ class PushTokenRegistry extends GetxService {
   }
 
   Future<void> _onToken(String value) async {
+    AppLog.i('push', 'token received');
     token.value = value;
     await _store.writeValue(_tokenKey, value);
     await _register();
@@ -65,6 +70,7 @@ class PushTokenRegistry extends GetxService {
 
   /// Remembers the answer of the permission prompt.
   Future<void> setPermitted(bool value) async {
+    AppLog.i('push', 'permission ${value ? 'granted' : 'denied'}');
     isPermitted.value = value;
     await _store.writeValue(_permissionKey, value ? 'granted' : 'denied');
   }

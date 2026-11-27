@@ -6,6 +6,7 @@ import 'package:connectum/data/repositories/inbox_field_kinds.dart';
 import 'package:connectum/data/repositories/inbox_repository.dart';
 import 'package:connectum/data/repositories/inbox_views_repository.dart';
 import 'package:connectum/data/repositories/smart_view_repository.dart';
+import 'package:connectum/data/repositories/sv_file_repository.dart';
 import 'package:connectum/data/repositories/ticket_repository.dart';
 import 'package:connectum/data/socket/connectivity_service.dart';
 import 'package:connectum/data/socket/read_gate.dart';
@@ -14,6 +15,7 @@ import 'package:connectum/features/home_shell/home_shell_controller.dart';
 import 'package:connectum/features/home_shell/home_tab.dart';
 import 'package:connectum/features/inbox/inbox_approvals_controller.dart';
 import 'package:connectum/features/inbox/inbox_controller.dart';
+import 'package:connectum/features/inbox/inbox_tour.dart';
 import 'package:connectum/features/inbox/inbox_views_controller.dart';
 import 'package:connectum/features/inbox/models/inbox_row.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +30,12 @@ class FakeShell extends Fake implements HomeShellController {
 
   @override
   final approvalsRequest = false.obs;
+
+  @override
+  final recordRequest = Rxn<int>();
+
+  @override
+  final listRequest = false.obs;
 }
 
 typedef Route =
@@ -42,6 +50,7 @@ Map<String, dynamic> record(
   String? status,
   Map<String, dynamic>? values,
   Map<String, dynamic>? labels,
+  Map<String, dynamic>? files,
 }) => {
   'id': id,
   'tstruct': form,
@@ -51,13 +60,20 @@ Map<String, dynamic> record(
   'status': ?status,
   'values': values ?? {'title': 'Record $id'},
   'labels': ?labels,
+  'files': ?files,
 };
 
 /// The `structures` of the replies below.
 const structures = {
   't': {
     'caption': 'Thing',
-    'fields': {'title': 'Title', 'stage': 'Stage', 'priority': 'Priority'},
+    'fields': {
+      'title': 'Title',
+      'stage': 'Stage',
+      'priority': 'Priority',
+      'attach': 'Attachment',
+      'pick': 'Pick',
+    },
     'status': {
       'field': 'stage',
       'final': ['Done'],
@@ -92,7 +108,12 @@ class RigConnectivity extends FakeConnectivity {
 
 /// The Inbox controller on a socket whose answers the test scripts by action.
 class InboxRig {
-  InboxRig({String user = 'ana', bool isOnline = true}) {
+  InboxRig({
+    String user = 'ana',
+    bool isOnline = true,
+    SvFileRepository? files,
+    InboxTour? tour,
+  }) {
     clock = GateClock();
     socket = HeldSocket();
     if (isOnline) socket.goOnline();
@@ -128,17 +149,33 @@ class InboxRig {
       shell: shell,
       newTicketDetail: (id) => throw UnimplementedError('no detail in tests'),
       fieldKinds: fieldKinds,
+      files: files,
+      tour: tour,
       views: InboxViews(repo: viewsRepo, connectivity: connectivity),
       approvals: InboxApprovals(
         approvals: approvalRepo,
         inbox: inbox,
         connectivity: connectivity,
+        me: user.toLowerCase(),
         now: () => DateTime(2026, 11, 24, 12),
         afterAnswer: const Duration(milliseconds: 10),
       ),
       now: () => DateTime(2026, 11, 24, 12),
+      liveEvents: liveEvents.stream,
+      liveOnline: liveOnline.stream,
+      liveNow: () => clock.now,
+      liveDebounce: const Duration(milliseconds: 30),
+      liveGap: const Duration(milliseconds: 150),
     );
   }
+
+  /// What the socket's `events` and `onOnline` would give the Inbox.
+  final liveEvents = StreamController<Map<String, dynamic>>.broadcast();
+  final liveOnline = StreamController<void>.broadcast();
+
+  /// An `sd_event` as the socket delivers it.
+  void emit(String event) =>
+      liveEvents.add({'type': 'sd_event', 'event': event, 'data': const {}});
 
   late final GateClock clock;
   late final HeldSocket socket;
@@ -166,6 +203,8 @@ class InboxRig {
   List<int> get ids => [for (final InboxRow r in controller.rows) r.id];
 
   void dispose() {
+    liveEvents.close();
+    liveOnline.close();
     approvalRepo.onClose();
     feed.onClose();
     tickets.onClose();

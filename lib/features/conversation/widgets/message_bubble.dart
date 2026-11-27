@@ -13,6 +13,7 @@ import '../../../core/widgets/app_mention_text.dart';
 import '../../../data/e2e/e2e_texts.dart';
 import '../../../data/models/message.dart';
 import '../../../data/models/reaction.dart';
+import '../../../data/models/self_conversation.dart';
 import '../models/chat_item.dart';
 import 'reaction_chips.dart';
 import 'message_status_mark.dart';
@@ -35,7 +36,10 @@ class MessageBubble extends StatelessWidget {
     required this.people,
     required this.onReviewKey,
     this.isHighlighted = false,
+    this.isSaved = false,
+    this.isPinned = false,
     this.onOpenOriginal,
+    this.onSetUpEncryption,
   });
 
   static const _maxWidthFraction = 0.88;
@@ -59,11 +63,20 @@ class MessageBubble extends StatelessWidget {
   /// Flashes the bubble (it was just opened from a reply quote).
   final bool isHighlighted;
 
+  /// Small marks beside the time: a bookmark for a saved message, a pin for a
+  /// pinned one.
+  final bool isSaved;
+  final bool isPinned;
+
   /// Scrolls to the quoted message; null when the quote has no known id.
   final VoidCallback? onOpenOriginal;
 
   /// Opens the key review for a sender whose changed key hid the message.
   final VoidCallback onReviewKey;
+
+  /// Opens the encryption setup from a note that has waited a long time for
+  /// it; null where a message never waits for encryption.
+  final VoidCallback? onSetUpEncryption;
 
   static Color _senderInk(String name) {
     var h = 0;
@@ -133,10 +146,32 @@ class MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
-                  m.secureFailure == null
+                  m.isTooOld
+                      ? 'Not sent. Too old to confirm. Tap to send again'
+                      : m.secureFailure == null
                       ? 'Not sent. Tap to retry'
                       : 'Not sent. ${m.secureFailure}. Tap to retry',
                   style: AppText.error,
+                ),
+              ),
+            if (m.isSetupNeeded && onSetUpEncryption != null)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onSetUpEncryption,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    SelfConversation.setupNeededLine,
+                    style: AppText.label.copyWith(color: AppColors.primary),
+                  ),
+                ),
+              )
+            else if (m.isWaitingForEncryption)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  'Waiting for encryption',
+                  style: AppText.label.copyWith(color: AppColors.muted),
                 ),
               ),
             Align(
@@ -145,6 +180,24 @@ class MessageBubble extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (isPinned) ...[
+                    const Icon(
+                      Icons.push_pin_outlined,
+                      size: AppSpacing.statusIcon,
+                      color: AppColors.muted,
+                      semanticLabel: 'Pinned',
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                  ],
+                  if (isSaved) ...[
+                    const Icon(
+                      Icons.bookmark,
+                      size: AppSpacing.statusIcon,
+                      color: AppColors.primary,
+                      semanticLabel: 'Saved',
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                  ],
                   if (m.isEncrypted && !m.isEncryptedUnsupported) ...[
                     const Icon(
                       Icons.lock,
@@ -157,11 +210,16 @@ class MessageBubble extends StatelessWidget {
                   Text(
                     '${ChatTime.time(m.ts, is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}'
                     '${m.editedTs == null ? '' : ' • edited'}',
-                    style: AppText.caption,
+                    style: AppText.chatTime,
                   ),
                   if (isMine) ...[
                     const SizedBox(width: AppSpacing.xxs),
-                    MessageStatusMark(status: m.status, isDirect: isDirect),
+                    MessageStatusMark(
+                      status: m.isEditPending
+                          ? MessageStatus.pending
+                          : m.status,
+                      isDirect: isDirect,
+                    ),
                   ],
                 ],
               ),
@@ -218,7 +276,7 @@ class _Body extends StatelessWidget {
       if (!message.isDecrypting) {
         final text = Text(
           E2eTexts.unreadableFor(message.unreadableCode),
-          style: AppText.message.copyWith(color: AppColors.muted),
+          style: AppText.chatMessage.copyWith(color: AppColors.muted),
         );
         return message.unreadableCode == 'key_changed'
             ? GestureDetector(
@@ -236,7 +294,7 @@ class _Body extends StatelessWidget {
           Flexible(
             child: Text(
               'Decrypting...',
-              style: AppText.message.copyWith(color: AppColors.muted),
+              style: AppText.chatMessage.copyWith(color: AppColors.muted),
             ),
           ),
         ],
@@ -247,7 +305,7 @@ class _Body extends StatelessWidget {
     final body = tag == null
         ? AppMentionText(
             text: forward.text,
-            style: AppText.message,
+            style: AppText.chatMessage,
             people: people,
           )
         : Column(
@@ -258,7 +316,7 @@ class _Body extends StatelessWidget {
               if (tag.caption.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                  child: Text(tag.caption, style: AppText.message),
+                  child: Text(tag.caption, style: AppText.chatMessage),
                 ),
             ],
           );
@@ -366,7 +424,9 @@ class _Quote extends StatelessWidget {
             AppSpacing.xxs,
           ),
           decoration: const BoxDecoration(
-            border: Border(left: BorderSide(color: AppColors.primaryBright, width: 2)),
+            border: Border(
+              left: BorderSide(color: AppColors.primaryBright, width: 2),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

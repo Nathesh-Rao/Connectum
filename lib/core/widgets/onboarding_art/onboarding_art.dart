@@ -47,7 +47,9 @@ enum OnboardingArtKind {
   /// symmetric about the axis (and about the steady picture's vertical
   /// centre), so the window is too.
   Rect cropWindow(Rect viewBox, {bool symmetric = false}) {
-    final b = symmetric && this == network ? networkSymContentBounds : contentBounds;
+    final b = symmetric && this == network
+        ? networkSymContentBounds
+        : contentBounds;
     return b.inflate(b.width * cropMargin).intersect(viewBox);
   }
 
@@ -66,18 +68,23 @@ enum OnboardingArtKind {
   /// default is the old layout (the widget passes its own switch).
   ArtScene bind(SvgScene scene, {bool tier2 = true, bool symmetric = false}) =>
       switch (this) {
-    network => symmetric
-        ? NetworkIcons.bindSymmetric(
-            scene,
-            visible: tier2 ? kNetworkSymVisiblePersons : kNetworkSymTier1Persons,
-          )
-        : NetworkIcons.bind(
-            scene,
-            visible: tier2 ? kNetworkVisiblePersons : kNetworkTier1Persons,
-          ),
-    buildings => BuildingsSwitching.bind(scene),
-    shield => ShieldSecurity.bind(scene),
-  };
+        network =>
+          symmetric
+              ? NetworkIcons.bindSymmetric(
+                  scene,
+                  visible: tier2
+                      ? kNetworkSymVisiblePersons
+                      : kNetworkSymTier1Persons,
+                )
+              : NetworkIcons.bind(
+                  scene,
+                  visible: tier2
+                      ? kNetworkVisiblePersons
+                      : kNetworkTier1Persons,
+                ),
+        buildings => BuildingsSwitching.bind(scene),
+        shield => ShieldSecurity.bind(scene),
+      };
 }
 
 /// Drives an [OnboardingArt]: play (restart the intro), pause, resume, seek
@@ -283,7 +290,8 @@ class OnboardingArtState extends State<OnboardingArt>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _isResumed = WidgetsBinding.instance.lifecycleState == null ||
+    _isResumed =
+        WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     _attachController();
     _buildScene();
@@ -326,7 +334,8 @@ class OnboardingArtState extends State<OnboardingArt>
       _isTickerEnabled = enabled;
       _controller.restartClock(); // the muted time must not count
     }
-    final reduced = widget.reducedMotion ??
+    final reduced =
+        widget.reducedMotion ??
         (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
     if (reduced != _isReduced || _ticker == null) {
       _isReduced = reduced;
@@ -351,7 +360,8 @@ class OnboardingArtState extends State<OnboardingArt>
         oldWidget.networkSymmetric != widget.networkSymmetric) {
       _buildScene();
     }
-    final reduced = widget.reducedMotion ??
+    final reduced =
+        widget.reducedMotion ??
         (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
     if (reduced != _isReduced) {
       _isReduced = reduced;
@@ -367,7 +377,8 @@ class OnboardingArtState extends State<OnboardingArt>
   }
 
   void _sync() {
-    final canRun = !_isReduced &&
+    final canRun =
+        !_isReduced &&
         _controller.isPlaying &&
         widget.isActive &&
         _isResumed &&

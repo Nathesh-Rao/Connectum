@@ -16,6 +16,7 @@ class FormBox extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.error,
+    this.errorText,
     this.isReadOnly = false,
     this.link,
     this.boxKey,
@@ -25,9 +26,14 @@ class FormBox extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
   final RxnString? error;
+
+  /// A message that does not change with an observable (shown when [error] is null).
+  final String? errorText;
   final bool isReadOnly;
   final LayerLink? link;
   final Key? boxKey;
+
+  bool get _hasText => errorText != null && errorText!.isNotEmpty;
 
   Widget _box(bool hasError) {
     final box = Container(
@@ -81,9 +87,14 @@ class FormBox extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: e == null
-              ? _box(false)
+              ? _box(_hasText)
               : Obx(() => _box(e.value != null && e.value!.isNotEmpty)),
         ),
+        if (e == null && _hasText)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Text(errorText!, style: AppText.error),
+          ),
         if (e != null)
           Obx(
             () => AnimatedSize(

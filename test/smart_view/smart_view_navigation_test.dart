@@ -219,12 +219,10 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await pumpFor(tester, 2000);
-    expect(find.text('Smart view'), findsOneWidget);
-    expect(find.byKey(const ValueKey('sv-drawer-overview')), findsOneWidget);
+    expect(find.text('Smart view'), findsWidgets);
     expect(find.byKey(const ValueKey('sv-drawer-tickets')), findsOneWidget);
     expect(find.byKey(const ValueKey('sv-drawer-requests')), findsOneWidget);
     expect(Get.find<SmartViewController>().isDrawerOpen.value, isTrue);
-    expect(Get.find<SmartViewController>().isOverview, isTrue);
     await tester.tap(find.byKey(const ValueKey('sv-drawer-tickets')));
     await pumpFor(tester, 2000);
     expect(Get.find<SmartViewController>().isDrawerOpen.value, isFalse);

@@ -4,6 +4,7 @@ import '../../../data/smart_view/engine/sv_engine.dart';
 import '../../../data/smart_view/engine/sv_values.dart';
 import '../../../data/smart_view/sv_columns.dart';
 import '../../../data/smart_view/sv_query.dart';
+import '../../../data/smart_view/sv_team.dart';
 
 /// One line of the filter sheet while it is being edited.
 class SvDraftRow {
@@ -40,7 +41,10 @@ class SvFilterDraft {
   SvFilterDraft(this.input, SmartViewQuery start)
     : search = start.search,
       scope = start.scope {
+    members.assignAll(SvTeam.membersOf(start.conditions));
+    linked.assignAll(SvTeam.waysOf(start.conditions));
     for (final c in start.conditions) {
+      if (SvTeam.isTeamLine(c)) continue;
       rows.add(SvDraftRow(id: _seq++, col: c.col, op: c.op, value: c.value));
     }
   }
@@ -51,7 +55,21 @@ class SvFilterDraft {
   final String search;
   final String? scope;
   final rows = <SvDraftRow>[].obs;
+
+  /// The "My team" and "Linked as" lines: not columns, so not in [rows].
+  final members = <String>[].obs;
+  final linked = <String>[].obs;
   int _seq = 0;
+
+  bool get hasAny => rows.isNotEmpty || members.isNotEmpty || linked.isNotEmpty;
+
+  void toggleMember(String user) => _toggle(members, user);
+
+  void toggleWay(String id) => _toggle(linked, id);
+
+  static void _toggle(RxList<String> list, String v) {
+    if (!list.remove(v)) list.add(v);
+  }
 
   /// Every column a filter can be put on (files have no useful value).
   List<SvColumn> get fields => [
@@ -105,7 +123,11 @@ class SvFilterDraft {
 
   void remove(int id) => rows.removeWhere((r) => r.id == id);
 
-  void clear() => rows.clear();
+  void clear() {
+    rows.clear();
+    members.clear();
+    linked.clear();
+  }
 
   void _replace(int id, SvDraftRow Function(SvDraftRow) f) {
     final i = rows.indexWhere((r) => r.id == id);
@@ -130,10 +152,16 @@ class SvFilterDraft {
     (r) => SvDraftRow(id: id, col: r.col, op: r.op, value: value),
   );
 
-  List<SvCondition> get conditions => [for (final r in rows) r.condition];
+  /// The column conditions the engine applies.
+  List<SvCondition> get columnConditions => [for (final r in rows) r.condition];
+
+  /// Everything the sheet applies: the columns' conditions and the two team
+  /// lines (a line with no choice is left out).
+  List<SvCondition> get conditions =>
+      SvTeam.withLines(columnConditions, members.toList(), linked.toList());
 
   int get total => input.rows.length;
 
   int get count =>
-      input.count(search: search, scope: scope, conditions: conditions);
+      input.count(search: search, scope: scope, conditions: columnConditions);
 }

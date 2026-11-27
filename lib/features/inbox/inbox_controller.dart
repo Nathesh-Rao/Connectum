@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/log/app_log.dart';
 import '../../core/log/safe.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
@@ -11,6 +15,9 @@ import '../../data/models/record_live.dart';
 import '../../data/records/record_commands.dart';
 import '../../data/repositories/inbox_field_kinds.dart';
 import '../../data/repositories/inbox_repository.dart';
+import '../../data/repositories/sv_file_repository.dart';
+import '../../data/smart_view/sv_file.dart';
+import '../smart_view/sv_file_preview_controller.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/session_store.dart';
 import '../../data/socket/connectivity_service.dart';
@@ -20,14 +27,20 @@ import '../home_shell/home_tab.dart';
 import '../tickets/ticket_detail_controller.dart';
 import 'inbox_approvals_controller.dart';
 import 'inbox_filter_controller.dart';
+import 'inbox_live.dart';
+import 'inbox_tour.dart';
+import 'inbox_tour_demo.dart';
 import 'inbox_views_controller.dart';
+import 'models/approval_entries.dart';
 import 'models/inbox_approval_rows.dart';
 import 'models/inbox_filter.dart';
+import 'models/inbox_filter_chips.dart';
 import 'models/inbox_page.dart';
 import 'models/inbox_query.dart';
 import 'models/inbox_row.dart';
 import 'models/inbox_saved_view.dart';
 import 'models/inbox_sort.dart';
+import 'models/inbox_tab.dart';
 import 'models/inbox_timeline.dart';
 
 /// Whose records the list shows (`scope:["me"]` / `scope:["team"]`).
@@ -55,8 +68,16 @@ class InboxController extends GetxController {
     required this.fieldKinds,
     required this.approvals,
     required this.views,
+    this.files,
+    this.tour,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now;
+    this.liveEvents,
+    this.liveOnline,
+    DateTime Function()? liveNow,
+    this.liveDebounce = const Duration(milliseconds: 300),
+    this.liveGap = const Duration(seconds: 2),
+  }) : _now = now ?? DateTime.now,
+       _liveNow = liveNow;
 
   static const title = 'Inbox';
   static const searchHint = 'Search records';
@@ -65,11 +86,11 @@ class InboxController extends GetxController {
   static const noMatchTitle = 'No records match your search.';
   static const noFilterMatchTitle = 'No records match the filter.';
   static const errorText =
-      'The records could not be read. Use Refresh to try again.';
+      'The records could not be read. Pull down to try again.';
   static const approvalsHeading = 'Approvals';
   static const approvalsLoadingText = 'Reading approvals...';
   static const approvalsErrorText =
-      'The approvals could not be read. Use Refresh to try again.';
+      'The approvals could not be read. Pull down to try again.';
   static const pageSize = RecordLimits.queryPageSize;
   static const _moreAt = 600.0;
   static const _staleAfter = Duration(seconds: 30);
@@ -79,6 +100,9 @@ class InboxController extends GetxController {
   final SessionStore store;
   final ConnectivityService connectivity;
   final HomeShellController shell;
+
+  /// The first-run tour; null where tours are not set up.
+  final InboxTour? tour;
   final TicketDetailController Function(int id) newTicketDetail;
 
   /// The field kinds of the Advanced filter's conditions; read only when the
@@ -90,7 +114,40 @@ class InboxController extends GetxController {
 
   /// The saved views (the list, the open view, what was last saved).
   final InboxViews views;
+
+  /// Fetches files for the Smart View file preview when a file chip is
+  /// tapped; null: the chip is plain.
+  final SvFileRepository? files;
+
+  bool get hasFiles => files != null;
+
+  SvFilePreviewController newFilePreview(List<SvFile> list, int index) =>
+      SvFilePreviewController(files: list, repo: files!, index: index);
+
+  /// The type of a field of a row's form when the source list is already held
+  /// (never read for this); null otherwise.
+  String? fieldTypeOf(InboxRow r, String field) =>
+      fieldKinds.typeOf(r.formId, field);
   final DateTime Function() _now;
+
+  /// The socket's events and its "connected again" signal, for the live
+  /// re-read. Null: no live updates.
+  final Stream<Map<String, dynamic>>? liveEvents;
+  final Stream<void>? liveOnline;
+  final DateTime Function()? _liveNow;
+  final Duration liveDebounce;
+  final Duration liveGap;
+
+  late final InboxLive live = InboxLive(
+    state: _liveState,
+    isBusy: () => isRefreshing.value || isLoadingMore.value,
+    read: _liveRead,
+    now: _liveNow,
+    debounce: liveDebounce,
+    minGap: liveGap,
+  );
+  final _liveSubs = <StreamSubscription<dynamic>>[];
+  InboxFilterController? _panel;
 
   final searchField = TextEditingController();
   final searchFocus = FocusNode();
@@ -117,8 +174,18 @@ class InboxController extends GetxController {
   final isLoadingMore = false.obs;
   final counts = Rxn<InboxCounts>();
 
-  /// The Approvals pane is shown in place of the list. Never saved.
-  final isApprovalsOpen = false.obs;
+  /// The tab shown (an index of [InboxTabs.all]). Never saved.
+  final tabIndex = 0.obs;
+
+  /// The Approvals tab is shown.
+  bool get isApprovalsOpen =>
+      tabIndex.value == InboxTabs.indexOf(InboxTab.approvals);
+
+  /// The search text of the Approvals tab; [query] is the Records tab's.
+  final approvalsQuery = ''.obs;
+
+  /// The search bar is open in the header.
+  final isSearchOpen = false.obs;
 
   /// "Save your changes?" is waiting for an answer (the view shows it).
   final unsavedPrompt = Rxn<UnsavedPrompt>();
@@ -126,9 +193,17 @@ class InboxController extends GetxController {
   /// The person answered Save or Discard on the way out: back may leave.
   final isLeaving = false.obs;
 
+  /// "View submission": the one record the Records tab shows under a header
+  /// strip (`record.card`). [focusId] is its number while it is asked or
+  /// shown; [focusRow] is null until it was read.
+  final focusId = Rxn<int>();
+  final focusRow = Rxn<InboxRow>();
+  bool get isFocused => focusId.value != null;
+
   final _workers = <Worker>[];
   final _details = <int, TicketDetailController>{};
   int _ask = 0;
+  int _focusAsk = 0;
   bool _isEntered = false;
   bool _isStartViewDone = false;
   DateTime? _readAt;
@@ -144,13 +219,30 @@ class InboxController extends GetxController {
         approvals.query.value = t;
         _update();
       }),
+      ever(approvalsQuery, (t) => approvals.paneQuery.value = t),
       ever(shell.approvalsRequest, (_) => _takeApprovalsRequest()),
+      ever(shell.recordRequest, (_) => _takeRecordRequest()),
+      ever(shell.listRequest, (_) => _takeListRequest()),
       ever(approvals.approvals.all, (_) => _update()),
       ever(approvals.approvals.hasRead, (_) => _update()),
       ever(approvals.approvals.hasError, (_) => _update()),
       ever(shell.tab, (t) {
-        if (t == HomeTab.inbox) _enter();
+        if (t == HomeTab.inbox) {
+          _enter();
+          _tourTrigger.schedule();
+        } else {
+          _tourTrigger.cancel();
+          tour?.cancel();
+        }
       }),
+      ever(viewState, (_) => _tourTrigger.schedule()),
+      ever(tabIndex, (_) {
+        if (_demo?.isDriving ?? false) return;
+        if (isApprovalsOpen) tour?.cancel();
+        _tourTrigger.schedule();
+      }),
+      ever(isSearchOpen, (_) => _tourTrigger.schedule()),
+      ever(focusId, (_) => _tourTrigger.schedule()),
       ever(connectivity.state, (s) {
         if (s == AppConnectivity.online && _isEntered && _needsRead) {
           fireAndLog('inbox_controller', () => load());
@@ -158,10 +250,28 @@ class InboxController extends GetxController {
       }),
       ever(store.current, (_) => _onSession()),
     ]);
+    live.start();
+    final events = liveEvents;
+    if (events != null) {
+      _liveSubs.add(
+        events.listen(live.onEvent, onError: streamOnError('inbox_controller')),
+      );
+    }
+    final online = liveOnline;
+    if (online != null) {
+      _liveSubs.add(
+        online.listen(
+          (_) => live.onReconnect(),
+          onError: streamOnError('inbox_controller'),
+        ),
+      );
+    }
     searchFocus.addListener(() => isSearchFocused.value = searchFocus.hasFocus);
     scroll.addListener(_onScroll);
     if (shell.tab.value == HomeTab.inbox) _enter();
     _takeApprovalsRequest();
+    _takeRecordRequest();
+    _takeListRequest();
   }
 
   bool get isOnline => connectivity.state.value == AppConnectivity.online;
@@ -185,6 +295,29 @@ class InboxController extends GetxController {
         ? '$n ${n == 1 ? 'approval' : 'approvals'}'
         : '';
     return [records, approvalsText].where((t) => t.isNotEmpty).join(', ');
+  }
+
+  /// The Records tab's pill: the (filtered) total of the records alone, "N+"
+  /// when capped; empty before the first read or when no record is asked for.
+  String get recordsCountLabel {
+    final p = page.value;
+    if (p == null || isRecordsOff) return '';
+    return p.isCapped ? '${counts.value?.cap ?? 1000}+' : '${p.total}';
+  }
+
+  /// The tab's count pill: the records' total on Records, and on Approvals
+  /// the number the quick filter's "All" status shows for the current scope
+  /// (0 included).
+  String pillOf(InboxTab t) =>
+      t == InboxTab.records ? recordsCountLabel : _approvalsPill;
+
+  String get _approvalsPill {
+    final n =
+        approvals.statusCountsFor(
+          approvals.effectiveSide,
+        )[ApprovalPrimary.all] ??
+        0;
+    return n > 9999 ? '9999+' : '$n';
   }
 
   String _recordsLabel(InboxPage p) {
@@ -225,6 +358,10 @@ class InboxController extends GetxController {
   bool get isApprovalsStale =>
       hasApprovalsPart && approvals.isRead && approvals.hasError;
 
+  bool isCardExpanded(String key) => approvals.isExpanded(key);
+
+  void toggleCardExpanded(String key) => approvals.toggleExpanded(key);
+
   bool isApprovalLeaving(Approval a) => approvals.isLeavingFor(filter.value, a);
 
   /// Is Timeline the "Search in" choice (a heading for each day)?
@@ -245,6 +382,29 @@ class InboxController extends GetxController {
 
   /// How many lines of the filter say something (the Filter button's badge).
   int get filterCount => filter.value.filterCount();
+
+  /// The Records filter row: a removable chip for each filter that is on.
+  List<InboxFilterChip> get filterChips {
+    inbox.cardRevision.value;
+    final forms = {
+      for (final a in approvals.approvals.all)
+        if (a.formId.isNotEmpty && a.caption.isNotEmpty) a.formId: a.caption,
+      for (final e
+          in (page.value?.forms ?? const <String, InboxForm>{}).entries)
+        e.key: e.value.caption,
+    };
+    return InboxFilterChips.of(
+      filter.value,
+      formName: (id) => forms[id] ?? id,
+      personName: (u) {
+        final n = inbox.cardOf(u)?.name ?? '';
+        return n.isEmpty ? u : n;
+      },
+    );
+  }
+
+  /// A chip's ×: the filter without that part, read again from page one.
+  void removeFilterChip(InboxFilterChip chip) => applyFilter(chip.removed);
 
   /// The empty text: "No records match the filter." with a filter set.
   String get emptyText {
@@ -274,9 +434,14 @@ class InboxController extends GetxController {
   void _enter() {
     if (!_isEntered) {
       _isEntered = true;
+      live.clearStale();
       approvals.start();
       fireAndLog('inbox_controller', () => load());
       fireAndLog('inbox_controller', () => loadViews());
+      return;
+    }
+    if (live.isStale) {
+      live.onShown();
       return;
     }
     final at = _readAt;
@@ -288,29 +453,112 @@ class InboxController extends GetxController {
 
   // ---- the Approvals pane -------------------------------------------------------
 
-  /// The Approvals button: the pane in place of the list, and back.
-  void toggleApprovals() => isApprovalsOpen.value = !isApprovalsOpen.value;
+  /// The tab bar's tap: the tab becomes [i] (the view's pages follow); the search field shows that
+  /// tab's own text.
+  void selectTab(int i) {
+    if (i < 0 || i >= InboxTabs.all.length) return;
+    _showTab(i);
+  }
 
-  void openApprovals() => isApprovalsOpen.value = true;
+  /// The page settled on [i] (a swipe, or the end of a tap's slide).
+  void onPageChanged(int i) => _showTab(i);
 
-  void closeApprovals() => isApprovalsOpen.value = false;
+  /// Exactly one list is attached: two Inbox views alive at once (a tab that
+  /// is replaced while its old copy is still leaving) must not break a read.
+  bool get _isScrollOne => scroll.hasClients && scroll.positions.length == 1;
+
+  void _showTab(int i) {
+    if (tabIndex.value == i) return;
+    tabIndex.value = i;
+    final text = _queryOf(i);
+    if (searchField.text.trim() != text) searchField.text = text;
+    if (text.isNotEmpty) isSearchOpen.value = true;
+  }
+
+  String _queryOf(int i) => i == InboxTabs.indexOf(InboxTab.approvals)
+      ? approvalsQuery.value
+      : query.value;
+
+  /// The Approvals badge: requests that wait for this person's answer.
+  int badgeOf(InboxTab t) => t == InboxTab.approvals ? approvals.count : 0;
+
+  void openApprovals() => selectTab(InboxTabs.indexOf(InboxTab.approvals));
+
+  /// Back to the Records tab (a filter or a saved view acts on it).
+  void closeApprovals() => selectTab(InboxTabs.indexOf(InboxTab.records));
 
   /// A notification, the Work Space icon or a link asked for the pane.
   void _takeApprovalsRequest() {
     if (!shell.approvalsRequest.value) return;
     shell.approvalsRequest.value = false;
+    approvals.clearFilters();
     openApprovals();
+  }
+
+  /// A "New submission" notification with no record number: the Records tab,
+  /// the usual list.
+  void _takeListRequest() {
+    if (!shell.listRequest.value) return;
+    shell.listRequest.value = false;
+    showAllRecords();
+    closeApprovals();
+  }
+
+  /// A notification's "View submission" asked for one record.
+  void _takeRecordRequest() {
+    final id = shell.recordRequest.value;
+    if (id == null) return;
+    shell.recordRequest.value = null;
+    fireAndLog('inbox_controller', () => openRecord(id));
+  }
+
+  /// Shows the one record [id] on the Records tab (`record.card`). A refusal
+  /// ("I cannot view it.", "No such submission.") shows the server's words
+  /// and leaves the usual screen as it is.
+  Future<void> openRecord(int id) async {
+    if (id <= 0) return;
+    closeApprovals();
+    final mine = ++_focusAsk;
+    focusId.value = id;
+    focusRow.value = null;
+    try {
+      final row = await inbox.loadCard(id);
+      if (mine != _focusAsk) return;
+      focusRow.value = row;
+      _learnPeople([row]);
+    } on SocketCallError catch (e) {
+      if (mine != _focusAsk) return;
+      focusId.value = null;
+      AppNotices.error(
+        e.message.trim().isNotEmpty && !e.isConnectionGap
+            ? e.message.trim()
+            : 'That record could not be opened.',
+      );
+    }
+  }
+
+  /// "Show all records": back to the usual list and the saved view.
+  void showAllRecords() {
+    _focusAsk++;
+    focusId.value = null;
+    focusRow.value = null;
   }
 
   void _onSession() {
     _ask++;
+    showAllRecords();
+    live.cancel();
     page.value = null;
     counts.value = null;
     hasError.value = false;
     isLoadingMore.value = false;
     _readAt = null;
     _closeDetails();
-    isApprovalsOpen.value = false;
+    tabIndex.value = 0;
+    query.value = '';
+    approvalsQuery.value = '';
+    searchField.clear();
+    isSearchOpen.value = false;
     approvals.onSession();
     views.onSession(InboxSetup.keyOf(InboxSetup.plain()));
     _isStartViewDone = false;
@@ -395,6 +643,90 @@ class InboxController extends GetxController {
     }
   }
 
+  // ---- live re-read ---------------------------------------------------------------
+
+  InboxLiveState _liveState() {
+    if (!store.hasEnterpriseSession || !_isEntered) {
+      return InboxLiveState.closed;
+    }
+    return shell.tab.value == HomeTab.inbox
+        ? InboxLiveState.active
+        : InboxLiveState.hidden;
+  }
+
+  /// A quiet read after a live event: as many records as are shown (a whole
+  /// number of pages, at most 200), the counts, the approvals, and the
+  /// filter panel's lists when it is open. No spinner, no scroll change. It
+  /// takes no new ask number, so a read of the person's (which does) makes
+  /// its answer stale; a failure keeps the list.
+  Future<void> _liveRead() async {
+    final had = page.value;
+    if (had == null) {
+      AppLog.i('inbox_live', 'no list yet, nothing to update');
+      return;
+    }
+    final mine = _ask;
+    final isOff = isRecordsOff;
+    final limit = ((had.rows.length + pageSize - 1) ~/ pageSize * pageSize)
+        .clamp(pageSize, RecordLimits.queryMaxLimit);
+    final q = _queryFor(scope.value);
+    final scopeNow = scope.value;
+    Future<T?> quiet<T>(String what, Future<T?> Function() body) async {
+      try {
+        return await body();
+      } on SocketCallError catch (e) {
+        AppLog.w('inbox_live', '$what not read: ${e.code}');
+      } on InboxQueryError catch (e) {
+        AppLog.w('inbox_live', '$what refused: ${e.message}');
+      } catch (e, st) {
+        AppLog.e('inbox_live', e, st, '$what failed');
+      }
+      return null;
+    }
+
+    final panel = _panel;
+    final results = await Future.wait<Object?>([
+      isOff
+          ? Future<InboxPage?>.value(null)
+          : quiet('records.query', () => inbox.query(q, limit: limit)),
+      quiet('records.counts', inbox.loadCounts),
+      quiet('req.list', () async {
+        await approvals.reload();
+        return true;
+      }),
+      if (panel != null && !panel.isDisposed)
+        quiet('facets', () async {
+          panel.refreshFacets();
+          return true;
+        }),
+    ]);
+    if (mine != _ask || scopeNow != scope.value) {
+      AppLog.i('inbox_live', 'answer dropped (newer read or filter)');
+      return;
+    }
+    final c = results[1] as InboxCounts?;
+    if (c != null) {
+      counts.value = c;
+      if (scope.value == InboxScope.team && c.reports <= 0) {
+        scope.value = InboxScope.me;
+        fireAndLog('inbox_controller', () => load(isSilent: true));
+        return;
+      }
+    }
+    final read = results[0] as InboxPage?;
+    if (read == null) {
+      if (!isOff) {
+        AppLog.i('inbox_live', 'list kept (read failed or replaced)');
+      }
+      return;
+    }
+    page.value = read;
+    hasError.value = false;
+    _readAt = DateTime.now();
+    _learnPeople(read.rows);
+    _update();
+  }
+
   void _onFailed(SocketCallError e) {
     // A dropped connection with a list on screen is the offline bar's news,
     // not an error of the list.
@@ -462,7 +794,7 @@ class InboxController extends GetxController {
   /// Pull to refresh and the Refresh button. Offline there is nothing to
   /// read: the bar says so and the list stays.
   Future<void> refreshList() async {
-    if (isApprovalsOpen.value) return approvals.reload();
+    if (isApprovalsOpen) return approvals.reload();
     if (hasApprovalsPart) fireAndLog('inbox_controller', approvals.reload);
     if (!isOnline) {
       if (page.value == null) viewState.value = AppViewState.offline;
@@ -472,7 +804,7 @@ class InboxController extends GetxController {
   }
 
   Future<void> retry() =>
-      isApprovalsOpen.value || isRecordsOff ? approvals.reload() : load();
+      isApprovalsOpen || isRecordsOff ? approvals.reload() : load();
 
   void _learnPeople(List<InboxRow> rows) {
     fireAndLog(
@@ -504,7 +836,7 @@ class InboxController extends GetxController {
     _isStartViewDone = true;
     final first = views.startView;
     if (first != null && !isStarted && !isViewChanged) {
-      _showView(first.name, first.setup);
+      _showView(first.name, first.setup, keepTab: true);
     }
   }
 
@@ -515,7 +847,13 @@ class InboxController extends GetxController {
     await views.load();
   }
 
-  void _showView(String name, Map<String, dynamic> saved) {
+  /// [keepTab]: the Inbox just opened on the Approvals tab (a notification)
+  /// and the saved view lands on the Records tab under it.
+  void _showView(
+    String name,
+    Map<String, dynamic> saved, {
+    bool keepTab = false,
+  }) {
     final r = InboxSetup.restore(
       saved,
       isTeamShown: counts.value == null || isTeamShown,
@@ -529,8 +867,8 @@ class InboxController extends GetxController {
         InboxSetup.compose(saved, filter.value, scope.value.name),
       ),
     );
-    closeApprovals();
-    _restart();
+    if (!keepTab) closeApprovals();
+    _restart(keepFocus: keepTab);
   }
 
   void _showPlain(String name) {
@@ -562,11 +900,7 @@ class InboxController extends GetxController {
   Future<String> saveView() async {
     if (!views.isReady) return InboxViews.stillLoading;
     final setup = _setupNow;
-    final problem = await views.persist(
-      views.openName,
-      setup,
-      isDefault: views.current.value.isEmpty,
-    );
+    final problem = await views.persist(views.openName, setup, isDefault: true);
     if (problem.isNotEmpty) return problem;
     views.open(views.current.value, setup, InboxSetup.keyOf(setup));
     AppNotices.success(
@@ -581,7 +915,12 @@ class InboxController extends GetxController {
     final early = _nameProblem(name);
     if (early.isNotEmpty) return early;
     final setup = _setupNow;
-    final problem = await views.persist(name, setup, isNew: true);
+    final problem = await views.persist(
+      name,
+      setup,
+      isNew: true,
+      isDefault: true,
+    );
     if (problem.isNotEmpty) return problem;
     views.open(name, setup, InboxSetup.keyOf(setup));
     AppNotices.success('View "$name" saved');
@@ -674,12 +1013,16 @@ class InboxController extends GetxController {
     _restart();
   }
 
-  void _restart() {
+  /// The list is read again from the first page. A view or filter change
+  /// also leaves a shown "View submission" record, except the view the Inbox
+  /// opens on by itself ([keepFocus]).
+  void _restart({bool keepFocus = false}) {
+    if (!keepFocus && isFocused) showAllRecords();
     _ask++;
     page.value = null;
     hasError.value = false;
     isLoadingMore.value = false;
-    if (scroll.hasClients) scroll.jumpTo(0);
+    if (_isScrollOne) scroll.jumpTo(0);
     _update();
     fireAndLog('inbox_controller', () => load());
   }
@@ -690,7 +1033,7 @@ class InboxController extends GetxController {
   /// when the sheet is gone. Facets are read only while it lives.
   InboxFilterController newFilterPanel() {
     final page = this.page.value;
-    return InboxFilterController(
+    final panel = InboxFilterController(
       inbox: inbox,
       initial: filter.value,
       baseWhere: scope.value.name,
@@ -706,6 +1049,8 @@ class InboxController extends GetxController {
       onApply: applyFilter,
       onClear: clearFilter,
     )..onInit();
+    _panel = panel;
+    return panel;
   }
 
   /// Apply: the list goes back to page one and the filtered `records.query`
@@ -734,15 +1079,42 @@ class InboxController extends GetxController {
     _restart();
   }
 
-  void onQueryChanged(String text) => query.value = text.trim();
+  /// The text typed goes to the shown tab's own search.
+  void onQueryChanged(String text) {
+    final t = text.trim();
+    if (isApprovalsOpen) {
+      approvalsQuery.value = t;
+    } else {
+      query.value = t;
+    }
+  }
 
+  /// The shown tab's search text.
+  String get activeQuery =>
+      isApprovalsOpen ? approvalsQuery.value : query.value;
+
+  /// The field is emptied (the bar stays open).
   void clearSearch() {
     searchField.clear();
-    query.value = '';
+    onQueryChanged('');
+  }
+
+  void openSearch() {
+    isSearchOpen.value = true;
+    searchFocus.requestFocus();
+  }
+
+  /// Clear, back and the close icon: the bar folds away and the shown tab's
+  /// search is empty again.
+  void closeSearch() {
+    searchFocus.unfocus();
+    clearSearch();
+    isSearchOpen.value = false;
   }
 
   /// Search over what is loaded (`filterWork`): subject, form, state, who it
-  /// is with, who raised it, the number.
+  /// is with, who raised it, the number, the captions, answers and file
+  /// names.
   List<InboxRow> _matching(List<InboxRow> all) {
     final q = query.value.toLowerCase();
     if (q.isEmpty) return all;
@@ -755,7 +1127,8 @@ class InboxController extends GetxController {
             has(r.holder) ||
             has(r.raiser) ||
             has(_nameOf(r)) ||
-            has('${r.id}'))
+            has('${r.id}') ||
+            r.hasAnswerText(q))
           r,
     ];
   }
@@ -797,7 +1170,7 @@ class InboxController extends GetxController {
   // ---- paging -------------------------------------------------------------------
 
   void _onScroll() {
-    if (!scroll.hasClients) return;
+    if (!_isScrollOne) return;
     if (scroll.position.extentAfter < _moreAt) {
       fireAndLog('inbox_controller', () => loadMore());
     }
@@ -806,7 +1179,7 @@ class InboxController extends GetxController {
   // A short list may not scroll at all: check again once it is drawn.
   void _checkMore() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isClosed || !scroll.hasClients) return;
+      if (isClosed || !_isScrollOne) return;
       _onScroll();
     });
   }
@@ -869,9 +1242,139 @@ class InboxController extends GetxController {
     _details.clear();
   }
 
+  // ---- first-run tour ----------------------------------------------------------
+
+  late final TourTrigger _tourTrigger = TourTrigger(
+    canTry: _canTryTour,
+    start: _startTour,
+  );
+
+  InboxTourDemo? get _demo => tour?.demo;
+
+  bool _canTryTour() {
+    if (tour == null || isClosed) return false;
+    final state = viewState.value;
+    return (state == AppViewState.content || state == AppViewState.empty) &&
+        shell.tab.value == HomeTab.inbox &&
+        !isApprovalsOpen &&
+        !isSearchOpen.value &&
+        !isFocused &&
+        unsavedPrompt.value == null;
+  }
+
+  /// Real data first: sample cards only without a record of the person's
+  /// own, sample requests only without one.
+  bool get _hasRealRecords => rows.isNotEmpty;
+  bool get _hasRealApprovals => approvals.hasListed;
+
+  /// Should the Records tab draw the tour's sample cards now? Reactive, and
+  /// false the moment a real record is there.
+  bool get isTourRecordsSample =>
+      (_demo?.isRecordsSample.value ?? false) && rows.isEmpty && !isFocused;
+
+  /// Should the Approvals tab draw the tour's sample requests now?
+  bool get isTourApprovalsSample =>
+      (_demo?.isApprovalsSample.value ?? false) && !approvals.hasListed;
+
+  Future<TourStart> _startTour() async {
+    final tour = this.tour;
+    if (tour == null || isClosed) return TourStart.failed;
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    return tour.start(
+      _tourPorts,
+      isSample: !_hasRealRecords || !_hasRealApprovals,
+      pendingApprovals: approvals.count,
+    );
+  }
+
+  late final InboxTourPorts _tourPorts = InboxTourPorts(
+    seed: _seedTour,
+    restore: _restoreTour,
+    expandFirst: () => _tourExpand(true),
+    collapseFirst: () => _tourExpand(false),
+    openFilter: () => _demo?.isFilterOpen.value = true,
+    closeFilter: () => _demo?.isFilterOpen.value = false,
+    showApprovals: () => selectTab(InboxTabs.indexOf(InboxTab.approvals)),
+    showRecords: () => selectTab(InboxTabs.indexOf(InboxTab.records)),
+  );
+
+  bool _seedTour() {
+    final d = _demo;
+    if (d == null) return false;
+    final isRecords = !_hasRealRecords;
+    final isApprovals = !_hasRealApprovals;
+    d.begin(
+      isRecords: isRecords,
+      isApprovals: isApprovals,
+      now: DateTime.now().millisecondsSinceEpoch,
+    );
+    return isRecords || isApprovals;
+  }
+
+  /// Back on Records with every sample, popup and open card gone. Runs on
+  /// every way a tour ends, and more than once.
+  void _restoreTour() {
+    _tourExpand(false);
+    if (isApprovalsOpen) selectTab(InboxTabs.indexOf(InboxTab.records));
+    _demo?.end();
+  }
+
+  String? _tourExpandedKey;
+
+  /// The first card on screen (a real record, else the sample) opens or
+  /// closes. A real card that was already open stays as it was.
+  void _tourExpand(bool isOpen) {
+    final d = _demo;
+    if (d == null) return;
+    if (!isOpen) {
+      final key = _tourExpandedKey;
+      _tourExpandedKey = null;
+      if (key == null) return;
+      if (key.startsWith('r-')) {
+        d.expanded.remove(key);
+      } else if (isCardExpanded(key)) {
+        toggleCardExpanded(key);
+      }
+      return;
+    }
+    final real = rows.firstOrNull;
+    if (real != null) {
+      final key = 'r${real.id}';
+      if (isCardExpanded(key)) return;
+      _tourExpandedKey = key;
+      toggleCardExpanded(key);
+    } else if (d.rows.isNotEmpty) {
+      final key = 'r${d.rows.first.id}';
+      _tourExpandedKey = key;
+      d.expanded.add(key);
+    }
+  }
+
+  /// A filter panel for the popup the tour shows: nothing is read for it
+  /// (no people, no field kinds, no counts) and nothing it does is kept.
+  InboxFilterController newSampleFilterPanel() => InboxFilterController(
+    inbox: inbox,
+    initial: InboxFilter.none,
+    baseWhere: InboxScope.me.name,
+    isTeamShown: false,
+    fieldKinds: null,
+    forms: const {},
+    approvals: null,
+    isSample: true,
+    onApply: (_) {},
+    onClear: () {},
+  )..onInit();
+
   @override
   void onClose() {
+    _tourTrigger.dispose();
+    tour?.cancel();
     _ask++;
+    live.dispose();
+    for (final s in _liveSubs) {
+      s.cancel();
+    }
     for (final w in _workers) {
       w.dispose();
     }

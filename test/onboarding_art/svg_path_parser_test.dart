@@ -24,7 +24,11 @@ void main() {
     final cases = {
       'shield': (shieldArt, 50, const Rect.fromLTWH(-500, -500, 2800, 1900)),
       'network': (networkArt, 58, const Rect.fromLTWH(-800, -700, 3200, 2600)),
-      'buildings': (buildingsArt, 117, const Rect.fromLTWH(-500, -500, 2600, 2000)),
+      'buildings': (
+        buildingsArt,
+        117,
+        const Rect.fromLTWH(-500, -500, 2600, 2000),
+      ),
     };
     for (final e in cases.entries) {
       test('${e.key}: every d string parses with sane bounds', () {
@@ -49,9 +53,15 @@ void main() {
     test('the buildings legs and route from the script config parse', () {
       final legs = buildingsArtCfg['legs']! as List;
       for (final l in legs) {
-        expect(parseSvgPath((l as Map)['d']! as String).bounds.isEmpty, isFalse);
+        expect(
+          parseSvgPath((l as Map)['d']! as String).bounds.isEmpty,
+          isFalse,
+        );
       }
-      expect(parseSvgPath(buildingsArtCfg['full']! as String).bounds.isEmpty, isFalse);
+      expect(
+        parseSvgPath(buildingsArtCfg['full']! as String).bounds.isEmpty,
+        isFalse,
+      );
     });
   });
 
@@ -66,7 +76,13 @@ void main() {
       _expectRect(parseSvgPath('M1.5-2.3L4 5').bounds, 1.5, -2.3, 4, 5);
       _expectRect(parseSvgPath('M0 0 10 10 20 0').bounds, 0, 0, 20, 10);
       _expectRect(parseSvgPath('M0,0L.5.5').bounds, 0, 0, .5, .5);
-      _expectRect(parseSvgPath('M0 0c1 1 2 2 3 3 1 1 1 1 1 1').bounds, 0, 0, 4, 4);
+      _expectRect(
+        parseSvgPath('M0 0c1 1 2 2 3 3 1 1 1 1 1 1').bounds,
+        0,
+        0,
+        4,
+        4,
+      );
     });
 
     test('cubic bounds are tight, not the control hull', () {
@@ -74,7 +90,10 @@ void main() {
     });
 
     test('S, Q and T', () {
-      expect(parseSvgPath('M0 0 C0 5 5 5 5 0 S10 -5 10 0').bounds.isEmpty, isFalse);
+      expect(
+        parseSvgPath('M0 0 C0 5 5 5 5 0 S10 -5 10 0').bounds.isEmpty,
+        isFalse,
+      );
       _expectRect(parseSvgPath('M0 0 Q5 10 10 0').bounds, 0, 0, 10, 5);
       expect(parseSvgPath('M0 0 Q5 10 10 0 T20 0').bounds.right, 20);
     });
@@ -87,7 +106,13 @@ void main() {
     });
 
     test('Z closes and a new M starts a subpath', () {
-      _expectRect(parseSvgPath('M0 0 L10 0 L10 10 Z m5 5 l1 1').bounds, 0, 0, 10, 10);
+      _expectRect(
+        parseSvgPath('M0 0 L10 0 L10 10 Z m5 5 l1 1').bounds,
+        0,
+        0,
+        10,
+        10,
+      );
     });
 
     test('bad data throws', () {
@@ -100,7 +125,9 @@ void main() {
     final t = Tf.identity.translate(10, 0).scale(2);
     final r = t.mapRect(const Rect.fromLTWH(0, 0, 1, 1));
     _expectRect(r, 10, 0, 12, 2);
-    final rot = Tf.parse('rotate(90 5 5)').mapRect(const Rect.fromLTWH(0, 0, 10, 10));
+    final rot = Tf.parse(
+      'rotate(90 5 5)',
+    ).mapRect(const Rect.fromLTWH(0, 0, 10, 10));
     _expectRect(rot, 0, 0, 10, 10);
     final a = Tf.parse('translate(3 4) scale(2)');
     final b = Tf.identity.translate(3, 4).scale(2);

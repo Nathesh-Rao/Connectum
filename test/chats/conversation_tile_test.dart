@@ -53,6 +53,30 @@ void main() {
     expect(time.style!.fontWeight, FontWeight.w600);
   });
 
+  testWidgets('read title weight is unread weight minus 100', (tester) async {
+    FontWeight? weightOf(Conversation c) {
+      return tester.widget<Text>(find.text('Billing Team')).style!.fontWeight;
+    }
+
+    await tester.pumpWidget(host(conv()));
+    await tester.pumpAndSettle();
+    final unread = weightOf(conv());
+    expect(unread, FontWeight.w700);
+
+    await tester.pumpWidget(
+      host(
+        Conversation(
+          convId: 'group:billing',
+          kind: 'group',
+          title: 'Billing Team',
+          lastTs: _ts,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(weightOf(conv()), FontWeight.w500);
+  });
+
   testWidgets('a muted tile stays grey', (tester) async {
     await tester.pumpWidget(host(conv(isMuted: true)));
     await tester.pumpAndSettle();

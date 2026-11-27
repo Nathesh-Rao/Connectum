@@ -41,7 +41,11 @@ class FrameStats extends ChangeNotifier {
     required double rasterMs,
     required double spanMs,
   }) {
-    for (final entry in [(_build, buildMs), (_raster, rasterMs), (_span, spanMs)]) {
+    for (final entry in [
+      (_build, buildMs),
+      (_raster, rasterMs),
+      (_span, spanMs),
+    ]) {
       entry.$1.addLast(entry.$2);
       while (entry.$1.length > window) {
         entry.$1.removeFirst();

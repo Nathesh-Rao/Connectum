@@ -47,12 +47,16 @@ const _clip = SvFile(
   size: 1000,
 );
 
-Future<void> _fast(
+Future<SvFileReply> _fast(
   SvFile f,
   String path,
+  String? etag,
   void Function(double) onProgress,
   CancelToken cancel,
-) => SeedSmartFiles.fetch(f, path, onProgress, cancel, step: Duration.zero);
+) async {
+  await SeedSmartFiles.fetch(f, path, onProgress, cancel, step: Duration.zero);
+  return const SvFileReply(200);
+}
 
 class _Rig {
   _Rig({SvFileFetcher? fetcher}) {
@@ -394,7 +398,7 @@ void main() {
       expect(_zip.viewer, SvViewer.zip);
       expect(_wav.viewer, SvViewer.audio);
       expect(_clip.viewer, SvViewer.video);
-      expect(_long.viewer, SvViewer.none);
+      expect(_long.viewer, SvViewer.sheet);
       expect(
         SvFile(id: 'a' * 24, name: 'x.svg', mime: 'image/svg+xml').viewer,
         SvViewer.none,
@@ -536,8 +540,9 @@ void main() {
 
     testWidgets('closing cancels a download in flight', (tester) async {
       final r = _Rig(
-        fetcher: (f, path, onProgress, cancel) async {
+        fetcher: (f, path, etag, onProgress, cancel) async {
           await Future<void>.delayed(const Duration(seconds: 30));
+          return const SvFileReply(200);
         },
       );
       addTearDown(r.dispose);
@@ -581,7 +586,7 @@ void main() {
       await tester.pump();
       expect(find.text('Raj'), findsOneWidget);
       expect(
-        find.text('Showing first 500 rows — Download for the full file'),
+        find.text("Showing the first 2 rows and 2 columns of 'Sick'"),
         findsOneWidget,
       );
     });
@@ -620,7 +625,7 @@ void main() {
 
     testWidgets('golden: sv_file_dialog_zip', (tester) async {
       await open(tester, [_zip]);
-      expect(find.text('3 files · 5 KB'), findsOneWidget);
+      expect(find.text('3 files · 4.8 KB'), findsOneWidget);
       expect(find.text('visa/form.pdf'), findsOneWidget);
       await expectLater(
         find.byType(MaterialApp),

@@ -83,11 +83,14 @@ class InboxViews extends GetxController {
     return null;
   }
 
-  /// The view the Inbox opens on when it is shown first: the Default View
-  /// when there is one, else the one named by `default`.
+  /// The view the Inbox opens on when it is shown first (the web's
+  /// `openFirstOf`): the one saved last, which the server keeps as `default`
+  /// (every Save view and Save as new view sets it), else the Default View
+  /// when it was saved; none when neither is there (the plain list). A
+  /// `default` naming a view that is gone is no choice.
   InboxSavedView? get startView =>
-      saved(InboxViewLimits.defaultName) ??
-      (defaultName == null ? null : saved(defaultName!));
+      (defaultName == null ? null : saved(defaultName!)) ??
+      saved(InboxViewLimits.defaultName);
 
   /// Is the open view the one the Inbox opens on? (Set as default / Clear.)
   bool get isOpenDefault =>

@@ -132,7 +132,9 @@ class ProfileActionRow extends StatelessWidget {
         bleed: 0,
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: ProfileInfoRow.minHeight),
+          constraints: const BoxConstraints(
+            minHeight: ProfileInfoRow.minHeight,
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -140,15 +142,7 @@ class ProfileActionRow extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: AppSpacing.avatarSmall,
-                  height: AppSpacing.avatarSmall,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryTint,
-                    borderRadius: AppRadius.controlAll,
-                  ),
-                  child: Icon(icon, size: 20, color: AppColors.primaryStrong),
-                ),
+                ProfileIconTile(icon: icon),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
@@ -182,6 +176,26 @@ class ProfileActionRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The tonal icon tile shared by the Settings rows.
+class ProfileIconTile extends StatelessWidget {
+  const ProfileIconTile({super.key, required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: AppSpacing.avatarSmall,
+      height: AppSpacing.avatarSmall,
+      decoration: const BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: AppRadius.controlAll,
+      ),
+      child: Icon(icon, size: 20, color: AppColors.primaryStrong),
     );
   }
 }

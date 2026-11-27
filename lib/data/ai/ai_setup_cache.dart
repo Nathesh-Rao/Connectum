@@ -8,7 +8,10 @@ import '../../core/log/safe.dart';
 class AiSetupCache {
   AiSetupCache(this._repository, {DateTime Function()? clock})
     : _now = clock ?? DateTime.now {
-    _repository.agentsChanged.listen((_) => clear(), onError: streamOnError('ai_setup_cache'));
+    _repository.agentsChanged.listen(
+      (_) => clear(),
+      onError: streamOnError('ai_setup_cache'),
+    );
   }
 
   static const keepFor = Duration(seconds: 60);

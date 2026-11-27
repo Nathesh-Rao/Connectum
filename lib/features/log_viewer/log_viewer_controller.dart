@@ -34,6 +34,7 @@ class LogViewerController extends GetxController {
   final viewState = AppViewState.loading.obs;
   final doc = LogDocument.empty.obs;
   final fileName = ''.obs;
+  final errorText = ''.obs;
   final isWrap = true.obs;
   final size = LogTextSize.medium.obs;
   final isSearching = false.obs;
@@ -86,7 +87,9 @@ class LogViewerController extends GetxController {
     try {
       final File? file = await sink.fileForExport();
       if (file == null) {
-        viewState.value = AppViewState.error;
+        AppLog.w('log_viewer', 'open: no log file on disk');
+        doc.value = LogDocument.empty;
+        viewState.value = AppViewState.empty;
         return;
       }
       fileName.value = file.uri.pathSegments.last;
@@ -96,6 +99,11 @@ class LogViewerController extends GetxController {
       }
       final read = await reader.read(file);
       doc.value = read;
+      AppLog.i(
+        'log_viewer',
+        'open: ${file.path} ${read.lines.length} lines${read.isPartial ? ' (last part)' : ''}',
+      );
+      errorText.value = '';
       viewState.value = read.isEmpty
           ? AppViewState.empty
           : AppViewState.content;
@@ -103,7 +111,8 @@ class LogViewerController extends GetxController {
       if (_isFirst || wasAtBottom) jumpToLatest();
       _isFirst = false;
     } on Object catch (e, st) {
-      AppLog.e('log_viewer', e, st, 'read');
+      AppLog.e('log_viewer', e, st, 'read $e');
+      errorText.value = '$e';
       viewState.value = AppViewState.error;
     } finally {
       _isLoading = false;

@@ -76,6 +76,7 @@ class InboxRow {
     this.fields = const {},
     this.values = const {},
     this.labels = const {},
+    this.files = const {},
     this.statusField = '',
     this.state = '',
     this.pct,
@@ -97,6 +98,10 @@ class InboxRow {
   final Map<String, String> fields;
   final Map<String, dynamic> values;
   final Map<String, dynamic> labels;
+
+  /// `files[field]`: the details of the file ids a field holds (`withDetails`
+  /// and `fileMeta:2`); empty when the server did not send them.
+  final Map<String, dynamic> files;
   final String statusField;
   final String subject;
 
@@ -165,6 +170,28 @@ class InboxRow {
     if (isAbout(me)) return 'You';
     final name = (cardName ?? '').trim();
     return name.isNotEmpty ? name : who;
+  }
+
+  /// Does [q] (lower case, not empty) occur in what the card shows below its
+  /// header: a field's caption, an answer (its readable label too) or the
+  /// name of a file? The status field is left out, as on the card.
+  bool hasAnswerText(String q) {
+    bool has(Object? v) => v is String && v.toLowerCase().contains(q);
+    bool deep(Object? v) =>
+        v is List ? v.any(deep) : has(v) || (v is num && '$v'.contains(q));
+    for (final e in values.entries) {
+      if (e.key == statusField) continue;
+      if (has(fields[e.key] ?? e.key) || deep(e.value) || deep(labels[e.key])) {
+        return true;
+      }
+    }
+    for (final info in files.values) {
+      if (info is! List) continue;
+      for (final f in info) {
+        if (f is Map && has(f['name'])) return true;
+      }
+    }
+    return false;
   }
 
   InboxPriority? get priority =>
@@ -254,6 +281,7 @@ class InboxRow {
       fields: form?.fields ?? const {},
       values: values,
       labels: _map(raw['labels']),
+      files: _map(raw['files']),
       statusField: form?.statusField ?? '',
       subject: _subject(values, form, caption, id),
       holder: holder,

@@ -119,8 +119,8 @@ void main() {
       await openSheet(t);
       final top = t.getTopLeft(find.text('Default View')).dy;
       expect(top, lessThan(t.getTopLeft(find.text('Alpha')).dy));
-      expect(find.byIcon(Icons.check), findsOneWidget);
-      final mark = t.getCenter(find.byIcon(Icons.check)).dy;
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      final mark = t.getCenter(find.byIcon(Icons.check_rounded)).dy;
       expect((mark - t.getCenter(find.text('Alpha')).dy).abs(), lessThan(12));
     });
 
@@ -131,7 +131,7 @@ void main() {
       await openSheet(t);
       expect(find.text('Remove view'), findsNothing);
       expect(find.text('Set as default'), findsNothing);
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
     });
 
     testWidgets('a default view offers Clear default', (t) async {

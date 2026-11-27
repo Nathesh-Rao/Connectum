@@ -29,6 +29,7 @@ class AppTones {
 
   static const red = AppTone(Color(0xFFC62828), Color(0xFF8E1B1B));
   static const green = AppTone(Color(0xFF15803D), Color(0xFF115E2D));
+
   /// Amber: the one yellow of the app. It means "waiting for you" on an Inbox
   /// record and nothing else.
   static const yellow = AppTone(Color(0xFFB45F06), Color(0xFF7A3F04));

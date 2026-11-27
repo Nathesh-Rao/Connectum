@@ -156,7 +156,12 @@ class _PersonRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            AppAvatar(name: person.name, size: AppSpacing.avatarSmall),
+            AppAvatar(
+              name: person.name,
+              kind: AppAvatarKind.person,
+              picture: person.avatar,
+              size: AppSpacing.avatarSmall,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -184,7 +189,9 @@ class _PersonRow extends StatelessWidget {
             Icon(
               isSelected ? Icons.check_circle : Icons.circle_outlined,
               size: 22,
-              color: isSelected ? AppColors.primaryBright : AppColors.inputBorder,
+              color: isSelected
+                  ? AppColors.primaryBright
+                  : AppColors.inputBorder,
             ),
           ],
         ),

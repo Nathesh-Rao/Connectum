@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/animation.dart';
-import 'package:flutter/material.dart' show Icons;
+import 'package:flutter/material.dart' show GlobalKey, Icons;
 import 'package:get/get.dart';
 
 import '../../core/debug/seed_ui.dart';
@@ -9,6 +9,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/routes/deep_link_service.dart';
 import '../../core/routes/home_reload.dart';
 import '../../core/theme/app_motion.dart';
+import '../../core/tour/tour_service.dart';
 import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../data/e2e/e2e_models.dart';
@@ -36,6 +37,7 @@ class HomeShellController extends GetxController
     required this.notifications,
     required this.notificationRouter,
     required this.smartView,
+    this.tour,
   });
 
   static final tabRoutes = [for (final t in HomeTab.values) t.route];
@@ -46,9 +48,31 @@ class HomeShellController extends GetxController
   final LocalNotificationService notifications;
   final NotificationRouter notificationRouter;
   final SmartViewController smartView;
+  final TourService? tour;
+
+  /// The bottom bar, for the tours to point at.
+  final navKey = GlobalKey(debugLabel: 'home-nav');
+
+  bool get isTourActive => tour?.isActive.value ?? false;
+
+  /// Back while a tour shows ends the tour and stays on the screen.
+  void cancelTour() => tour?.cancel();
 
   final tab = HomeTab.chats.obs;
   final hasUnread = false.obs;
+
+  /// Set by [openInbox] with `approvals: true`; the Inbox takes it (and
+  /// clears it) when it opens the Approvals pane. Kept here so a request made
+  /// before the Inbox exists, as on a cold start, is not lost.
+  final approvalsRequest = false.obs;
+
+  /// Set by [openInbox] with `recordId`: the Inbox shows that one record
+  /// (a notification's "View submission") and takes the request.
+  final recordRequest = Rxn<int>();
+
+  /// Set by [openInbox] with `isList`: the Inbox shows its Records tab, the
+  /// usual list (a "New submission" notification with no record number).
+  final listRequest = false.obs;
 
   /// A form (its name) My Submissions should show only; set by `#tstruct`,
   /// read and cleared by the Submissions screen.
@@ -68,7 +92,11 @@ class HomeShellController extends GetxController
   @override
   void onInit() {
     super.onInit();
+    tour?.bottomBarKey = navKey;
     notificationRouter.selectTab = select;
+    notificationRouter.openApprovals = () => openInbox(approvals: true);
+    notificationRouter.openRecord = (id) => openInbox(recordId: id);
+    notificationRouter.openInboxList = () => openInbox(isList: true);
     HomeReload.retireHome = () => isRetired.value = true;
     HomeReload.restoreHome = () => isRetired.value = false;
     final start = HomeTab.ofRoute(Get.currentRoute);
@@ -77,7 +105,10 @@ class HomeShellController extends GetxController
       previous = start;
       isBuilt[start.index] = true;
       if (start == HomeTab.smartView) {
-        fireAndLog('home_shell_controller', () => smartView.enter(const SmartViewEntry.tab()));
+        fireAndLog(
+          'home_shell_controller',
+          () => smartView.enter(const SmartViewEntry.tab()),
+        );
       }
     }
     ever(conversations.conversations, (_) => _updateDot());
@@ -86,7 +117,10 @@ class HomeShellController extends GetxController
     ever(security.e2e.notice, (_) => _syncNotice());
     ever(security.e2e.lateHint, (_) => _syncNotice());
     ever(security.e2e.isLate, (_) => _syncNotice());
-    _notices = security.e2e.notices.listen(_onE2eNotice, onError: streamOnError('home_shell_controller'));
+    _notices = security.e2e.notices.listen(
+      _onE2eNotice,
+      onError: streamOnError('home_shell_controller'),
+    );
     _syncNotice();
     _updateDot();
   }
@@ -180,10 +214,16 @@ class HomeShellController extends GetxController
     final context = Get.context;
     if (context == null) return;
     if (phase == E2eSetupPhase.limit) {
-      fireAndLog('home_shell_controller', () => SecuritySheets.openLimit(context, security));
+      fireAndLog(
+        'home_shell_controller',
+        () => SecuritySheets.openLimit(context, security),
+      );
     } else if (phase == E2eSetupPhase.removed ||
         phase == E2eSetupPhase.refused) {
-      fireAndLog('home_shell_controller', () => SecuritySheets.openIssue(context, security));
+      fireAndLog(
+        'home_shell_controller',
+        () => SecuritySheets.openIssue(context, security),
+      );
     }
   }
 
@@ -191,7 +231,10 @@ class HomeShellController extends GetxController
   void openDeviceLimit() {
     final context = Get.context;
     if (context == null) return;
-    fireAndLog('home_shell_controller', () => SecuritySheets.openLimit(context, security, isRequested: true));
+    fireAndLog(
+      'home_shell_controller',
+      () => SecuritySheets.openLimit(context, security, isRequested: true),
+    );
   }
 
   void _updateDot() {
@@ -220,8 +263,12 @@ class HomeShellController extends GetxController
   }
 
   /// `#inbox`: leaves the open chat and shows the Inbox tab. The Smart view
-  /// tab keeps its own state while the Inbox is shown.
-  void openInbox() {
+  /// tab keeps its own state while the Inbox is shown. With [approvals] the
+  /// Approvals pane is open on it (notifications, the Work Space icon).
+  void openInbox({bool approvals = false, int? recordId, bool isList = false}) {
+    if (approvals) approvalsRequest.value = true;
+    if (isList) listRequest.value = true;
+    if (recordId != null) recordRequest.value = recordId;
     Get.until((r) => tabRoutes.contains(r.settings.name));
     select(HomeTab.inbox);
   }
@@ -239,12 +286,16 @@ class HomeShellController extends GetxController
       smartView.setActive(isSmart);
     }
     if (isSmart && (isMoving || entry != null)) {
-      fireAndLog('home_shell_controller', () => smartView.enter(entry ?? const SmartViewEntry.tab()));
+      fireAndLog(
+        'home_shell_controller',
+        () => smartView.enter(entry ?? const SmartViewEntry.tab()),
+      );
     }
   }
 
   @override
   void onClose() {
+    if (tour?.bottomBarKey == navKey) tour?.bottomBarKey = null;
     notificationRouter.markHomeGone();
     _notices?.cancel();
     AppNotices.hide(_lateKey);

@@ -12,6 +12,8 @@ import '../../core/widgets/app_list_row.dart';
 import '../../core/widgets/app_offline_bar.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/app_state_view.dart';
+import '../../core/widgets/message_selection/selectable_row.dart';
+import '../../core/widgets/message_selection/selection_app_bar.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/form_card.dart';
 import '../conversation/widgets/chat_rows.dart';
@@ -23,9 +25,15 @@ import '../tickets/widgets/record_card_actions.dart';
 import '../tickets/widgets/record_menu_rows.dart';
 import '../tickets/widgets/ticket_action_sheet.dart';
 import 'widgets/workspace_composer.dart';
+import 'widgets/workspace_locked_hint.dart';
 import 'widgets/workspace_message.dart';
+import 'widgets/workspace_sample_row.dart';
+import 'widgets/workspace_selection.dart';
+import 'widgets/workspace_pinned_bar.dart';
+import 'widgets/workspace_saved_sheet.dart';
 import 'widgets/workspace_welcome.dart';
 import 'workspace_controller.dart';
+import 'workspace_tour.dart';
 
 class WorkspaceView extends GetView<WorkspaceController> {
   const WorkspaceView({super.key});
@@ -36,59 +44,111 @@ class WorkspaceView extends GetView<WorkspaceController> {
     return AppScaffold(
       isScrollable: false,
       padding: EdgeInsets.zero,
-      body: Column(
-        children: [
-          ConversationHeader(
-            title: 'My Work Space',
-            status: null,
-            avatar: const AppAvatar(name: 'My Work Space', isSquare: true),
-            onBack: Get.back,
-            trailing: [
-              AppButton.icon(
-                icon: Icons.task_alt,
-                semanticLabel: 'Tasks',
-                onPressed: c.openTasks,
+      body: Obx(
+        () => PopScope(
+          canPop: !c.selection.isActive && !c.isTourActive,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (c.isTourActive) {
+              c.cancelTour();
+            } else {
+              c.selection.clear();
+            }
+          },
+          child: Column(
+            children: [
+              SelectionHeaderSwitcher(
+                isSelecting:
+                    c.selection.isActive ||
+                    (c.tour?.demo.selection.isActive ?? false),
+                selectionBar: KeyedSubtree(
+                  key: c.tour?.selectionBarKey,
+                  child: _selectionBar(c),
+                ),
+                header: KeyedSubtree(
+                  key: c.tour?.headerKey,
+                  child: ConversationHeader(
+                    title: 'My Work Space',
+                    status: null,
+                    avatar: const AppAvatar(
+                      name: 'My Work Space',
+                      isSquare: true,
+                    ),
+                    onBack: Get.back,
+                    trailing: [
+                      AppButton.icon(
+                        icon: Icons.bookmark_border,
+                        semanticLabel: 'Saved notes',
+                        onPressed: () => WorkspaceSavedSheet.show(context, c),
+                      ),
+                      AppButton.icon(
+                        icon: Icons.task_alt,
+                        semanticLabel: 'Tasks',
+                        onPressed: c.openTasks,
+                      ),
+                      AppButton.icon(
+                        icon: Icons.fact_check_outlined,
+                        semanticLabel: 'Approvals',
+                        onPressed: c.openApprovals,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              AppButton.icon(
-                icon: Icons.fact_check_outlined,
-                semanticLabel: 'Approvals',
-                onPressed: c.openApprovals,
+              const AppOfflineBar(),
+              WorkspacePinnedBar(controller: c),
+              Expanded(
+                child: KeyedSubtree(
+                  key: c.tour?.areaKey,
+                  child: Obx(
+                    () => AppStateView(
+                      state: c.viewState.value,
+                      errorMessage: "Couldn't load your workspace.",
+                      onRetry: c.retry,
+                      child: _Feed(controller: c),
+                    ),
+                  ),
+                ),
+              ),
+              Obx(() {
+                final text = c.notice.value;
+                return AnimatedSize(
+                  duration: AppDurations.fast,
+                  curve: AppCurves.out,
+                  alignment: Alignment.topLeft,
+                  child: text == null
+                      ? const SizedBox(width: double.infinity)
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: Text(text, style: AppText.wsMeta),
+                        ),
+                );
+              }),
+              KeyedSubtree(
+                key: c.tour?.composerKey,
+                child: WorkspaceComposer(controller: c),
               ),
             ],
           ),
-          const AppOfflineBar(),
-          Expanded(
-            child: Obx(
-              () => AppStateView(
-                state: c.viewState.value,
-                errorMessage: "Couldn't load your workspace.",
-                onRetry: c.retry,
-                child: _Feed(controller: c),
-              ),
-            ),
-          ),
-          Obx(() {
-            final text = c.notice.value;
-            return AnimatedSize(
-              duration: AppDurations.fast,
-              curve: AppCurves.out,
-              alignment: Alignment.topLeft,
-              child: text == null
-                  ? const SizedBox(width: double.infinity)
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      child: Text(text, style: AppText.wsMeta),
-                    ),
-            );
-          }),
-          WorkspaceComposer(controller: c),
-        ],
+        ),
       ),
     );
   }
 }
+
+/// The selection bar: the notes' own, or the sample's while the tour shows
+/// the sample note.
+Widget _selectionBar(WorkspaceController c) => Obx(() {
+  final demo = c.tour?.demo;
+  final isSample = demo != null && demo.isOn.value;
+  final bar = WorkspaceSelectionBar(
+    controller: c,
+    sample: isSample ? demo : null,
+  );
+  return isSample ? IgnorePointer(child: bar) : bar;
+});
 
 /// Newest at the bottom; the welcome message is the oldest, at the top.
 class _Feed extends StatelessWidget {
@@ -101,20 +161,38 @@ class _Feed extends StatelessWidget {
     final c = controller;
     return Obx(() {
       final rows = c.rows.toList();
+      final tour = c.tour;
+      final hasSample = tour != null && tour.demo.isOn.value;
+      final sampleCount = hasSample ? 1 : 0;
+      // The tour presses and holds the newest note and slides the newest one
+      // that can be replied to.
+      final notes = [
+        for (final r in rows)
+          if (r.message != null) r.message!,
+      ];
+      final holdId = tour == null ? null : WorkspaceTour.holdNote(notes)?.msgId;
+      final swipeId = tour == null
+          ? null
+          : WorkspaceTour.swipeNote(notes, c.targetOf)?.msgId;
       return ListView.builder(
+        controller: c.scroll,
         reverse: true,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.sm,
         ),
-        itemCount: rows.length + 1,
-        itemBuilder: (context, i) {
+        itemCount: rows.length + sampleCount + 1,
+        itemBuilder: (context, index) {
+          if (hasSample && index == 0) return WorkspaceSampleRow(tour: tour);
+          final i = index - sampleCount;
           if (i == rows.length) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 WorkspaceWelcome(text: c.welcome),
+                if (c.hasLockedNotes)
+                  WorkspaceLockedHint(onTap: c.openEncryptionSetup),
                 if (rows.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: AppSpacing.lg),
@@ -133,12 +211,31 @@ class _Feed extends StatelessWidget {
           final note = row.note;
           final message = row.message;
           if (message != null) {
-            return WorkspaceMessage(
-              key: ValueKey(row.key),
-              message: message,
-              original: c.originalOf(message),
-              me: c.me,
+            final bubble = SelectableRow(
+              selection: c.selection,
+              id: message.msgId,
+              swipeKey: message.msgId == swipeId ? tour?.swipeKey : null,
+              onSwipeReply: c.targetOf(message).canReply
+                  ? () => c.startReply(message)
+                  : null,
+              child: Obx(
+                () => WorkspaceMessage(
+                  key: c.keyForNote(message.msgId),
+                  message: message,
+                  original: c.originalOf(message),
+                  me: c.me,
+                  isHighlighted: c.flashId.value == message.msgId,
+                  isSaved: c.isSaved(message),
+                  isPinned: c.isPinned(message),
+                  onRetry: () => c.retryNote(message),
+                  onSetUpEncryption: c.openEncryptionSetup,
+                  onLongPress: () => c.selection.onLongPress(message.msgId),
+                ),
+              ),
             );
+            return message.msgId == holdId
+                ? KeyedSubtree(key: tour?.noteKey, child: bubble)
+                : bubble;
           }
           if (note != null) {
             return Obx(

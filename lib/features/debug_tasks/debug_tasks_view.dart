@@ -33,7 +33,7 @@ class DebugTasksView extends GetView<DebugTasksController> {
           ),
           _Gap(
             AppButton.secondary(
-              label: 'Open Approvals',
+              label: 'Open Inbox approvals',
               onPressed: c.openApprovals,
             ),
           ),

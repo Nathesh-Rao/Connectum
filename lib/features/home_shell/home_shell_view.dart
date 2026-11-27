@@ -62,6 +62,22 @@ class HomeShellView extends GetView<HomeShellController> {
     final c = controller;
     final media = MediaQuery.of(context);
     final navHeight = AppBottomNav.heightFor(context);
+    return Obx(
+      () => PopScope(
+        canPop: !c.isTourActive,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) c.cancelTour();
+        },
+        child: _scaffold(c, media, navHeight),
+      ),
+    );
+  }
+
+  Widget _scaffold(
+    HomeShellController c,
+    MediaQueryData media,
+    double navHeight,
+  ) {
     return Scaffold(
       backgroundColor: AppColors.white,
       resizeToAvoidBottomInset: false,
@@ -95,6 +111,7 @@ class HomeShellView extends GetView<HomeShellController> {
                           for (var i = 0; i < _screens.length; i++)
                             if (c.isBuilt[i])
                               _TabLayer(
+                                key: ValueKey(HomeTab.values[i]),
                                 animation: c.crossfade,
                                 isActive: HomeTab.values[i] == active,
                                 isLeaving: HomeTab.values[i] == c.previous,
@@ -106,10 +123,13 @@ class HomeShellView extends GetView<HomeShellController> {
                   ),
                 ),
                 Obx(
-                  () => AppBottomNav(
-                    index: c.tab.value.index,
-                    onSelected: (i) => c.select(HomeTab.values[i]),
-                    items: navItems(hasUnread: c.hasUnread.value),
+                  () => KeyedSubtree(
+                    key: c.navKey,
+                    child: AppBottomNav(
+                      index: c.tab.value.index,
+                      onSelected: (i) => c.select(HomeTab.values[i]),
+                      items: navItems(hasUnread: c.hasUnread.value),
+                    ),
                   ),
                 ),
               ],
@@ -126,6 +146,7 @@ class HomeShellView extends GetView<HomeShellController> {
 /// rising by [AppDistances.tab].
 class _TabLayer extends StatelessWidget {
   const _TabLayer({
+    super.key,
     required this.animation,
     required this.isActive,
     required this.isLeaving,

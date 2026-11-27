@@ -26,7 +26,8 @@ class ScannerPane extends StatelessWidget {
     final maxHeight = AppSheetScope.maybeMaxBodyHeight(context) ?? 0;
     return SizedBox(
       height: maxHeight < AppSpacing.scannerMinPaneHeight
-          ? AppSpacing.scannerMinPaneHeight + (kDebugMode ? AppSpacing.connectDebugExtra : 0)
+          ? AppSpacing.scannerMinPaneHeight +
+                (kDebugMode ? AppSpacing.connectDebugExtra : 0)
           : maxHeight,
       child: LayoutBuilder(
         builder: (context, constraints) {

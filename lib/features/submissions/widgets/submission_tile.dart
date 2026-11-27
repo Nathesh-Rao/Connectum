@@ -71,7 +71,9 @@ class _SubmissionTileState extends State<SubmissionTile> {
                     ),
                     child: Text(
                       card.status!,
-                      style: AppText.label.copyWith(color: AppColors.primaryStrong),
+                      style: AppText.label.copyWith(
+                        color: AppColors.primaryStrong,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),

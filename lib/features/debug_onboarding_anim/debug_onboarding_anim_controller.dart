@@ -21,6 +21,7 @@ class DebugOnboardingAnimController extends GetxController {
 
   final frames = FrameStats();
   final isPlaying = true.obs;
+
   /// The chosen multiple of the HTML speed, null = each art's own constant.
   final speedChoice = Rxn<double>();
   final isBlueOnly = false.obs;
@@ -91,7 +92,8 @@ class DebugOnboardingAnimController extends GetxController {
   }
 
   /// The speed an animation plays at now (choice, else its constant).
-  double effectiveSpeed(OnboardingArtKind kind) => speedChoice.value ?? kind.speed;
+  double effectiveSpeed(OnboardingArtKind kind) =>
+      speedChoice.value ?? kind.speed;
 
   @override
   void onClose() {

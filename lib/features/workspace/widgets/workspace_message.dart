@@ -17,24 +17,40 @@ class WorkspaceMessage extends StatelessWidget {
     required this.message,
     required this.original,
     required this.me,
+    this.onRetry,
+    this.onLongPress,
+    this.onSetUpEncryption,
+    this.isHighlighted = false,
+    this.isSaved = false,
+    this.isPinned = false,
   });
 
   final Message message;
   final Message? original;
   final String me;
+  final VoidCallback? onRetry;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onSetUpEncryption;
+  final bool isHighlighted;
+  final bool isSaved;
+  final bool isPinned;
 
   @override
   Widget build(BuildContext context) => MessageBubble(
     item: ChatItem.message(message),
     isDirect: false,
+    isHighlighted: isHighlighted,
+    isSaved: isSaved,
+    isPinned: isPinned,
     original: original,
-    onLongPress: () {},
-    onRetry: () {},
+    onLongPress: onLongPress ?? () {},
+    onRetry: onRetry ?? () {},
     reactions: const [],
     onReact: (_) {},
     attachmentOf: (tag) => _FileRow(tag: tag),
     people: MentionPeople(me: me.toLowerCase()),
     onReviewKey: () {},
+    onSetUpEncryption: onSetUpEncryption,
   );
 }
 

@@ -24,7 +24,13 @@ class CommandsPanel extends StatelessWidget {
     required this.onPickItem,
     required this.onPickName,
     required this.isOnline,
+    this.panelKey,
+    this.rowKeyOf,
   });
+
+  /// Targets of the first-run tour; null elsewhere.
+  final GlobalKey? panelKey;
+  final GlobalKey? Function(String name)? rowKeyOf;
 
   final CommandPrompt prompt;
   final ValueChanged<HashCommand> onPick;
@@ -48,12 +54,18 @@ class CommandsPanel extends StatelessWidget {
       } else if (prompt.command.value != null) {
         body = _Arguments(prompt: prompt, onPickItem: onPickItem);
       } else {
-        body = _Names(prompt: prompt, onPick: onPick, isOnline: isOnline);
+        body = _Names(
+          prompt: prompt,
+          onPick: onPick,
+          isOnline: isOnline,
+          rowKeyOf: rowKeyOf,
+        );
       }
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (_, _) => prompt.close(),
         child: Container(
+          key: panelKey,
           margin: const EdgeInsets.fromLTRB(
             AppSpacing.sm,
             AppSpacing.xs,
@@ -79,7 +91,10 @@ class _Names extends StatelessWidget {
     required this.prompt,
     required this.onPick,
     required this.isOnline,
+    this.rowKeyOf,
   });
+
+  final GlobalKey? Function(String name)? rowKeyOf;
 
   final CommandPrompt prompt;
   final ValueChanged<HashCommand> onPick;
@@ -111,6 +126,7 @@ class _Names extends StatelessWidget {
         itemBuilder: (context, i) => _CommandRow(
           key: ValueKey(rows[i].name),
           command: rows[i],
+          tourKey: rowKeyOf?.call(rows[i].name),
           onTap: () => onPick(rows[i]),
         ),
       ),
@@ -119,8 +135,14 @@ class _Names extends StatelessWidget {
 }
 
 class _CommandRow extends StatelessWidget {
-  const _CommandRow({super.key, required this.command, required this.onTap});
+  const _CommandRow({
+    super.key,
+    required this.command,
+    required this.onTap,
+    this.tourKey,
+  });
 
+  final GlobalKey? tourKey;
   final HashCommand command;
   final VoidCallback onTap;
 
@@ -128,48 +150,55 @@ class _CommandRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = command;
     final color = c.isAvailable ? AppColors.ink : AppColors.muted;
-    return InkWell(
-      onTap: c.isAvailable ? onTap : null,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: AppSpacing.commandRowHeight,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xxs,
+    return KeyedSubtree(
+      key: tourKey,
+      child: InkWell(
+        onTap: c.isAvailable ? onTap : null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.commandRowHeight,
           ),
-          child: Row(
-            children: [
-              Icon(CommandCategoryIcon.of(c.category), size: 20, color: color),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '#${c.name}${c.summary.isEmpty ? '' : '  ${c.summary}'}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.readableStrong.copyWith(color: color),
-                    ),
-                    if (c.usage.isNotEmpty)
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xxs,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  CommandCategoryIcon.of(c.category),
+                  size: 20,
+                  color: color,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        c.usage,
+                        '#${c.name}${c.summary.isEmpty ? '' : '  ${c.summary}'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.caption,
+                        style: AppText.readableStrong.copyWith(color: color),
                       ),
-                  ],
+                      if (c.usage.isNotEmpty)
+                        Text(
+                          c.usage,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              if (!c.isAvailable && c.requires != 'none')
-                Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.xs),
-                  child: Text('Needs ${c.requires}', style: AppText.caption),
-                ),
-            ],
+                if (!c.isAvailable && c.requires != 'none')
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: Text('Needs ${c.requires}', style: AppText.caption),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

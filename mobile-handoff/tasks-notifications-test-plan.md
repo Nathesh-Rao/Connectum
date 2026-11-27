@@ -208,7 +208,7 @@ Preconditions: `help_ticket` installed, Support group = pool. Me = holder (assig
 
 | ID | Title | Steps | Expected | P/F |
 |---|---|---|---|---|
-| X-01 | Organisation switch | Me belongs to Org A and Org B. In A open Notifications, Tasks, Tickets (note a ticket id). Switch to B. | Nothing from A is visible: bell 0 until re-read, Tasks/Approvals/Tickets empty or B's; open ticket with the same id in B shows B's (no flash of A's, fix F1). Lists re-read after connect. Local notifications of A are gone from the tray. | ☐ |
+| X-01 | Organisation switch | Me belongs to Org A and Org B. In A open Notifications, Tasks, Tickets (note a ticket id). Switch to B. | Nothing from A is visible: bell 0 until re-read, Tasks/Inbox Approvals pane/Tickets empty or B's; open ticket with the same id in B shows B's (no flash of A's, fix F1). Lists re-read after connect. Local notifications of A are gone from the tray. | ☐ |
 | X-02 | Sign out, sign in as another person | Sign out as Me, sign in as Ana. | Feed, tasks, approvals, tickets are Ana's; no notification of Me in the tray; badge right. | ☐ |
 | X-03 | Large text | Settings -> Display -> font size largest; also 1.3. | Tiles, task and ticket rows, sheets (clamped at 1.3) readable, no overflow, buttons reachable; long titles ellipsis; long names (40+ letters) wrap or cut. | ☐ |
 | X-04 | Language / time zone | Change the phone time zone by +5 h and the date format. | "Due today/tomorrow", overdue and "ago" follow the device; a task due "today" in the old zone is still accepted by the server. | ☐ |

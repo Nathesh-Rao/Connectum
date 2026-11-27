@@ -2,7 +2,7 @@ import 'package:connectum/core/widgets/app_state_view.dart';
 import 'package:connectum/data/socket/connectivity_service.dart';
 import 'package:connectum/data/socket/socket_service.dart';
 import 'package:connectum/features/inbox/inbox_controller.dart';
-import 'package:connectum/features/inbox/models/approval_pane.dart';
+import 'package:connectum/features/inbox/models/approval_entries.dart';
 import 'package:connectum/features/inbox/models/approval_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,12 +16,18 @@ Map<String, dynamic> raw(
   bool canRespond = true,
   String direction = 'incoming',
   int? createdTs,
+  String? resolvedBy,
+  bool returned = false,
+  String from = 'rhea',
 }) => {
   'id': id,
   'type': type,
   'status': status,
-  'from': 'rhea',
+  'from': from,
+  'fromUser': from,
   'fromName': 'Rhea',
+  'resolvedBy': ?resolvedBy,
+  if (returned) 'returned': true,
   'approvers': ['ana'],
   'direction': direction,
   'canRespond': canRespond,
@@ -68,14 +74,14 @@ void main() {
       },
     );
 
-    test('the button toggles the pane and back, saving nothing', () async {
+    test('a tab shows the pane and back, saving nothing', () async {
       final c = start(InboxRig());
       await settle();
-      expect(c.isApprovalsOpen.value, isFalse);
-      c.toggleApprovals();
-      expect(c.isApprovalsOpen.value, isTrue);
-      c.toggleApprovals();
-      expect(c.isApprovalsOpen.value, isFalse);
+      expect(c.isApprovalsOpen, isFalse);
+      c.selectTab(1);
+      expect(c.isApprovalsOpen, isTrue);
+      c.selectTab(0);
+      expect(c.isApprovalsOpen, isFalse);
       expect(rig.asked.where((a) => a == 'req.list'), hasLength(1));
     });
 
@@ -84,12 +90,12 @@ void main() {
       r.shell.approvalsRequest.value = true;
       final c = start(r);
       await settle();
-      expect(c.isApprovalsOpen.value, isTrue);
+      expect(c.isApprovalsOpen, isTrue);
       expect(r.shell.approvalsRequest.value, isFalse);
-      c.toggleApprovals();
+      c.selectTab(0);
       r.shell.approvalsRequest.value = true;
       await settle();
-      expect(c.isApprovalsOpen.value, isTrue);
+      expect(c.isApprovalsOpen, isTrue);
     });
 
     test('Apply and Clear close the pane', () async {
@@ -97,10 +103,10 @@ void main() {
       await settle();
       c.openApprovals();
       c.applyFilter(c.filter.value.copyWith(wheres: const []));
-      expect(c.isApprovalsOpen.value, isFalse);
+      expect(c.isApprovalsOpen, isFalse);
       c.openApprovals();
       c.clearFilter();
-      expect(c.isApprovalsOpen.value, isFalse);
+      expect(c.isApprovalsOpen, isFalse);
     });
 
     test('a new session closes the pane and forgets the list', () async {
@@ -109,44 +115,58 @@ void main() {
       c.openApprovals();
       rig.store.switchTo('zed');
       await settle();
-      expect(c.isApprovalsOpen.value, isFalse);
+      expect(c.isApprovalsOpen, isFalse);
     });
   });
 
   group('the pane', () {
-    test('rows: every state, newest first, with counts per answer', () async {
-      final c = start(
-        InboxRig(),
-        rows: [
-          raw(1, createdTs: 10),
-          raw(2, status: 'rejected', canRespond: false, createdTs: 30),
-          raw(3, status: 'accepted', canRespond: false, createdTs: 20),
-          raw(
-            4,
-            type: 'onboarding',
-            status: 'accepted',
-            canRespond: false,
-            createdTs: 40,
-          ),
-        ],
-      );
-      await settle();
-      final a = c.approvals;
-      expect([for (final r in a.rows) r.id], [2, 3, 1]);
-      expect(a.counts[ApprovalFilter.all], 3);
-      expect(a.offered, [
-        ApprovalFilter.all,
-        ApprovalFilter.pending,
-        ApprovalFilter.approved,
-        ApprovalFilter.rejected,
-      ]);
-      a.select(ApprovalFilter.rejected);
-      expect([for (final r in a.rows) r.id], [2]);
-    });
+    test(
+      'rows: every listed state (a settled sign-up is not), newest first, with the chip counts',
+      () async {
+        final c = start(
+          InboxRig(),
+          rows: [
+            raw(1, createdTs: 10),
+            raw(
+              2,
+              status: 'rejected',
+              canRespond: false,
+              createdTs: 30,
+              resolvedBy: 'ana',
+            ),
+            raw(
+              3,
+              status: 'accepted',
+              canRespond: false,
+              createdTs: 20,
+              resolvedBy: 'ana',
+            ),
+            raw(
+              4,
+              type: 'onboarding',
+              status: 'accepted',
+              canRespond: false,
+              createdTs: 40,
+            ),
+            raw(5, status: 'ignored', canRespond: false, createdTs: 50),
+          ],
+        );
+        await settle();
+        final a = c.approvals;
+        expect([for (final r in a.rows) r.id], [2, 3, 1]);
+        expect(
+          {for (final e in a.primaryCounts.entries) e.key.name: e.value},
+          {'all': 3, 'pending': 1, 'approved': 1, 'requests': 3, 'rejected': 1},
+        );
+        a.pickPrimary(ApprovalPrimary.rejected);
+        expect([for (final r in a.rows) r.id], [2]);
+      },
+    );
 
     test('the Inbox search narrows the approvals', () async {
       final c = start(InboxRig());
       await settle();
+      c.selectTab(1);
       c.onQueryChanged('Expense 2');
       await settle();
       expect(c.approvals.rows, isEmpty);

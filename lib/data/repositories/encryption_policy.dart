@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../e2e/e2e_models.dart';
 import '../models/ids.dart';
+import '../models/self_conversation.dart';
 import '../session_store.dart';
 import '../socket/socket_service.dart';
 import 'e2e_repository.dart';
@@ -53,10 +54,15 @@ class EncryptionPolicy {
   /// messages older than what has been loaded.
   EncryptionVerdict evaluate(String convId, ThreadFacts facts, bool? peerKeys) {
     final kind = convId.split(':').first;
-    if (kind != 'dm' && kind != 'group') return EncryptionVerdict.plain;
+    final isSelf = SelfConversation.isSelf(convId);
+    if (!isSelf && kind != 'dm' && kind != 'group') {
+      return EncryptionVerdict.plain;
+    }
     if (facts.isE2e || _mode == 'required') return EncryptionVerdict.encrypted;
     if (_mode == null) return EncryptionVerdict.unknown;
-    if (_mode == 'off' || facts.hasHistory) return EncryptionVerdict.plain;
+    if (_mode == 'off' || (facts.hasHistory && !isSelf)) {
+      return EncryptionVerdict.plain;
+    }
     if (peerKeys == null) return EncryptionVerdict.unknown;
     return peerKeys ? EncryptionVerdict.encrypted : EncryptionVerdict.plain;
   }
@@ -71,7 +77,9 @@ class EncryptionPolicy {
   /// Looks things up when needed, used right before a send.
   Future<EncryptionVerdict> verdict(String convId, ThreadFacts facts) async {
     final kind = convId.split(':').first;
-    if (kind != 'dm' && kind != 'group') return EncryptionVerdict.plain;
+    if (!SelfConversation.isSelf(convId) && kind != 'dm' && kind != 'group') {
+      return EncryptionVerdict.plain;
+    }
     if (facts.isE2e) return EncryptionVerdict.encrypted;
     await _loadMode();
     var verdict = cached(convId, facts);
@@ -228,8 +236,76 @@ class EncryptionPolicy {
     );
   }
 
+  /// THE rule for a note into My Work Space, the counterpart of [decide]. The
+  /// only readers are the person's own devices, so:
+  ///  - mode off: plain.
+  ///  - required, or an own reader device exists, or the thread already holds
+  ///    encrypted notes: the note is encrypted for EVERY device of mine (this
+  ///    phone included, so a person with one device works). Without this
+  ///    phone's keys the answer is setup-pending (the note waits); with keys
+  ///    but this phone not registered, or a pinned key changed, it is blocked.
+  ///    These are never plain.
+  ///  - optional, no device of mine anywhere, thread not encrypted: plain.
+  ///  - mode not known yet: unknown (the note waits and asks again).
+  static E2eSendDecision decideSelf({
+    required String? mode,
+    required bool isEncryptedThread,
+    required List<E2eDevicePublic> myDevices,
+    required E2eDeviceKeys? keys,
+    required List<E2ePinChange> pinChanges,
+    bool isSettingUp = true,
+  }) {
+    if (mode == null) return const E2eSendDecision.unknown();
+    if (mode == 'off') return const E2eSendDecision.plain();
+    final hasReader = E2eRepository.readers(myDevices).isNotEmpty;
+    if (mode != 'required' && !hasReader && !isEncryptedThread) {
+      return const E2eSendDecision.plain();
+    }
+    if (keys == null) {
+      return isSettingUp
+          ? const E2eSendDecision.setupPending()
+          : const E2eSendDecision.blocked(
+              E2eSendDecision.cantSend,
+              reason: E2eSendDecision.notSetUpReason,
+            );
+    }
+    if (!myDevices.any((d) => d.id == keys.id)) {
+      return const E2eSendDecision.blocked(
+        E2eSendDecision.cantSend,
+        reason: E2eSendDecision.notRegisteredReason,
+      );
+    }
+    if (pinChanges.isNotEmpty) {
+      return const E2eSendDecision.blocked(
+        'Your security key changed on another device',
+        isKeyChange: true,
+      );
+    }
+    final byId = {for (final d in myDevices) d.id: d};
+    if (byId.values.where((d) => !d.isRecovery).length > maxDevices) {
+      return const E2eSendDecision.blocked(
+        E2eSendDecision.cantSend,
+        reason:
+            'this account has more than $maxDevices devices; remove one first',
+      );
+    }
+    if (byId.length > maxWraps) {
+      return const E2eSendDecision.blocked(
+        E2eSendDecision.cantSend,
+        reason: 'too many devices to encrypt for',
+      );
+    }
+    return E2eSendDecision.encrypt(
+      recipients: byId.values.toList(),
+      keys: keys,
+    );
+  }
+
   /// The most boxes one envelope may carry.
   static const maxWraps = 250;
+
+  /// The most devices one person may have (the server's limit).
+  static const maxDevices = 10;
 
   /// Gathers what [decide] needs. With [isLookup] it may ask the server and
   /// pins first-seen keys (a send); without it, it reads caches only (the
@@ -240,8 +316,12 @@ class EncryptionPolicy {
     bool isLookup = true,
   }) async {
     final kind = convId.split(':').first;
-    if (kind != 'dm' && kind != 'group') return const E2eSendDecision.plain();
+    final isSelf = SelfConversation.isSelf(convId);
+    if (!isSelf && kind != 'dm' && kind != 'group') {
+      return const E2eSendDecision.plain();
+    }
     await _loadMode(isOnlineRead: isLookup);
+    if (isSelf) return _decideSelfSend(facts, isLookup);
     if (kind == 'group') return _decideGroupSend(convId, facts, isLookup);
     if (_mode == null) return const E2eSendDecision.unknown();
     if (_mode == 'off') return const E2eSendDecision.plain();
@@ -303,6 +383,52 @@ class EncryptionPolicy {
           : await _e2e.checkPins(found, isRecord: isLookup),
     );
   }
+
+  Future<E2eSendDecision> _decideSelfSend(
+    ThreadFacts facts,
+    bool isLookup,
+  ) async {
+    if (_mode == null) return const E2eSendDecision.unknown();
+    if (_mode == 'off') return const E2eSendDecision.plain();
+    final me = (_store.userId ?? '').toLowerCase();
+    final keys = await _e2e.keys();
+    // A send asks the server for my devices right before it seals (a list
+    // younger than `sendListTtl` is reused); the composer reads the cache.
+    var dirs = isLookup ? null : _e2e.cachedDevices([me]);
+    if (dirs == null) {
+      // Without the list the answer is "ask again at send time", never plain.
+      if (!isLookup) return const E2eSendDecision.unknown();
+      try {
+        dirs = await _e2e.devicesOf([me], maxAge: E2eRepository.sendListTtl);
+      } on SocketCallError catch (e) {
+        AppLog.w('encryption_policy', 'self devices ${e.code}');
+        return _selfLookupFailed();
+      } catch (e, st) {
+        AppLog.e('encryption_policy', e, st, 'self devices');
+        return _selfLookupFailed();
+      }
+    }
+    final mine = dirs[me] ?? const <E2eDevicePublic>[];
+    return decideSelf(
+      mode: _mode,
+      isEncryptedThread: facts.isE2e,
+      myDevices: mine,
+      keys: keys,
+      isSettingUp: _e2e.isSettingUp,
+      pinChanges: mine.isEmpty
+          ? const []
+          : await _e2e.checkPins({me: mine}, isRecord: isLookup),
+    );
+  }
+
+  /// The list of my devices could not be read: ask again later. Never plain.
+  E2eSendDecision _selfLookupFailed() => _socket.isOnline
+      ? const E2eSendDecision.blocked(
+          E2eSendDecision.cantSend,
+          reason: "couldn't check your devices",
+          isTransient: true,
+        )
+      : const E2eSendDecision.unknown();
 
   Future<E2eSendDecision> _decideGroupSend(
     String convId,
@@ -379,7 +505,18 @@ class EncryptionPolicy {
     final me = (_store.userId ?? '').toLowerCase();
     try {
       bool hasKeys;
-      if (convId.startsWith('dm:')) {
+      if (SelfConversation.isSelf(convId)) {
+        final data = await _socket.sdCall('e2e.devices', {
+          'users': [me],
+        });
+        final devices = (data['users'] as Map?) ?? {};
+        hasKeys = devices.entries.any(
+          (e) =>
+              e.key.toString().toLowerCase() == me &&
+              e.value is List &&
+              (e.value as List).any((d) => d is Map && d['recovery'] != true),
+        );
+      } else if (convId.startsWith('dm:')) {
         final peer = convId.substring(3);
         final data = await _socket.sdCall('e2e.devices', {
           'users': [peer],

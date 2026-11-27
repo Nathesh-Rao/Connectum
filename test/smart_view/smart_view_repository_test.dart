@@ -74,6 +74,32 @@ void main() {
       },
     );
 
+    test('every read asks fileMeta:2, the number 2 exactly', () async {
+      await openTickets();
+      serve(
+        [ownRow(1)],
+        mine: {
+          'with': [mineRow(100)],
+          'involved': [mineRow(200)],
+        },
+      );
+      await rig.repo.load(table);
+      final reads = rig.socket.calls.where(
+        (c) => c.action == _rows || c.action == _mine,
+      );
+      expect(reads.where((c) => c.action == _mine), isNotEmpty);
+      for (final c in reads) {
+        expect(c.args['fileMeta'], isA<int>());
+        expect(c.args['fileMeta'], 2);
+      }
+      expect(
+        reads
+            .where((c) => c.action == _rows)
+            .every((c) => c.args['withDetails'] == true),
+        isTrue,
+      );
+    });
+
     test('at most 20 pages, then it says so', () async {
       await openTickets();
       serve([for (var i = 0; i < 12000; i++) ownRow(i + 1)]);
@@ -534,32 +560,29 @@ void main() {
       expect(table.rowOf(13), isNotNull);
     });
 
-    test(
-      'a burst of 20 events stays inside the shared read budget',
-      () async {
-        await opened();
-        times.clear();
-        rig.socket.answers[_one] = (args) {
-          times.add(rig.clock.now);
-          return {'submission': ownRow(args['id'] as int)};
-        };
-        for (var i = 0; i < 20; i++) {
-          rig.repo.onEvent(event(100 + i));
-        }
-        for (var i = 0; i < 60; i++) {
-          await Future<void>.delayed(Duration.zero);
-        }
-        expect(times.length, 20);
-        for (final t in times) {
-          final inWindow = times.where(
-            (x) =>
-                !x.isBefore(t) && x.difference(t) < const Duration(seconds: 10),
-          );
-          expect(inWindow.length, lessThanOrEqualTo(ReadGate.budget));
-        }
-        expect(rig.count(_rows), 0);
-      },
-    );
+    test('a burst of 20 events stays inside the shared read budget', () async {
+      await opened();
+      times.clear();
+      rig.socket.answers[_one] = (args) {
+        times.add(rig.clock.now);
+        return {'submission': ownRow(args['id'] as int)};
+      };
+      for (var i = 0; i < 20; i++) {
+        rig.repo.onEvent(event(100 + i));
+      }
+      for (var i = 0; i < 60; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(times.length, 20);
+      for (final t in times) {
+        final inWindow = times.where(
+          (x) =>
+              !x.isBefore(t) && x.difference(t) < const Duration(seconds: 10),
+        );
+        expect(inWindow.length, lessThanOrEqualTo(ReadGate.budget));
+      }
+      expect(rig.count(_rows), 0);
+    });
 
     test('a structure change reads this table again, once', () async {
       await opened();

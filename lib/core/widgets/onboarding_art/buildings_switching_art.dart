@@ -24,7 +24,9 @@ class BuildingsSwitching {
         'loopStart': f.loop0,
         'period': f.period,
         'nodeT': f.nodeT,
-        'hits': [for (final h in f.hits) [h.t, h.icon]],
+        'hits': [
+          for (final h in f.hits) [h.t, h.icon],
+        ],
       },
     );
   }
@@ -100,12 +102,15 @@ class _BuildingsFrame {
     stops = [for (final s in cfg['stops']! as List) (s as num).toDouble()];
     order = [for (final o in cfg['order']! as List) o as String];
     basex = {
-      for (final e in (cfg['basex']! as Map).entries) e.key as String: (e.value as num).toDouble(),
+      for (final e in (cfg['basex']! as Map).entries)
+        e.key as String: (e.value as num).toDouble(),
     };
     for (final n in order) {
       groups[n] = scene.byClass('bg-$n');
     }
-    tints = {for (final k in ['fa', 'tw', 'mu']) k: scene.byId('tint_$k')};
+    tints = {
+      for (final k in ['fa', 'tw', 'mu']) k: scene.byId('tint_$k'),
+    };
     nodes = [
       for (final n in cfg['nodes']! as List)
         (
@@ -114,7 +119,9 @@ class _BuildingsFrame {
           y: (n[2] as num).toDouble(),
         ),
     ];
-    bubs = [for (final n in ['bL', 'bC', 'bR']) _Bub(scene.byId(n))];
+    bubs = [
+      for (final n in ['bL', 'bC', 'bR']) _Bub(scene.byId(n)),
+    ];
     arcm = scene.byClass('arcm');
 
     final st = <double>[], du = <double>[], nt = <double>[0.75];
@@ -184,8 +191,13 @@ class _BuildingsFrame {
       final cp = eOutCubic(seg(gt, 0.2, 0.35));
       final pulse = u >= 0 ? bump(clamp01(u / 0.6)) : 0.0;
       final cu = u >= 0 ? clamp01((u - 0.15) / 0.5) : 1.0;
-      final cx = double.parse(shG.data['cx']!), cy = double.parse(shG.data['cy']!);
-      shG.transform = _tf(cx, cy, math.max(0.001, (0.5 + 0.5 * sp) * (1 - 0.12 * pulse)));
+      final cx = double.parse(shG.data['cx']!),
+          cy = double.parse(shG.data['cy']!);
+      shG.transform = _tf(
+        cx,
+        cy,
+        math.max(0.001, (0.5 + 0.5 * sp) * (1 - 0.12 * pulse)),
+      );
       shG.opacity = sp;
       shCk.dashOffset = toFixed(1 - (u >= 0 ? eOutCubic(cu) : cp), 3);
       return;
@@ -260,7 +272,11 @@ class _BuildingsFrame {
       final s = 0.82 + 0.18 * p;
       final hp = 1 + 0.08 * hl[k];
       b.el.opacity = toFixed(p, 3);
-      b.el.transform = _tf(b.nx, b.ny, s).then(_tf(b.cx, b.cy, k == 2 ? 1 : hp));
+      b.el.transform = _tf(
+        b.nx,
+        b.ny,
+        s,
+      ).then(_tf(b.cx, b.cy, k == 2 ? 1 : hp));
       _glyph(k, t - bub0[k] - 0.2, hu[k]);
     }
 
@@ -301,7 +317,9 @@ class _BuildingsFrame {
       }
     }
     if (pos != null && op > 0) {
-      final pt = routeMetric.getTangentForOffset(clamp01(pos, 0, routeLen))!.position;
+      final pt = routeMetric
+          .getTangentForOffset(clamp01(pos, 0, routeLen))!
+          .position;
       particle.cx = toFixed(pt.dx, 2);
       particle.cy = toFixed(pt.dy, 2);
       particle.r = toFixed(9 * sc, 2);

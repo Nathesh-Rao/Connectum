@@ -38,7 +38,9 @@ class LogViewerView extends GetView<LogViewerController> {
               () => AppStateView(
                 state: c.viewState.value,
                 emptyTitle: 'No log entries yet',
-                errorMessage: "The log file couldn't be read.",
+                errorMessage: c.errorText.value.isEmpty
+                    ? "The log file couldn't be read."
+                    : "The log file couldn't be read.\n${c.errorText.value}",
                 onRetry: c.load,
                 child: _Body(controller: c),
               ),
@@ -59,21 +61,43 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     return Obx(
-      () => SvLogViewer(
-        doc: c.doc.value,
-        scroll: c.scroll,
-        isWrap: c.isWrap.value,
-        fontSize: c.size.value.fontSize,
-        hitStarts: c.hitStarts,
-        queryLength: c.queryLength,
-        currentHit: c.hits.value.hits.isEmpty ? null : c.currentHit,
-        onRows: (rows, extent) {
-          c.rows = rows;
-          c.lineExtent = extent;
-        },
-        onTop: c.jumpToTop,
-        onLatest: c.jumpToLatest,
+      () => Column(
+        children: [
+          if (c.doc.value.isPartial)
+            Container(
+              width: double.infinity,
+              color: AppColors.violetTint,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              child: const Text(
+                'Showing last part of file',
+                key: ValueKey('log-partial'),
+                style: AppText.supporting,
+              ),
+            ),
+          Expanded(child: _lines(c)),
+        ],
       ),
+    );
+  }
+
+  Widget _lines(LogViewerController c) {
+    return SvLogViewer(
+      doc: c.doc.value,
+      scroll: c.scroll,
+      isWrap: c.isWrap.value,
+      fontSize: c.size.value.fontSize,
+      hitStarts: c.hitStarts,
+      queryLength: c.queryLength,
+      currentHit: c.hits.value.hits.isEmpty ? null : c.currentHit,
+      onRows: (rows, extent) {
+        c.rows = rows;
+        c.lineExtent = extent;
+      },
+      onTop: c.jumpToTop,
+      onLatest: c.jumpToLatest,
     );
   }
 }

@@ -57,7 +57,12 @@ void main() {
       socket.handler = (a, args) async => reply([3, 2, 1]);
       final page = (await repo.query(q))!;
       expect(socket.calls.single.action, RecordCmd.query);
-      expect(socket.calls.single.args, {'limit': 100, 'offset': 0});
+      expect(socket.calls.single.args, {
+        'limit': 100,
+        'offset': 0,
+        'withDetails': true,
+        'fileMeta': 2,
+      });
       expect(page.rows.map((r) => r.id), [3, 2, 1]);
       expect(page.total, 100);
       expect(page.hasMore, isTrue);

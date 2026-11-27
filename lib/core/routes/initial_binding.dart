@@ -18,6 +18,8 @@ import '../../data/db/app_database.dart';
 import '../../data/e2e/e2e_key_store.dart';
 import '../../data/form_logic/form_logic_service.dart';
 import '../../data/repositories/attachment_repository.dart';
+import '../../data/repositories/attachment_sender.dart';
+import '../../data/repositories/share_repository.dart';
 import '../../data/repositories/approval_repository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/command_repository.dart';
@@ -34,9 +36,11 @@ import '../../data/repositories/feed_repository.dart';
 import '../../features/notifications/notification_router.dart';
 import '../../data/repositories/form_file_repository.dart';
 import '../../data/repositories/form_options_repository.dart';
+import '../../data/repositories/marks_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/profile_photo/profile_photo_picker.dart';
 import '../../data/repositories/people_avatars.dart';
+import '../../data/repositories/people_repository.dart';
 import '../../data/repositories/presence_repository.dart';
 import '../../data/repositories/profile_photo_repository.dart';
 import '../widgets/avatar_image.dart';
@@ -61,6 +65,7 @@ import '../../data/socket/read_gate.dart';
 import '../../data/socket/socket_service.dart';
 import '../../features/connect_target/connect_target_controller.dart';
 import '../utils/install_referrer.dart';
+import '../tour/tour_service.dart';
 import 'deep_link_service.dart';
 import 'invite_service.dart';
 import '../../demo/demo_ai_repository.dart';
@@ -179,8 +184,18 @@ class InitialBinding extends Bindings {
       MessageRepository(db, store, socket, conversations, policy, e2e),
       permanent: true,
     );
+    final readGate = Get.put(ReadGate(), permanent: true);
+    Get.put(MarksRepository(db, store, socket, readGate), permanent: true);
+    Get.put(PeopleRepository(socket, readGate), permanent: true);
     final commands = Get.put(
-      CommandRepository(socket, store, connectivity, messages, conversations),
+      CommandRepository(
+        socket,
+        store,
+        connectivity,
+        messages,
+        conversations,
+        readGate: readGate,
+      ),
       permanent: true,
     );
     final formOptions = Get.put(
@@ -191,7 +206,6 @@ class InitialBinding extends Bindings {
       SubmissionRepository(db, store, socket, messages, formOptions),
       permanent: true,
     );
-    final readGate = Get.put(ReadGate(), permanent: true);
     final tickets = Get.put(
       TicketRepository(socket, store, conversations, gate: readGate),
       permanent: true,
@@ -266,8 +280,41 @@ class InitialBinding extends Bindings {
       ),
       permanent: true,
     );
-    if (!isDemo) fireAndLog('initial_binding', () => localNotifications.start());
+    if (!isDemo)
+      fireAndLog('initial_binding', () => localNotifications.start());
+    Get.put(
+      TourService(
+        userId: () => store.userId,
+        blockerNames: ['e2eSetup', 'notificationExplainer'],
+        blockers: [
+          // Secure-messaging setup needs the person.
+          () => switch (Get.find<E2eRepository>().phase.value) {
+            E2eSetupPhase.working ||
+            E2eSetupPhase.limit ||
+            E2eSetupPhase.removed ||
+            E2eSetupPhase.refused => true,
+            _ => false,
+          },
+          // The notification explainer comes first.
+          () => localNotifications.shouldExplain,
+        ],
+      ),
+      permanent: true,
+    );
     final attachments = Get.put(AttachmentRepository(store), permanent: true);
+    final shareToConnectum = Get.put(
+      ShareRepository(
+        conversations: conversations,
+        sender: AttachmentSender(
+          messages: messages,
+          attachments: attachments,
+          e2e: e2e,
+        ),
+        attachments: attachments,
+        socket: socket,
+      ),
+      permanent: true,
+    );
     Get.put(FormFileRepository(attachments, store), permanent: true);
     final attachmentCache = Get.put(
       AttachmentCache(attachments.dio),
@@ -283,6 +330,7 @@ class InitialBinding extends Bindings {
         onUnauthorized: api.reportUnauthorized,
         store: store,
         fetcher: isDemo ? SeedSmartFiles.fetcher : null,
+        connectumShare: shareToConnectum,
       ),
       permanent: true,
     );
@@ -325,10 +373,13 @@ class InitialBinding extends Bindings {
     Get.put(InviteService(auth, store, links), permanent: true);
     if (isDemo) {
       SeedTasks.start();
-      fireAndLog('initial_binding', () => SeedTickets.start().then((_) {
+      fireAndLog(
+        'initial_binding',
+        () => SeedTickets.start().then((_) {
           SeedTickets.startOtherPerson();
           return SeedSmartView.start();
-        }));
+        }),
+      );
     }
   }
 }

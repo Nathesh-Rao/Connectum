@@ -82,6 +82,8 @@ class LogRedaction {
     'task.send',
     'req.respond',
     'assistant.relay',
+    'msg.pins',
+    'msg.saved',
   };
 
   /// Socket actions whose whole request and response are hidden.

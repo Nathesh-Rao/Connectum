@@ -7,7 +7,11 @@ import '../../../core/widgets/app_button.dart';
 import '../profile_controller.dart';
 
 class LogoutSheet extends StatelessWidget {
-  const LogoutSheet({super.key, required this.controller, required this.unsent});
+  const LogoutSheet({
+    super.key,
+    required this.controller,
+    required this.unsent,
+  });
 
   final ProfileController controller;
   final int unsent;
@@ -51,7 +55,9 @@ class LogoutSheet extends StatelessWidget {
           () => AppButton.text(
             label: 'Cancel',
             tone: AppTextButtonTone.ink,
-            onPressed: c.isLoggingOut.value ? null : () => Navigator.of(context).pop(),
+            onPressed: c.isLoggingOut.value
+                ? null
+                : () => Navigator.of(context).pop(),
           ),
         ),
       ],

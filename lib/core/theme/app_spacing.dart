@@ -94,12 +94,21 @@ class AppSpacing {
   static const double bracketLength = 26;
   static const double bracketStroke = 4;
   static const double tagHeight = 22;
-  static const double inboxCardHeight = 220;
-  static const double inboxFaceWidth = 56;
+  static const double inboxStatusCircle = 22;
   static const double inboxFaceSize = 36;
-  static const double inboxChipMaxWidth = 112;
+
+  /// The Inbox card's picture with its ring: outer size, ring stroke and the
+  /// surface gap between ring and photo.
+  static const double inboxRingSize = 56;
+  static const double inboxRingStroke = 2;
+  static const double inboxRingGap = 2;
+  static const double inboxChipHeight = 34;
+  static const double inboxChipMaxWidth = 260;
   static const double inboxPriorityDot = 10;
   static const double inboxMenuButton = 32;
+  static const double inboxFieldIcon = 28;
+  static const double inboxMetaIcon = 14;
+  static const double inboxStripHeight = 32;
   static const double otpCellHeight = 58;
   static const double otpCellGap = 7;
   static const double dotCell = 28;
@@ -154,6 +163,13 @@ class AppSpacing {
   static const double popupMenuMargin = 16;
   static const double popupMenuIcon = 20;
   static const double menuEdge = 8;
+  static const double compactMenuMinWidth = 168;
+  static const double compactMenuMaxWidth = 220;
+  static const double compactMenuMaxFraction = 0.6;
+  static const double compactMenuRow = 44;
+  static const double compactMenuIcon = 18;
+  static const double compactMenuIconSlot = 24;
+  static const double compactMenuPadding = 14;
   static const double qrCardMinWidth = 260;
   static const double qrCardWidth = 312;
   static const double qrShareWidth = 360;

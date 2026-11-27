@@ -22,7 +22,11 @@ class DeviceLimitBanner extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Icons.lock_outline, size: 16, color: AppColors.primaryBright),
+        const Icon(
+          Icons.lock_outline,
+          size: 16,
+          color: AppColors.primaryBright,
+        ),
         const SizedBox(width: AppSpacing.xs),
         const Expanded(
           child: Padding(

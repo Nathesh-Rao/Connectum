@@ -74,7 +74,7 @@ class _RecordRenameSheetState extends State<RecordRenameSheet> {
             errorText: r.error.value,
             maxLength: RecordRename.maxLength,
             autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
+            textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.done,
             enabled: !r.isSaving.value,
             onChanged: (_) => r.clearError(),

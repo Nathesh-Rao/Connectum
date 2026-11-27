@@ -39,7 +39,10 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
   @override
   void initState() {
     super.initState();
-    _detections = _scanner.barcodes.listen(_onDetect, onError: streamOnError('barcode_scanner_sheet'));
+    _detections = _scanner.barcodes.listen(
+      _onDetect,
+      onError: streamOnError('barcode_scanner_sheet'),
+    );
     _scanner.addListener(_onValue);
   }
 

@@ -26,7 +26,7 @@ class Sql {
 }
 
 class AppDatabase {
-  static const _version = 16;
+  static const _version = 17;
   static const couldNotConfirm = "couldn't confirm delivery";
 
   static const _migrations = <int, List<String>>{
@@ -162,6 +162,18 @@ class AppDatabase {
     // is never created now.
     15: [],
     16: ['DROP TABLE IF EXISTS sv_overview_cache'],
+    // Saved and pinned messages (`msg.*`): what the server last said
+    // (`is_saved`, `is_pinned`) and what the person asked for that is still
+    // waiting to reach it (`want_saved`, `want_pinned`; null: nothing waits).
+    // One row per message; today only the person's own notes (`conv_id` self).
+    17: [
+      '''CREATE TABLE message_marks(
+        org_id TEXT NOT NULL, user_id TEXT NOT NULL, conv_id TEXT NOT NULL,
+        msg_id TEXT NOT NULL, is_saved INTEGER DEFAULT 0, is_pinned INTEGER DEFAULT 0,
+        want_saved INTEGER, want_pinned INTEGER, pinned_by TEXT,
+        pinned_ts INTEGER DEFAULT 0, saved_ts INTEGER DEFAULT 0, preview TEXT,
+        PRIMARY KEY(org_id, user_id, conv_id, msg_id))''',
+    ],
   };
 
   static const _scopedTables = [
@@ -176,6 +188,7 @@ class AppDatabase {
     'outbox',
     'sync_cursor',
     'people_avatars',
+    'message_marks',
   ];
 
   @visibleForTesting

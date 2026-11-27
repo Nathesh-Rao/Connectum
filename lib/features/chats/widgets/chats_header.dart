@@ -19,6 +19,8 @@ class ChatsHeader extends StatelessWidget {
     required this.profileName,
     required this.profilePicture,
     required this.onOpenProfile,
+    this.switcherKey,
+    this.actionsKey,
   });
 
   /// Read inside an Obx, so it may read observables.
@@ -31,6 +33,11 @@ class ChatsHeader extends StatelessWidget {
   final String Function() profileName;
   final String? Function() profilePicture;
   final VoidCallback onOpenProfile;
+
+  /// Targets of the first-run tour: the enterprise switcher, and the bell with
+  /// the profile picture.
+  final GlobalKey? switcherKey;
+  final GlobalKey? actionsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -48,62 +55,73 @@ class ChatsHeader extends StatelessWidget {
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Semantics(
-                button: true,
-                label: 'Switch enterprise',
-                excludeSemantics: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onSwitchEnterprise,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: AppSpacing.minTapTarget,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('YOUR ENTERPRISE', style: AppText.eyebrow),
-                        Obx(
-                          () => Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  enterpriseName(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppText.subtitle,
+              child: KeyedSubtree(
+                key: switcherKey,
+                child: Semantics(
+                  button: true,
+                  label: 'Switch enterprise',
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onSwitchEnterprise,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: AppSpacing.minTapTarget,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('YOUR ENTERPRISE', style: AppText.eyebrow),
+                          Obx(
+                            () => Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    enterpriseName(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.subtitle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              const Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 18,
-                                color: AppColors.ink,
-                              ),
-                            ],
+                                const SizedBox(width: AppSpacing.xs),
+                                const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 18,
+                                  color: AppColors.ink,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-          Obx(
-            () => AppNotificationBell(
-              count: unread(),
-              onPressed: onOpenNotifications,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.bellAvatarGap),
-          Obx(
-            () => AppProfileAvatar(
-              name: profileName(),
-              picture: profilePicture(),
-              onPressed: onOpenProfile,
+          KeyedSubtree(
+            key: actionsKey,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Obx(
+                  () => AppNotificationBell(
+                    count: unread(),
+                    onPressed: onOpenNotifications,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.bellAvatarGap),
+                Obx(
+                  () => AppProfileAvatar(
+                    name: profileName(),
+                    picture: profilePicture(),
+                    onPressed: onOpenProfile,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

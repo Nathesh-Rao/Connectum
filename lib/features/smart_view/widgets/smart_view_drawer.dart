@@ -5,7 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/tour/tour_texts.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_tag.dart';
 import '../../../core/widgets/app_state_view.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../data/repositories/smart_view_repository.dart';
@@ -30,54 +32,57 @@ class SmartViewDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    return SafeArea(
-      right: false,
-      bottom: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              SmartViewDrawer.inset,
-              AppSpacing.md,
-              SmartViewDrawer.inset,
-              AppSpacing.xs,
-            ),
-            child: Text('Smart view', style: AppText.title),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              SmartViewDrawer.inset,
-              0,
-              SmartViewDrawer.inset,
-              AppSpacing.xs,
-            ),
-            child: AppTextField(
-              controller: c.findField,
-              hint: 'Find',
-              minHeight: AppSpacing.searchHeight,
-              leading: const Icon(
-                Icons.search,
-                size: 18,
-                color: AppColors.muted,
+    return KeyedSubtree(
+      key: c.tour?.drawerKey,
+      child: SafeArea(
+        right: false,
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                SmartViewDrawer.inset,
+                AppSpacing.md,
+                SmartViewDrawer.inset,
+                AppSpacing.xs,
               ),
-              suffix: Obx(
-                () => c.find.value.isEmpty
-                    ? const SizedBox.shrink()
-                    : AppButton.icon(
-                        icon: Icons.close,
-                        semanticLabel: 'Clear',
-                        onPressed: () {
-                          c.findField.clear();
-                          c.find.value = '';
-                        },
-                      ),
-              ),
-              onChanged: (v) => c.find.value = v,
+              child: Text('Smart view', style: AppText.title),
             ),
-          ),
-          Expanded(child: _List(controller: c)),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                SmartViewDrawer.inset,
+                0,
+                SmartViewDrawer.inset,
+                AppSpacing.xs,
+              ),
+              child: AppTextField(
+                controller: c.findField,
+                hint: 'Find',
+                minHeight: AppSpacing.searchHeight,
+                leading: const Icon(
+                  Icons.search,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+                suffix: Obx(
+                  () => c.find.value.isEmpty
+                      ? const SizedBox.shrink()
+                      : AppButton.icon(
+                          icon: Icons.close,
+                          semanticLabel: 'Clear',
+                          onPressed: () {
+                            c.findField.clear();
+                            c.find.value = '';
+                          },
+                        ),
+                ),
+                onChanged: (v) => c.find.value = v,
+              ),
+            ),
+            Expanded(child: _List(controller: c)),
+          ],
+        ),
       ),
     );
   }
@@ -92,7 +97,7 @@ class _List extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     return Obx(() {
-      final phase = c.listPhase.value;
+      final phase = c.drawerPhase;
       final state = switch (phase) {
         SvPhase.loading => AppViewState.loading,
         SvPhase.error => AppViewState.error,
@@ -130,14 +135,6 @@ class _Rows extends StatelessWidget {
           AppSpacing.lg,
         ),
         children: [
-          _DrawerRow(
-            key: const ValueKey('sv-drawer-overview'),
-            title: 'Overview',
-            icon: Icons.space_dashboard_outlined,
-            isSelected: c.isOverview,
-            onTap: c.showOverview,
-          ),
-          const SizedBox(height: AppSpacing.xs),
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
             child: Row(
@@ -155,12 +152,18 @@ class _Rows extends StatelessWidget {
                 child: Text('Nothing matches.', style: AppText.readable),
               ),
             ),
-          for (final s in shown)
-            _DrawerRow(
-              key: ValueKey('sv-drawer-${s.name}'),
-              title: s.caption,
-              isSelected: s.name == openName && !c.isOverview,
-              onTap: () => c.show(s),
+          for (final (i, s) in shown.indexed)
+            KeyedSubtree(
+              key: (openName == null ? i == 0 : s.name == openName)
+                  ? c.tour?.rowKey
+                  : null,
+              child: _DrawerRow(
+                key: ValueKey('sv-drawer-${s.name}'),
+                title: s.caption,
+                isSelected: s.name == openName,
+                isSample: c.tour?.demo.isSampleSource(s) ?? false,
+                onTap: () => c.show(s),
+              ),
             ),
         ],
       );
@@ -174,12 +177,12 @@ class _DrawerRow extends StatelessWidget {
     required this.title,
     required this.isSelected,
     required this.onTap,
-    this.icon,
+    this.isSample = false,
   });
 
   final String title;
-  final IconData? icon;
   final bool isSelected;
+  final bool isSample;
   final VoidCallback onTap;
 
   @override
@@ -207,14 +210,6 @@ class _DrawerRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 18,
-                  color: isSelected ? AppColors.violetStrong : AppColors.muted,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
               Expanded(
                 child: Text(
                   title,
@@ -225,6 +220,14 @@ class _DrawerRow extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isSample)
+                const Padding(
+                  padding: EdgeInsets.only(left: AppSpacing.xs),
+                  child: AppTag(
+                    label: TourTexts.sampleTag,
+                    tone: AppTagTone.accent,
+                  ),
+                ),
             ],
           ),
         ),

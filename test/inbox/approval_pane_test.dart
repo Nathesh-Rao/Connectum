@@ -13,6 +13,7 @@ Approval ap(
   int? stage,
   int? stages,
   String caption = '',
+  bool returned = false,
 }) => Approval(
   id: id,
   type: type,
@@ -24,6 +25,7 @@ Approval ap(
   stage: stage,
   stages: stages,
   caption: caption,
+  returned: returned,
 );
 
 void main() {
@@ -84,6 +86,14 @@ void main() {
         'Waiting for approval',
       );
       expect(ApprovalPane.tagOf(ap(1, status: 'rejected')), 'Declined');
+      expect(
+        ApprovalPane.tagOf(ap(1, status: 'rejected', returned: true)),
+        'Returned',
+      );
+      expect(
+        ApprovalPane.statusWord(ap(1, status: 'rejected', returned: true)),
+        'Returned',
+      );
       expect(ApprovalPane.tagOf(ap(1, status: 'accepted')), 'Approved');
       expect(ApprovalPane.tagOf(ap(1, status: 'ignored')), '');
     });
@@ -97,44 +107,31 @@ void main() {
         ap(3, status: 'rejected', canRespond: false, createdTs: 20),
         ap(4, status: 'ignored', canRespond: false, createdTs: 5),
       ];
-      expect([for (final a in ApprovalPane.listed(all)) a.id], [2, 3, 1, 4]);
+      // A dismissed (ignored) request is not listed anywhere.
+      expect([for (final a in ApprovalPane.listed(all)) a.id], [2, 3, 1]);
     });
 
-    test('a settled sign-up is dropped, a pending one stays', () {
+    test('only a waiting sign-up is listed (the web rule, HashInboxModal)', () {
       final all = [
         ap(1, type: 'onboarding'),
         ap(2, type: 'onboarding', status: 'accepted', canRespond: false),
         ap(3, type: 'onboarding', status: 'rejected', canRespond: false),
+        ap(4, type: 'onboarding', status: 'withdrawn', canRespond: false),
       ];
       expect([for (final a in ApprovalPane.listed(all)) a.id], [1]);
     });
 
-    test('counts per filter; an answer with no rows is not offered', () {
-      final all = [ap(1), ap(2), ap(3, status: 'accepted', canRespond: false)];
-      final counts = ApprovalPane.countsOf(all);
-      expect(counts[ApprovalFilter.all], 3);
-      expect(counts[ApprovalFilter.pending], 2);
-      expect(counts[ApprovalFilter.approved], 1);
-      expect(counts[ApprovalFilter.rejected], 0);
-      expect(ApprovalPane.offered(counts), [
-        ApprovalFilter.all,
-        ApprovalFilter.pending,
-        ApprovalFilter.approved,
-      ]);
-    });
-
-    test('a filter and the search text narrow the rows', () {
+    test('the search text narrows the rows', () {
       final all = [
         ap(1, caption: 'Expense claim'),
         ap(2, caption: 'Leave request'),
         ap(3, status: 'accepted', canRespond: false, caption: 'Expense claim'),
       ];
-      List<int> ids(ApprovalFilter f, String q) => [
-        for (final a in ApprovalPane.rows(all, filter: f, query: q)) a.id,
+      List<int> ids(String q) => [
+        for (final a in ApprovalPane.rows(all, query: q)) a.id,
       ];
-      expect(ids(ApprovalFilter.all, 'expense'), [3, 1]);
-      expect(ids(ApprovalFilter.pending, 'expense'), [1]);
-      expect(ids(ApprovalFilter.all, 'nothing like it'), isEmpty);
+      expect(ids('expense'), [3, 1]);
+      expect(ids('nothing like it'), isEmpty);
     });
   });
 

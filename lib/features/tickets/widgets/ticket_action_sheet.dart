@@ -123,6 +123,7 @@ class TicketActionSheet extends StatelessWidget {
           label: _marked(TicketsTexts.commentsField, s.isCommentsRequired),
           child: AppTextField(
             controller: f.comments,
+            textCapitalization: TextCapitalization.sentences,
             hint: TicketsTexts.commentsHint,
             minLines: 2,
             maxLines: 5,
@@ -291,6 +292,7 @@ class TicketActionSheet extends StatelessWidget {
           label: TicketsTexts.reasonField,
           child: AppTextField(
             controller: f.reason,
+            textCapitalization: TextCapitalization.sentences,
             hint: TicketsTexts.reasonHint,
             minLines: 1,
             maxLines: 3,
@@ -305,6 +307,7 @@ class TicketActionSheet extends StatelessWidget {
           label: TicketsTexts.remarksField,
           child: AppTextField(
             controller: f.remarks,
+            textCapitalization: TextCapitalization.sentences,
             hint: TicketsTexts.remarksHint,
             minLines: 2,
             maxLines: 5,

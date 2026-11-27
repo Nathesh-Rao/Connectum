@@ -131,7 +131,8 @@ class FormController extends GetxController {
     _onlineWorker = ever(connectivity.state, (state) {
       _updateDraftState();
       if (state != AppConnectivity.online) return;
-      if (viewState.value == AppViewState.offline) fireAndLog('form_controller', () => _load());
+      if (viewState.value == AppViewState.offline)
+        fireAndLog('form_controller', () => _load());
       if (definition != null) _refreshSources();
     });
     _personWorker = ever(logic.personVersion, (_) => _scheduleCalc());
@@ -171,7 +172,10 @@ class FormController extends GetxController {
     if (_isDisposed) return;
     _initial = _snapshot();
     if (launch.errorDetails != null) showServerErrors(launch.errorDetails);
-    fireAndLog('form_controller', () => options.markUsed(launch.name, def.scope, def.caption));
+    fireAndLog(
+      'form_controller',
+      () => options.markUsed(launch.name, def.scope, def.caption),
+    );
     _updateDraftState();
     viewState.value = AppViewState.content;
   }
@@ -948,7 +952,10 @@ class FormController extends GetxController {
 
   void _scheduleCalc() {
     _calcTimer?.cancel();
-    _calcTimer = Timer(calcDelay, () => fireAndLog('form_controller', () => _calc()));
+    _calcTimer = Timer(
+      calcDelay,
+      () => fireAndLog('form_controller', () => _calc()),
+    );
   }
 
   /// The answers as the editor holds them, by field name; a grid is a list
@@ -1163,11 +1170,14 @@ class FormController extends GetxController {
   void _scrollTo(GlobalKey? key) {
     final ctx = key?.currentContext;
     if (ctx == null) return;
-    fireAndLog('form_controller', () => Scrollable.ensureVisible(
+    fireAndLog(
+      'form_controller',
+      () => Scrollable.ensureVisible(
         ctx,
         alignment: 0.1,
         duration: const Duration(milliseconds: 250),
-      ));
+      ),
+    );
   }
 
   /// What is sent: shown fields, and hidden ones made for the person (calc,
@@ -1338,7 +1348,10 @@ class FormController extends GetxController {
       Get.back<bool>(result: true);
       if (launch.mode == FormMode.create &&
           FormChatRule.returnsToWorkspace(launch.convId)) {
-        fireAndLog('form_controller', () async => Get.toNamed(AppRoutes.workspace));
+        fireAndLog(
+          'form_controller',
+          () async => Get.toNamed(AppRoutes.workspace),
+        );
       }
     } on Object {
       banner.value = "That couldn't be saved. Try again.";

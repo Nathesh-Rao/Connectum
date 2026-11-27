@@ -1,4 +1,7 @@
 import 'package:connectum/data/repositories/form_file_repository.dart';
+import 'package:connectum/data/repositories/inbox_repository.dart';
+import 'package:connectum/data/socket/read_gate.dart';
+import 'package:connectum/data/smart_view/sv_team.dart';
 import 'package:connectum/data/repositories/smart_view_repository.dart';
 import 'package:connectum/data/repositories/submission_repository.dart';
 import 'package:connectum/data/repositories/ticket_repository.dart';
@@ -152,6 +155,87 @@ void main() {
     if (value != null) d.setValue(id, value);
     return id;
   }
+
+  group('the team lines through the real controller', () {
+    late SmartViewController tc;
+
+    setUp(() {
+      final inbox = InboxRepository(
+        rig.socket,
+        rig.store,
+        ReadGate(now: rig.clock.read, delay: rig.clock.delay),
+      );
+      tc = SmartViewController(
+        repo: rig.repo,
+        tickets: rig.tickets,
+        submissions: Get.find<SubmissionRepository>(),
+        inbox: inbox,
+        prefs: SmartViewPrefs(),
+        newTicketDetail: (id) => throw UnimplementedError(),
+      );
+      tc.current.value = _source('tickets');
+      tc.table.value = tableOf('tickets');
+    });
+
+    test(
+      'nobody reports to the person: no lines; a failed read is nobody',
+      () async {
+        rig.socket.answers['records.people'] = {'team': <String>[]};
+        await tc.loadTeam();
+        expect(tc.teamUsers, isEmpty);
+      },
+    );
+
+    test('somebody does: the lines are offered once; setting them reads '
+        'records.query, the chip names the member, removing it reads the '
+        'plain list', () async {
+      rig.socket.answers['records.people'] = {
+        'team': ['ravi', 'sana'],
+      };
+      rig.socket.answers['people.cards'] = {'people': <String, dynamic>{}};
+      await tc.loadTeam();
+      await tc.loadTeam();
+      expect(tc.teamUsers, ['ravi', 'sana']);
+      expect(rig.socket.count('records.people'), 1);
+
+      rig.socket.answers['records.query'] = {
+        'submissions': <Object>[],
+        'total': 0,
+        'hasMore': false,
+      };
+      rig.socket.answers['submissions.list'] = {
+        'submissions': <Object>[],
+        'total': 0,
+        'hasMore': false,
+      };
+      rig.socket.answers['records.mine'] = {
+        'submissions': <Object>[],
+        'hasMore': false,
+      };
+      tc.setConditions([
+        const SvCondition(SvTeamCols.team, 'in', ['ravi']),
+        const SvCondition(SvTeamCols.linked, 'in', ['tagged']),
+      ]);
+      await pumpMicro();
+      await pumpMicro();
+      final q = rig.socket.calls.where((x) => x.action == 'records.query');
+      expect(q.single.args['team'], {
+        'members': ['ravi'],
+        'linked': ['tagged'],
+      });
+      expect(tc.table.value!.team!.members, ['ravi']);
+      expect(
+        SvTeam.chipText(tc.query.value.activeConditions.first, tc.teamNameOf),
+        'My team: ravi',
+      );
+
+      tc.clearFilters();
+      await pumpMicro();
+      await pumpMicro();
+      expect(tc.table.value!.team, isNull);
+      expect(rig.socket.count('submissions.list'), greaterThan(0));
+    });
+  });
 
   group('through the real controller', () {
     test('add a filter, Apply: rows and chips change; reopen, remove, Apply: '

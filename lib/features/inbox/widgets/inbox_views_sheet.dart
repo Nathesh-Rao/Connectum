@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_inbox.dart';
+import '../../../core/theme/app_motion.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
@@ -12,9 +15,9 @@ import '../inbox_views_controller.dart';
 import '../models/inbox_saved_view.dart';
 import 'inbox_view_dialogs.dart';
 
-/// The Views sheet (`HashInboxModal.jsx` saved views): the Default View first,
-/// then the named ones with the open one marked, and the actions on the open
-/// view. Works offline on the last known list; saving needs a connection.
+/// The Views panel (`HashInboxModal.jsx` saved views), a bottom panel: the
+/// Default View first, then the named ones in one card with the open one
+/// ticked and the default starred, and the actions on the open view as tiles. Works offline on the last known list; saving needs a connection.
 class InboxViewsSheet {
   InboxViewsSheet._();
 
@@ -111,46 +114,83 @@ class InboxViewsPanel extends StatelessWidget {
               onRetry: () =>
                   fireAndLog('inbox_views_sheet', controller.refreshViews),
             ),
-          for (final name in names)
-            _ViewRow(
-              name: name,
-              isOpen: name == open,
-              isDefault:
-                  name != InboxViewLimits.defaultName && name == defaultName,
-              onTap: () => _open(context, name),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppInbox.cardFill,
+              borderRadius: BorderRadius.circular(AppInbox.cardRadius),
+              border: Border.all(color: AppInbox.cardBorder),
             ),
-          if (v.problem.value.isNotEmpty)
+            child: Column(
+              children: [
+                for (var i = 0; i < names.length; i++) ...[
+                  if (i > 0) const Divider(height: 1, color: AppColors.line),
+                  _ViewRow(
+                    name: names[i],
+                    isOpen: names[i] == open,
+                    isDefault:
+                        names[i] != InboxViewLimits.defaultName &&
+                        names[i] == defaultName,
+                    onTap: () => _open(context, names[i]),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (v.problem.value.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
             _Note(text: v.problem.value, isError: true),
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(height: 1, color: AppColors.line),
-          _Action(
-            icon: Icons.save_outlined,
-            label: 'Save view',
-            onTap: canWrite ? () => _save(context) : null,
+          ],
+          const SizedBox(height: AppSpacing.md),
+          LayoutBuilder(
+            builder: (context, box) {
+              final w = (box.maxWidth - AppSpacing.xs) / 2;
+              return Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  _Action(
+                    width: w,
+                    icon: Icons.save_outlined,
+                    label: 'Save view',
+                    onTap: canWrite ? () => _save(context) : null,
+                  ),
+                  _Action(
+                    width: w,
+                    icon: Icons.save_as_outlined,
+                    label: 'Save as new view',
+                    onTap: canWrite ? () => _saveAsNew(context) : null,
+                  ),
+                  _Action(
+                    width: w,
+                    icon: Icons.add_rounded,
+                    label: 'Create view',
+                    onTap: canWrite ? () => _create(context) : null,
+                  ),
+                  if (isNamed)
+                    _Action(
+                      width: w,
+                      icon: v.isOpenDefault
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      label: v.isOpenDefault
+                          ? 'Clear default'
+                          : 'Set as default',
+                      onTap: canWrite && v.saved(open) != null
+                          ? _toggleDefault
+                          : null,
+                    ),
+                  if (isNamed)
+                    _Action(
+                      width: w,
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Remove view',
+                      isDanger: true,
+                      onTap: canWrite ? () => _remove(context) : null,
+                    ),
+                ],
+              );
+            },
           ),
-          _Action(
-            icon: Icons.save_as_outlined,
-            label: 'Save as new view',
-            onTap: canWrite ? () => _saveAsNew(context) : null,
-          ),
-          _Action(
-            icon: Icons.add,
-            label: 'Create view',
-            onTap: canWrite ? () => _create(context) : null,
-          ),
-          if (isNamed)
-            _Action(
-              icon: v.isOpenDefault ? Icons.star : Icons.star_border,
-              label: v.isOpenDefault ? 'Clear default' : 'Set as default',
-              onTap: canWrite && v.saved(open) != null ? _toggleDefault : null,
-            ),
-          if (isNamed)
-            _Action(
-              icon: Icons.delete_outline,
-              label: 'Remove view',
-              isDanger: true,
-              onTap: canWrite ? () => _remove(context) : null,
-            ),
         ],
       );
     });
@@ -178,45 +218,98 @@ class _ViewRow extends StatelessWidget {
     excludeSemantics: true,
     child: InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(AppInbox.cardRadius),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 28,
-              child: isOpen
-                  ? const Icon(Icons.check, size: 18, color: AppColors.primary)
-                  : null,
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                child: Text(
-                  name,
-                  style: isOpen ? AppText.bodyStrong : AppText.body,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: AppDurations.fast,
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isOpen ? AppColors.primary : Colors.transparent,
+                  border: Border.all(
+                    color: isOpen ? AppColors.primary : AppColors.inputBorder,
+                    width: 1.5,
+                  ),
+                ),
+                child: isOpen
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 14,
+                        color: AppColors.white,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  child: Text(
+                    name,
+                    style: isOpen ? AppText.bodyStrong : AppText.body,
+                  ),
                 ),
               ),
-            ),
-            if (isDefault)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(start: AppSpacing.xs),
-                child: Text('Default', style: AppText.caption),
-              ),
-          ],
+              if (isDefault)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: AppSpacing.xs,
+                  ),
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: AppColors.violetTint,
+                      borderRadius: AppRadius.pillAll,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: AppSpacing.xxs / 2,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 12,
+                            color: AppColors.violetStrong,
+                          ),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Text(
+                            'Default',
+                            style: AppText.caption.copyWith(
+                              color: AppColors.violetStrong,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     ),
   );
 }
 
+/// An action of the open view: a tonal tile with its icon in a disc, two to
+/// a row.
 class _Action extends StatelessWidget {
   const _Action({
+    required this.width,
     required this.icon,
     required this.label,
     required this.onTap,
     this.isDanger = false,
   });
 
+  final double width;
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
@@ -224,33 +317,65 @@ class _Action extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = onTap == null
-        ? AppColors.muted
+    final isOn = onTap != null;
+    final ink = !isOn
+        ? AppColors.disabledInk
         : isDanger
         ? AppColors.error
         : AppColors.ink;
-    return Semantics(
-      button: true,
-      enabled: onTap != null,
-      label: label,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
-          child: Row(
-            children: [
-              SizedBox(width: 28, child: Icon(icon, size: 20, color: color)),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  child: Text(
-                    label,
-                    style: AppText.body.copyWith(color: color),
-                  ),
+    final disc = !isOn
+        ? AppColors.fill
+        : isDanger
+        ? AppColors.noFill
+        : AppInbox.discFill;
+    return SizedBox(
+      width: width,
+      child: Semantics(
+        button: true,
+        enabled: isOn,
+        label: label,
+        excludeSemantics: true,
+        child: Material(
+          color: AppInbox.cardFill,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: const BorderSide(color: AppInbox.cardBorder),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: Row(
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: disc,
+                        shape: BoxShape.circle,
+                      ),
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Icon(
+                          icon,
+                          size: 18,
+                          color: isOn && !isDanger ? AppInbox.discInk : ink,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: AppText.readableStrong.copyWith(color: ink),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

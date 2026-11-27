@@ -282,7 +282,10 @@ class AuthenticationController extends GetxController {
     final result = await auth.startLogin(email.text.trim());
     switch (result.kind) {
       case LoginStartKind.trusted:
-        fireAndLog('authentication_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
+        fireAndLog(
+          'authentication_controller',
+          () async => Get.offAllNamed(AppRoutes.enterprises),
+        );
       case LoginStartKind.throttled:
         _openVerification(AuthFlow.login, null, result.retryAfter);
       case LoginStartKind.codeSent:
@@ -308,7 +311,10 @@ class AuthenticationController extends GetxController {
     }
     password.clear();
     TextInput.finishAutofillContext();
-    fireAndLog('authentication_controller', () async => Get.offAllNamed(AppRoutes.enterprises));
+    fireAndLog(
+      'authentication_controller',
+      () async => Get.offAllNamed(AppRoutes.enterprises),
+    );
   }
 
   void _startRetry(int? seconds) {

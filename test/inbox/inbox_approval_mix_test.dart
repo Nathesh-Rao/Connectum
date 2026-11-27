@@ -127,8 +127,8 @@ void main() {
       expect(cards(f(['approvals']), all), [1, 6]);
     });
 
-    test('Approvals holds every answer, closed ones too', () {
-      expect(cards(f(['allapprovals']), all), [1, 2, 3, 4, 5, 6]);
+    test('Approvals holds every answer but a dismissed or withdrawn one', () {
+      expect(cards(f(['allapprovals']), all), [1, 2, 3, 4, 6]);
     });
 
     test('Approved and Rejected', () {
@@ -152,7 +152,7 @@ void main() {
     test('the people lines and Open / Closed are the records\' own', () {
       expect(
         cards(f(['allapprovals'], createdBy: ['zed'], status: 'closed'), all),
-        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 6],
       );
     });
 
@@ -168,7 +168,6 @@ void main() {
         2,
         3,
         4,
-        5,
         6,
         7,
       ]);
@@ -206,7 +205,7 @@ void main() {
     });
 
     test('with Approvals every pending one is listed', () {
-      expect(cards(f(['me', 'allapprovals']), all), [1, 2, 3, 4, 5, 6]);
+      expect(cards(f(['me', 'allapprovals']), all), [1, 2, 3, 4, 6]);
     });
 
     test('Data applies; Date, Sort and the people lines do not', () {
@@ -389,7 +388,7 @@ void main() {
       final c = await start();
       c.openApprovals();
       c.applyFilter(f(['approved']));
-      expect(c.isApprovalsOpen.value, isFalse);
+      expect(c.isApprovalsOpen, isFalse);
     });
 
     test(
@@ -513,7 +512,7 @@ void main() {
         await wait();
         expect(
           [for (final x in p.formChoices) x.label],
-          ['Expense (2)', 'Leave (4)'],
+          ['Expense (2)', 'Leave (3)'],
         );
         expect(rig.asked.where((a) => a == 'records.query').length, before);
       },

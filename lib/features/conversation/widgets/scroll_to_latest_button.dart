@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_unread_badge.dart';
 
 /// Shown while the list is scrolled up: jumps to the newest message, with a
@@ -66,6 +67,7 @@ class ScrollToLatestButton extends StatelessWidget {
                         child: IgnorePointer(
                           child: AppUnreadBadge(
                             label: count > 99 ? '99+' : '$count',
+                            textStyle: AppText.chatUnread,
                           ),
                         ),
                       ),

@@ -10,20 +10,9 @@ class Reaction {
     required this.isMine,
   });
 
-  /// The quick row of the long-press sheet, then the ones the "+" adds.
-  static const quick = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-  static const more = [
-    '🔥',
-    '🎉',
-    '👏',
-    '💯',
-    '🚀',
-    '✨',
-    '🤝',
-    '🥰',
-    '🤩',
-    '👀',
-  ];
+  /// The quick row of the reaction bar, then the ones the web adds.
+  static const quick = ['👍', '❤️', '😂', '😮', '😢', '🙏', '👏'];
+  static const more = ['🔥', '🎉', '💯', '🚀', '✨', '🤝', '🥰', '🤩', '👀'];
 
   final String emoji;
   final int count;

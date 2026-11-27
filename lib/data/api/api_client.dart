@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/config/app_config.dart';
 import '../../core/crash/crash_service.dart';
 import '../session_store.dart';
+import 'api_log_interceptor.dart';
 
 class ApiException implements Exception {
   const ApiException(this.code, this.message, {this.status, this.details});
@@ -55,6 +56,7 @@ class ApiClient {
             contentType: Headers.jsonContentType,
           ),
         );
+    _dio.interceptors.add(ApiLogInterceptor());
     final adapter = _dio.httpClientAdapter;
     if (adapter is IOHttpClientAdapter) {
       adapter.createHttpClient = () {

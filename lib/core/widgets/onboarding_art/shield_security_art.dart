@@ -30,9 +30,7 @@ class ShieldSecurity {
 }
 
 class _Centre {
-  _Centre(this.g)
-    : cx = g.getBBox().center.dx,
-      cy = g.getBBox().center.dy;
+  _Centre(this.g) : cx = g.getBBox().center.dx, cy = g.getBBox().center.dy;
 
   final SvgNode g;
   final double cx, cy;
@@ -72,7 +70,8 @@ class _ShieldFrame {
   final SvgScene scene;
   static const double cx0 = 887, cy0 = 458;
   static const msgScale = .58, encScale = .46;
-  static const cycle = ShieldSecurity.cycle, loopStart = ShieldSecurity.loopStart;
+  static const cycle = ShieldSecurity.cycle,
+      loopStart = ShieldSecurity.loopStart;
   static const inX0 = -260.0, inDur = 1.1;
   static const encStart = 1.55, encDur = 1.7, encX1 = 1900.0;
   static const waveBreathe = 6.0, waveSpeed = 1.6;
@@ -102,7 +101,14 @@ class _ShieldFrame {
       const _Ring(262, false, 3.5, OnboardingArtPalette.shieldMist, .9),
       const _Ring(297, true, 6, OnboardingArtPalette.shieldSky, .75, '0.1 17'),
       const _Ring(333, false, 2.5, OnboardingArtPalette.shieldSky, .8),
-      const _Ring(370, true, 6, OnboardingArtPalette.shieldViolet, .7, '0.1 19'),
+      const _Ring(
+        370,
+        true,
+        6,
+        OnboardingArtPalette.shieldViolet,
+        .7,
+        '0.1 19',
+      ),
       const _Ring(408, false, 2.5, OnboardingArtPalette.shieldMist, .55),
     ];
     sh = scene.byId('shield');
@@ -123,9 +129,15 @@ class _ShieldFrame {
     variants = [scene.byId('msgA'), scene.byId('msgB'), scene.byId('msgC')];
     asts = [for (var i = 0; i < 6; i++) _Centre(scene.byId('a$i'))];
     nodes = [for (var i = 0; i < 3; i++) _Centre(scene.byId('n$i'))];
-    chevL = [for (final n in [22, 19]) _Centre(scene.byId('p$n'))];
-    chevR = [for (final n in [20, 21]) _Centre(scene.byId('p$n'))];
-    encAccent = [for (final n in [20, 21]) scene.byId('p$n')];
+    chevL = [
+      for (final n in [22, 19]) _Centre(scene.byId('p$n')),
+    ];
+    chevR = [
+      for (final n in [20, 21]) _Centre(scene.byId('p$n')),
+    ];
+    encAccent = [
+      for (final n in [20, 21]) scene.byId('p$n'),
+    ];
 
     ringEls = [
       for (final r in rings)
@@ -139,7 +151,12 @@ class _ShieldFrame {
         }, waves),
     ];
 
-    sparksIn = _mkSparks(16, 0, math.pi * 2 * 15 / 16, OnboardingArtPalette.shieldCyan);
+    sparksIn = _mkSparks(
+      16,
+      0,
+      math.pi * 2 * 15 / 16,
+      OnboardingArtPalette.shieldCyan,
+    );
     sparksOut = _mkSparks(9, -1.1, 1.1, OnboardingArtPalette.shieldViolet);
 
     chips = [
@@ -211,7 +228,8 @@ class _ShieldFrame {
   double _msgV(double ct) =>
       (_msgX(ct + .01) - _msgX(ct - .01)).abs() / .02 / vmax;
 
-  double _encX(double ue) => lerp(cx0, encX1, eInOutCubic(clamp01(ue / encDur)));
+  double _encX(double ue) =>
+      lerp(cx0, encX1, eInOutCubic(clamp01(ue / encDur)));
 
   double _encV(double ue) =>
       (_encX(ue + .01) - _encX(ue - .01)).abs() /
@@ -253,7 +271,9 @@ class _ShieldFrame {
   void _renderChips(double ct) {
     for (var i = 0; i < chips.length; i++) {
       final c = chips[i];
-      final pin = ct < 0 ? 0.0 : eOutBack(clamp01((ct - .6 - i * .05) / .3), 2.6);
+      final pin = ct < 0
+          ? 0.0
+          : eOutBack(clamp01((ct - .6 - i * .05) / .3), 2.6);
       final fp = clamp01((ct - 1.0 - i * .09) / .24);
       final pout = clamp01((ct - 1.4 - i * .04) / .2);
       final sc = math.max(0.0, pin * (1 - eInCubic(pout)));
@@ -334,7 +354,11 @@ class _ShieldFrame {
       el.r = round2(math.max(0.0, _ringR(i, t, kick, amp.toDouble())) * p);
       el.strokeOpacity = round2(rg.o * clamp01(p));
       el.stroke = rg.c == OnboardingArtPalette.shieldViolet
-          ? mixColor(_m(OnboardingArtPalette.shieldViolet), _m(OnboardingArtPalette.shieldVioletPulse), pa)
+          ? mixColor(
+              _m(OnboardingArtPalette.shieldViolet),
+              _m(OnboardingArtPalette.shieldVioletPulse),
+              pa,
+            )
           : mixColor(_m(rg.c), _m(OnboardingArtPalette.shieldCyan), lit * .85);
     }
     for (var i = 0; i < nodes.length; i++) {
@@ -397,7 +421,8 @@ class _ShieldFrame {
           )
           .translate(-msgC[0], -msgC[1]);
       final left = mx - halfMsg;
-      final a = eOutCubic(clamp01(ct / .2)) * (1 - clamp01((ct - (tArr + .02)) / .1));
+      final a =
+          eOutCubic(clamp01(ct / .2)) * (1 - clamp01((ct - (tArr + .02)) / .1));
       final x0 = math.max(-40.0, left - 170 * a);
       final x1 = math.min(689.0, left - 10);
       packetIn.visible = a > .01 && x1 > x0;
@@ -429,7 +454,11 @@ class _ShieldFrame {
             round2(encScale * pop * (1 - .06 * vn)),
           )
           .translate(-encC[0], -encC[1]);
-      encLock.transform = xf(1362, 454, math.max(0.0, eOutBack(clamp01((ue - .12) / .35), 3)));
+      encLock.transform = xf(
+        1362,
+        454,
+        math.max(0.0, eOutBack(clamp01((ue - .12) / .35), 3)),
+      );
       final n = 6 - v;
       for (var i = 0; i < asts.length; i++) {
         final a = asts[i];

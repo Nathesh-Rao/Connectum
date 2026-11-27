@@ -82,7 +82,8 @@ class InviteService extends GetxService {
 
   void retry() {
     final target = _links.pending.value;
-    if (target != null && _isVisible) fireAndLog('invite_service', () => _load(target));
+    if (target != null && _isVisible)
+      fireAndLog('invite_service', () => _load(target));
   }
 
   /// Forgets the invite (or, for the hint, only the hint).

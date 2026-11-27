@@ -6,7 +6,19 @@ import 'package:connectum/core/widgets/onboarding_art/svg_scene.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _times = <OnboardingArtKind, List<double>>{
-  OnboardingArtKind.shield: [0, 0.5, 1.2, 1.95, 2.6, 3.4, 5.9, 6.5, 9.9, 10.9, 13.65],
+  OnboardingArtKind.shield: [
+    0,
+    0.5,
+    1.2,
+    1.95,
+    2.6,
+    3.4,
+    5.9,
+    6.5,
+    9.9,
+    10.9,
+    13.65,
+  ],
   OnboardingArtKind.network: [0, 1.0, 2.5, 3.6, 5, 7, 9, 12, 14.5, 15.9, 16.7],
   OnboardingArtKind.buildings: [0, 0.3, 1.0, 2.0, 3.5, 4.5, 6, 8, 10, 12],
 };
@@ -71,9 +83,10 @@ void main() {
         canvas.translate(-vb.left, -vb.top);
         art.render(_times[kind]![5]);
         renderer.paint(canvas);
-        final img = await rec
-            .endRecording()
-            .toImage((w + 40).round(), (h + 40).round());
+        final img = await rec.endRecording().toImage(
+          (w + 40).round(),
+          (h + 40).round(),
+        );
         final px = (await img.toByteData())!.buffer.asUint8List();
         final width = img.width;
         int alpha(int x, int y) => px[(y * width + x) * 4 + 3];

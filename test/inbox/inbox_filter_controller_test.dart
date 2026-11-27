@@ -196,6 +196,8 @@ void main() {
           'scope': ['me'],
           'limit': 100,
           'offset': 0,
+          'withDetails': true,
+          'fileMeta': 2,
         });
       },
     );

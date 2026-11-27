@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../core/errors/run_guarded.dart';
@@ -40,6 +41,20 @@ class _History {
   final String? next;
 }
 
+class _HeldSelf {
+  const _HeldSelf({
+    required this.org,
+    required this.user,
+    required this.event,
+    required this.timer,
+  });
+
+  final String org;
+  final String user;
+  final Map<String, dynamic> event;
+  final Timer timer;
+}
+
 class OlderPage {
   const OlderPage({
     required this.count,
@@ -52,7 +67,7 @@ class OlderPage {
   final String? next;
 }
 
-class MessageRepository extends GetxService {
+class MessageRepository extends GetxService with WidgetsBindingObserver {
   MessageRepository(
     this._db,
     this._session,
@@ -89,6 +104,54 @@ class MessageRepository extends GetxService {
   /// a stale-devices refusal (which names only a `mid`) finds its send.
   final _sealedMids = <int, String>{};
   final _staleTries = <int, int>{};
+
+  /// A `self_message` that may be the echo of a note this phone just sent,
+  /// held (by its server id) until the matching `self_ack` or the timer.
+  final _heldSelf = <String, _HeldSelf>{};
+
+  /// How long such an echo is held before it counts as a note of another
+  /// device. The timer is replaceable so a test can fire it by hand.
+  static const selfHold = Duration(seconds: 3);
+  @visibleForTesting
+  Timer Function(Duration, void Function()) holdTimer = Timer.new;
+
+  /// The device clock (no server time offset is tracked). Replaceable in a
+  /// test.
+  @visibleForTesting
+  int Function() clock = () => DateTime.now().millisecondsSinceEpoch;
+
+  /// Server time minus the device clock, from the `now` of the last history
+  /// answer; zero until one arrived. Only the chat edit window uses it.
+  int _serverSkewMs = 0;
+
+  int get _serverNow => clock() + _serverSkewMs;
+
+  final _notices = StreamController<String>.broadcast();
+
+  /// Short plain-words lines about a note command that ended without the
+  /// person asking (an edit that came too late, a delete that failed).
+  Stream<String> get notices => _notices.stream;
+
+  static const cantEditYet = "Can't edit this note yet";
+  static const tooOldToEdit = 'Too old to edit';
+  static const couldNotEditMessage = "Couldn't edit this message";
+
+  /// The server's `CHAT_EDIT_WINDOW_SEC` (900 s) for direct chats and groups,
+  /// counted from the message's server time to the moment the server
+  /// receives the edit.
+  static const chatEditWindow = Duration(minutes: 15);
+  static const couldNotEdit = "Couldn't edit this note";
+  static const couldNotDelete = "Couldn't delete the note";
+
+  void _learnServerTime(Object? serverNow) {
+    final now = serverNow is int ? serverNow : int.tryParse('$serverNow');
+    if (now != null && now > 0) _serverSkewMs = now - clock();
+  }
+
+  void _notify(String text) {
+    if (!_notices.isClosed) _notices.add(text);
+  }
+
   Timer? _wakeTimer;
   Future<void> _queue = Future.value();
   Future<void> _decrypting = Future.value();
@@ -121,14 +184,15 @@ class MessageRepository extends GetxService {
           );
     }, onError: streamOnError('message_repository'));
     _socket.listenOnline('messages', _onOnline);
-    _e2e.unlockRequests.listen(
-      (_) => fireAndLog('messages.unlock', _unlockLocked),
-      onError: streamOnError('message_repository'),
-    );
-    _e2e.registrations.listen(
-      (_) => fireAndLog('messages.reopen', reopenNoDevice),
-      onError: streamOnError('message_repository'),
-    );
+    _e2e.unlockRequests.listen((_) {
+      fireAndLog('messages.unlock', _unlockLocked);
+      fireAndLog('messages.self_wake', _wakeSelfNotes);
+    }, onError: streamOnError('message_repository'));
+    WidgetsBinding.instance.addObserver(this);
+    _e2e.registrations.listen((_) {
+      fireAndLog('messages.reopen', reopenNoDevice);
+      fireAndLog('messages.self_wake', _wakeSelfNotes);
+    }, onError: streamOnError('message_repository'));
     _conversations.receiptsChanged.listen(
       applyReceipts,
       onError: streamOnError('message_repository'),
@@ -145,10 +209,25 @@ class MessageRepository extends GetxService {
         if (!waiter.isCompleted) waiter.completeError(StateError('switched'));
       }
       _historyWaiters.clear();
+      _clearHeldSelf();
       _lists.keys.toList().forEach(_reload);
       _scheduleDecrypt();
     });
     _scheduleDecrypt();
+  }
+
+  /// A note that waits for encryption is tried again when the app comes back.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      fireAndLog('messages.self_wake', _wakeSelfNotes);
+    }
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.onClose();
   }
 
   /// Completes when every envelope held so far has been tried, so a read
@@ -374,6 +453,7 @@ class MessageRepository extends GetxService {
       await _conversations.reload();
       return DeleteResult.deleted;
     }
+    if (SelfConversation.isSelf(m.convId)) return _deleteSelf(m);
     final kind = ConversationRepository.kindOf(m.convId);
     final target = ConversationRepository.targetOf(m.convId);
     final command = switch (kind) {
@@ -452,6 +532,18 @@ class MessageRepository extends GetxService {
   }
 
   Future<ThreadFacts> _facts(String convId) async {
+    if (SelfConversation.isSelf(convId)) {
+      // No list row: the thread's facts come from its own notes.
+      final own = await _db.query(
+        'SELECT COUNT(*) AS n, COALESCE(SUM(is_encrypted_unsupported), 0) AS e FROM messages '
+        "WHERE org_id = ? AND user_id = ? AND conv_id = ? AND msg_id NOT LIKE 'temp-%'",
+        [_org, _me, convId],
+      );
+      return ThreadFacts(
+        isE2e: own.isNotEmpty && intOf(own.first['e']) > 0,
+        hasHistory: own.isNotEmpty && intOf(own.first['n']) > 0,
+      );
+    }
     final rows = await _db.query(
       'SELECT is_encrypted, (SELECT COUNT(*) FROM messages m WHERE m.org_id = c.org_id AND m.user_id = c.user_id '
       "AND m.conv_id = c.conv_id AND m.msg_id NOT LIKE 'temp-%') AS n "
@@ -483,12 +575,21 @@ class MessageRepository extends GetxService {
     final org = _org;
     final user = _me;
     if (org == null || user == null) return SendResult.noSession;
-    if (SelfConversation.refuse(convId, 'sendText')) return SendResult.invalid;
+    final isSelf = SelfConversation.isSelf(convId);
     final body = text.trim();
     if (body.isEmpty) return SendResult.invalid;
-    if (body.length > 2000) return SendResult.tooLong;
+    if (body.length > SelfConversation.maxLength) return SendResult.tooLong;
+    if (isSelf && isCommandLike(body)) {
+      // `#` lines run as commands and are never stored as notes.
+      lastBlock = _noCommands;
+      return SendResult.blocked;
+    }
     if (convId == 'global' && body.startsWith('/')) return SendResult.invalid;
     if (replyTo != null && replyTo.startsWith('temp-')) {
+      return SendResult.invalid;
+    }
+    // A note is quoted only by a sent note that is still there.
+    if (isSelf && replyTo != null && !await _isReplyTarget(replyTo)) {
       return SendResult.invalid;
     }
     // A send that can never work (no encryption set up by the peer, a changed
@@ -496,7 +597,10 @@ class MessageRepository extends GetxService {
     // queued and decided again when it goes out.
     final facts = await _facts(convId);
     final gate = await _policy.decideSend(convId, facts, isLookup: false);
-    if (gate.isBlocked && !gate.isTransient) {
+    // A note that waits for encryption is queued, not refused: it goes out
+    // encrypted when the keys are ready and never as plain text.
+    final waitsForKeys = isSelf && gate.isSetupMissing;
+    if (gate.isBlocked && !gate.isTransient && !waitsForKeys) {
       lastBlock = gate.message;
       return SendResult.blocked;
     }
@@ -513,7 +617,8 @@ class MessageRepository extends GetxService {
       'queued ${replyTo == null ? 'message' : 'reply'} cid=$cid encrypted=$isSecure',
     );
     await _db.transaction((sql) async {
-      await ConversationRepository.ensure(sql, org, user, convId);
+      // My Work Space has no list row.
+      if (!isSelf) await ConversationRepository.ensure(sql, org, user, convId);
       await sql.insert(
         'INSERT INTO messages(org_id, user_id, msg_id, conv_id, sender, is_mine, kind, text, ts, reply_to, status, local_seq, cid, '
         'is_encrypted_unsupported, plaintext, decrypt_state) '
@@ -548,10 +653,12 @@ class MessageRepository extends GetxService {
           cid,
         ],
       );
-      await sql.update(
-        'UPDATE conversations SET last_text = ?, last_ts = ?, last_from = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
-        [body, now, user, org, user, convId],
-      );
+      if (!isSelf) {
+        await sql.update(
+          'UPDATE conversations SET last_text = ?, last_ts = ?, last_from = ? WHERE org_id = ? AND user_id = ? AND conv_id = ?',
+          [body, now, user, org, user, convId],
+        );
+      }
     });
     lastCid = cid;
     await _reload(convId);
@@ -650,13 +757,15 @@ class MessageRepository extends GetxService {
     );
     if (rows.isEmpty) return false;
     final message = Message.fromRow(rows.first);
-    if (SelfConversation.refuse(message.convId, 'editText')) return false;
+    if (SelfConversation.isSelf(message.convId)) {
+      return _editSelf(message, body);
+    }
     if (!message.isMine || message.isDeleted || message.kind != 'chat') {
       return false;
     }
-    if (message.isEncrypted) return false;
     if (message.convId.startsWith('host:')) return false;
     if (message.isLocalTemp) {
+      if (message.isEncrypted) return false;
       final pending = await _db.query(
         'SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND ref_id = ? '
         "AND status IN ('pending','failed') AND kind IN ('message','reply')",
@@ -673,24 +782,18 @@ class MessageRepository extends GetxService {
         [body, org, user, msgId],
       );
     } else {
-      await _db.transaction((sql) async {
-        await sql.insert(
-          'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts) '
-          "VALUES(?,?,?,'edit',?,?,'pending',?)",
-          [
-            org,
-            user,
-            message.convId,
-            jsonEncode({'text': body, 'prevText': message.text}),
-            msgId,
-            DateTime.now().millisecondsSinceEpoch,
-          ],
-        );
-        await sql.update(
-          'UPDATE messages SET text = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?',
-          [body, org, user, msgId],
-        );
-      });
+      if (!canEditChat(message)) {
+        if (_isChatEditCandidate(message) && !_isInChatWindow(message.ts)) {
+          _notify(tooOldToEdit);
+        }
+        return false;
+      }
+      if (message.isEncrypted && isCommandLike(body)) {
+        lastBlock = _noCommands;
+        return false;
+      }
+      if (body == message.text) return true;
+      return _queueEdit(message, body, ts: message.ts);
     }
     await _reload(message.convId);
     fireAndLog('message_repository', () => flush());
@@ -702,7 +805,23 @@ class MessageRepository extends GetxService {
     final org = _org;
     final user = _me;
     if (org == null || user == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final cutoff = now - _cidMemory.inMilliseconds;
     await _db.transaction((sql) async {
+      // A note too old for the server to know its client id is sent again as
+      // a new note: a new id, and the time of the new attempt.
+      final fresh = newCid();
+      final renewed = await sql.update(
+        'UPDATE outbox SET cid = ?, created_ts = ? WHERE org_id = ? AND user_id = ? AND ref_id = ? '
+        "AND conv_id = 'self' AND status = 'failed' AND (created_ts < ? OR first_attempt_ts < ?)",
+        [fresh, now, org, user, msgId, cutoff, cutoff],
+      );
+      if (renewed > 0) {
+        await sql.update(
+          "UPDATE messages SET cid = ?, ts = ?, local_seq = ? WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = 'self'",
+          [fresh, now, now, org, user, msgId],
+        );
+      }
       await sql.update(
         "UPDATE outbox SET status = 'pending', retry_count = 0, next_attempt_ts = 0, last_error = NULL, first_attempt_ts = NULL "
         "WHERE org_id = ? AND user_id = ? AND ref_id = ? AND status = 'failed'",
@@ -729,6 +848,196 @@ class MessageRepository extends GetxService {
     for (final id in _lists.keys.toList()) {
       await _reload(id);
     }
+  }
+
+  // ---- notes: edit, delete, reply -----------------------------------------
+
+  /// An edit or a delete: a command with no client id and no ack.
+  static bool _isCommandOnly(String kind) => kind == 'edit' || kind == 'delete';
+
+  Future<bool> _isReplyTarget(String id) async {
+    if (numericId(id) == null) return false;
+    final rows = await _db.query(
+      'SELECT 1 FROM messages WHERE org_id = ? AND user_id = ? AND conv_id = ? AND msg_id = ? AND is_deleted = 0',
+      [_org, _me, SelfConversation.id, id],
+    );
+    return rows.isNotEmpty;
+  }
+
+  /// True when [m] can be quoted: a sent note, not deleted, not locked.
+  bool canReplyToNote(Message m) =>
+      SelfConversation.isSelf(m.convId) &&
+      !m.isLocalTemp &&
+      numericId(m.msgId) != null &&
+      m.status != MessageStatus.failed &&
+      !m.isDeleted &&
+      !m.isEncryptedUnsupported;
+
+  /// True when [m] can be edited now: my sent note, readable and not already
+  /// being edited. Notes have no age limit ([SelfConversation.hasEditWindow]).
+  bool canEditNote(Message m) =>
+      canReplyToNote(m) &&
+      m.isMine &&
+      m.kind == 'chat' &&
+      !m.isEditPending &&
+      AttachmentTag.parse(m.text) == null &&
+      SelfConversation.isInEditWindow(m.ts, clock());
+
+  bool _isInChatWindow(int ts) =>
+      _serverNow - ts <= chatEditWindow.inMilliseconds;
+
+  /// What decides Edit apart from the age: my own readable text message that
+  /// the server has, in a direct chat, group or the general room.
+  bool _isChatEditCandidate(Message m) {
+    if (SelfConversation.isSelf(m.convId) || m.convId.startsWith('host:')) {
+      return false;
+    }
+    final kind = ConversationRepository.kindOf(m.convId);
+    return (kind == 'dm' || kind == 'group' || kind == 'global') &&
+        m.isMine &&
+        m.kind == 'chat' &&
+        !m.isDeleted &&
+        !m.isLocalTemp &&
+        numericId(m.msgId) != null &&
+        (m.status == MessageStatus.sent ||
+            m.status == MessageStatus.delivered ||
+            m.status == MessageStatus.read) &&
+        !m.isEditPending &&
+        !m.isEncryptedUnsupported &&
+        m.text.trim().isNotEmpty &&
+        AttachmentTag.parse(m.text) == null;
+  }
+
+  /// True when [m] can be edited now: the web's rule (my own text message,
+  /// not failed, deleted, unreadable or a file) and the server's 15 minutes.
+  bool canEditChat(Message m) =>
+      _isChatEditCandidate(m) && _isInChatWindow(m.ts);
+
+  bool _isEditable(OutboxEntry e) {
+    final ts = e.payload['noteTs'] ?? e.payload['msgTs'];
+    if (ts is! int) return true;
+    return SelfConversation.isSelf(e.convId)
+        ? SelfConversation.isInEditWindow(ts, clock())
+        : _isInChatWindow(ts);
+  }
+
+  /// Queues an edit of a sent note: the new text shows at once with a clock
+  /// until the server confirms, and the old state is kept to put back.
+  Future<bool> _editSelf(Message message, String body) async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return false;
+    if (!canEditNote(message)) {
+      if (SelfConversation.hasEditWindow &&
+          message.isMine &&
+          !message.isEditPending) {
+        _notify(cantEditYet);
+      }
+      return false;
+    }
+    if (isCommandLike(body)) {
+      lastBlock = _noCommands;
+      return false;
+    }
+    if (body.length > SelfConversation.maxLength) {
+      lastBlock = SelfConversation.tooLongText;
+      return false;
+    }
+    if (body == message.text) return true;
+    return _queueEdit(message, body, ts: message.ts);
+  }
+
+  /// Queues an edit: the new text shows at once with a clock until the server
+  /// answers, and the old state is kept to put back.
+  Future<bool> _queueEdit(
+    Message message,
+    String body, {
+    required int ts,
+  }) async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return false;
+    final isSelf = SelfConversation.isSelf(message.convId);
+    final rows = await _db.query(
+      'SELECT text, plaintext, decrypt_state, is_encrypted_unsupported, edited_ts FROM messages '
+      'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+      [org, user, message.msgId],
+    );
+    if (rows.isEmpty) return false;
+    final row = rows.first;
+    final isSealed = message.isEncrypted;
+    final now = clock();
+    AppLog.i('outbox', 'queued edit id=${message.msgId}');
+    await _db.transaction((sql) async {
+      await sql.insert(
+        'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts) '
+        "VALUES(?,?,?,'edit',?,?,'pending',?)",
+        [
+          org,
+          user,
+          message.convId,
+          jsonEncode({
+            'text': body,
+            'prevText': message.text,
+            isSelf ? 'noteTs' : 'msgTs': ts,
+            'prev': {
+              'text': row['text'],
+              'plaintext': row['plaintext'],
+              'decrypt': row['decrypt_state'],
+              'enc': intOf(row['is_encrypted_unsupported']),
+              'editedTs': row['edited_ts'],
+            },
+          }),
+          message.msgId,
+          now,
+        ],
+      );
+      await sql.update(
+        'UPDATE messages SET ${isSealed ? 'plaintext' : 'text'} = ?, fail_reason = ? '
+        'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+        [body, SelfConversation.editPending, org, user, message.msgId],
+      );
+    });
+    await _reload(message.convId);
+    fireAndLog('message_repository', () => flush());
+    return true;
+  }
+
+  /// Removes a sent note at once and queues `/delete self`. Repeating a
+  /// delete is safe, so it goes out under the usual retry rules; if it
+  /// finally fails the note comes back.
+  Future<DeleteResult> _deleteSelf(Message m) async {
+    final org = _org;
+    final user = _me;
+    if (org == null || user == null) return DeleteResult.failed;
+    if (numericId(m.msgId) == null) return DeleteResult.notSupported;
+    AppLog.i('outbox', 'queued delete id=${m.msgId}');
+    await _db.transaction((sql) async {
+      final queued = await sql.query(
+        'SELECT 1 FROM outbox WHERE org_id = ? AND user_id = ? AND conv_id = ? AND kind = ? AND ref_id = ? '
+        "AND status IN ('pending','sending')",
+        [org, user, SelfConversation.id, 'delete', m.msgId],
+      );
+      if (queued.isEmpty) {
+        // An edit still waiting for a note that is going away is dropped.
+        await sql.update(
+          "DELETE FROM outbox WHERE org_id = ? AND user_id = ? AND conv_id = ? AND ref_id = ? AND kind = 'edit' AND status = 'pending'",
+          [org, user, SelfConversation.id, m.msgId],
+        );
+        await sql.insert(
+          'INSERT INTO outbox(org_id, user_id, conv_id, kind, payload_json, ref_id, status, created_ts) '
+          "VALUES(?,?,?,'delete','{}',?,'pending',?)",
+          [org, user, SelfConversation.id, m.msgId, clock()],
+        );
+      }
+      await sql.update(
+        'UPDATE messages SET is_deleted = 1, fail_reason = NULL WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+        [org, user, m.msgId],
+      );
+    });
+    await _reload(SelfConversation.id);
+    fireAndLog('message_repository', () => flush());
+    return DeleteResult.deleted;
   }
 
   // ---- outbox flusher -----------------------------------------------------
@@ -769,9 +1078,9 @@ class MessageRepository extends GetxService {
     final now = DateTime.now().millisecondsSinceEpoch;
     final rows = await _db.query(
       "SELECT o.* FROM outbox o WHERE o.org_id = ? AND o.user_id = ? AND o.status = 'pending' "
-      "AND o.kind IN ('message','reply','edit') AND o.next_attempt_ts <= ? "
+      "AND o.kind IN ('message','reply','edit','delete') AND o.next_attempt_ts <= ? "
       'AND NOT EXISTS (SELECT 1 FROM outbox p WHERE p.org_id = o.org_id AND p.user_id = o.user_id '
-      "AND p.conv_id = o.conv_id AND p.kind IN ('message','reply','edit') "
+      "AND p.conv_id = o.conv_id AND p.kind IN ('message','reply','edit','delete') "
       "AND (p.status = 'sending' OR (p.status = 'pending' AND p.id < o.id AND p.next_attempt_ts > ?))) "
       'ORDER BY o.id LIMIT 1',
       [_org, _me, now, now],
@@ -782,7 +1091,7 @@ class MessageRepository extends GetxService {
   Future<void> _scheduleWake() async {
     final rows = await _db.query(
       "SELECT MIN(next_attempt_ts) AS t FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'pending' "
-      "AND kind IN ('message','reply','edit') AND next_attempt_ts > ?",
+      "AND kind IN ('message','reply','edit','delete') AND next_attempt_ts > ?",
       [_org, _me, DateTime.now().millisecondsSinceEpoch],
     );
     final next = rows.first['t'];
@@ -799,15 +1108,25 @@ class MessageRepository extends GetxService {
       DateTime.now().millisecondsSinceEpoch - e.firstAttemptTs! >
           _cidMemory.inMilliseconds;
 
+  /// A note is also stopped when it waited more than 23 hours in the outbox
+  /// without ever being sent: the person sends it again as a new note.
+  bool _isTooOld(OutboxEntry e) =>
+      e.usesCid &&
+      (_isPastCidMemory(e) ||
+          (SelfConversation.isSelf(e.convId) &&
+              DateTime.now().millisecondsSinceEpoch - e.createdTs >
+                  _cidMemory.inMilliseconds));
+
+  String _tooOldReason(OutboxEntry e) => SelfConversation.isSelf(e.convId)
+      ? SelfConversation.tooOld
+      : couldNotConfirm;
+
   Future<_Outcome> _send(OutboxEntry entry) async {
     AppLog.i(
       'outbox',
       'send kind=${entry.kind} cid=${entry.cid} attempt=${entry.retryCount + 1}',
     );
-    if (SelfConversation.refuse(entry.convId, 'outbox ${entry.kind}')) {
-      await _fail(entry, 'unsupported in this conversation');
-      return _Outcome.finished;
-    }
+    final isSelf = SelfConversation.isSelf(entry.convId);
     if (entry.isUnreadable) {
       await _fail(entry, 'unreadable');
       return _Outcome.finished;
@@ -816,21 +1135,36 @@ class MessageRepository extends GetxService {
       await _fail(entry, 'too many attempts');
       return _Outcome.finished;
     }
-    if (entry.usesCid && _isPastCidMemory(entry)) {
-      await _fail(entry, couldNotConfirm);
+    if (_isTooOld(entry)) {
+      await _fail(entry, _tooOldReason(entry));
+      return _Outcome.finished;
+    }
+    if (entry.kind == 'edit' && !_isEditable(entry)) {
+      // The server counts the window to the moment it receives the edit, so
+      // an edit that waited too long is not sent at all (and never retried).
+      await _dropSelfCommand(
+        entry,
+        notice: isSelf ? cantEditYet : tooOldToEdit,
+      );
       return _Outcome.finished;
     }
     // The only place chat text is put on the socket. The decision is asked
     // again here, so a key change or a new device after composing is caught.
-    final decision = await _policy.decideSend(
-      entry.convId,
-      await _facts(entry.convId),
-    );
+    // A delete carries no text: nothing to decide or seal.
+    final decision = entry.kind == 'delete'
+        ? const E2eSendDecision.plain()
+        : await _policy.decideSend(entry.convId, await _facts(entry.convId));
     switch (decision.verdict) {
       case E2eSendVerdict.unknown:
+        if (isSelf) return _waitForEncryption(entry);
         await _defer(entry, const Duration(seconds: 15));
         return _Outcome.deferred;
       case E2eSendVerdict.blocked:
+        // A note waits (never plain) while keys or the device list are not
+        // ready; it fails only on a refusal that waiting cannot fix.
+        if (isSelf && (decision.isSetupMissing || decision.isTransient)) {
+          return _waitForEncryption(entry);
+        }
         if (decision.isSetupPending) {
           await _defer(entry, const Duration(seconds: 15));
           return _Outcome.deferred;
@@ -840,6 +1174,16 @@ class MessageRepository extends GetxService {
       case E2eSendVerdict.plain:
       case E2eSendVerdict.encrypt:
         break;
+    }
+    if (entry.kind == 'edit' && !decision.isEncrypt && _wasSealed(entry)) {
+      // An encrypted message's edit must be encrypted too (the server refuses
+      // the plain one), and the new text must never leave in the clear.
+      AppLog.w('outbox', 'edit of an encrypted message without encryption');
+      await _dropSelfCommand(
+        entry,
+        notice: isSelf ? couldNotEdit : couldNotEditMessage,
+      );
+      return _Outcome.finished;
     }
     String? envelope;
     // A file goes out the way it was made: sealed with its key inside an
@@ -853,13 +1197,6 @@ class MessageRepository extends GetxService {
     if (decision.isEncrypt) {
       if (isCommandLike('${entry.payload['text']}')) {
         await _fail(entry, '${E2eSendDecision.failTag}$_noCommands');
-        return _Outcome.finished;
-      }
-      if (entry.kind == 'edit') {
-        await _fail(
-          entry,
-          "${E2eSendDecision.failTag}Editing isn't supported in encrypted chats yet",
-        );
         return _Outcome.finished;
       }
       try {
@@ -889,10 +1226,23 @@ class MessageRepository extends GetxService {
         );
         return _Outcome.finished;
       }
+      if (isSelf && envelope.length > SelfConversation.maxEnvelope) {
+        // Never cut: the note is refused before it is sent.
+        AppLog.w(
+          'outbox',
+          'note envelope too large boxes=${decision.recipients.length}',
+        );
+        await _fail(entry, '${E2eSendDecision.failTag}$_tooLargeNote');
+        return _Outcome.finished;
+      }
     }
     if (envelope != null) {
       final mid = E2eCrypto.midOf(envelope);
-      if (mid != null) _sealedMids[entry.id] = mid;
+      if (mid != null) {
+        _sealedMids[entry.id] = mid;
+        if (isSelf && !_isCommandOnly(entry.kind))
+          await _rememberMid(entry, mid);
+      }
     }
     final command = wireCommand(entry, text: envelope);
     if (command == null) {
@@ -907,9 +1257,9 @@ class MessageRepository extends GetxService {
         'retry_count = retry_count + 1, cursor_at_send = ? WHERE id = ?',
         [now, now, cursor, entry.id],
       );
-      if (entry.kind != 'edit') {
+      if (!_isCommandOnly(entry.kind)) {
         await sql.update(
-          "UPDATE messages SET status = 'sending' WHERE org_id = ? AND user_id = ? AND msg_id = ?",
+          "UPDATE messages SET status = 'sending', fail_reason = NULL WHERE org_id = ? AND user_id = ? AND msg_id = ?",
           [_org, _me, entry.refId],
         );
       }
@@ -963,11 +1313,16 @@ class MessageRepository extends GetxService {
 
   /// The same line for a debug send, without an outbox entry.
   static String? cidCommand(String convId, String text, String cid) {
-    if (SelfConversation.refuse(convId, 'cidCommand')) return null;
     final kind = ConversationRepository.kindOf(convId);
-    if (kind != 'dm' && kind != 'group' && kind != 'host') return null;
+    if (kind != 'dm' &&
+        kind != 'group' &&
+        kind != 'host' &&
+        !SelfConversation.isSelf(convId)) {
+      return null;
+    }
     final target = ConversationRepository.targetOf(convId);
     final command = switch (kind) {
+      'self' => '/self $text',
       'dm' => '/msg $target $text',
       'group' => '/groupmsg $target $text',
       _ => '/hostmsg $target $text',
@@ -978,7 +1333,20 @@ class MessageRepository extends GetxService {
   static String? _commandFor(OutboxEntry e, {String? text}) {
     text ??= '${e.payload['text']}';
     final reply = e.payload['replyTo'] as String?;
-    if (SelfConversation.refuse(e.convId, 'command ${e.kind}')) return null;
+    if (SelfConversation.isSelf(e.convId)) {
+      // A note has its own commands and can never fall through to the plain
+      // text of the global room or a direct chat. Only a server id goes on
+      // the wire as the target.
+      final target = numericId(e.refId) == null ? null : e.refId;
+      final quoted = reply != null && numericId(reply) != null ? reply : null;
+      return switch (e.kind) {
+        'message' => '/self $text',
+        'reply' => quoted == null ? null : '/replyself $quoted $text',
+        'edit' => target == null ? null : '/edit self $target $text',
+        'delete' => target == null ? null : '/delete self $target',
+        _ => null,
+      };
+    }
     final kind = ConversationRepository.kindOf(e.convId);
     final target = ConversationRepository.targetOf(e.convId);
     switch (e.kind) {
@@ -1028,7 +1396,7 @@ class MessageRepository extends GetxService {
         "UPDATE outbox SET status = 'pending', next_attempt_ts = 0 ${countAttempt ? '' : ', retry_count = MAX(retry_count - 1, 0)'} WHERE id = ?",
         [e.id],
       );
-      if (e.kind != 'edit') {
+      if (!_isCommandOnly(e.kind)) {
         await sql.update(
           "UPDATE messages SET status = 'pending' WHERE org_id = ? AND user_id = ? AND msg_id = ?",
           [_org, _me, e.refId],
@@ -1049,6 +1417,24 @@ class MessageRepository extends GetxService {
       'outbox',
       'failed kind=${e.kind} cid=${e.cid} retries=${e.retryCount} reason=$reason',
     );
+    final isSelf = SelfConversation.isSelf(e.convId);
+    if ((isSelf && _isCommandOnly(e.kind)) || e.kind == 'edit') {
+      // An edit or a delete of a note, or an edit of a chat message, has no
+      // retry button: the message goes back to what it was and the person is
+      // told (a refusal on encryption grounds says why).
+      final why = reason.startsWith(E2eSendDecision.failTag)
+          ? reason.substring(E2eSendDecision.failTag.length)
+          : '';
+      await _dropSelfCommand(
+        e,
+        notice: e.kind == 'edit'
+            ? (isSelf
+                  ? couldNotEdit
+                  : (why.isEmpty ? couldNotEditMessage : why))
+            : couldNotDelete,
+      );
+      return;
+    }
     _settle(e.id);
     _staleTries.remove(e.id);
     await _db.transaction((sql) async {
@@ -1056,17 +1442,10 @@ class MessageRepository extends GetxService {
         "UPDATE outbox SET status = 'failed', last_error = ? WHERE id = ?",
         [reason, e.id],
       );
-      if (e.kind == 'edit') {
-        await sql.update(
-          'UPDATE messages SET text = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?',
-          ['${e.payload['prevText']}', _org, _me, e.refId],
-        );
-      } else {
-        await sql.update(
-          "UPDATE messages SET status = 'failed', fail_reason = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?",
-          [reason, _org, _me, e.refId],
-        );
-      }
+      await sql.update(
+        "UPDATE messages SET status = 'failed', fail_reason = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?",
+        [reason, _org, _me, e.refId],
+      );
     });
     await _reload(e.convId);
     fireAndLog('message_repository', () => flush());
@@ -1079,6 +1458,10 @@ class MessageRepository extends GetxService {
     _ackTimers.clear();
     _sealedMids.clear();
     _inFlight.clear();
+    // A held echo is a note of mine whatever happens next: it is added now.
+    for (final id in _heldSelf.keys.toList()) {
+      _enqueue('release held note', () => _releaseHeld(id));
+    }
     for (final waiter in _historyWaiters.values) {
       if (!waiter.isCompleted) waiter.completeError(StateError('dropped'));
     }
@@ -1103,12 +1486,13 @@ class MessageRepository extends GetxService {
     _syncScope = scope;
     try {
       final stale = await _db.query(
-        "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'sending' AND kind IN ('message','reply','edit') ORDER BY id",
+        "SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND status = 'sending' AND kind IN ('message','reply','edit','delete') ORDER BY id",
         [_org, _me],
       );
       for (final row in stale) {
         await _recover(OutboxEntry.fromRow(row), countAttempt: false);
       }
+      await _wakeSelfNotes();
       await flush();
       await _syncAll();
       await syncSelf();
@@ -1126,12 +1510,12 @@ class MessageRepository extends GetxService {
   /// message cannot carry an id and is checked against history first.
   Future<void> _recover(OutboxEntry entry, {required bool countAttempt}) async {
     _settle(entry.id);
-    if (entry.kind == 'edit') {
+    if (_isCommandOnly(entry.kind)) {
       await _backToPending(entry, countAttempt: countAttempt);
     } else if (!entry.usesCid) {
       await _reconcileByText(entry);
-    } else if (_isPastCidMemory(entry)) {
-      await _fail(entry, couldNotConfirm);
+    } else if (_isTooOld(entry)) {
+      await _fail(entry, _tooOldReason(entry));
     } else {
       await _backToPending(entry, countAttempt: countAttempt);
     }
@@ -1214,9 +1598,7 @@ class MessageRepository extends GetxService {
     final waiter = Completer<_History>();
     _historyWaiters[key] = waiter;
     try {
-      final scope = kind == 'global' || kind == 'self'
-          ? kind
-          : '$kind $target';
+      final scope = kind == 'global' || kind == 'self' ? kind : '$kind $target';
       final sent = await _socket.sendCommand(
         delta != null
             ? '/history $scope delta ${delta.after} ${delta.since}'
@@ -1406,8 +1788,7 @@ class MessageRepository extends GetxService {
       case 'self_deleted':
         await _onSelfDeleted(e);
       case 'self_ack':
-        // Nothing sends into My Work Space yet, so there is no note to match.
-        break;
+        await _onSelfAck(e);
       case 'dm_read':
         await _onRead(idText(e['from']).toLowerCase());
       case 'history':
@@ -1423,6 +1804,7 @@ class MessageRepository extends GetxService {
         if (waiter != null && !waiter.isCompleted) {
           waiter.complete(DeleteResult.denied);
         }
+        await _onSelfDeleteDenied(e);
       case 'edit_denied':
         await _onEditDenied(e);
       case 'deleted':
@@ -1467,12 +1849,7 @@ class MessageRepository extends GetxService {
     final cid = e['cid'];
     OutboxEntry? entry;
     if (cid is String && cid.isNotEmpty) {
-      final rows = await _db.query(
-        'SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND cid = ? '
-        "AND kind IN ('message','reply') AND status IN ('sending','pending') ORDER BY id LIMIT 1",
-        [_org, _me, cid],
-      );
-      if (rows.isNotEmpty) entry = OutboxEntry.fromRow(rows.first);
+      entry = await _sendByCid(cid);
     } else {
       for (final inFlight in _inFlight.values) {
         if (inFlight.isSend &&
@@ -1492,6 +1869,16 @@ class MessageRepository extends GetxService {
       moveCursor: e['duplicate'] != true,
     );
     fireAndLog('message_repository', () => flush());
+  }
+
+  /// The send still waiting for its answer under this client id.
+  Future<OutboxEntry?> _sendByCid(String cid) async {
+    final rows = await _db.query(
+      'SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND cid = ? '
+      "AND kind IN ('message','reply') AND status IN ('sending','pending') ORDER BY id LIMIT 1",
+      [_org, _me, cid],
+    );
+    return rows.isEmpty ? null : OutboxEntry.fromRow(rows.first);
   }
 
   Future<void> _adopt(
@@ -1590,13 +1977,22 @@ class MessageRepository extends GetxService {
   /// oldest send in flight. The cached device lists and mode are dropped so
   /// a retry asks again.
   Future<void> _onE2eError(String code, {String text = ''}) async {
-    final sends = _inFlight.values.where((i) => i.isSend).toList()
-      ..sort((a, b) => a.id.compareTo(b.id));
+    final sends =
+        _inFlight.values.where((i) => i.isSend || i.kind == 'edit').toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
     _policy.onReconnected();
     if (sends.isEmpty) return;
     final entry = sends.first;
     final peer = ConversationRepository.targetOf(entry.convId);
     final isGroup = entry.convId.startsWith('group:');
+    if (code == 'bad_envelope' &&
+        (SelfConversation.isSelf(entry.convId) || entry.kind == 'edit')) {
+      // A box the server does not accept (a device that is gone or new):
+      // the device lists are read again, then one more try.
+      if (isGroup) _e2e.invalidateGroup(peer);
+      await _retrySealed(entry, [if (entry.convId.startsWith('dm:')) peer]);
+      return;
+    }
     if (entry.convId.startsWith('dm:')) _e2e.invalidate([peer, _me ?? '']);
     if (isGroup) _e2e.invalidateGroup(peer);
     final why = switch (code) {
@@ -1629,7 +2025,10 @@ class MessageRepository extends GetxService {
       final entry = _inFlight[item.key];
       if (item.value == mid &&
           entry != null &&
-          (conv.isEmpty || entry.convId.toLowerCase() == conv)) {
+          (conv.isEmpty ||
+              entry.convId.toLowerCase() == conv ||
+              (SelfConversation.isSelf(entry.convId) &&
+                  conv == E2eCrypto.selfLabel(_me ?? '')))) {
         outboxId = item.key;
       }
     }
@@ -1642,9 +2041,19 @@ class MessageRepository extends GetxService {
       _e2e.invalidateGroup(ConversationRepository.targetOf(entry.convId));
     }
     final users = e['users'];
-    _e2e.invalidate([if (users is List) ...users.map((u) => '$u'), _me ?? '']);
+    await _retrySealed(entry, [if (users is List) ...users.map((u) => '$u')]);
+  }
+
+  /// Forgets the device lists, then sends again under the same `cid` with a
+  /// new envelope: at most [_maxStaleRetries] times for a chat, once for a
+  /// note. After that the message fails (never plain text).
+  Future<void> _retrySealed(OutboxEntry entry, List<String> users) async {
+    _e2e.invalidate([...users, _me ?? '']);
     final tries = (_staleTries[entry.id] ?? 0) + 1;
-    if (tries > _maxStaleRetries) {
+    final most = SelfConversation.isSelf(entry.convId) || entry.kind == 'edit'
+        ? 1
+        : _maxStaleRetries;
+    if (tries > most) {
       if (kDebugMode) debugPrint('e2e: stale devices, giving up');
       await _fail(entry, E2eSendDecision.staleFailure);
       return;
@@ -1806,19 +2215,78 @@ class MessageRepository extends GetxService {
     await _reload('dm:$peer');
   }
 
+  /// `edited`, `dm_edited` and `group_edited`. An edit I sent from this phone
+  /// is settled by its own echo (same text, or the same envelope `mid`) and
+  /// the text I typed stays on screen: no second read of the envelope, no
+  /// flicker; a repeat of the event changes nothing. An edit by another
+  /// person or device replaces the text and is opened like any envelope.
   Future<void> _onEdited(Map<String, dynamic> e) async {
     final id = idText(e['messageId']);
-    await _db.update(
-      'UPDATE messages SET text = ?, edited_ts = ? WHERE org_id = ? AND user_id = ? AND msg_id = ?',
-      [idText(e['text']), intOf(e['editedTs']), _org, _me, id],
+    if (id.isEmpty) return;
+    final text = idText(e['text']);
+    final isEnvelope = E2eCrypto.isEnvelope(text);
+    final editedTs = e['editedTs'] == null ? null : intOf(e['editedTs']);
+    final rows = await _db.query(
+      'SELECT is_mine, edited_ts, decrypt_state, plaintext, text, conv_id FROM messages '
+      'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+      [_org, _me, id],
     );
-    for (final entry in _inFlight.values.toList()) {
-      if (entry.kind == 'edit' && entry.refId == id) {
-        _settle(entry.id);
-        await _db.update('DELETE FROM outbox WHERE id = ?', [entry.id]);
-        fireAndLog('message_repository', () => flush());
-      }
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final convId = idText(row['conv_id']);
+    if (SelfConversation.isSelf(convId)) return;
+    final own = await _ownEditFor(id, text, isEnvelope);
+    if (own != null) {
+      _settle(own.id);
+      await _db.transaction((sql) async {
+        await sql.update('DELETE FROM outbox WHERE id = ?', [own.id]);
+        await sql.update(
+          'UPDATE messages SET text = ?, edited_ts = ?, fail_reason = NULL, '
+          "plaintext = CASE WHEN ? = 1 THEN ? ELSE NULL END, decrypt_state = CASE WHEN ? = 1 THEN 'ok' ELSE NULL END, "
+          'is_encrypted_unsupported = ? '
+          'WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [
+            text,
+            editedTs,
+            isEnvelope ? 1 : 0,
+            '${own.payload['text']}',
+            isEnvelope ? 1 : 0,
+            isEnvelope ? 1 : 0,
+            _org,
+            _me,
+            id,
+          ],
+        );
+      });
+      await _reload(convId);
+      fireAndLog('message_repository', () => flush());
+      return;
     }
+    final isSameEdit =
+        editedTs != null &&
+        row['edited_ts'] != null &&
+        intOf(row['edited_ts']) == editedTs;
+    final isMineOpened =
+        intOf(row['is_mine']) == 1 &&
+        row['decrypt_state'] == 'ok' &&
+        row['plaintext'] != null;
+    if (isSameEdit && (isEnvelope ? isMineOpened : row['text'] == text)) {
+      return;
+    }
+    await _db.update(
+      'UPDATE messages SET text = ?, edited_ts = ?, fail_reason = NULL, is_encrypted_unsupported = ?, '
+      'decrypt_state = ?, plaintext = NULL WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+      [
+        text,
+        editedTs,
+        isEnvelope ? 1 : 0,
+        isEnvelope ? 'pending' : null,
+        _org,
+        _me,
+        id,
+      ],
+    );
+    if (isEnvelope) _scheduleDecrypt();
     await _reloadAll();
   }
 
@@ -1857,6 +2325,7 @@ class MessageRepository extends GetxService {
           : numericId(saved.first['last_server_id']);
       final since = saved.isEmpty ? 0 : intOf(saved.first['last_history_now']);
       await _syncConversation(SelfConversation.id);
+      await _reopenSelfLocked();
       if (_org != org || _me != user || !_socket.isOnline) return;
       if (lastId == null || since <= 0) return;
       await _fetchHistory(
@@ -1868,9 +2337,68 @@ class MessageRepository extends GetxService {
     }
   }
 
+  /// A locked note is never dropped: after every sync the ones that failed
+  /// for a reason that may have passed (keys not ready, a sender device not
+  /// known yet, a directory lookup that failed) are opened again. A note with
+  /// no box for this phone stays locked until its envelope changes.
+  Future<void> _reopenSelfLocked() async {
+    final changed = await _db.update(
+      "UPDATE messages SET decrypt_state = 'pending', plaintext = NULL "
+      "WHERE org_id = ? AND user_id = ? AND conv_id = ? AND decrypt_state = 'cant_decrypt' "
+      "AND (plaintext IN ('no_device', 'unknown_sender_device') OR plaintext LIKE 'directory_%')",
+      [_org, _me, SelfConversation.id],
+    );
+    if (changed > 0) _scheduleDecrypt();
+  }
+
   /// A note of mine, typed on this or another device. Added once by its
   /// server id; a repeat (or the same note from history) changes nothing.
+  ///
+  /// The server pushes the live copy BEFORE it answers the sender with
+  /// `self_ack`, and the copy carries no client id. While this phone has a
+  /// note in flight, an unknown id is therefore held for [selfHold]: if a
+  /// `self_ack` with that id arrives, the held copy is the echo of my own note
+  /// and is dropped (the pending row takes the id); otherwise it is a note of
+  /// another device and is added. Text is never compared.
   Future<void> _onSelfMessage(Map<String, dynamic> e) async {
+    final org = _org;
+    final user = _me;
+    final id = idText(e['id']);
+    if (org == null || user == null || id.isEmpty) return;
+    if (_heldSelf.containsKey(id) || await _hasMessage(id)) return;
+    final mine = await _selfSendByMid(idText(e['text']));
+    if (mine != null) {
+      // My own encrypted note, known by its envelope id: no hold is needed.
+      AppLog.i('outbox', 'self note matched by mid');
+      await _adopt(mine, id, intOf(e['ts']));
+      fireAndLog('message_repository', () => flush());
+      return;
+    }
+    if (!_hasSelfInFlight) {
+      await _insertSelf(e);
+      return;
+    }
+    _heldSelf[id] = _HeldSelf(
+      org: org,
+      user: user,
+      event: e,
+      timer: holdTimer(
+        selfHold,
+        () => _enqueue('release held note', () => _releaseHeld(id)),
+      ),
+    );
+  }
+
+  bool get _hasSelfInFlight => _inFlight.values.any(
+    (i) => i.isSend && SelfConversation.isSelf(i.convId),
+  );
+
+  Future<bool> _hasMessage(String id) async => (await _db.query(
+    'SELECT 1 FROM messages WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+    [_org, _me, id],
+  )).isNotEmpty;
+
+  Future<void> _insertSelf(Map<String, dynamic> e) async {
     final org = _org;
     final user = _me;
     final id = idText(e['id']);
@@ -1887,17 +2415,186 @@ class MessageRepository extends GetxService {
     await _reload(SelfConversation.id);
   }
 
+  /// The hold ran out (or the connection dropped): the held copy is added as
+  /// a note, unless the person or organisation changed in between.
+  Future<void> _releaseHeld(String id) async {
+    final held = _heldSelf.remove(id);
+    if (held == null) return;
+    held.timer.cancel();
+    if (_org != held.org || _me != held.user) return;
+    await _insertSelf(held.event);
+  }
+
+  void _clearHeldSelf() {
+    for (final held in _heldSelf.values) {
+      held.timer.cancel();
+    }
+    _heldSelf.clear();
+  }
+
+  /// Runs [job] in event order and logs (never rethrows) a failure.
+  void _enqueue(String reason, Future<void> Function() job) {
+    _queue = _queue
+        .then((_) => job())
+        .catchError((Object err, StackTrace s) => _logDropped(err, s, reason));
+  }
+
+  /// The server kept a note of mine. Its client id finds the pending row,
+  /// which takes the server id and time and becomes `sent` (a note has no
+  /// recipient, so the answer's `delivered` never shows ticks, as on the
+  /// web). A repeat (`duplicate: true`) is the same answer again. An answer
+  /// for a client id this phone does not know is ignored.
+  Future<void> _onSelfAck(Map<String, dynamic> e) async {
+    final id = idText(e['id']);
+    final cid = e['cid'];
+    final entry = cid is String && cid.isNotEmpty
+        ? await _sendByCid(cid)
+        : null;
+    if (entry == null || !SelfConversation.isSelf(entry.convId) || id.isEmpty) {
+      AppLog.d('message_repository', 'self_ack for a note not in the outbox');
+      // A copy held for this id is then a note like any other.
+      await _releaseHeld(id);
+      return;
+    }
+    final held = _heldSelf.remove(id);
+    held?.timer.cancel();
+    await _adopt(entry, id, intOf(e['ts']), moveCursor: e['duplicate'] != true);
+    fireAndLog('message_repository', () => flush());
+  }
+
+  /// A note that waits for encryption says so until it goes out. After
+  /// [SelfConversation.setupAfter] the line asks the person to set encryption
+  /// up. The note stays queued, never plain, until the 23 hour stop.
+  Future<_Outcome> _waitForEncryption(OutboxEntry entry) async {
+    final waited = Duration(milliseconds: clock() - entry.createdTs);
+    final isLong = waited >= SelfConversation.setupAfter;
+    final reason = isLong
+        ? SelfConversation.waitingForSetup
+        : SelfConversation.waitingForEncryption;
+    final changed = await _db.update(
+      "UPDATE messages SET fail_reason = ? WHERE org_id = ? AND user_id = ? AND msg_id = ? AND status = 'pending' "
+      'AND (fail_reason IS NULL OR fail_reason != ?)',
+      [reason, _org, _me, entry.refId, reason],
+    );
+    if (changed > 0) {
+      if (isLong) {
+        AppLog.w('outbox', 'note waits for encryption, setup asked');
+      }
+      await _reload(entry.convId);
+    }
+    // Events wake the note at once; the timer is the slow fallback, and the
+    // moment the line has to change.
+    var wait = SelfConversation.waitFallback;
+    if (!isLong) {
+      final left = SelfConversation.setupAfter - waited;
+      if (left < wait) wait = left + const Duration(seconds: 1);
+    }
+    await _defer(entry, wait);
+    return _Outcome.deferred;
+  }
+
+  bool _wasSealed(OutboxEntry entry) {
+    final prev = entry.payload['prev'];
+    return prev is Map && prev['enc'] == 1;
+  }
+
+  static const _tooLargeNote = 'That note is too large to send securely';
+
+  /// The `mid` of every envelope sealed for a note is kept with its outbox
+  /// entry, so a copy that comes back (a live frame or history) is known as
+  /// mine even when the ack was lost, a retry sealed a new envelope, or the
+  /// app restarted.
+  Future<void> _rememberMid(OutboxEntry entry, String mid) async {
+    final known = entry.payload['mids'];
+    final mids = <String>[if (known is List) ...known.map((m) => '$m')];
+    if (mids.contains(mid)) return;
+    mids.add(mid);
+    entry.payload['mids'] = mids;
+    await _db.update('UPDATE outbox SET payload_json = ? WHERE id = ?', [
+      jsonEncode(entry.payload),
+      entry.id,
+    ]);
+  }
+
+  /// My own note this envelope belongs to (matched by its `mid`, never by
+  /// text), if one is still waiting for its answer. A plain note has no `mid`
+  /// and is matched only by its server id.
+  Future<OutboxEntry?> _selfSendByMid(String text) async {
+    if (!E2eCrypto.isEnvelope(text)) return null;
+    final mid = E2eCrypto.midOf(text);
+    if (mid == null || mid.isEmpty) return null;
+    final rows = await _db.query(
+      'SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND conv_id = ? '
+      "AND kind IN ('message','reply') AND status IN ('sending','pending','failed') ORDER BY id",
+      [_org, _me, SelfConversation.id],
+    );
+    for (final row in rows) {
+      final entry = OutboxEntry.fromRow(row);
+      final mids = entry.payload['mids'];
+      if ((mids is List && mids.any((m) => '$m' == mid)) ||
+          _sealedMids[entry.id] == mid) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  /// Encryption may be ready now (a new device list, keys, a reconnect): the
+  /// waiting notes are tried again at once.
+  Future<void> _wakeSelfNotes() async {
+    await _db.update(
+      "UPDATE outbox SET next_attempt_ts = 0 WHERE org_id = ? AND user_id = ? AND conv_id = 'self' "
+      "AND status = 'pending' AND next_attempt_ts > 0",
+      [_org, _me],
+    );
+    fireAndLog('message_repository', () => flush());
+  }
+
+  /// `self_edited` reaches every connection of the person, this one too. When
+  /// it is the answer to the edit this phone sent, the queued entry is done and
+  /// the text I typed stays on screen (no second read of the envelope, no
+  /// flicker); a repeat of the same event changes nothing. An edit made on
+  /// another device replaces the text and is opened like any envelope.
   Future<void> _onSelfEdited(Map<String, dynamic> e) async {
     final id = idText(e['messageId']);
     if (id.isEmpty) return;
     final text = idText(e['text']);
     final isEnvelope = text.startsWith('e2e1:');
+    final editedTs = e['editedTs'] == null ? null : intOf(e['editedTs']);
+    final own = await _ownEditFor(id, text, isEnvelope);
+    if (own != null) {
+      _settle(own.id);
+      await _db.transaction((sql) async {
+        await sql.update('DELETE FROM outbox WHERE id = ?', [own.id]);
+        await sql.update(
+          'UPDATE messages SET text = ?, edited_ts = ?, fail_reason = NULL, '
+          "plaintext = CASE WHEN ? = 1 THEN ? ELSE NULL END, decrypt_state = CASE WHEN ? = 1 THEN 'ok' ELSE NULL END, "
+          'is_encrypted_unsupported = ? '
+          'WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = ?',
+          [
+            text,
+            editedTs,
+            isEnvelope ? 1 : 0,
+            '${own.payload['text']}',
+            isEnvelope ? 1 : 0,
+            isEnvelope ? 1 : 0,
+            _org,
+            _me,
+            id,
+            SelfConversation.id,
+          ],
+        );
+      });
+      await _reload(SelfConversation.id);
+      fireAndLog('message_repository', () => flush());
+      return;
+    }
     await _db.update(
       'UPDATE messages SET text = ?, edited_ts = ?, is_encrypted_unsupported = ?, decrypt_state = ?, plaintext = NULL '
       'WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = ?',
       [
         text,
-        e['editedTs'] == null ? null : intOf(e['editedTs']),
+        editedTs,
         isEnvelope ? 1 : 0,
         isEnvelope ? 'pending' : null,
         _org,
@@ -1910,25 +2607,163 @@ class MessageRepository extends GetxService {
     await _reload(SelfConversation.id);
   }
 
-  /// A delete made on another device: the row is marked deleted, as in every
-  /// chat; the My Work Space thread does not draw deleted notes.
+  /// The queued edit this event answers: same note, and the same text (plain)
+  /// or the same envelope `mid` (sealed).
+  Future<OutboxEntry?> _ownEditFor(
+    String id,
+    String text,
+    bool isEnvelope,
+  ) async {
+    final entry = await _entryOf('edit', id);
+    if (entry == null) return null;
+    if (isEnvelope) {
+      final mid = E2eCrypto.midOf(text);
+      return mid != null && mid == _sealedMids[entry.id] ? entry : null;
+    }
+    return '${entry.payload['text']}' == text ? entry : null;
+  }
+
+  /// The edit or delete of a note still waiting for its answer, if any.
+  Future<OutboxEntry?> _selfEntry(String kind, String refId) async =>
+      _entryOf(kind, refId, convId: SelfConversation.id);
+
+  /// The queued or sent [kind] command for message [refId], in [convId] or
+  /// (when null) any conversation.
+  Future<OutboxEntry?> _entryOf(
+    String kind,
+    String refId, {
+    String? convId,
+  }) async {
+    final rows = await _db.query(
+      'SELECT * FROM outbox WHERE org_id = ? AND user_id = ? AND kind = ? AND ref_id = ? '
+      "${convId == null ? '' : 'AND conv_id = ? '}AND status IN ('sending','pending') ORDER BY id LIMIT 1",
+      [_org, _me, kind, refId, ?convId],
+    );
+    return rows.isEmpty ? null : OutboxEntry.fromRow(rows.first);
+  }
+
+  /// `self_deleted` reaches every connection, this one too. The note is marked
+  /// deleted (the My Work Space thread does not draw it); my own queued delete
+  /// of it is done, and an edit still waiting for it is dropped. A repeat of
+  /// the event changes nothing.
   Future<void> _onSelfDeleted(Map<String, dynamic> e) async {
     final id = idText(e['messageId']);
     if (id.isEmpty) return;
-    await _db.update(
-      'UPDATE messages SET is_deleted = 1 WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = ?',
-      [_org, _me, id, SelfConversation.id],
-    );
+    final own = await _selfEntry('delete', id);
+    if (own != null) _settle(own.id);
+    await _db.transaction((sql) async {
+      await sql.update(
+        'UPDATE messages SET is_deleted = 1, fail_reason = NULL WHERE org_id = ? AND user_id = ? AND msg_id = ? AND conv_id = ?',
+        [_org, _me, id, SelfConversation.id],
+      );
+      await sql.update(
+        "DELETE FROM outbox WHERE org_id = ? AND user_id = ? AND conv_id = ? AND ref_id = ? AND kind IN ('delete','edit') "
+        "AND status IN ('pending','failed')",
+        [_org, _me, SelfConversation.id, id],
+      );
+      if (own != null) {
+        await sql.update('DELETE FROM outbox WHERE id = ?', [own.id]);
+      }
+    });
     await _reload(SelfConversation.id);
+    if (own != null) fireAndLog('message_repository', () => flush());
+  }
+
+  /// `delete_denied` for a note: `not_found` means it is already gone, which
+  /// is what was asked; any other reason ends the delete and brings the note
+  /// back.
+  Future<void> _onSelfDeleteDenied(Map<String, dynamic> e) async {
+    final entry = await _selfEntry('delete', idText(e['messageId']));
+    if (entry == null) return;
+    if (idText(e['reason']) == 'not_found') {
+      await _onSelfDeleted({'messageId': entry.refId});
+      return;
+    }
+    await _fail(entry, 'delete denied: ${idText(e['reason'])}');
+  }
+
+  /// `edit_denied` for an edit of a note. `expired` and any other refusal put
+  /// the old text back and are never retried; `deleted` and `not_found` mean
+  /// the note is gone.
+  Future<void> _denySelfEdit(OutboxEntry entry, String reason) async {
+    AppLog.w('outbox', 'edit denied reason=$reason cid=${entry.cid}');
+    final isSelf = SelfConversation.isSelf(entry.convId);
+    switch (reason) {
+      case 'deleted':
+      case 'not_found':
+        await _dropSelfCommand(entry, isGone: true);
+      case 'expired':
+        await _dropSelfCommand(
+          entry,
+          notice: isSelf ? cantEditYet : tooOldToEdit,
+        );
+      default:
+        await _dropSelfCommand(
+          entry,
+          notice: isSelf ? couldNotEdit : couldNotEditMessage,
+        );
+    }
+  }
+
+  /// Ends an edit or delete of a note without retry: the entry is removed and
+  /// the note goes back to what it was before (an edit restores text, envelope
+  /// and edited time; a delete shows the note again), or it is marked deleted
+  /// when [isGone]. [notice] tells the person in a few words.
+  Future<void> _dropSelfCommand(
+    OutboxEntry e, {
+    String? notice,
+    bool isGone = false,
+  }) async {
+    AppLog.w('outbox', 'dropped kind=${e.kind} id=${e.refId} cid=${e.cid}');
+    _settle(e.id);
+    _staleTries.remove(e.id);
+    await _db.transaction((sql) async {
+      await sql.update('DELETE FROM outbox WHERE id = ?', [e.id]);
+      if (isGone) {
+        await sql.update(
+          'UPDATE messages SET is_deleted = 1, fail_reason = NULL WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [_org, _me, e.refId],
+        );
+      } else if (e.kind == 'delete') {
+        await sql.update(
+          'UPDATE messages SET is_deleted = 0 WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [_org, _me, e.refId],
+        );
+      } else {
+        final prev = e.payload['prev'];
+        final old = prev is Map ? prev : const {};
+        await sql.update(
+          'UPDATE messages SET text = ?, plaintext = ?, decrypt_state = ?, is_encrypted_unsupported = ?, '
+          'edited_ts = ?, fail_reason = NULL WHERE org_id = ? AND user_id = ? AND msg_id = ?',
+          [
+            old['text'] ?? e.payload['prevText'],
+            old['plaintext'],
+            old['decrypt'],
+            old['enc'] == 1 ? 1 : 0,
+            old['editedTs'],
+            _org,
+            _me,
+            e.refId,
+          ],
+        );
+      }
+    });
+    await _reload(e.convId);
+    if (notice != null) _notify(notice);
+    fireAndLog('message_repository', () => flush());
   }
 
   Future<void> _onEditDenied(Map<String, dynamic> e) async {
+    final id = idText(e['messageId']);
     for (final entry in _inFlight.values.toList()) {
-      if (entry.kind == 'edit' && entry.refId == idText(e['messageId'])) {
-        await _fail(entry, 'edit denied: ${idText(e['reason'])}');
+      if (entry.kind == 'edit' && entry.refId == id) {
+        await _denySelfEdit(entry, idText(e['reason']));
         return;
       }
     }
+    // The answer of an edit sent before a reconnect: its entry is queued.
+    final queued = await _entryOf('edit', id);
+    if (queued != null) await _denySelfEdit(queued, idText(e['reason']));
   }
 
   Future<void> _setDeleted(String id) async {
@@ -2085,6 +2920,18 @@ class MessageRepository extends GetxService {
         .toList();
     final unknown = <Map<String, dynamic>>[];
     final fresh = <int>[];
+    if (isSelf) {
+      // A note of mine whose ack was lost comes back in history: the pending
+      // row takes its server id first (matched by the envelope `mid`).
+      for (final item in items) {
+        final id = idText(item['id']);
+        if (id.isEmpty || await _hasMessage(id)) continue;
+        final mine = await _selfSendByMid(idText(item['text']));
+        if (mine == null) continue;
+        AppLog.i('outbox', 'self note matched by mid in history');
+        await _adopt(mine, id, intOf(item['ts']), moveCursor: false);
+      }
+    }
     await _db.transaction((sql) async {
       // My Work Space has no list row: it never shows in the chat list and
       // never counts as unread.
@@ -2106,6 +2953,7 @@ class MessageRepository extends GetxService {
       if (isDelta) {
         // Only what changed: the newest-id cursor and paging stay as they are.
         await _setCursor(sql, convId, null, now: intOf(e['now']));
+        _learnServerTime(e['now']);
       } else if (isOlder) {
         // Fetching locked messages again must not move the "load older" spot.
         if (convId != _unlockingConv) {
@@ -2123,6 +2971,7 @@ class MessageRepository extends GetxService {
           items.isEmpty ? null : idText(items.last['id']),
           now: intOf(e['now']),
         );
+        _learnServerTime(e['now']);
         await sql.update(
           'UPDATE sync_cursor SET has_more = ?, next_id = ? '
           'WHERE org_id = ? AND user_id = ? AND conv_id = ? AND has_more IS NULL',

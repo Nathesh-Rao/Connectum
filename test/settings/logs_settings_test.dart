@@ -90,12 +90,12 @@ void main() {
     });
   });
 
-  testWidgets('options sheet: rows, Coming soon, disabled without a file', (
+  testWidgets('options sheet: Share to Connectum first, no Upload log', (
     tester,
   ) async {
     var saved = 0;
     var viewed = 0;
-    var upload = 0;
+    var shared = 0;
     await tester.pumpWidget(
       _host(
         LogsOptionsSheet(
@@ -103,7 +103,7 @@ void main() {
           onView: () async => viewed++,
           onSave: () async => saved++,
           onShare: () async {},
-          onUpload: () => upload++,
+          onShareToConnectum: () async => shared++,
         ),
       ),
     );
@@ -115,8 +115,13 @@ void main() {
     );
     expect(find.text('Save to device'), findsOneWidget);
     expect(find.text('Share file'), findsOneWidget);
-    expect(find.text('Upload log'), findsOneWidget);
-    expect(find.text('Soon'), findsOneWidget);
+    expect(find.text('Upload log'), findsNothing);
+    expect(find.text('Soon'), findsNothing);
+    expect(find.text('Share to Connectum'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Share to Connectum')).dy,
+      lessThan(tester.getTopLeft(find.text('View log file')).dy),
+    );
     expect(
       find.text('No log file yet. Turn on Logs to create one.'),
       findsOneWidget,
@@ -125,8 +130,8 @@ void main() {
     await tester.tap(find.text('Save to device'));
     expect(saved, 0);
     expect(viewed, 0);
-    await tester.tap(find.text('Upload log'));
-    expect(upload, 1);
+    await tester.tap(find.text('Share to Connectum'));
+    expect(shared, 0);
   });
 
   testWidgets('options sheet with a file enables save', (tester) async {
@@ -141,7 +146,6 @@ void main() {
               onView: () async => viewed++,
               onSave: () async => saved++,
               onShare: () async {},
-              onUpload: () {},
             ),
           ),
         ),
@@ -164,7 +168,6 @@ void main() {
               onView: () async => viewed++,
               onSave: () async {},
               onShare: () async {},
-              onUpload: () {},
             ),
           ),
         ),

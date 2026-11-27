@@ -163,16 +163,10 @@ Verdict: **not shipped, package not added.** I could not run anything on a phone
 - Cards list and table keep `AppSv.dialClearance` (fab + margin + 16) plus the safe area at the bottom so the last item clears the speed dial.
 - Log: done; 4-row card about 229 dp at 360 dp wide; goldens regenerated.
 
-## Task E: Overview page and table cells without wrapping
+## Task E: table cells without wrapping
 
-- Plan: the Overview is the landing page of the tab (`SvOverviewBody`, data in `SvOverviewModel`, pure numbers in `lib/data/smart_view/overview/sv_overview.dart`); every way into the tab resets the open view, queries and Overview numbers; `#view <name>` opens that view; the old "last opened view" restore is gone.
-- Data: no new BE call. One `submissions.list` page (500 newest, own records) per structure through the repository gate (`readForOverview`: 6 per 10 s, 300 ms apart), one structure at a time in list order; the count is the page's `total`. Worst case N structures, one page each: about `ceil(N/6) * 10 s` (the first 6 in under 2 s).
-- Numbers: Structures = list length; Records = sum of `total`; This week = records from Monday 00:00 (device zone, the web's "This week" preset); Waiting for approval = loaded records with `status: pending`, tile only when a structure has its own status flow; bars = last 7 local days, today last; mix = status field value, else approval words; footer `Last entry N min / h / d ago`.
-- KPI values show "…" until every card is read or failed; a failed or partial card adds "Based on loaded records".
-- Navigation: tab/`#view` -> Overview (drawer closed/open); re-tap on a view -> Overview, on the Overview -> scroll to top; back: drawer, then view -> Overview; controls row and speed dial exist only on a view; drawer has its own Overview row above STRUCTURES (Find filters structures only).
 - Table: nothing wraps; text over 10 words or over 60 % of the width is cut with "…" and "View more" (violet); "View more" or long press opens the Details sheet (`SvCellDetailsSheet`: label, selectable full value, Copy); column width = widest cut cell; rows have one fixed height.
-- Debug: `/debug/smartoverview` (fake source), DEMO_MODE Leave request rows are spread over a month.
-- Log: done; goldens sv_overview_loaded / loading / empty, sv_drawer_open, sv_table, sv_cell_details_sheet.
+- Log: done; goldens sv_drawer_open, sv_table, sv_cell_details_sheet. The Overview page of this task was removed again (Inbox Phase 1): the tab is drawer-first.
 
 ## Task G: Smart View bug fixes
 

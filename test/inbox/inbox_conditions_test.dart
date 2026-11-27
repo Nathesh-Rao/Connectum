@@ -371,11 +371,13 @@ void main() {
       final sent = rig.argsOf('records.query').last;
       expect(sent.containsKey('views'), isFalse);
       expect(sent.containsKey('scope'), isFalse);
-      expect(sent, {'limit': 100, 'offset': 0});
+      const files = {'withDetails': true, 'fileMeta': 2};
+      expect(sent, {'limit': 100, 'offset': 0, ...files});
       expect(unfiltered, {
         'scope': ['me'],
         'limit': 100,
         'offset': 0,
+        ...files,
       });
       expect(c.isTimeline, isTrue);
     });

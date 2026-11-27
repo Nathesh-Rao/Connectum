@@ -90,7 +90,14 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
       }
       expect(find.byType(ApprovalCard), findsWidgets);
-      expect(find.text('2 records, 3 approvals'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('inbox-records-count')),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+        reason: 'the pill counts records only',
+      );
       expect(tester.takeException(), isNull);
     });
   }
@@ -133,7 +140,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(InboxCard), findsNothing);
     expect(find.byType(ApprovalCard), findsWidgets);
-    expect(find.text('2 approvals'), findsOneWidget);
+    expect(find.byKey(const ValueKey('inbox-records-count')), findsNothing);
     expect(Approval.pending, 'pending');
   });
 }

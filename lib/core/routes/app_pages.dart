@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import '../config/app_config.dart';
 import '../../features/link_browser/link_browser_binding.dart';
 import '../../features/link_browser/link_browser_view.dart';
-import '../../features/approvals/approvals_binding.dart';
-import '../../features/approvals/approvals_view.dart';
 import '../../features/authentication/authentication_binding.dart';
 import '../../features/authentication/authentication_view.dart';
 import '../../features/chat_info/chat_info_binding.dart';
@@ -60,8 +58,6 @@ import '../../features/debug_smart_insights/debug_smart_insights_binding.dart';
 import '../../features/debug_smart_insights/debug_smart_insights_view.dart';
 import '../../features/debug_smart_files/debug_smart_files_binding.dart';
 import '../../features/debug_smart_files/debug_smart_files_view.dart';
-import '../../features/debug_smart_overview/debug_smart_overview_binding.dart';
-import '../../features/debug_smart_overview/debug_smart_overview_view.dart';
 import '../../features/debug_smart_query/debug_smart_query_binding.dart';
 import '../../features/debug_smart_views/debug_smart_views_binding.dart';
 import '../../features/debug_smart_views/debug_smart_views_view.dart';
@@ -103,7 +99,7 @@ import '../../features/submission_detail/submission_detail_binding.dart';
 import '../../features/tasks/tasks_binding.dart';
 import '../../features/tasks/tasks_view.dart';
 import '../../features/tickets/ticket_detail_binding.dart';
-import '../../features/tickets/ticket_detail_view.dart';
+import '../../features/tickets/record_detail_view.dart';
 import '../../features/submission_detail/submission_detail_view.dart';
 import '../../features/verification/verification_binding.dart';
 import '../../features/profile/profile_binding.dart';
@@ -284,14 +280,8 @@ class AppPages {
     ),
     _page(
       AppRoutes.ticket,
-      () => const TicketDetailView(),
+      () => const RecordDetailView(),
       TicketDetailBinding(),
-      AppTransitionKind.push,
-    ),
-    _page(
-      AppRoutes.approvals,
-      () => const ApprovalsView(),
-      ApprovalsBinding(),
       AppTransitionKind.push,
     ),
     _page(
@@ -373,12 +363,6 @@ class AppPages {
       AppRoutes.debugSmartQuery,
       () => const DebugSmartQueryView(),
       DebugSmartQueryBinding(),
-      AppTransitionKind.push,
-    ),
-    _page(
-      AppRoutes.debugSmartOverview,
-      () => const DebugSmartOverviewView(),
-      DebugSmartOverviewBinding(),
       AppTransitionKind.push,
     ),
     _page(

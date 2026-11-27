@@ -12,9 +12,10 @@ import '../../../core/widgets/app_search_field.dart';
 import '../../../data/models/connect_card.dart';
 import '../connect_controller.dart';
 import '../models/join_flow.dart';
+import 'join_details_steps.dart';
 
-/// The join steps of the web's JoinWizard: Associate card, category, optional
-/// affiliate, review.
+/// The join steps of the web's JoinWizard: Employee and Associate cards, the
+/// employee code, category, optional affiliate, details, review.
 class JoinSteps extends StatelessWidget {
   const JoinSteps({super.key, required this.card, required this.controller});
 
@@ -30,19 +31,6 @@ class JoinSteps extends StatelessWidget {
         if (c.isLoadingPage.value) return const _Loading();
         return _PageError(controller: c);
       }
-      if (!flow.isOpen) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              "This enterprise isn't open for joining from the app yet.",
-              style: AppText.body,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppButton.text(label: 'Cancel', onPressed: c.backToEntry),
-          ],
-        );
-      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -54,10 +42,16 @@ class JoinSteps extends StatelessWidget {
           KeyedSubtree(
             key: ValueKey(flow.step),
             child: switch (flow.step) {
-              JoinStep.type => _TypeStep(card: card, controller: c),
+              JoinStep.type => _TypeStep(card: card, controller: c, flow: flow),
+              JoinStep.employee => JoinEmployeeStep(controller: c),
               JoinStep.category => _CategoryStep(controller: c, flow: flow),
               JoinStep.affiliate => _AffiliateStep(controller: c, flow: flow),
-              JoinStep.review => _ReviewStep(card: card, flow: flow),
+              JoinStep.details => JoinDetailsStep(controller: c),
+              JoinStep.review => _ReviewStep(
+                card: card,
+                flow: flow,
+                email: c.identityEmail,
+              ),
             },
           ),
           Obx(() {
@@ -73,7 +67,9 @@ class JoinSteps extends StatelessWidget {
           if (flow.step == JoinStep.review)
             Obx(
               () => AppButton.primary(
-                label: 'Join ${card.name}',
+                label: flow.isClaiming
+                    ? 'Activate my account'
+                    : 'Join ${card.name}',
                 isCentered: true,
                 isLoading: c.isJoining.value,
                 onPressed: c.join,
@@ -146,56 +142,94 @@ class _PageError extends StatelessWidget {
 }
 
 class _TypeStep extends StatelessWidget {
-  const _TypeStep({required this.card, required this.controller});
+  const _TypeStep({
+    required this.card,
+    required this.controller,
+    required this.flow,
+  });
 
   final ConnectCard card;
   final ConnectController controller;
+  final JoinFlow flow;
 
   @override
   Widget build(BuildContext context) {
-    final categories = controller.joinFlow.value?.page.categories ?? const [];
+    final categories = flow.page.categories;
     final shown = categories.take(4).join(', ');
     final more = categories.length > 4 ? ' …' : '';
     final text =
         'A customer, vendor, partner or other outside person'
         '${categories.isEmpty ? '' : ': $shown$more'}.';
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: controller.chooseAssociate,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: AppColors.inputBorder),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.person_outline,
-                size: 22,
-                color: AppColors.primaryStrong,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("I'm an associate", style: AppText.bodyStrong),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(text, style: AppText.readable),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _KindCard(
+          icon: Icons.groups_outlined,
+          title:
+              "I'm an employee${card.name.isEmpty ? '' : ' of ${card.name}'}",
+          text: "You'll need your employee code.",
+          onTap: controller.chooseEmployee,
         ),
-      ),
+        if (flow.isAssociateOffered) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _KindCard(
+            icon: Icons.person_outline,
+            title: "I'm an associate",
+            text: text,
+            onTap: controller.chooseAssociate,
+          ),
+        ],
+      ],
     );
   }
+}
+
+class _KindCard extends StatelessWidget {
+  const _KindCard({
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 22, color: AppColors.primaryStrong),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppText.bodyStrong),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(text, style: AppText.readable),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _CategoryStep extends StatelessWidget {
@@ -270,23 +304,44 @@ class _AffiliateStep extends StatelessWidget {
 }
 
 class _ReviewStep extends StatelessWidget {
-  const _ReviewStep({required this.card, required this.flow});
+  const _ReviewStep({
+    required this.card,
+    required this.flow,
+    required this.email,
+  });
 
   final ConnectCard card;
   final JoinFlow flow;
+  final String email;
 
   @override
   Widget build(BuildContext context) {
+    final place = [
+      for (final k in const ['branch', 'department', 'designation'])
+        if (flow.value(k).isNotEmpty) flow.value(k),
+    ].join(' · ');
+    final mobile = flow.mobile.value.isNotEmpty
+        ? flow.mobile.value
+        : flow.value('mobile');
     final rows = <(String, String)>[
       ('Enterprise', card.name),
-      ('You are', 'Associate'),
-      if (flow.category.isNotEmpty) ('Category', flow.category),
-      (
-        'Affiliate',
-        flow.affiliate.isEmpty ? 'None (an individual)' : flow.affiliate,
-      ),
-      if (flow.affiliate.isNotEmpty)
+      ('You are', flow.isEmployee ? 'Employee' : 'Associate'),
+      if (flow.isEmployee)
+        flow.isClaiming
+            ? ('Employee code', flow.value('employeeCode'))
+            : ('Branch / department / designation', place),
+      if (flow.isAssociate && flow.category.isNotEmpty)
+        ('Category', flow.category),
+      if (flow.isAssociate)
+        (
+          'Affiliate',
+          flow.affiliate.isEmpty ? 'None (an individual)' : flow.affiliate,
+        ),
+      if (flow.isAssociate && flow.affiliate.isNotEmpty)
         ('Branch', flow.needsBranch ? flow.affiliateBranch : 'NA'),
+      if (flow.value('name').isNotEmpty) ('Name', flow.value('name')),
+      if (email.isNotEmpty) ('E-mail', email),
+      if (mobile.isNotEmpty) ('Mobile', mobile),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -385,7 +440,9 @@ class _ChoiceListState extends State<_ChoiceList> {
           const SizedBox(height: AppSpacing.xs),
         ],
         ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: AppSpacing.joinListMaxHeight),
+          constraints: const BoxConstraints(
+            maxHeight: AppSpacing.joinListMaxHeight,
+          ),
           child: ValueListenableBuilder<TextEditingValue>(
             valueListenable: _query,
             builder: (context, value, _) {

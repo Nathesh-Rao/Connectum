@@ -19,6 +19,9 @@ class AppColors {
   static const primarySoft = Color(0xFFF0F5FC);
   static const primaryTint = Color(0xFFE6EEFA);
   static const primaryTintStrong = Color(0xFFD6E3F7);
+
+  /// The band behind a selected message row: [primary] at 14 %.
+  static const selectionTint = Color(0x240052CC);
   static const primaryBorder = Color(0xFFBDD2F2);
   static const primaryDisabled = Color(0xFF99BAEB);
 

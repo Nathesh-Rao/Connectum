@@ -10,9 +10,12 @@ import '../../core/crash/crash_breadcrumbs.dart';
 import '../../core/widgets/app_notice_card.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../data/attachment_cache.dart';
+import '../../data/repositories/share_repository.dart';
 import '../../data/repositories/sv_file_repository.dart';
 import '../../data/smart_view/preview/sv_preview_parsers.dart';
+import '../../data/smart_view/preview/sv_xlsx_parser.dart';
 import '../../data/smart_view/sv_file.dart';
+import '../../core/log/app_log.dart';
 import '../../core/log/safe.dart';
 
 enum SvFilePhase { idle, loading, ready, error }
@@ -29,10 +32,20 @@ class SvFileLoad {
 
   /// 0 to 1; stays 0 while the length is unknown.
   final progress = 0.0.obs;
+
+  /// Bytes of a network download so far (never goes backwards); stays empty
+  /// for a 304 or a kept copy.
+  final transfer = SvFileProgress.none.obs;
   final message = RxnString();
   final problem = Rxn<SvFileProblem>();
   final text = RxnString();
   final isCut = false.obs;
+
+  /// A sheet is being read; the viewer shows a skeleton table meanwhile.
+  final isParsing = false.obs;
+
+  /// The server could not be reached: the kept copy is shown unchecked.
+  final isMaybeStale = false.obs;
 
   /// Set by the picture and PDF viewers while zoomed in: the swipe between
   /// files is off then.
@@ -113,7 +126,11 @@ class SvFilePreviewController extends GetxController {
         viewer == SvViewer.docx ||
         viewer == SvViewer.pptx ||
         viewer == SvViewer.zip;
-    if (isParsed && l.file.size > maxParseBytes) return;
+    final isXlsx = SvFile.extensionOf(l.file.name) == 'xlsx';
+    if (isParsed &&
+        l.file.size > (isXlsx ? SvXlsxParser.maxFileBytes : maxParseBytes)) {
+      return;
+    }
     if (l.file.size > SvFileRepository.maxPreviewBytes) {
       l.problem.value = SvFileProblem.tooLarge;
       l.message.value =
@@ -132,15 +149,28 @@ class SvFilePreviewController extends GetxController {
     if (known != null && known.existsSync()) return known;
     l.phase.value = SvFilePhase.loading;
     l.progress.value = 0;
+    if (l.transfer.value.isStarted) l.transfer.value = SvFileProgress.none;
     l.message.value = null;
     l.problem.value = null;
     final cancel = l.cancel = CancelToken();
     try {
-      final file = await repo.fetch(
+      final got = await repo.fetch(
         l.file,
-        onProgress: (p) => l.progress.value = p,
+        onProgress: (p) {
+          if (identical(l.cancel, cancel) && p > l.progress.value) {
+            l.progress.value = p;
+          }
+        },
+        onTransfer: (t) {
+          if (identical(l.cancel, cancel) &&
+              t.received > l.transfer.value.received) {
+            l.transfer.value = t;
+          }
+        },
         cancel: cancel,
       );
+      final file = got.file;
+      l.isMaybeStale.value = got.isMaybeStale;
       l.local = file;
       await _prepare(l, file);
       l.phase.value = SvFilePhase.ready;
@@ -176,14 +206,7 @@ class SvFilePreviewController extends GetxController {
         l.isCut.value = t.isCut;
         l.isShowable.value = true;
       case SvViewer.sheet:
-        final bytes = await file.readAsBytes();
-        final table = await _parse(
-          SvPreviewParsers.parseCsvBytes,
-          bytes,
-          bytes.length,
-        );
-        l.sheet = SvSheetBook([table]);
-        l.isShowable.value = table.rows.isNotEmpty;
+        await _prepareSheet(l, file);
       case SvViewer.docx:
         final bytes = await file.readAsBytes();
         l.doc = await _parse(SvPreviewParsers.parseDocx, bytes, bytes.length);
@@ -198,6 +221,34 @@ class SvFilePreviewController extends GetxController {
         l.isShowable.value = l.zip != null;
       case SvViewer.none:
         break;
+    }
+  }
+
+  /// A csv / tsv, or an xlsx read in an isolate. Anything that cannot be read
+  /// leaves the file card, never a spinner.
+  Future<void> _prepareSheet(SvFileLoad l, File file) async {
+    l.isParsing.value = true;
+    try {
+      final bytes = await file.readAsBytes();
+      if (SvFile.extensionOf(l.file.name) == 'xlsx') {
+        final book = await compute(SvXlsxParser.parse, bytes);
+        l.sheet = book;
+        l.isShowable.value = book != null;
+        return;
+      }
+      final table = await _parse(
+        SvPreviewParsers.parseCsvBytes,
+        bytes,
+        bytes.length,
+      );
+      l.sheet = SvSheetBook([table]);
+      l.isShowable.value = table.rows.isNotEmpty;
+    } on Object catch (e, st) {
+      AppLog.e('sv_file_preview', e, st);
+      l.sheet = null;
+      l.isShowable.value = false;
+    } finally {
+      l.isParsing.value = false;
     }
   }
 
@@ -233,14 +284,18 @@ class SvFilePreviewController extends GetxController {
           "Still couldn't save it. You can share the file instead.",
           variant: AppNoticeVariant.error,
           actionLabel: 'Share',
-          onAction: () => fireAndLog('sv_file_preview_controller', () => share()),
+          onAction: () =>
+              fireAndLog('sv_file_preview_controller', () => share()),
         );
       } else {
         AppNotices.show(
           "The file couldn't be saved. Try again.",
           variant: AppNoticeVariant.error,
           actionLabel: 'Retry',
-          onAction: () => fireAndLog('sv_file_preview_controller', () => download(isRetry: true)),
+          onAction: () => fireAndLog(
+            'sv_file_preview_controller',
+            () => download(isRetry: true),
+          ),
         );
       }
       return SvDownload.failed;
@@ -262,5 +317,18 @@ class SvFilePreviewController extends GetxController {
     final local = await ensure(current);
     if (local == null) return;
     await repo.share(local, current.file);
+  }
+
+  /// "Share to Connectum" is offered when sharing is set up.
+  bool get canShareToConnectum => repo.connectumShare != null;
+
+  /// Makes the current file local first (the same progress and cache as
+  /// Download), then returns it as a share, or null when it did not load (the
+  /// page says why).
+  Future<ShareFile?> fileForConnectum() async {
+    final l = current;
+    final local = await ensure(l);
+    if (local == null) return null;
+    return ShareFile(name: l.file.name, path: local.path);
   }
 }

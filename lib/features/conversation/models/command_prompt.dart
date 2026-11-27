@@ -44,6 +44,14 @@ class CommandPrompt {
   bool get isOpen =>
       query.value != null || command.value != null || unknownNames.isNotEmpty;
 
+  /// True while the list of command names shows (not a command's arguments,
+  /// not the "Did you mean" line).
+  bool get isNameList =>
+      query.value != null && command.value == null && unknownNames.isEmpty;
+
+  /// True once the list has at least one command to show.
+  bool get hasRows => hasCatalog && matches.isNotEmpty;
+
   void onTextChanged(String value, {int? caret}) {
     unknownNames.clear();
     if (!CommandLine.opensMenu(value)) {

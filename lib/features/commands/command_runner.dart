@@ -105,11 +105,14 @@ class CommandRunner {
       case HashKind.screen:
         _openScreen(r.target);
       case HashKind.rows:
-        fireAndLog('command_runner', () async => CommandSheets.showRows(
-          title: r.text,
-          rows: r.rows,
-          onOpen: ConversationRoute.open,
-        ));
+        fireAndLog(
+          'command_runner',
+          () async => CommandSheets.showRows(
+            title: r.text,
+            rows: r.rows,
+            onOpen: ConversationRoute.open,
+          ),
+        );
       case HashKind.confirm:
         final isSure = await CommandSheets.confirmLeave(r.target);
         if (isSure) return run(body, isConfirmed: true);
@@ -142,25 +145,31 @@ class CommandRunner {
       return false;
     }
     if (r.kind == HashKind.records) {
-      fireAndLog('command_runner', () async => Get.toNamed(
-        AppRoutes.structRecords,
-        arguments: StructRecordsLaunch(
-          name: open.name,
-          scope: open.scope,
-          caption: open.caption,
-          convId: _postableChat,
+      fireAndLog(
+        'command_runner',
+        () async => Get.toNamed(
+          AppRoutes.structRecords,
+          arguments: StructRecordsLaunch(
+            name: open.name,
+            scope: open.scope,
+            caption: open.caption,
+            convId: _postableChat,
+          ),
         ),
-      ));
+      );
     } else {
-      fireAndLog('command_runner', () async => Get.toNamed(
-        AppRoutes.form,
-        arguments: FormLaunch(
-          name: open.name,
-          scope: open.scope,
-          caption: open.caption,
-          convId: _postableChat,
+      fireAndLog(
+        'command_runner',
+        () async => Get.toNamed(
+          AppRoutes.form,
+          arguments: FormLaunch(
+            name: open.name,
+            scope: open.scope,
+            caption: open.caption,
+            convId: _postableChat,
+          ),
         ),
-      ));
+      );
     }
     return true;
   }

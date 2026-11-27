@@ -92,10 +92,24 @@ class FormsPickerController extends GetxController {
       if (matches(o.caption)) o,
   ];
 
-  List<FormRecent> get recents => [
-    for (final r in options.recents)
-      if (options.options.any((o) => o.isForm && o.target == r.name)) r,
-  ];
+  /// The forms used lately, each resolved against the current list (by form
+  /// name, then ignoring case) so it reads exactly as its Forms chip; one the
+  /// list no longer has is left out.
+  List<FormOption> get recentOptions {
+    final forms = [
+      for (final o in options.options)
+        if (o.isForm) o,
+    ];
+    final found = <FormOption>[];
+    for (final r in options.recents) {
+      final name = r.name.toLowerCase();
+      final match =
+          forms.firstWhereOrNull((o) => o.target == r.name) ??
+          forms.firstWhereOrNull((o) => o.target.toLowerCase() == name);
+      if (match != null && !found.contains(match)) found.add(match);
+    }
+    return found;
+  }
 
   bool get showsMySubmissions => matches('My Submissions');
 
@@ -180,9 +194,6 @@ class FormsPickerController extends GetxController {
     if (!option.isForm) return;
     _launch(option.target, option.targetScope, option.caption);
   }
-
-  void openRecent(FormRecent recent) =>
-      _launch(recent.name, recent.scope, recent.caption);
 
   void _launch(String name, String scope, String caption) {
     Get.toNamed(

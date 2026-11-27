@@ -34,6 +34,14 @@ void main() {
     }
   }
 
+  /// The Add chip of a line is below the fold in a short window.
+  Future<void> tapAdd(WidgetTester t, String label) async {
+    final add = find.byKey(ValueKey('filter-add-$label'));
+    await t.ensureVisible(add);
+    await t.pump();
+    await t.tap(add);
+  }
+
   Future<InboxFilterController> pump(
     WidgetTester tester, {
     double width = 390,
@@ -97,14 +105,18 @@ void main() {
     await pump(t);
     for (final s in [
       'Filters',
+      'Where and what',
+      'People',
+      'Date and order',
       'Search in',
       'Data',
       'Created by',
       'Sent by',
       'Sent to',
       'Tagged to',
-      'Date: from',
-      'Date: to',
+      'Date',
+      'From date',
+      'To date',
       'Sort',
       'Advanced filter',
       'Apply',
@@ -126,7 +138,7 @@ void main() {
       held!.complete(facets());
       await answered(t);
       expect(find.text('Counting the forms...'), findsNothing);
-      await t.tap(find.text('Data').last);
+      await tapAdd(t, 'Data');
       await t.pumpAndSettle();
       expect(find.text('Thing (2)'), findsOneWidget);
       expect(
@@ -154,7 +166,7 @@ void main() {
     t,
   ) async {
     final p = await pump(t);
-    await t.tap(find.text('Data').last);
+    await tapAdd(t, 'Data');
     await t.pumpAndSettle();
     await t.tap(find.text('Thing (2)'));
     await t.pumpAndSettle();
@@ -166,6 +178,7 @@ void main() {
     await t.pump();
     expect(p.draft.value.forms, ['t']);
     expect(p.draft.value.status, 'open');
+    expect(find.byKey(const ValueKey('filter-remove-Data-t')), findsOneWidget);
     await t.tap(find.text('Apply'));
     await t.pump();
     expect(applied?.forms, ['t']);
@@ -175,7 +188,7 @@ void main() {
 
   testWidgets('a list can be searched', (t) async {
     await pump(t);
-    await t.tap(find.text('Anybody').first);
+    await tapAdd(t, 'Created by');
     await t.pumpAndSettle();
     expect(find.text('Me'), findsWidgets);
     await t.enterText(find.byType(TextField), 'zzz');
@@ -254,13 +267,13 @@ void main() {
 
     testWidgets('the multi-select sheet at 320 px, scale 1.5', (t) async {
       await pump(t, width: 320, height: 640, scale: 1.5);
-      await t.tap(find.text('Data').last);
+      await tapAdd(t, 'Data');
       await t.pumpAndSettle();
       expect(find.text('Thing (2)'), findsOneWidget);
       expect(t.takeException(), isNull);
       await t.tap(find.text('Done'));
       await t.pumpAndSettle();
-      await t.tap(find.text('Anybody').first);
+      await tapAdd(t, 'Created by');
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);
     });

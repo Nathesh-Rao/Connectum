@@ -220,7 +220,7 @@ Before: 259 tests. After: **392** (+133), `flutter test` all pass, `dart analyze
 | `test/notifications/feed_repository_test.dart` | 33 | re-read on connect/resume, coalescing 150 ms, shared in-flight read, three events, counts, onGone, rollback of all 6 feed writes, paging cursors, in-app lines, e2e text and cache, reset on session change |
 | `test/tickets/ticket_detail_controller_test.dart` | 10 | payload, request id kept/new, stale, forbidden, double tap, offline, not_found, reason required, no cross-account leak |
 | `test/tasks/tasks_controller_test.dart` | 16 | list params, paging, filter, error state, create (no cid, once, offline, rate limit, double tap), status move, forbidden/not_found recovery, send, events |
-| `test/approvals/approvals_controller_test.dart` | 8 | real `req.list`, accept, reject needs reason, already_resolved, lost answer not replayed, forbidden/not_found, double tap, events |
+| `test/inbox/inbox_approvals_test.dart`, `approval_repository_test.dart` (the old `test/approvals/approvals_controller_test.dart` went with the Approvals screen, now the Inbox Approvals pane) | - | req.list paging through the gate, count rule, out-of-order answers, answers and their rules, already_resolved, events |
 | `test/tasks/call_problem_table_test.dart` | 26 | every error code, read and write, text verbatim |
 | `test/tasks/time_handling_test.dart` | 14 | overdue with a wrong clock, labels, midnight, picker, limits at the edge |
 | `test/notifications/local_notification_gaps_test.dart` | 14 | the catalogue types against the rules, own action, chat sources, channels |

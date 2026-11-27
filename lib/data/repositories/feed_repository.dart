@@ -75,7 +75,10 @@ class FeedRepository extends GetxService with WidgetsBindingObserver {
       (event) => fireAndLog('feed_repository', () async => onEvent(event)),
       onError: streamOnError('feed_repository'),
     );
-    _online = _socket.onOnline.listen((_) => scheduleRefresh(), onError: streamOnError('feed_repository'));
+    _online = _socket.onOnline.listen(
+      (_) => scheduleRefresh(),
+      onError: streamOnError('feed_repository'),
+    );
     ever(_store.current, (_) => _reset());
     ever(counts, (c) => unread.value = c.unread);
   }

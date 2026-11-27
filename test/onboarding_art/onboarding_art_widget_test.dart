@@ -174,7 +174,11 @@ void main() {
     addTearDown(c.dispose);
     await tester.pumpWidget(
       _host(
-        OnboardingArt(kind: OnboardingArtKind.shield, controller: c, loop: false),
+        OnboardingArt(
+          kind: OnboardingArtKind.shield,
+          controller: c,
+          loop: false,
+        ),
       ),
     );
     c.time.value = c.duration - 0.05;
@@ -188,9 +192,8 @@ void main() {
   testWidgets('the blue-only switch rebuilds the scene without an error', (
     tester,
   ) async {
-    Widget app(bool blue) => _host(
-      OnboardingArt(kind: OnboardingArtKind.shield, blueOnly: blue),
-    );
+    Widget app(bool blue) =>
+        _host(OnboardingArt(kind: OnboardingArtKind.shield, blueOnly: blue));
     await tester.pumpWidget(app(false));
     await tester.pump(_tick);
     await tester.pumpWidget(app(true));

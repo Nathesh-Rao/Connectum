@@ -122,7 +122,9 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
     });
     await safeCall('deep_link_service', _load);
     _subscription = _appLinks.uriLinkStream.listen(
-      (uri) => receive(uri.toString()), onError: streamOnError('deep_link_service'));
+      (uri) => receive(uri.toString()),
+      onError: streamOnError('deep_link_service'),
+    );
     try {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) receive(initial.toString());
@@ -242,11 +244,17 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
       'by': ConnectFlowLog.caller(),
     });
     _savedAt = DateTime.now();
-    fireAndLog('deep_link_service', () => _store.writeValue(_storageKey, target.linkText));
-    fireAndLog('deep_link_service', () => _store.writeValue(
+    fireAndLog(
+      'deep_link_service',
+      () => _store.writeValue(_storageKey, target.linkText),
+    );
+    fireAndLog(
+      'deep_link_service',
+      () => _store.writeValue(
         _savedAtKey,
         _savedAt!.millisecondsSinceEpoch.toString(),
-      ));
+      ),
+    );
   }
 
   /// A raw link or scanned text. Unreadable text is ignored.
@@ -341,13 +349,19 @@ class DeepLinkService extends GetxService with WidgetsBindingObserver {
       }
       // After a switch the confirmed link scans at once, from here: a sheet
       // that is lost does not lose the answer.
-      fireAndLog('deep_link_service', () => scanIfConfirmed(next).then((result) {
+      fireAndLog(
+        'deep_link_service',
+        () => scanIfConfirmed(next).then((result) {
           if (result != null) _noticeIfNoSheet();
-        }));
+        }),
+      );
       _isSheetOpen = true;
       _userClosed = null;
       ConnectFlowLog.log('sheet opened', {'person': next.isPersonLink});
-      fireAndLog('deep_link_service', () => ConnectTargetSheet.show(ready, next).then((_) => _afterSheet()));
+      fireAndLog(
+        'deep_link_service',
+        () => ConnectTargetSheet.show(ready, next).then((_) => _afterSheet()),
+      );
     } finally {
       releaseSheetClaim();
     }

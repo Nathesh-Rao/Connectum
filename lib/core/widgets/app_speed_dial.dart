@@ -40,11 +40,15 @@ class AppSpeedDial extends StatefulWidget {
     required this.options,
     this.closeKey,
     this.semanticLabel = 'Actions',
+    this.buttonKey,
   });
 
   final List<AppSpeedDialOption> options;
   final Object? closeKey;
   final String semanticLabel;
+
+  /// Put on the round button (a first-run tour points at it).
+  final GlobalKey? buttonKey;
 
   @override
   State<AppSpeedDial> createState() => _AppSpeedDialState();
@@ -115,6 +119,7 @@ class _AppSpeedDialState extends State<AppSpeedDial>
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.fabMargin),
           child: AppFab(
+            key: widget.buttonKey,
             semanticLabel: only.label,
             onPressed: only.onSelected,
             child: Icon(only.icon, color: AppColors.white),
@@ -171,6 +176,7 @@ class _AppSpeedDialState extends State<AppSpeedDial>
                         onTap: () => _pick(options[i]),
                       ),
                     AppFab(
+                      key: widget.buttonKey,
                       semanticLabel: _isOpen
                           ? 'Close menu'
                           : widget.semanticLabel,

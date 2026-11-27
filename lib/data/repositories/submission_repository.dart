@@ -248,6 +248,7 @@ class SubmissionRepository extends GetxService {
     final now = DateTime.now().millisecondsSinceEpoch;
     final tempId = 'temp-$now';
     final def = definitions[name];
+    AppLog.i('outbox', 'queued form_submit name=$name cid=$cid');
     await _db.transaction((sql) async {
       await sql.insert(
         'INSERT INTO form_submissions(org_id, user_id, submission_id, tstruct, by_user, ts, values_json, sync_state) '
@@ -720,6 +721,10 @@ class SubmissionRepository extends GetxService {
       return;
     }
     final cid = entry.cid ?? newCid();
+    AppLog.i(
+      'outbox',
+      'send kind=${entry.kind} cid=$cid attempt=${entry.retryCount + 1}',
+    );
     final now = DateTime.now().millisecondsSinceEpoch;
     await _db.update(
       "UPDATE outbox SET status = 'sending', attempt_ts = ?, retry_count = retry_count + 1, "
@@ -749,6 +754,11 @@ class SubmissionRepository extends GetxService {
               : null,
         );
         final id = idNumber(submission['id']);
+        AppLog.i(
+          'submission',
+          'form saved name=$name status=${data['recordStatus']} cid=$cid '
+              'posted_to_chat=${data['message'] != null}',
+        );
         if (id != null && !_saved.isClosed) {
           _saved.add(
             SavedRecord(
@@ -799,6 +809,10 @@ class SubmissionRepository extends GetxService {
           _cidMemory.inMilliseconds;
 
   Future<void> _onSendError(OutboxEntry entry, SocketCallError e) async {
+    AppLog.w(
+      'submission',
+      'form send answered ${e.code} kind=${entry.kind} cid=${entry.cid}',
+    );
     // No answer: the save may or may not have happened, and sending the same
     // cid again is safe either way, so it goes back to pending.
     if (e.isConnectionGap) {
@@ -865,12 +879,17 @@ class SubmissionRepository extends GetxService {
       _db.update('UPDATE outbox SET status = ? WHERE id = ?', [status, e.id]);
 
   Future<void> _fail(OutboxEntry e, String reason) async {
+    AppLog.w(
+      'outbox',
+      'failed kind=${e.kind} cid=${e.cid} retries=${e.retryCount} reason=$reason',
+    );
     await _db.update(
       "UPDATE outbox SET status = 'failed', last_error = ? WHERE id = ?",
       [reason, e.id],
     );
     await _setMessageStatus(e, 'failed', reason: reason);
-    if (e.kind == 'form_submit') fireAndLog('submission_repository', () => reload());
+    if (e.kind == 'form_submit')
+      fireAndLog('submission_repository', () => reload());
     if (e.kind != 'form_submit') {
       // A refused edit leaves the server's version in place.
       await _db.update(

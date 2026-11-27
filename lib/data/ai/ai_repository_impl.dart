@@ -27,8 +27,14 @@ class AiRepositoryImpl implements AiRepository {
     this.displayNameOf,
     DateTime Function()? clock,
   }) : _now = clock ?? DateTime.now {
-    _events = _socket.events.listen(onEvent, onError: streamOnError('ai_repository_impl'));
-    _online = _socket.onOnline.listen((_) => _changed.add(null), onError: streamOnError('ai_repository_impl'));
+    _events = _socket.events.listen(
+      onEvent,
+      onError: streamOnError('ai_repository_impl'),
+    );
+    _online = _socket.onOnline.listen(
+      (_) => _changed.add(null),
+      onError: streamOnError('ai_repository_impl'),
+    );
   }
 
   final SocketService _socket;

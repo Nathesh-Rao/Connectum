@@ -54,6 +54,8 @@ void main() {
           'scope': ['me'],
           'limit': 100,
           'offset': 0,
+          'withDetails': true,
+          'fileMeta': 2,
         });
         expect(r.argsOf('people.cards').single['usernames'], ['ana']);
       },
@@ -101,7 +103,7 @@ void main() {
       expect(rig.ids, [2, 1]);
       expect(
         InboxController.errorText,
-        'The records could not be read. Use Refresh to try again.',
+        'The records could not be read. Pull down to try again.',
       );
     });
 
@@ -257,6 +259,8 @@ void main() {
         'scope': ['me'],
         'limit': 100,
         'offset': 3,
+        'withDetails': true,
+        'fileMeta': 2,
       });
       expect(rig.ids, [5, 4, 3, 2, 1]);
       expect(c.hasMore, isFalse);

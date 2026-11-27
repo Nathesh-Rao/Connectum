@@ -29,9 +29,17 @@ class LogSearchResult {
 /// The lines of a log file with how each is drawn. Pure Dart, so it can be
 /// built off the UI thread.
 class LogDocument {
-  const LogDocument(this.lines, this.kinds, this.longest);
+  const LogDocument(
+    this.lines,
+    this.kinds,
+    this.longest, {
+    this.isPartial = false,
+  });
 
   static const maxHits = 5000;
+
+  /// The most that is read from the end of a big file.
+  static const maxBytes = 2 * 1024 * 1024;
 
   static final empty = LogDocument(const [], Uint8List(0), 0);
 
@@ -43,17 +51,33 @@ class LogDocument {
   /// Length in characters of the longest line.
   final int longest;
 
+  /// True when only the last part of a big file was read.
+  final bool isPartial;
+
   bool get isEmpty => lines.isEmpty;
 
   LogLineKind kindOf(int i) => LogLineKind.values[kinds[i]];
 
   /// Reads and classifies the file at [path]. Runs in an isolate.
   static Future<LogDocument> readFile(String path) async {
-    final bytes = await File(path).readAsBytes();
-    return parse(utf8.decode(bytes, allowMalformed: true));
+    final file = File(path);
+    final length = await file.length();
+    if (length <= maxBytes) {
+      return parse(utf8.decode(await file.readAsBytes(), allowMalformed: true));
+    }
+    final raf = await file.open();
+    try {
+      await raf.setPosition(length - maxBytes);
+      final bytes = await raf.read(maxBytes);
+      final text = utf8.decode(bytes, allowMalformed: true);
+      final cut = text.indexOf('\n');
+      return parse(cut < 0 ? text : text.substring(cut + 1), isPartial: true);
+    } finally {
+      await raf.close();
+    }
   }
 
-  static LogDocument parse(String text) {
+  static LogDocument parse(String text, {bool isPartial = false}) {
     final lines = const LineSplitter().convert(text);
     final kinds = Uint8List(lines.length);
     var isHeader = true;
@@ -88,7 +112,7 @@ class LogDocument {
       }
       kinds[i] = kind.index;
     }
-    return LogDocument(lines, kinds, longest);
+    return LogDocument(lines, kinds, longest, isPartial: isPartial);
   }
 
   /// Case-insensitive matches of [query], at most [maxHits].

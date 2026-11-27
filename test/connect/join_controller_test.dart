@@ -119,57 +119,90 @@ void main() {
     if (affiliate != null) c.pickAffiliate(affiliate);
     if (branch != null) c.pickBranch(branch);
     await c.nextStep();
+    c.setValue('name', 'Ana Rao');
+    await c.nextStep();
   }
 
-  test('the card is read once and the flow starts on the Associate card', () async {
-    await open();
-    expect(auth.pageReads, 1);
-    expect(flow().step, JoinStep.type);
-    expect(flow().steps.length, 4);
-  });
+  test(
+    'the card is read once and the flow starts on the Associate card',
+    () async {
+      await open();
+      expect(auth.pageReads, 1);
+      expect(flow().step, JoinStep.type);
+      expect(flow().total, 4);
+    },
+  );
 
-  test('no affiliate: checks category, then affiliate step, joins with category only', () async {
-    await open();
-    await toReview();
-    expect(flow().step, JoinStep.review);
-    expect(auth.checks, [
-      {'enterprise': 'Y2NH-GHP6', 'isEmployee': false, 'category': 'Customer'},
-      {'enterprise': 'Y2NH-GHP6', 'isEmployee': false, 'category': 'Customer'},
-    ]);
-    await c.join();
-    expect(auth.joins, [
-      {'enterprise': 'Y2NH-GHP6', 'isEmployee': false, 'category': 'Customer'},
-    ]);
-  });
+  test(
+    'no affiliate: checks category, then affiliate step, joins with category only',
+    () async {
+      await open();
+      await toReview();
+      expect(flow().step, JoinStep.review);
+      expect(auth.checks, [
+        {
+          'enterprise': 'Y2NH-GHP6',
+          'isEmployee': false,
+          'category': 'Customer',
+        },
+        {
+          'enterprise': 'Y2NH-GHP6',
+          'isEmployee': false,
+          'category': 'Customer',
+        },
+        {'enterprise': 'Y2NH-GHP6', 'final': true, 'category': 'Customer'},
+      ]);
+      await c.join();
+      expect(auth.joins, [
+        {
+          'enterprise': 'Y2NH-GHP6',
+          'name': 'Ana Rao',
+          'isEmployee': false,
+          'category': 'Customer',
+        },
+      ]);
+    },
+  );
 
-  test('category and affiliate with branch are sent to check and join', () async {
-    await open();
-    await toReview(affiliate: 'Twin', branch: 'South');
-    expect(auth.checks.last, {
-      'enterprise': 'Y2NH-GHP6',
-      'isEmployee': false,
-      'category': 'Customer',
-      'affiliate': 'Twin',
-      'affiliateBranch': 'South',
-    });
-    await c.join();
-    expect(auth.joins.single['affiliate'], 'Twin');
-    expect(auth.joins.single['affiliateBranch'], 'South');
-    expect(auth.joins.single['category'], 'Customer');
-  });
+  test(
+    'category and affiliate with branch are sent to check and join',
+    () async {
+      await open();
+      await toReview(affiliate: 'Twin', branch: 'South');
+      expect(auth.checks[auth.checks.length - 2], {
+        'enterprise': 'Y2NH-GHP6',
+        'isEmployee': false,
+        'category': 'Customer',
+        'affiliate': 'Twin',
+        'affiliateBranch': 'South',
+      });
+      expect(auth.checks.last, {
+        'enterprise': 'Y2NH-GHP6',
+        'final': true,
+        'category': 'Customer',
+      });
+      await c.join();
+      expect(auth.joins.single['affiliate'], 'Twin');
+      expect(auth.joins.single['affiliateBranch'], 'South');
+      expect(auth.joins.single['category'], 'Customer');
+    },
+  );
 
-  test('a missing branch stops the step with the web text and sends nothing', () async {
-    await open();
-    c.chooseAssociate();
-    c.pickCategory('Customer');
-    await c.nextStep();
-    c.pickAffiliate('Twin');
-    final before = auth.checks.length;
-    await c.nextStep();
-    expect(c.fieldErrors['affiliateBranch'], 'Choose your branch.');
-    expect(flow().step, JoinStep.affiliate);
-    expect(auth.checks.length, before);
-  });
+  test(
+    'a missing branch stops the step with the web text and sends nothing',
+    () async {
+      await open();
+      c.chooseAssociate();
+      c.pickCategory('Customer');
+      await c.nextStep();
+      c.pickAffiliate('Twin');
+      final before = auth.checks.length;
+      await c.nextStep();
+      expect(c.fieldErrors['affiliateBranch'], 'Choose your branch.');
+      expect(flow().step, JoinStep.affiliate);
+      expect(auth.checks.length, before);
+    },
+  );
 
   test('a missing category stops the first step', () async {
     await open();
@@ -179,22 +212,29 @@ void main() {
     expect(auth.checks, isEmpty);
   });
 
-  test('category only organisation (old path): no affiliate step, joins with category', () async {
-    await open({
-      'categories': ['Customer'],
-      'affiliates': [],
-    });
-    c.chooseAssociate();
-    c.pickCategory('Customer');
-    await c.nextStep();
-    expect(flow().step, JoinStep.review);
-    await c.join();
-    expect(auth.joins.single, {
-      'enterprise': 'Y2NH-GHP6',
-      'isEmployee': false,
-      'category': 'Customer',
-    });
-  });
+  test(
+    'category only organisation (old path): no affiliate step, joins with category',
+    () async {
+      await open({
+        'categories': ['Customer'],
+        'affiliates': [],
+      });
+      c.chooseAssociate();
+      c.pickCategory('Customer');
+      await c.nextStep();
+      expect(flow().step, JoinStep.details);
+      c.setValue('name', 'Ana Rao');
+      await c.nextStep();
+      expect(flow().step, JoinStep.review);
+      await c.join();
+      expect(auth.joins.single, {
+        'enterprise': 'Y2NH-GHP6',
+        'name': 'Ana Rao',
+        'isEmployee': false,
+        'category': 'Customer',
+      });
+    },
+  );
 
   test('affiliate-only organisation: no category is sent', () async {
     await open({
@@ -210,36 +250,43 @@ void main() {
     c.pickAffiliate('Acme');
     await c.nextStep();
     expect(auth.checks.single.containsKey('category'), isFalse);
+    c.setValue('name', 'Ana Rao');
+    await c.nextStep();
+    expect(auth.checks.last, {'enterprise': 'Y2NH-GHP6', 'final': true});
     await c.join();
     expect(auth.joins.single, {
       'enterprise': 'Y2NH-GHP6',
+      'name': 'Ana Rao',
       'isEmployee': false,
       'affiliate': 'Acme',
     });
   });
 
-  test('server field errors from the check are shown and the step stays', () async {
-    await open();
-    auth.checkAnswer = {
-      'ok': false,
-      'fields': {'affiliate': 'That affiliate organisation is deactivated.'},
-    };
-    c.chooseAssociate();
-    c.pickCategory('Customer');
-    auth.checkAnswer = {'ok': true, 'fields': {}};
-    await c.nextStep();
-    auth.checkAnswer = {
-      'ok': false,
-      'fields': {'affiliate': 'That affiliate organisation is deactivated.'},
-    };
-    c.pickAffiliate('Acme');
-    await c.nextStep();
-    expect(
-      c.fieldErrors['affiliate'],
-      'That affiliate organisation is deactivated.',
-    );
-    expect(flow().step, JoinStep.affiliate);
-  });
+  test(
+    'server field errors from the check are shown and the step stays',
+    () async {
+      await open();
+      auth.checkAnswer = {
+        'ok': false,
+        'fields': {'affiliate': 'That affiliate organisation is deactivated.'},
+      };
+      c.chooseAssociate();
+      c.pickCategory('Customer');
+      auth.checkAnswer = {'ok': true, 'fields': {}};
+      await c.nextStep();
+      auth.checkAnswer = {
+        'ok': false,
+        'fields': {'affiliate': 'That affiliate organisation is deactivated.'},
+      };
+      c.pickAffiliate('Acme');
+      await c.nextStep();
+      expect(
+        c.fieldErrors['affiliate'],
+        'That affiliate organisation is deactivated.',
+      );
+      expect(flow().step, JoinStep.affiliate);
+    },
+  );
 
   test('a refused join shows its field message and keeps the review', () async {
     await open();
@@ -278,52 +325,38 @@ void main() {
     expect(c.joinMessage.value, isNull);
   });
 
-  test('a category that needs details the app lacks stops with the old message', () async {
-    await open({
-      ..._full,
-      'onboarding': {
-        'Customer': {
-          'requiredFields': ['address'],
-        },
-      },
-    });
-    c.chooseAssociate();
-    c.pickCategory('Customer');
-    await c.nextStep();
-    expect(flow().step, JoinStep.category);
-    expect(
-      c.joinMessage.value,
-      'Joining as Customer needs more details than the mobile app supports yet.',
-    );
-    expect(auth.checks, isEmpty);
-  });
+  test(
+    'offline: the page is not read and the notice shows; online it reads',
+    () async {
+      await open();
+      final reads = auth.pageReads;
+      c.joinFlow.value = null;
+      net.state.value = AppConnectivity.offline;
+      await c.loadJoinPage();
+      expect(auth.pageReads, reads);
+      expect(c.pageMessage.value, 'Connect to the internet to join.');
+      net.state.value = AppConnectivity.online;
+      await c.loadJoinPage();
+      expect(c.joinFlow.value, isNotNull);
+      expect(c.pageMessage.value, isNull);
+    },
+  );
 
-  test('offline: the page is not read and the notice shows; online it reads', () async {
-    await open();
-    final reads = auth.pageReads;
-    c.joinFlow.value = null;
-    net.state.value = AppConnectivity.offline;
-    await c.loadJoinPage();
-    expect(auth.pageReads, reads);
-    expect(c.pageMessage.value, 'Connect to the internet to join.');
-    net.state.value = AppConnectivity.online;
-    await c.loadJoinPage();
-    expect(c.joinFlow.value, isNotNull);
-    expect(c.pageMessage.value, isNull);
-  });
-
-  test('the page failing shows its message and Try again reads it again', () async {
-    await open();
-    auth.pageError = const ApiException('network', '');
-    c.joinFlow.value = null;
-    await c.loadJoinPage();
-    expect(c.pageMessage.value, isNotNull);
-    expect(c.joinFlow.value, isNull);
-    auth.pageError = null;
-    await c.loadJoinPage();
-    expect(c.joinFlow.value, isNotNull);
-    expect(c.pageMessage.value, isNull);
-  });
+  test(
+    'the page failing shows its message and Try again reads it again',
+    () async {
+      await open();
+      auth.pageError = const ApiException('network', '');
+      c.joinFlow.value = null;
+      await c.loadJoinPage();
+      expect(c.pageMessage.value, isNotNull);
+      expect(c.joinFlow.value, isNull);
+      auth.pageError = null;
+      await c.loadJoinPage();
+      expect(c.joinFlow.value, isNotNull);
+      expect(c.pageMessage.value, isNull);
+    },
+  );
 
   group('screen at 320 px, text scale 1.5', () {
     Future<void> pump(WidgetTester t) async {
@@ -341,10 +374,7 @@ void main() {
           home: Scaffold(
             body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: JoinSteps(
-                card: c.card.value!,
-                controller: c,
-              ),
+              child: JoinSteps(card: c.card.value!, controller: c),
             ),
           ),
         ),
@@ -352,80 +382,95 @@ void main() {
       await t.pump();
     }
 
-    testWidgets('every step draws without overflow and the flow can be tapped', (
+    testWidgets(
+      'every step draws without overflow and the flow can be tapped',
+      (t) async {
+        await t.runAsync(
+          () => open({
+            'categories': [
+              'Customer',
+              'Vendor',
+              'A very long category name for a small screen',
+            ],
+            'affiliates': [
+              {
+                'name': 'A partner organisation with a long name',
+                'category': 'Vendor',
+                'branches': ['North side branch', 'South side branch'],
+              },
+            ],
+          }),
+        );
+        await pump(t);
+        expect(find.text('Step 1 of 4: Who are you here?'), findsOneWidget);
+        expect(find.text("I'm an associate"), findsOneWidget);
+        await t.tap(find.text("I'm an associate"));
+        await t.pump();
+        expect(find.text('Step 2 of 5: What describes you?'), findsOneWidget);
+        await t.tap(find.text('Next'));
+        await t.pump();
+        expect(find.text('Choose what describes you.'), findsOneWidget);
+        await t.tap(find.text('Vendor'));
+        await t.pump();
+        await t.runAsync(() => c.nextStep());
+        await t.pump();
+        expect(
+          find.text('Step 3 of 5: Your partner organisation'),
+          findsOneWidget,
+        );
+        expect(find.text(JoinFlow.individual), findsOneWidget);
+        expect(find.text('Search partner organisations'), findsOneWidget);
+        await t.tap(find.text('A partner organisation with a long name'));
+        await t.pump();
+        await t.ensureVisible(find.text('Next'));
+        await t.tap(find.text('Next'));
+        await t.pump();
+        expect(find.text('Choose your branch.'), findsOneWidget);
+        await t.tap(find.text('South side branch'));
+        await t.pump();
+        await t.runAsync(() => c.nextStep());
+        await t.pump();
+        expect(find.text('Step 4 of 5: Your details'), findsOneWidget);
+        c.setValue('name', 'Ana Rao');
+        await t.runAsync(() => c.nextStep());
+        await t.pump();
+        expect(find.text('Step 5 of 5: Check and send'), findsOneWidget);
+        expect(find.text('South side branch'), findsOneWidget);
+        expect(find.text('Join Acme Clinic'), findsOneWidget);
+        expect(t.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'typing in the affiliate search narrows the rows, "individual" stays',
+      (t) async {
+        await t.runAsync(() => open());
+        await pump(t);
+        c.chooseAssociate();
+        c.pickCategory('Customer');
+        await t.runAsync(() => c.nextStep());
+        await t.pump();
+        expect(find.text('Acme'), findsOneWidget);
+        expect(find.text('Twin'), findsOneWidget);
+        await t.enterText(find.byType(EditableText), 'tw');
+        await t.pump();
+        expect(find.text('Acme'), findsNothing);
+        expect(find.text('Twin'), findsOneWidget);
+        expect(find.text(JoinFlow.individual), findsOneWidget);
+        await t.enterText(find.byType(EditableText), 'zzz');
+        await t.pump();
+        expect(find.textContaining('Nothing matches'), findsOneWidget);
+        expect(find.text(JoinFlow.individual), findsOneWidget);
+      },
+    );
+
+    testWidgets('an organisation with nothing to choose offers only Employee', (
       t,
     ) async {
-      await t.runAsync(() => open({
-        'categories': ['Customer', 'Vendor', 'A very long category name for a small screen'],
-        'affiliates': [
-          {
-            'name': 'A partner organisation with a long name',
-            'category': 'Vendor',
-            'branches': ['North side branch', 'South side branch'],
-          },
-        ],
-      }));
-      await pump(t);
-      expect(find.text('Step 1 of 4: Who are you here?'), findsOneWidget);
-      expect(find.text("I'm an associate"), findsOneWidget);
-      await t.tap(find.text("I'm an associate"));
-      await t.pump();
-      expect(find.text('Step 2 of 4: What describes you?'), findsOneWidget);
-      await t.tap(find.text('Next'));
-      await t.pump();
-      expect(find.text('Choose what describes you.'), findsOneWidget);
-      await t.tap(find.text('Vendor'));
-      await t.pump();
-      await t.runAsync(() => c.nextStep());
-      await t.pump();
-      expect(find.text('Step 3 of 4: Your partner organisation'), findsOneWidget);
-      expect(find.text(JoinFlow.individual), findsOneWidget);
-      expect(find.text('Search partner organisations'), findsOneWidget);
-      await t.tap(find.text('A partner organisation with a long name'));
-      await t.pump();
-      await t.ensureVisible(find.text('Next'));
-      await t.tap(find.text('Next'));
-      await t.pump();
-      expect(find.text('Choose your branch.'), findsOneWidget);
-      await t.tap(find.text('South side branch'));
-      await t.pump();
-      await t.runAsync(() => c.nextStep());
-      await t.pump();
-      expect(find.text('Step 4 of 4: Check and send'), findsOneWidget);
-      expect(find.text('South side branch'), findsOneWidget);
-      expect(find.text('Join Acme Clinic'), findsOneWidget);
-      expect(t.takeException(), isNull);
-    });
-
-    testWidgets('typing in the affiliate search narrows the rows, "individual" stays', (
-      t,
-    ) async {
-      await t.runAsync(() => open());
-      await pump(t);
-      c.chooseAssociate();
-      c.pickCategory('Customer');
-      await t.runAsync(() => c.nextStep());
-      await t.pump();
-      expect(find.text('Acme'), findsOneWidget);
-      expect(find.text('Twin'), findsOneWidget);
-      await t.enterText(find.byType(EditableText), 'tw');
-      await t.pump();
-      expect(find.text('Acme'), findsNothing);
-      expect(find.text('Twin'), findsOneWidget);
-      expect(find.text(JoinFlow.individual), findsOneWidget);
-      await t.enterText(find.byType(EditableText), 'zzz');
-      await t.pump();
-      expect(find.textContaining('Nothing matches'), findsOneWidget);
-      expect(find.text(JoinFlow.individual), findsOneWidget);
-    });
-
-    testWidgets('an organisation with nothing to choose says so', (t) async {
       await t.runAsync(() => open({'categories': [], 'affiliates': []}));
       await pump(t);
-      expect(
-        find.text("This enterprise isn't open for joining from the app yet."),
-        findsOneWidget,
-      );
+      expect(find.text("I'm an employee of Acme Clinic"), findsOneWidget);
+      expect(find.text("I'm an associate"), findsNothing);
     });
 
     testWidgets('a page that failed shows the error and Try again', (t) async {
@@ -445,7 +490,9 @@ void main() {
       await pump(t);
       expect(find.text('Try again'), findsOneWidget);
       expect(
-        find.text("Can't reach the server. Check your connection and try again."),
+        find.text(
+          "Can't reach the server. Check your connection and try again.",
+        ),
         findsOneWidget,
       );
     });

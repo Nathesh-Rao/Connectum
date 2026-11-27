@@ -5,6 +5,7 @@ class ChatPerson {
     required this.source,
     this.canInteract,
     this.detail = '',
+    this.avatar,
   });
 
   final String username;
@@ -19,6 +20,9 @@ class ChatPerson {
 
   /// Designation or department, when the list gives one.
   final String detail;
+
+  /// The person's picture address, when the list gives one.
+  final String? avatar;
 
   bool get isKnown => source != 'search';
 }

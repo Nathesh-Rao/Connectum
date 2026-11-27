@@ -64,7 +64,10 @@ class TicketsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _refreshes = tickets.refreshes.listen((_) => fireAndLog('tickets_controller', () => refreshAll()), onError: streamOnError('tickets_controller'));
+    _refreshes = tickets.refreshes.listen(
+      (_) => fireAndLog('tickets_controller', () => refreshAll()),
+      onError: streamOnError('tickets_controller'),
+    );
     fireAndLog('tickets_controller', () => refreshAll());
   }
 
@@ -255,7 +258,9 @@ class TicketsController extends GetxController {
           ? AppNoticeVariant.warning
           : AppNoticeVariant.error,
       actionLabel: problem.canRetry ? TicketsTexts.retry : null,
-      onAction: problem.canRetry ? () => fireAndLog('tickets_controller', () => retry()) : null,
+      onAction: problem.canRetry
+          ? () => fireAndLog('tickets_controller', () => retry())
+          : null,
     );
   }
 }

@@ -75,7 +75,8 @@ class ChatInfoController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    if (ticketId != null) fireAndLog('chat_info_controller', () => _readTicket());
+    if (ticketId != null)
+      fireAndLog('chat_info_controller', () => _readTicket());
   }
 
   Future<void> _readTicket() async {

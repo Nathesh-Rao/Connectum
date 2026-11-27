@@ -4,9 +4,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_list_row.dart';
-import '../../../core/widgets/app_tag.dart';
+import '../../../core/theme/app_radius.dart';
 
-/// The four things to do with the log file. The sheet's own header comes
+/// The things to do with the log file: Share to Connectum first, then view,
+/// save and the system share. The sheet's own header comes
 /// from [AppBottomSheet.show].
 class LogsOptionsSheet extends StatelessWidget {
   const LogsOptionsSheet({
@@ -15,14 +16,16 @@ class LogsOptionsSheet extends StatelessWidget {
     required this.onView,
     required this.onSave,
     required this.onShare,
-    required this.onUpload,
+    this.onShareToConnectum,
   });
 
   final bool hasFile;
   final Future<void> Function() onView;
   final Future<void> Function() onSave;
   final Future<void> Function() onShare;
-  final VoidCallback onUpload;
+
+  /// Opens the Share to Connectum picker; null hides the card.
+  final Future<void> Function()? onShareToConnectum;
 
   Widget _icon(IconData icon) => Icon(icon, color: AppColors.primary);
 
@@ -57,6 +60,14 @@ class LogsOptionsSheet extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      if (onShareToConnectum != null)
+        _ConnectumCard(
+          isEnabled: hasFile,
+          onTap: () {
+            Navigator.of(context).pop();
+            onShareToConnectum!();
+          },
+        ),
       _fileRow(
         context,
         icon: Icons.article_outlined,
@@ -78,17 +89,6 @@ class LogsOptionsSheet extends StatelessWidget {
         subtitle: 'Send the log file with another app',
         action: onShare,
       ),
-      Semantics(
-        button: true,
-        child: AppListRow(
-          title: 'Upload log',
-          subtitle: 'Send the log file to support',
-          leading: _icon(Icons.cloud_upload_outlined),
-          minHeight: AppSpacing.minTapTarget + AppSpacing.md,
-          trailing: const AppTag(label: 'Soon'),
-          onTap: onUpload,
-        ),
-      ),
       if (!hasFile)
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -98,5 +98,86 @@ class LogsOptionsSheet extends StatelessWidget {
           ),
         ),
     ],
+  );
+}
+
+/// The primary choice: a tonal card in the app's accent, above the rows.
+class _ConnectumCard extends StatelessWidget {
+  const _ConnectumCard({required this.isEnabled, required this.onTap});
+
+  final bool isEnabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    enabled: isEnabled,
+    label: 'Share to Connectum. Send the log file to a chat',
+    excludeSemantics: true,
+    child: Opacity(
+      opacity: isEnabled ? 1 : 0.5,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+        child: Material(
+          color: AppColors.primarySoft,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.cardAll,
+            side: const BorderSide(color: AppColors.primaryBorder),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: const ValueKey('logs-share-connectum'),
+            onTap: isEnabled ? onTap : null,
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.minTapTarget + AppSpacing.lg,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: AppSpacing.avatarSmall,
+                    height: AppSpacing.avatarSmall,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      size: 18,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Share to Connectum',
+                          style: AppText.rowTitle.copyWith(
+                            color: AppColors.primaryStrong,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Send the log file to a chat',
+                          style: AppText.rowCaption,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: AppColors.primary),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 }

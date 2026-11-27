@@ -48,6 +48,10 @@ class AppLog {
 
   static void i(String tag, String message) => _print('I', tag, message);
 
+  /// Debug level: the console in debug builds and the log file; never in
+  /// release console output.
+  static void d(String tag, String message) => _print('D', tag, message);
+
   /// An error nobody caught (framework, platform, isolate): the file and the
   /// console only, because the crash hooks already report it.
   static void unhandled(String tag, Object error, StackTrace? stack) =>

@@ -54,12 +54,12 @@ class WorkspaceRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('My Work Space', style: AppText.rowTitle),
+                    Text('My Work Space', style: AppText.chatName),
                     Text(
                       preview,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.rowCaption,
+                      style: AppText.chatPreview,
                     ),
                   ],
                 ),

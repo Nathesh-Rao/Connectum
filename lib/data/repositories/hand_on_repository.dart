@@ -164,7 +164,10 @@ class HandOnRepository extends GetxService with WidgetsBindingObserver {
 
   void _schedule() {
     _debounce?.cancel();
-    _debounce = Timer(_discoverDebounce, () => fireAndLog('hand_on_repository', () => discover()));
+    _debounce = Timer(
+      _discoverDebounce,
+      () => fireAndLog('hand_on_repository', () => discover()),
+    );
   }
 
   // ---- finding a waiting device ----------------------------------------

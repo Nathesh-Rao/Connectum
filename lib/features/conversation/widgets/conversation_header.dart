@@ -71,7 +71,7 @@ class ConversationHeader extends StatelessWidget {
                                   title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppText.bodyStrong,
+                                  style: AppText.chatHeaderName,
                                 ),
                               ),
                               if (isEncrypted) ...[
@@ -90,7 +90,7 @@ class ConversationHeader extends StatelessWidget {
                               status!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppText.caption,
+                              style: AppText.chatStatus,
                             ),
                         ],
                       ),

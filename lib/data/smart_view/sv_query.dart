@@ -2,6 +2,7 @@ import 'engine/sv_engine.dart';
 import 'engine/sv_values.dart';
 import 'models/sv_row.dart';
 import 'sv_columns.dart';
+import 'sv_team.dart';
 
 /// What the person asked of one view: search text (all fields or one), the
 /// filter conditions and one sort. Plain value, compared by content, so a
@@ -30,9 +31,21 @@ class SmartViewQuery {
       if (SvEngine.isActive(c)) c,
   ];
 
-  /// True when the search or a filter narrows the rows (a sort does not).
+  /// The active column conditions: without the "My team" and "Linked as"
+  /// lines, which are not columns.
+  List<SvCondition> get columnConditions => [
+    for (final c in activeConditions)
+      if (!SvTeam.isTeamLine(c)) c,
+  ];
+
+  /// What the server is asked to cut the records by, or null when neither
+  /// team line is set.
+  SvTeamFilter? get team => SvTeam.of(conditions);
+
+  /// True when the search or a column filter narrows the rows here (a sort
+  /// does not; the team lines are the server's cut, not the app's).
   bool get isFiltering =>
-      search.trim().isNotEmpty || activeConditions.isNotEmpty;
+      search.trim().isNotEmpty || columnConditions.isNotEmpty;
 
   bool get isSorting => sortKey != null;
   bool get isEmpty => !isFiltering && !isSorting && scope == null;

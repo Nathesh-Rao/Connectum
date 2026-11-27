@@ -69,7 +69,11 @@ class _AppSuccessAnimationState extends State<AppSuccessAnimation>
                 color: AppColors.primaryTint,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check, size: 32, color: AppColors.primaryBright),
+              child: const Icon(
+                Icons.check,
+                size: 32,
+                color: AppColors.primaryBright,
+              ),
             ),
           ),
         ),

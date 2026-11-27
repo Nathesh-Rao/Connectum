@@ -6,3 +6,5 @@ hard-coded|lib/core/widgets/onboarding_art/onboarding_art_palette.dart|authored 
 hard-coded|lib/core/widgets/onboarding_art/generated/shield_art_data.dart|authored artwork colours, generated from the HTML art
 hard-coded|lib/core/widgets/onboarding_art/generated/network_art_data.dart|authored artwork colours, generated from the HTML art
 hard-coded|lib/core/widgets/onboarding_art/generated/buildings_art_data.dart|authored artwork colours, generated from the HTML art
+warm-hue|lib/core/theme/app_tones.dart|the one amber tone token ("waiting for you" on an Inbox record), added with the Inbox work
+colour-name|lib/features/conversation/models/emoji_catalog.dart|the emoji name "orange heart", not a colour token

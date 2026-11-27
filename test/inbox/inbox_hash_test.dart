@@ -61,6 +61,12 @@ class _Router extends Fake implements NotificationRouter {
   void Function()? openApprovals;
 
   @override
+  void Function(int id)? openRecord;
+
+  @override
+  void Function()? openInboxList;
+
+  @override
   void markHomeGone() {}
 
   @override

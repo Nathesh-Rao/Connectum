@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../data/smart_view/engine/sv_engine.dart';
+import '../../../data/smart_view/sv_team.dart';
 import '../smart_view_controller.dart';
 import 'sv_sort_sheet.dart';
 
@@ -52,7 +53,9 @@ class SvChipsStrip extends StatelessWidget {
                       _ChipIn(
                         key: ValueKey('sv-chip-${cond.hashCode}'),
                         child: _Chip(
-                          label: SvEngine.chipText(cond, labelOf(cond.col)),
+                          label: SvTeam.isTeamLine(cond)
+                              ? SvTeam.chipText(cond, c.teamNameOf)
+                              : SvEngine.chipText(cond, labelOf(cond.col)),
                           onRemove: () => c.removeCondition(cond),
                         ),
                       ),

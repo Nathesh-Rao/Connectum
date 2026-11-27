@@ -369,7 +369,10 @@ class EnterprisesController extends GetxController with WidgetsBindingObserver {
 
   Future<void> signOut() async {
     await auth.signOutIdentity();
-    fireAndLog('enterprises_controller', () async => Get.offAllNamed(AppRoutes.authentication));
+    fireAndLog(
+      'enterprises_controller',
+      () async => Get.offAllNamed(AppRoutes.authentication),
+    );
   }
 
   @override

@@ -82,8 +82,9 @@ class DebugOnboardingAnimView extends GetView<DebugOnboardingAnimController> {
               selected: {
                 if (c.speedChoice.value != null) c.speedChoice.value!,
                 if (c.speedChoice.value == null &&
-                    DebugOnboardingAnimController.speeds
-                        .contains(OnboardingArtKind.network.speed))
+                    DebugOnboardingAnimController.speeds.contains(
+                      OnboardingArtKind.network.speed,
+                    ))
                   OnboardingArtKind.network.speed,
               },
               onSelectionChanged: (v) {

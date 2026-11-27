@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -32,7 +34,6 @@ class SvFileChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = file.sizeText;
     return Semantics(
       button: onTap != null,
       label: file.semanticLabel,
@@ -67,24 +68,7 @@ class SvFileChip extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSv.fileChipGap),
-                  Flexible(
-                    child: Text(
-                      SvFile.middleEllipsis(file.name, AppSv.fileChipMaxName),
-                      style: AppSv.fileChipName,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (size.isNotEmpty) ...[
-                    const SizedBox(width: AppSv.fileChipGap),
-                    Text(
-                      size,
-                      style: AppSv.fileChipSize,
-                      maxLines: 1,
-                      softWrap: false,
-                    ),
-                  ],
+                  Flexible(child: _NameMeta(file: file)),
                   const SizedBox(width: AppSv.fileChipGap),
                 ],
               ),
@@ -92,6 +76,65 @@ class SvFileChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The name, cut with an ellipsis, then "TYPE · size", which is measured first
+/// so it always stays readable. With [isFill] the type and size sit at the
+/// right edge.
+class _NameMeta extends StatelessWidget {
+  const _NameMeta({required this.file, this.isFill = false});
+
+  final SvFile file;
+  final bool isFill;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final painter = TextPainter(
+          text: TextSpan(text: file.metaText, style: AppSv.fileChipSize),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        final metaWidth = math.min(
+          painter.width.ceilToDouble() + 1,
+          box.maxWidth,
+        );
+        painter.dispose();
+        final hasName = box.maxWidth - metaWidth - AppSv.fileChipGap > 0;
+        final meta = SizedBox(
+          width: metaWidth,
+          child: Text(
+            file.metaText,
+            style: AppSv.fileChipSize,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+          ),
+        );
+        final name = Text(
+          file.name,
+          style: AppSv.fileChipName,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+        );
+        return Row(
+          mainAxisSize: isFill ? MainAxisSize.max : MainAxisSize.min,
+          children: [
+            if (hasName) ...[
+              isFill ? Expanded(child: name) : Flexible(child: name),
+              const SizedBox(width: AppSv.fileChipGap),
+            ],
+            meta,
+          ],
+        );
+      },
     );
   }
 }
@@ -183,7 +226,6 @@ class SvFileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = file.sizeText;
     return Semantics(
       button: onTap != null,
       label: file.semanticLabel,
@@ -204,58 +246,24 @@ class SvFileTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppSv.fileChipRadius),
                 border: Border.all(color: AppSv.cardBorder),
               ),
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final scale = MediaQuery.textScalerOf(context).scale(1);
-                  final room =
-                      box.maxWidth -
-                      AppSv.fileTileHeight -
-                      (size.isEmpty ? 0 : 52 * scale) -
-                      AppSv.fileChipGap * 2;
-                  final chars =
-                      (room / (AppSv.fileChipName.fontSize! * 0.58 * scale))
-                          .floor()
-                          .clamp(8, 80);
-                  return Row(
-                    children: [
-                      Container(
-                        width: AppSv.fileTileHeight - 2,
-                        height: AppSv.fileTileHeight - 2,
-                        decoration: BoxDecoration(
-                          color: file.kind.palette.background,
-                          borderRadius: BorderRadius.circular(
-                            AppSv.fileChipRadius,
-                          ),
-                        ),
-                        child: Icon(
-                          svFileIcon(file.kind),
-                          size: AppSv.fileChipIcon,
-                          color: file.kind.palette.foreground,
-                        ),
-                      ),
-                      const SizedBox(width: AppSv.fileChipGap),
-                      Expanded(
-                        child: Text(
-                          SvFile.middleEllipsis(file.name, chars),
-                          style: AppSv.fileChipName,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (size.isNotEmpty) ...[
-                        const SizedBox(width: AppSv.fileChipGap),
-                        Text(
-                          size,
-                          style: AppSv.fileChipSize,
-                          maxLines: 1,
-                          softWrap: false,
-                          textAlign: TextAlign.right,
-                        ),
-                      ],
-                    ],
-                  );
-                },
+              child: Row(
+                children: [
+                  Container(
+                    width: AppSv.fileTileHeight - 2,
+                    height: AppSv.fileTileHeight - 2,
+                    decoration: BoxDecoration(
+                      color: file.kind.palette.background,
+                      borderRadius: BorderRadius.circular(AppSv.fileChipRadius),
+                    ),
+                    child: Icon(
+                      svFileIcon(file.kind),
+                      size: AppSv.fileChipIcon,
+                      color: file.kind.palette.foreground,
+                    ),
+                  ),
+                  const SizedBox(width: AppSv.fileChipGap),
+                  Expanded(child: _NameMeta(file: file, isFill: true)),
+                ],
               ),
             ),
           ),

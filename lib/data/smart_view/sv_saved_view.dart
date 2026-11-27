@@ -1,6 +1,7 @@
 import 'engine/sv_engine.dart';
 import 'sv_columns.dart';
 import 'sv_query.dart';
+import 'sv_team.dart';
 
 /// The limits the server enforces on a person's views of one source.
 class SvViewLimits {
@@ -205,13 +206,19 @@ class SvSavedView {
   /// The screen state this view stands for over the columns [known]. Filters,
   /// sort and groups naming a column that is not there (a field the form
   /// keeps hidden, or one that is gone) are dropped, link conditions
-  /// (`preset: true`) too; nothing outside [known] ever reaches the screen.
+  /// (`preset: true`) too; the "My team" and "Linked as" lines are not
+  /// columns and always stay; nothing outside [known] ever reaches the screen.
   SvViewState toState(Set<String> known) {
     final conditions = <SvCondition>[];
     for (final f in filters) {
       final col = f['col'];
       final op = f['op'];
       if (f['preset'] == true || col is! String || op is! String) continue;
+      if (SvTeamCols.isReserved(col)) {
+        final line = SvTeam.tryLine(col, op, f['value']);
+        if (line != null) conditions.add(line);
+        continue;
+      }
       final key = SvKeys.mobile(col);
       if (!known.contains(key)) continue;
       conditions.add(SvCondition(key, op, f['value']));

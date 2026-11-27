@@ -203,6 +203,7 @@ class _AskBoxState extends State<_AskBox> {
         const SizedBox(height: AppSpacing.xs),
         AppTextField(
           controller: _text,
+          textCapitalization: TextCapitalization.sentences,
           hint: AiTexts.askHint,
           textInputAction: TextInputAction.send,
           onSubmitted: (_) => _send(),

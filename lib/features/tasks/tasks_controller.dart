@@ -89,9 +89,18 @@ class TasksController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _changes = tasks.changes.listen(_onChange, onError: streamOnError('tasks_controller'));
-    _refreshes = tasks.refreshes.listen((_) => fireAndLog('tasks_controller', () => refreshAll()), onError: streamOnError('tasks_controller'));
-    _openRequests = tasks.openRequests.listen((id) => fireAndLog('tasks_controller', () => openTask(id)), onError: streamOnError('tasks_controller'));
+    _changes = tasks.changes.listen(
+      _onChange,
+      onError: streamOnError('tasks_controller'),
+    );
+    _refreshes = tasks.refreshes.listen(
+      (_) => fireAndLog('tasks_controller', () => refreshAll()),
+      onError: streamOnError('tasks_controller'),
+    );
+    _openRequests = tasks.openRequests.listen(
+      (id) => fireAndLog('tasks_controller', () => openTask(id)),
+      onError: streamOnError('tasks_controller'),
+    );
     fireAndLog('tasks_controller', () => refreshAll());
     final id = Get.arguments;
     if (id is int) fireAndLog('tasks_controller', () => openTask(id));
@@ -295,7 +304,8 @@ class TasksController extends GetxController {
     } on SocketCallError catch (e) {
       final problem = CallProblem.of(e, isWrite: true);
       _tell(problem, retry: retry);
-      if (problem.shouldRefresh) fireAndLog('tasks_controller', () => _recover(problem, taskId));
+      if (problem.shouldRefresh)
+        fireAndLog('tasks_controller', () => _recover(problem, taskId));
       return false;
     } finally {
       isBusy.value = false;
@@ -326,7 +336,9 @@ class TasksController extends GetxController {
           ? AppNoticeVariant.warning
           : AppNoticeVariant.error,
       actionLabel: problem.canRetry ? TasksTexts.retry : null,
-      onAction: problem.canRetry ? () => fireAndLog('tasks_controller', () => retry()) : null,
+      onAction: problem.canRetry
+          ? () => fireAndLog('tasks_controller', () => retry())
+          : null,
     );
   }
 

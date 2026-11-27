@@ -70,29 +70,32 @@ class NotificationsView extends GetView<NotificationsController> {
               AppSpacing.page,
               0,
             ),
-            child: Obx(
-              () => AppPillBar.multi(
-                size: AppPillSize.compact,
-                gap: NotificationsSpacing.pillGap,
-                pills: [
-                  for (
-                    var i = 0;
-                    i < NotificationsController.chipLabels.length;
-                    i++
-                  )
-                    AppPill(
-                      id: NotificationsController.priorities[i],
-                      label: NotificationsController.chipLabels[i],
-                      count: i == 0
-                          ? 0
-                          : c.feed.counts.value.forPriority(
-                              NotificationsController.priorities[i],
-                            ),
-                    ),
-                ],
-                selectedIds: c.selectedIds.value,
-                onToggle: c.toggleChip,
-                exclusiveId: 'all',
+            child: KeyedSubtree(
+              key: c.tour?.pillsKey,
+              child: Obx(
+                () => AppPillBar.multi(
+                  size: AppPillSize.compact,
+                  gap: NotificationsSpacing.pillGap,
+                  pills: [
+                    for (
+                      var i = 0;
+                      i < NotificationsController.chipLabels.length;
+                      i++
+                    )
+                      AppPill(
+                        id: NotificationsController.priorities[i],
+                        label: NotificationsController.chipLabels[i],
+                        count: i == 0
+                            ? 0
+                            : c.feed.counts.value.forPriority(
+                                NotificationsController.priorities[i],
+                              ),
+                      ),
+                  ],
+                  selectedIds: c.selectedIds.value,
+                  onToggle: c.toggleChip,
+                  exclusiveId: 'all',
+                ),
               ),
             ),
           ),
@@ -128,10 +131,13 @@ class _Header extends StatelessWidget {
           const Expanded(
             child: Text(NotificationTexts.screenTitle, style: AppText.title),
           ),
-          NotificationsMoreMenu(
-            shouldNotifyGroups: c.notifications.shouldNotifyGroups,
-            isUnreadOnly: c.isUnreadOnly,
-            onSelected: c.onMenu,
+          KeyedSubtree(
+            key: c.tour?.moreKey,
+            child: NotificationsMoreMenu(
+              shouldNotifyGroups: c.notifications.shouldNotifyGroups,
+              isUnreadOnly: c.isUnreadOnly,
+              onSelected: c.onMenu,
+            ),
           ),
         ],
       ),
@@ -190,66 +196,72 @@ class _Body extends StatelessWidget {
     return Obx(() {
       final items = c.visible;
       final state = c.viewState;
-      return AppStateView(
-        state: state,
-        emptyImage: AppStateImageKind.emptyGeneric,
-        emptyTitle: NotificationTexts.emptyTitle,
-        emptyMessage: c.emptyMessage,
-        errorMessage: NotificationTexts.errorMessage,
-        onRetry: c.retry,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (n) {
-            if (n.metrics.extentAfter < 300) c.loadMore();
-            return false;
-          },
-          child: AppRefresh(
-            onRefresh: c.onRefresh,
-            slivers: [
-              const SliverToBoxAdapter(
-                child: SizedBox(height: NotificationsSpacing.listTopPadding),
-              ),
-              SliverList.separated(
-                itemCount: items.length,
-                separatorBuilder: (context, i) => const Divider(
-                  height: 1,
-                  color: AppColors.line,
-                  indent:
-                      AppSpacing.page +
-                      AppSpacing.feedIconCircle +
-                      AppSpacing.sm,
-                  endIndent: AppSpacing.page,
+      return KeyedSubtree(
+        key: c.tour?.bodyKey,
+        child: AppStateView(
+          state: state,
+          emptyImage: AppStateImageKind.emptyGeneric,
+          emptyTitle: NotificationTexts.emptyTitle,
+          emptyMessage: c.emptyMessage,
+          errorMessage: NotificationTexts.errorMessage,
+          onRetry: c.retry,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n.metrics.extentAfter < 300) c.loadMore();
+              return false;
+            },
+            child: AppRefresh(
+              onRefresh: c.onRefresh,
+              slivers: [
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: NotificationsSpacing.listTopPadding),
                 ),
-                itemBuilder: (context, i) {
-                  final item = items[i];
-                  return FeedTile(
-                    key: ValueKey(item.id),
-                    item: item,
-                    topPadding: NotificationsSpacing.firstTileTopPadding,
-                    readText: c.feed.readableText,
-                    onTap: () => c.open(item),
-                    onDismissed: () => c.dismiss(item),
-                    onMenu: (m) => switch (m) {
-                      FeedTileMenu.toggleRead => c.setRead(
-                        item,
-                        isRead: !item.isRead,
+                SliverList.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (context, i) => const Divider(
+                    height: 1,
+                    color: AppColors.line,
+                    indent:
+                        AppSpacing.page +
+                        AppSpacing.feedIconCircle +
+                        AppSpacing.sm,
+                    endIndent: AppSpacing.page,
+                  ),
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+                    return KeyedSubtree(
+                      key: i == 0 ? c.tour?.tileKey : null,
+                      child: FeedTile(
+                        key: ValueKey(item.id),
+                        item: item,
+                        topPadding: NotificationsSpacing.firstTileTopPadding,
+                        readText: c.feed.readableText,
+                        onTap: () => c.open(item),
+                        onDismissed: () => c.dismiss(item),
+                        onMenu: (m) => switch (m) {
+                          FeedTileMenu.toggleRead => c.setRead(
+                            item,
+                            isRead: !item.isRead,
+                          ),
+                          FeedTileMenu.resolve => c.resolve(item),
+                          FeedTileMenu.dismiss => c.dismiss(item),
+                        },
                       ),
-                      FeedTileMenu.resolve => c.resolve(item),
-                      FeedTileMenu.dismiss => c.dismiss(item),
-                    },
-                  );
-                },
-              ),
-              SliverToBoxAdapter(
-                child: Obx(
-                  () => c.isLoadingMore.value
-                      ? const Padding(
-                          padding: EdgeInsets.all(AppSpacing.md),
-                          child: Center(child: AppSpinner()),
-                        )
-                      : const SizedBox(height: AppSpacing.xl),
+                    );
+                  },
                 ),
-              ),
-            ],
+                SliverToBoxAdapter(
+                  child: Obx(
+                    () => c.isLoadingMore.value
+                        ? const Padding(
+                            padding: EdgeInsets.all(AppSpacing.md),
+                            child: Center(child: AppSpinner()),
+                          )
+                        : const SizedBox(height: AppSpacing.xl),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

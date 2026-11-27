@@ -149,73 +149,10 @@ class AppSv {
   static const int tableMaxWords = 10;
   static const double tableMaxWidthShare = 0.6;
 
-  // Overview
-  static const double ovTileRadius = 16;
-  static const double ovIconCircle = 36;
-  static const double ovCardIcon = 36;
-  static const double ovCardIconRadius = 10;
-  static const double ovPad = 16;
-  static const double ovGap = 12;
+  // Row entrance (cards slide in one after another)
   static const double ovSlide = 12;
-  static const double ovBarWidth = 6;
-  static const double ovBarGap = 4;
-  static const double ovBarMax = 36;
-  static const double ovBarDash = 3;
-  static const double ovBarRestAlpha = 0.25;
-  static const double ovMixHeight = 8;
-  static const double ovMixGap = 3;
-  static const double ovMixRadius = 3;
-  static const double ovPressScale = 0.98;
-  static const double ovSkeletonLow = 0.45;
-  static const int ovLegendMax = 3;
   static const ovStagger = Duration(milliseconds: 60);
   static const ovEnter = Duration(milliseconds: 280);
-  static const ovCount = Duration(milliseconds: 500);
-  static const ovPress = Duration(milliseconds: 120);
-  static const ovPulse = Duration(milliseconds: 900);
-  static const ovSwitch = Duration(milliseconds: 220);
-  static const ovLabel = TextStyle(
-    fontFamily: _font,
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    height: 1.3,
-    color: AppColors.cardMuted,
-  );
-  static const ovValue = TextStyle(
-    fontFamily: _font,
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-    color: AppColors.ink,
-  );
-  static const ovName = TextStyle(
-    fontFamily: _font,
-    fontSize: 15,
-    fontWeight: FontWeight.w700,
-    height: 1.25,
-    color: cardInk,
-  );
-  static const ovBig = TextStyle(
-    fontFamily: _font,
-    fontSize: 28,
-    fontWeight: FontWeight.w800,
-    height: 1.1,
-    color: cardInk,
-  );
-  static const ovLegend = TextStyle(
-    fontFamily: _font,
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    height: 1.3,
-    color: AppColors.cardMuted,
-  );
-  static const ovLegendCount = TextStyle(
-    fontFamily: _font,
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    height: 1.3,
-    color: cardInk,
-  );
 
   // Controls row
   static const double controlButton = 40;
@@ -349,7 +286,6 @@ class AppSv {
   static const double fileChipMaxWidth = 200;
   static const double fileChipGap = 6;
   static const double fileMinHit = 44;
-  static const int fileChipMaxName = 26;
   static const int fileChipsMax = 3;
   static const fileChipName = TextStyle(
     fontFamily: _font,
@@ -378,6 +314,7 @@ class AppSv {
   static const double fileDot = 6;
   static const double fileSheetCell = 140;
   static const double fileSheetRow = 36;
+  static const double fileSheetNumber = 48;
   static const double fileSheetTab = 32;
   static const double fileCircle = 96;
   static const double fileCircleIcon = 44;

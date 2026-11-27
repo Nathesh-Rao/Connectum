@@ -216,6 +216,14 @@ class E2eSendDecision {
   static const staleFailure = 'stale devices';
   static const settingUp = 'Setting up secure messaging';
   static const notSetUpReason = "secure messaging isn't set up on this phone";
+  static const notRegisteredReason =
+      "this phone isn't registered for secure messaging";
+
+  /// A My Work Space note waits (and asks for setup) instead of failing.
+  bool get isSetupMissing =>
+      isSetupPending ||
+      reason == notSetUpReason ||
+      reason == notRegisteredReason;
 
   final E2eSendVerdict verdict;
   final String? headline;

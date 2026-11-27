@@ -35,7 +35,10 @@ class SvCellDetails extends StatelessWidget {
 
   static Future<void> copy(String value) async {
     await Clipboard.setData(ClipboardData(text: value));
-    fireAndLog('sv_cell_details_sheet', () async => HapticFeedback.lightImpact());
+    fireAndLog(
+      'sv_cell_details_sheet',
+      () async => HapticFeedback.lightImpact(),
+    );
     AppNotices.success('Copied');
   }
 

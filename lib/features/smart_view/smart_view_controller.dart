@@ -7,9 +7,11 @@ import 'package:get/get.dart';
 import '../../core/crash/crash_breadcrumbs.dart';
 
 import '../../core/debug/records_log.dart';
+import '../../core/log/app_log.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_notices.dart';
 import '../../core/widgets/app_state_view.dart';
+import '../../data/repositories/inbox_repository.dart';
 import '../../data/repositories/smart_view_repository.dart';
 import '../../data/repositories/submission_repository.dart';
 import '../../data/repositories/sv_file_repository.dart';
@@ -23,14 +25,19 @@ import '../../data/smart_view/sv_file.dart';
 import '../../data/smart_view/sv_prefs.dart';
 import '../../data/smart_view/sv_saved_view.dart';
 import '../../data/smart_view/sv_query.dart';
+import '../../data/smart_view/sv_team.dart';
 import '../../data/socket/socket_service.dart';
 import '../forms/models/form_launch.dart';
 import '../tickets/ticket_detail_controller.dart';
 import 'models/smart_view_entry.dart';
-import 'models/sv_overview_model.dart';
+import 'widgets/sv_team_lines.dart';
 import 'sv_file_preview_controller.dart';
 import 'widgets/smart_view_table.dart';
 import '../../core/log/safe.dart';
+import '../../core/tour/tour_service.dart';
+import '../../core/tour/tour_trigger.dart';
+import 'smart_view_tour.dart';
+import 'smart_view_tour_demo.dart';
 
 enum SvViewsPhase { loading, ready, error }
 
@@ -46,10 +53,9 @@ class SvGrouped {
   final String? sumLabel;
 }
 
-/// The Smart view tab: the Overview of every structure, the list of
-/// structures (the drawer) and the records of the one that is open, as cards
-/// or a table. Rows are read by [SmartViewRepository] into an [SvTable] and
-/// live in memory only. Every way into the tab starts from the Overview.
+/// The Smart view tab: the list of structures (the drawer) and the records of
+/// the one that is open, as cards or a table. Rows are read by
+/// [SmartViewRepository] into an [SvTable] and live in memory only.
 class SmartViewController extends GetxController {
   SmartViewController({
     required this.repo,
@@ -57,13 +63,12 @@ class SmartViewController extends GetxController {
     required this.submissions,
     required this.newTicketDetail,
     SmartViewPrefs? prefs,
-    SvOverviewModel? overview,
     this.files,
     this.views,
+    this.inbox,
+    this.tour,
   }) : prefs = prefs ?? SmartViewPrefs(),
-       mode = Rx<SvViewMode>((prefs ?? SmartViewPrefs()).mode) {
-    this.overview = overview ?? SvOverviewModel(read: repo.readForOverview);
-  }
+       mode = Rx<SvViewMode>((prefs ?? SmartViewPrefs()).mode);
 
   final SmartViewRepository repo;
   final TicketRepository tickets;
@@ -77,14 +82,17 @@ class SmartViewController extends GetxController {
   /// The saved views of the open structure; null: no tabs.
   final SvSavedViewsRepository? views;
 
+  /// Who reports to the person (`records.people`) and their names and
+  /// pictures (`people.cards`), for the "My team" line; null: no team lines.
+  final InboxRepository? inbox;
+
+  /// The first-run tour; null where tours are not set up.
+  final SmartViewTour? tour;
+
   bool get hasFiles => files != null;
 
   SvFilePreviewController newFilePreview(List<SvFile> list, int index) =>
       SvFilePreviewController(files: list, repo: files!, index: index);
-
-  /// The Overview's cards and totals.
-  late final SvOverviewModel overview;
-  final overviewScroll = ScrollController();
 
   /// Cards or Table, the app-wide choice (restored before the first frame).
   final Rx<SvViewMode> mode;
@@ -137,6 +145,10 @@ class SmartViewController extends GetxController {
   final selectedViewId = Rxn<String>();
   final isSavingViews = false.obs;
 
+  /// Counts page switches (mode or view); only the newest page of the mode
+  /// switcher holds the tour's card key.
+  final pageSeq = 0.obs;
+
   /// False once the server refused a save: "+" and the manage actions hide.
   final canWriteViews = true.obs;
   final _closed = <String, RxSet<String>>{};
@@ -159,6 +171,8 @@ class SmartViewController extends GetxController {
 
   /// The structures matching the Find text (name or caption, any case).
   List<SvSource> get shownSources {
+    final sample = _sampleSource;
+    if (sample != null) return [sample];
     final q = find.value.trim().toLowerCase();
     if (q.isEmpty) return sources.toList();
     return [
@@ -199,103 +213,34 @@ class SmartViewController extends GetxController {
 
   void setDrawer(bool value) => isDrawerOpen.value = value;
 
-  /// Every way in starts clean: the open view, its search and filters and
-  /// the Overview's numbers are dropped. The tab alone: the Overview, drawer
-  /// closed. `#view`: the Overview, drawer open. `#view <name>`: that view
-  /// (read afresh), drawer closed.
+  /// Every way in. The tab alone: the view that was open, else the list with
+  /// the drawer open. `#view`: the list. `#view <name>`: that view (read
+  /// afresh), the drawer closed.
   Future<void> enter(SmartViewEntry entry) async {
     CrashBreadcrumbs.add(Crumb.smartviewOpen);
     setActive(true);
-    _resetTab();
     switch (entry.kind) {
       case SmartViewEntryKind.drawer:
         openDrawer();
-        await _refreshOverview();
+        await loadList();
       case SmartViewEntryKind.named:
         closeDrawer();
         _wanted = entry.name;
         await loadList();
         await _showWanted();
       case SmartViewEntryKind.tab:
-        closeDrawer();
-        await _refreshOverview();
+        await loadList();
+        if (current.value == null && listPhase.value == SvPhase.ready) {
+          openDrawer();
+        }
     }
   }
 
-  void _resetTab() {
-    _closeTable();
-    current.value = null;
-    _states.clear();
-    _selected.clear();
-    _loadedViews.clear();
-    _closed.clear();
-    _clearViews();
-    _wanted = null;
-    _searchTimer?.cancel();
-    query.value = SmartViewQuery.none;
-    groupBy.clear();
-    hidden.clear();
-    order.clear();
-    searchField.clear();
-    isSearchOpen.value = false;
-    expanded.clear();
-    filesExpanded.clear();
-    overview.reset();
-  }
-
-  /// The Overview is the page: no view is open.
-  bool get isOverview => current.value == null;
-
-  /// Back to the Overview from a view; its numbers stay as they were.
-  Future<void> showOverview() async {
-    closeDrawer();
-    if (isOverview) return;
-    _closeTable();
-    current.value = null;
-    if (overview.cards.isEmpty) await _refreshOverview();
-  }
-
-  /// The tab's own icon tapped again: a view goes back to the Overview, the
-  /// Overview scrolls to its top.
-  void onReselect() {
-    if (isDrawerOpen.value) {
-      closeDrawer();
-      return;
-    }
-    if (!isOverview) {
-      fireAndLog('smart_view_controller', () => showOverview());
-      return;
-    }
-    if (overviewScroll.hasClients) {
-      overviewScroll.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  /// Back: the drawer closes first, then a view goes to the Overview.
-  bool get canLeave => !(isActive.value && (isDrawerOpen.value || !isOverview));
+  /// Back: the drawer closes first, then the screen is left.
+  bool get canLeave => !(isActive.value && isDrawerOpen.value);
 
   void onBack() {
-    if (isDrawerOpen.value) {
-      closeDrawer();
-    } else if (!isOverview) {
-      fireAndLog('smart_view_controller', () => showOverview());
-    }
-  }
-
-  /// Reads the structure list (quietly when it is held), then every
-  /// structure's numbers.
-  Future<void> _refreshOverview() async {
-    await loadList(isForced: true);
-    if (!isOverview) return;
-    if (listPhase.value == SvPhase.ready) {
-      await overview.start(sources.toList());
-    } else {
-      overview.reset();
-    }
+    if (isDrawerOpen.value) closeDrawer();
   }
 
   /// Reads the structures once; [isForced] reads them again (Retry).
@@ -328,7 +273,6 @@ class SmartViewController extends GetxController {
     final hit = SvSources.find(sources.toList(), name);
     if (hit == null) {
       openDrawer();
-      await overview.start(sources.toList());
     } else {
       await show(hit);
     }
@@ -337,19 +281,22 @@ class SmartViewController extends GetxController {
   /// Opens [s] in the body and closes the drawer.
   Future<void> show(SvSource s) async {
     closeDrawer();
+    if (_demo?.isSampleSource(s) ?? false) return;
     if (current.value?.name == s.name && table.value != null) return;
     _closeTable();
     _restoreQuery(s.name);
     current.value = s;
     final t = repo.open(s);
+    t.team = query.value.team;
     table.value = t;
     fireAndLog('smart_view_controller', () => _loadViews(s));
+    _learnMembers();
     await repo.load(t);
   }
 
   void _closeTable() {
     final t = table.value;
-    if (t != null) repo.close(t);
+    if (t != null && !(_demo?.isSampleTable(t) ?? false)) repo.close(t);
     for (final d in _details.values) {
       d.onClose();
     }
@@ -401,7 +348,82 @@ class SmartViewController extends GetxController {
       CrashBreadcrumbs.add(Crumb.smartviewFilterApplied);
     }
     _keep();
+    _syncTeam();
     if (isLogged) _logQuery(before, q);
+  }
+
+  // ---- "My team" and "Linked as" ----
+
+  /// The person's direct reports (user names); empty until known or when
+  /// nobody reports to them, and then the two lines are not drawn.
+  final teamUsers = <String>[].obs;
+  bool _isTeamRead = false;
+
+  /// The choices the filter panel draws; null when this tab has no Inbox data
+  /// layer to ask.
+  late final SvTeamChoices? teamChoices = inbox == null
+      ? null
+      : SvTeamChoices(
+          users: teamUsers,
+          nameOf: teamNameOf,
+          pictureOf: teamPictureOf,
+        );
+
+  String teamNameOf(String user) {
+    inbox?.cardRevision.value;
+    final name = inbox?.cardOf(user)?.name.trim() ?? '';
+    return name.isEmpty ? user : name;
+  }
+
+  String? teamPictureOf(String user) {
+    inbox?.cardRevision.value;
+    final a = inbox?.cardOf(user)?.avatar ?? '';
+    return a.isEmpty ? null : a;
+  }
+
+  /// Reads who reports to the person once per session (`records.people`
+  /// through the shared gate; the Inbox's answer is reused). A failed read is
+  /// nobody: the lines stay hidden and the next panel opening asks again.
+  Future<void> loadTeam() async {
+    final r = inbox;
+    if (r == null || _isTeamRead) return;
+    try {
+      final known = r.people.last.value;
+      final people = known ?? await r.loadPeople();
+      if (people == null) return;
+      _isTeamRead = true;
+      teamUsers.assignAll(people.team);
+      await r.loadCards(people.team);
+    } on SocketCallError catch (e, st) {
+      AppLog.e('smart_view_controller', e, st, 'records.people failed');
+    }
+  }
+
+  /// Names and pictures of the members a condition names (a view saved on the
+  /// web may name people the panel never listed).
+  void _learnMembers() {
+    final names = SvTeam.membersOf(query.value.conditions);
+    final r = inbox;
+    if (r == null || names.isEmpty) return;
+    fireAndLog('smart_view_controller', () => r.loadCards(names));
+  }
+
+  /// The open table is read by the query's team lines; a change reads again.
+  void _syncTeam() {
+    final t = table.value;
+    if (t == null) return;
+    final want = query.value.team;
+    if (t.team == want) return;
+    _learnMembers();
+    fireAndLog('smart_view_controller', () => _readTeam(t, want));
+  }
+
+  Future<void> _readTeam(SvTable t, SvTeamFilter? want) async {
+    await repo.applyTeam(t, want);
+    if (table.value != t || t.team != want) return;
+    if (t.hasPartialError.value && t.errorMessage.value.isNotEmpty) {
+      AppNotices.warning(t.errorMessage.value);
+    }
   }
 
   /// The working state of the open structure, kept for the session.
@@ -645,13 +667,18 @@ class SmartViewController extends GetxController {
     };
   }
 
-  String get title => current.value?.caption ?? 'Overview';
+  /// True when nothing is open yet and the list has views to choose from.
+  bool get isChoosing =>
+      table.value == null && listPhase.value == SvPhase.ready;
+
+  String get title => current.value?.caption ?? 'Smart view';
 
   /// Pull to refresh and Retry: the rows stay until the new ones land.
   Future<void> reload() async {
     final t = table.value;
+    if (_demo?.isSampleTable(t) ?? false) return;
     if (t == null) {
-      await _refreshOverview();
+      await loadList(isForced: true);
     } else {
       await repo.refresh(t);
     }
@@ -660,6 +687,7 @@ class SmartViewController extends GetxController {
   /// The structure's add form (`tstruct.user.open`, as `#tstruct-add`), then
   /// back here: the saved record shows when the server has it.
   Future<void> add() async {
+    if (_demo?.isSampleSource(source) ?? false) return;
     final s = source;
     final t = table.value;
     if (s == null || t == null || isAdding.value) return;
@@ -684,7 +712,8 @@ class SmartViewController extends GetxController {
           caption: open.caption,
         ),
       );
-      if (result == true) fireAndLog('smart_view_controller', () => repo.refreshNewest(t));
+      if (result == true)
+        fireAndLog('smart_view_controller', () => repo.refreshNewest(t));
     } finally {
       isAdding.value = false;
     }
@@ -789,6 +818,7 @@ class SmartViewController extends GetxController {
     selectedViewId.value = id;
     baseline.value = st;
     _keep();
+    _syncTeam();
   }
 
   /// A tab was tapped: that view replaces the working state (null: the
@@ -1034,7 +1064,8 @@ class SmartViewController extends GetxController {
   // ---- the card's bar and menu: the queue's, nothing new per card ---------
 
   /// The menu is opened: its actions are read once (cached 60 s).
-  void openRecordMenu(int id) => fireAndLog('smart_view_controller', () => tickets.ensureMenu(id));
+  void openRecordMenu(int id) =>
+      fireAndLog('smart_view_controller', () => tickets.ensureMenu(id));
 
   TicketDetailController detailOf(int id) => _details.putIfAbsent(id, () {
     final c = newTicketDetail(id);
@@ -1042,13 +1073,235 @@ class SmartViewController extends GetxController {
     return c;
   });
 
+  // ---- first-run tour ----------------------------------------------------------
+
+  late final TourTrigger _tourTrigger = TourTrigger(
+    canTry: _canTryTour,
+    start: _startTour,
+  );
+  final _tourWorkers = <Worker>[];
+  Worker? _phaseWorker;
+
+  @override
+  void onInit() {
+    super.onInit();
+    if (tour == null) return;
+    void schedule() => _tourTrigger.schedule();
+    _tourWorkers.addAll([
+      ever(mode, (_) => pageSeq.value++),
+      ever(selectedViewId, (_) => pageSeq.value++),
+      ever(isActive, (on) {
+        if (on) {
+          schedule();
+        } else {
+          _tourTrigger.cancel();
+          tour?.cancel();
+        }
+      }),
+      ever(isDrawerOpen, (open) {
+        if (_demo?.isDriving ?? false) return;
+        if (tour?.isRunning ?? false) {
+          tour?.cancel();
+        } else {
+          schedule();
+        }
+      }),
+      ever(listPhase, (_) => schedule()),
+      ever(table, (t) {
+        _phaseWorker?.dispose();
+        _phaseWorker = t == null ? null : ever(t.phase, (_) => schedule());
+        schedule();
+      }),
+    ]);
+  }
+
+  SvTourDemo? get _demo => tour?.demo;
+
+  /// The sample view the drawer lists while the tour runs, only when the
+  /// person has no view of their own (a real list always wins).
+  SvSource? get _sampleSource {
+    final d = _demo;
+    if (d == null || !d.isListSample.value || sources.isNotEmpty) return null;
+    return d.source;
+  }
+
+  /// What the drawer's list shows: the sample view counts as a ready list.
+  SvPhase get drawerPhase =>
+      _sampleSource != null ? SvPhase.ready : listPhase.value;
+
+  /// The records on screen are the tour's sample ones.
+  bool get isTourSampleShown => _demo?.isSampleTable(table.value) ?? false;
+
+  /// The tour needs the list read, and a view that is open to have been read
+  /// to its end (loading or failed states are not shown a tour over).
+  bool get _isTourReady {
+    final t = table.value;
+    if (t == null) {
+      return listPhase.value == SvPhase.ready ||
+          listPhase.value == SvPhase.empty;
+    }
+    return t.phase.value == SvPhase.ready || t.phase.value == SvPhase.empty;
+  }
+
+  bool get _hasRealList =>
+      listPhase.value == SvPhase.ready && sources.isNotEmpty;
+
+  bool get _hasRealRows {
+    final t = table.value;
+    return t != null && t.rows.isNotEmpty;
+  }
+
+  bool _canTryTour() =>
+      tour != null &&
+      !isClosed &&
+      isActive.value &&
+      !isSearchOpen.value &&
+      _isTourReady;
+
+  /// Some record on screen has a file (the first rows are enough).
+  bool get _hasFilesForTour {
+    final t = table.value;
+    if (t == null || !hasFiles) return false;
+    final columns = shownColumns ?? SmartViewColumns.of(t.source);
+    return shownRows
+        .take(30)
+        .any(
+          (r) => columns.cardOf(r).fields.any((f) => f.cell.files.isNotEmpty),
+        );
+  }
+
+  Future<TourStart> _startTour() async {
+    final tour = this.tour;
+    if (tour == null || isClosed || !_isTourReady) return TourStart.failed;
+    await WidgetsBinding.instance.endOfFrame;
+    if (isClosed) return TourStart.failed;
+    _tourStartedOpen = isDrawerOpen.value;
+    return tour.start(
+      _tourPorts,
+      isSample: !_hasRealList || !_hasRealRows,
+      hasFiles: _hasFilesForTour || !_hasRealRows,
+      isDrawerOpen: _tourStartedOpen,
+    );
+  }
+
+  /// The drawer as the tour found it (the list opens it by itself when no
+  /// view is selected); every way a tour ends puts it back like that.
+  bool _tourStartedOpen = false;
+
+  late final SvTourPorts _tourPorts = SvTourPorts(
+    seed: _seedTour,
+    restore: _restoreTour,
+    openDrawer: () => isDrawerOpen.value = true,
+    closeDrawer: () => isDrawerOpen.value = false,
+    pick: _tourPick,
+    unpick: _tourUnpick,
+    expandFirst: () => _tourExpand(true),
+    collapseFirst: () => _tourExpand(false),
+    openFilter: () => _demo?.isFilterOpen.value = true,
+    closeFilter: () => _demo?.isFilterOpen.value = false,
+  );
+
+  /// Real data first: the sample view only without views, the sample records
+  /// only when no open view has records.
+  bool _seedTour() {
+    final d = _demo;
+    if (d == null) return false;
+    final isList = !_hasRealList;
+    final isRecords = !_hasRealRows;
+    d.begin(
+      isList: isList,
+      isRecords: isRecords,
+      now: DateTime.now().millisecondsSinceEpoch,
+    );
+    return isList || isRecords;
+  }
+
+  /// The drawer closed, the open view back, the sample gone. Runs on every
+  /// way a tour ends, and more than once.
+  void _restoreTour() {
+    _tourUnpick();
+    isDrawerOpen.value = isActive.value && _tourStartedOpen;
+    _demo?.end();
+  }
+
+  /// Shows the records: the sample ones when no real view has records, in
+  /// cards (the saved mode is only restored, never written to preferences).
+  void _tourPick() {
+    final d = _demo;
+    if (d == null || d.saved != null) return;
+    d.saved = SvTourSaved(
+      table: table.value,
+      current: current.value,
+      query: query.value,
+      groupBy: groupBy.toList(),
+      hidden: hidden.toList(),
+      order: order.toList(),
+      selectedViewId: selectedViewId.value,
+      mode: mode.value,
+    );
+    if (mode.value != SvViewMode.cards) mode.value = SvViewMode.cards;
+    final sample = d.table;
+    if (d.isRecordsSample.value && sample != null && !_hasRealRows) {
+      query.value = SmartViewQuery.none;
+      groupBy.clear();
+      hidden.clear();
+      order.clear();
+      selectedViewId.value = null;
+      current.value = d.source;
+      table.value = sample;
+    }
+  }
+
+  void _tourUnpick() {
+    final d = _demo;
+    final saved = d?.saved;
+    if (d == null || saved == null) return;
+    d.saved = null;
+    d.isFilterOpen.value = false;
+    expanded.removeWhere((id) => id < 0);
+    filesExpanded.removeWhere((id) => id < 0);
+    if (d.isSampleTable(table.value)) {
+      table.value = saved.table;
+      current.value = saved.current;
+      query.value = saved.query;
+      groupBy.assignAll(saved.groupBy);
+      hidden.assignAll(saved.hidden);
+      order.assignAll(saved.order);
+      selectedViewId.value = saved.selectedViewId;
+    }
+    if (mode.value != saved.mode) mode.value = saved.mode;
+  }
+
+  /// The first card on screen opens (every field and the files) or closes.
+  void _tourExpand(bool isOpen) {
+    final d = _demo;
+    if (d == null) return;
+    final id = isOpen ? shownRows.firstOrNull?.id : _tourExpandedId;
+    if (id == null) return;
+    if (isOpen) {
+      _tourExpandedId = id;
+      if (expanded.add(id)) filesExpanded.add(id);
+    } else {
+      _tourExpandedId = null;
+      expanded.remove(id);
+      filesExpanded.remove(id);
+    }
+  }
+
+  int? _tourExpandedId;
+
   @override
   void onClose() {
+    _tourTrigger.dispose();
+    for (final w in _tourWorkers) {
+      w.dispose();
+    }
+    _phaseWorker?.dispose();
+    tour?.cancel();
     _searchTimer?.cancel();
     _closeTable();
     searchField.dispose();
     findField.dispose();
-    overviewScroll.dispose();
     super.onClose();
   }
 }

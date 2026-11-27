@@ -221,7 +221,11 @@ class ConnectTargetController extends GetxController {
       step.value = found.isConnected
           ? ConnectTargetStep.alreadyAssociates
           : ConnectTargetStep.person;
-      if (found.isConnected) fireAndLog('connect_target_controller', () => links.clear(only: target));
+      if (found.isConnected)
+        fireAndLog(
+          'connect_target_controller',
+          () => links.clear(only: target),
+        );
       return;
     }
     card.value = found.card;

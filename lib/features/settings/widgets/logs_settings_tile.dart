@@ -107,8 +107,7 @@ class LogsSettingsTile extends StatelessWidget {
                       toggled: s.isEnabled,
                       label: 'Logs, switch, ${s.isEnabled ? 'on' : 'off'}',
                       excludeSemantics: true,
-                      onTap: () =>
-                          controller.setEnabled(context, !s.isEnabled),
+                      onTap: () => controller.setEnabled(context, !s.isEnabled),
                       child: SizedBox(
                         width: 72,
                         child: Center(

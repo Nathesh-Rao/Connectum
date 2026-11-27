@@ -25,11 +25,30 @@ class ForwardSheet extends StatelessWidget {
     required this.onSend,
     required this.message,
     required this.picker,
+    this.count = 1,
   });
 
   final void Function(List<Conversation> chosen) onSend;
   final Message message;
   final ForwardPicker picker;
+
+  /// How many messages go; the preview then says so.
+  final int count;
+
+  static Future<void> showMany(
+    BuildContext context,
+    ConversationController controller,
+    List<Message> messages,
+  ) => AppBottomSheet.show<void>(
+    context,
+    title: 'Forward to',
+    child: ForwardSheet(
+      onSend: (chosen) => controller.forwardMany(messages, chosen),
+      message: messages.first,
+      count: messages.length,
+      picker: ForwardPicker(targets: controller.forwardTargetsFor(messages)),
+    ),
+  );
 
   static Future<void> show(
     BuildContext context,
@@ -71,7 +90,7 @@ class ForwardSheet extends StatelessWidget {
             const SizedBox(width: AppSpacing.xxs),
             Expanded(
               child: Text(
-                Forward.previewOf(message),
+                count > 1 ? '$count messages' : Forward.previewOf(message),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppText.readable,
